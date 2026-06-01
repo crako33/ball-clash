@@ -84,15 +84,7 @@ const BALL_TYPES = {
     radius: 29,
     description: "Lays up to 3 proximity landmines that explode.",
   },
-  wrestler: {
-    id: "wrestler",
-    name: "Wrestler Ball",
-    shortName: "SLAM",
-    color: "#22c55e",
-    stroke: "#a855f7",
-    radius: 32,
-    description: "Hulk grappler. Grabs and slams enemies, dashes to close gaps, and resists damage.",
-  },
+
   spore: {
     id: "spore",
     name: "Hydra Ball",
@@ -149,7 +141,7 @@ const BALANCE = {
   shield: { damage: 14, arcWidth: 1.57, knockback: 14, cooldown: 2200, shieldSpeed: 550, returnSpeed: 650, duration: 1200 },
   spider: { fangDamage: 3, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000 },
   bomber: { mineDamage: 14, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16 },
-  wrestler: { grabRange: 85, grabDuration: 800, slamDamage: 20, slamKnockback: 12, cooldown: 3200, dashSpeed: 550, gritRatio: 0.3, slamSlowDuration: 1500 },
+
   spore: { cactusDamage: 12, growthDuration: 1000, speedBoost: 1.5, cactusLife: 6000, cooldown: 4000 },
   hammer: { spinDamage: 5, launchDamage: 22, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
   wallSpike: { spikeDamage: 12, spikeLifetime: 8000, maxSpikes: 8 },
@@ -244,7 +236,7 @@ export default function BallWeaponSimulator() {
       vx: vxVal,
       vy: vyVal,
       r,
-      mass: type === "shield" ? 1.5 : type === "wrestler" ? 1.6 : 1,
+      mass: type === "shield" ? 1.5 : 1,
       health: 100,
       angle: side === "left" ? 0 : Math.PI,
       spinAngle: 0,
@@ -268,8 +260,6 @@ export default function BallWeaponSimulator() {
       shieldState: "held", shieldX: 0, shieldY: 0, shieldVx: 0, shieldVy: 0, shieldThrownUntil: 0, shieldNextHitAt: 0, nextThrowAt: 0, shieldSpinAngle: 0, shieldGuardHits: 0,
       // Spider Specific
       webState: "idle", webX: 0, webY: 0, webVx: 0, webVy: 0, webStateUntil: 0, webTargetId: null, webBouncesLeft: 0, fangFlashUntil: 0,
-      // Wrestler Specific
-      wrestlerState: "idle", wrestlerStateUntil: 0, grabLiftAngle: 0, wrestlerDashUntil: 0, nextWrestlerDashAt: 0, wrestlerSlowUntil: 0,
       // Vampire Specific
       hasStuck: false,
       // Spore Specific
@@ -428,8 +418,7 @@ export default function BallWeaponSimulator() {
             
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
-            const isWrestlerSlowed = ball.wrestlerSlowUntil && ball.wrestlerSlowUntil > simTime;
-            const slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : (isWrestlerSlowed ? 0.5 : 1.0);
+            const slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
 
             if (!isPulling && !isWebbedTarget && !isLatchedSelf && !isChargingHammer) {
               ball.x += ball.vx * dt * slowMult;
@@ -506,15 +495,7 @@ export default function BallWeaponSimulator() {
             const localApplyDamage = (defender, amount, cooldownKey, cd = 360) => {
               if (damageCooldowns[cooldownKey] > simTime) return;
               let finalAmount = amount;
-            if (defender.type === "wrestler") {
-              const grit = balance.wrestler.gritRatio !== undefined ? balance.wrestler.gritRatio : 0.3;
-              finalAmount *= (1 - grit);
-              const isGrabbing = defender.wrestlerState === "grabbing";
-              const isDashing = defender.wrestlerDashUntil && defender.wrestlerDashUntil > simTime;
-              if (isGrabbing || isDashing) {
-                finalAmount *= 0.5;
-              }
-            }
+
             finalAmount = Math.max(MIN_DAMAGE, Math.round(finalAmount));
             defender.health = Math.max(0, defender.health - finalAmount);
             damageCooldowns[cooldownKey] = simTime + cd;
@@ -814,53 +795,7 @@ export default function BallWeaponSimulator() {
               });
               ball.nextShotAt = simTime + balance.bomber.cooldown;
             }
-            // Wrestler Ball Physics in Tournament
-            if (ball.type === "wrestler") {
-              const isDashing = ball.wrestlerDashUntil && ball.wrestlerDashUntil > simTime;
 
-              if (ball.wrestlerState === "idle") {
-                const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (ball.nextShotAt <= simTime && dist < balance.wrestler.grabRange) {
-                  ball.wrestlerState = "grabbing";
-                  ball.wrestlerStateUntil = simTime + balance.wrestler.grabDuration;
-                  ball.wrestlerDashUntil = 0;
-                  ball.nextShotAt = simTime + balance.wrestler.cooldown;
-                } else if (!isDashing && simTime >= ball.nextWrestlerDashAt && dist > balance.wrestler.grabRange && dist < 290) {
-                  ball.wrestlerDashUntil = simTime + 400;
-                  ball.nextWrestlerDashAt = simTime + 2500;
-                  const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  ball.vx = Math.cos(angle) * balance.wrestler.dashSpeed;
-                  ball.vy = Math.sin(angle) * balance.wrestler.dashSpeed;
-                }
-
-                if (isDashing) {
-                  const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  ball.vx = Math.cos(angle) * balance.wrestler.dashSpeed;
-                  ball.vy = Math.sin(angle) * balance.wrestler.dashSpeed;
-                }
-              } else if (ball.wrestlerState === "grabbing") {
-                const t = 1 - (ball.wrestlerStateUntil - simTime) / balance.wrestler.grabDuration;
-                const baseAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                const grabAngle = baseAngle + t * Math.PI; // Overhead swing rotation
-                const grabDist = ball.r + enemy.r + 4;
-                const pad = 18;
-                enemy.x = clamp(ball.x + Math.cos(grabAngle) * grabDist, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
-                enemy.y = clamp(ball.y + Math.sin(grabAngle) * grabDist, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
-                enemy.vx = ball.vx; enemy.vy = ball.vy;
-
-                if (simTime >= ball.wrestlerStateUntil) {
-                  ball.wrestlerState = "idle";
-                  const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                  if (dist < balance.wrestler.grabRange + enemy.r + 20) {
-                    localApplyDamage(enemy, balance.wrestler.slamDamage, `${ball.id}-slam`, simTime, balance.wrestler.cooldown);
-                    const slamAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                    enemy.vx += Math.cos(slamAngle) * balance.wrestler.slamKnockback * 16;
-                    enemy.vy += Math.sin(slamAngle) * balance.wrestler.slamKnockback * 16;
-                    enemy.wrestlerSlowUntil = simTime + balance.wrestler.slamSlowDuration;
-                  }
-                }
-              }
-            }
             if (ball.type === "spore" && ball.nextSporeAt <= simTime) {
               for (let i = 0; i < 5; i++) {
                 const rx = clamp(ball.x + (Math.random() - 0.5) * 280, 120, ARENA_SIZE - 120);
@@ -1162,16 +1097,6 @@ export default function BallWeaponSimulator() {
       if (game.damageCooldowns[cooldownKey] > currentTime) return;
       
       let finalAmount = amount;
-      if (defender.type === "wrestler") {
-        const grit = game.balance.wrestler.gritRatio !== undefined ? game.balance.wrestler.gritRatio : 0.3;
-        finalAmount *= (1 - grit);
-        
-        const isGrabbing = defender.wrestlerState === "grabbing";
-        const isDashing = defender.wrestlerDashUntil && defender.wrestlerDashUntil > currentTime;
-        if (isGrabbing || isDashing) {
-          finalAmount *= 0.5;
-        }
-      }
       finalAmount = Math.max(MIN_DAMAGE, Math.round(finalAmount));
 
       defender.health = clamp(defender.health - finalAmount, 0, 100);
@@ -1183,7 +1108,7 @@ export default function BallWeaponSimulator() {
         y: defender.y - defender.r - 5,
         vy: -60,
         text: `-${finalAmount}`,
-        color: defender.type === "wrestler" ? "#d8b4fe" : "#f87171",
+        color: "#f87171",
         life: 0.8,
         maxLife: 0.8
       });
@@ -1695,91 +1620,7 @@ export default function BallWeaponSimulator() {
       }
     };
 
-    const updateWrestler = (wrestlerBall, target, currentTime) => {
-      const bal = game.balance;
 
-      const isDashing = wrestlerBall.wrestlerDashUntil && wrestlerBall.wrestlerDashUntil > currentTime;
-
-      if (wrestlerBall.wrestlerState === "idle") {
-        const dist = distance(wrestlerBall, target);
-        
-        if (wrestlerBall.nextShotAt <= currentTime && dist < bal.wrestler.grabRange) {
-          wrestlerBall.wrestlerState = "grabbing";
-          wrestlerBall.wrestlerStateUntil = currentTime + bal.wrestler.grabDuration;
-          wrestlerBall.wrestlerDashUntil = 0;
-          
-          if (wrestlerBall.side === "left") game.stats.left.totalShots++;
-          else game.stats.right.totalShots++;
-          
-          wrestlerBall.nextShotAt = currentTime + bal.wrestler.cooldown;
-        } else if (!isDashing && currentTime >= wrestlerBall.nextWrestlerDashAt && dist > bal.wrestler.grabRange && dist < 290) {
-          wrestlerBall.wrestlerDashUntil = currentTime + 400;
-          wrestlerBall.nextWrestlerDashAt = currentTime + 2500;
-          const angle = Math.atan2(target.y - wrestlerBall.y, target.x - wrestlerBall.x);
-          wrestlerBall.vx = Math.cos(angle) * bal.wrestler.dashSpeed;
-          wrestlerBall.vy = Math.sin(angle) * bal.wrestler.dashSpeed;
-          
-          spawnSparks(wrestlerBall.x, wrestlerBall.y, "#a855f7", 8);
-        }
-
-        if (isDashing) {
-          const angle = Math.atan2(target.y - wrestlerBall.y, target.x - wrestlerBall.x);
-          wrestlerBall.vx = Math.cos(angle) * bal.wrestler.dashSpeed;
-          wrestlerBall.vy = Math.sin(angle) * bal.wrestler.dashSpeed;
-
-          if (Math.random() < 0.4) {
-            game.particles.push({
-              x: wrestlerBall.x - Math.cos(angle) * wrestlerBall.r,
-              y: wrestlerBall.y - Math.sin(angle) * wrestlerBall.r,
-              vx: -Math.cos(angle) * 80 + (Math.random() - 0.5) * 45,
-              vy: -Math.sin(angle) * 80 + (Math.random() - 0.5) * 45,
-              color: "rgba(168, 85, 247, 0.42)",
-              radius: 2.5 + Math.random() * 3,
-              life: 0.25,
-              maxLife: 0.25
-            });
-          }
-        }
-      } else if (wrestlerBall.wrestlerState === "grabbing") {
-        // Spin the wrestler ball twice over the grab duration
-        const t = 1 - (wrestlerBall.wrestlerStateUntil - currentTime) / bal.wrestler.grabDuration;
-        const targetAngle = Math.atan2(target.y - wrestlerBall.y, target.x - wrestlerBall.x);
-        wrestlerBall.angle = targetAngle + t * Math.PI * 4; // 2 spins (4 * pi)
-
-        if (currentTime >= wrestlerBall.wrestlerStateUntil) {
-          wrestlerBall.wrestlerState = "idle";
-          const slamRadius = bal.wrestler.grabRange;
-          const dist = distance(wrestlerBall, target);
-
-          if (dist < slamRadius + target.r) {
-            applyDamage(target, bal.wrestler.slamDamage, `${wrestlerBall.id}-slam`, currentTime, bal.wrestler.cooldown);
-            
-            if (wrestlerBall.side === "left") {
-              game.stats.left.damageDealt += bal.wrestler.slamDamage;
-              game.stats.left.hitsLanded++;
-            } else {
-              game.stats.right.damageDealt += bal.wrestler.slamDamage;
-              game.stats.right.hitsLanded++;
-            }
-
-            const slamAngle = Math.atan2(target.y - wrestlerBall.y, target.x - wrestlerBall.x);
-            target.vx += Math.cos(slamAngle) * bal.wrestler.slamKnockback * 16;
-            target.vy += Math.sin(slamAngle) * bal.wrestler.slamKnockback * 16;
-            target.wrestlerSlowUntil = currentTime + bal.wrestler.slamSlowDuration;
-            
-            game.floatingTexts = game.floatingTexts || [];
-            game.floatingTexts.push({
-              x: target.x, y: target.y - target.r - 25, vy: -50,
-              text: "SLOWED!", color: "#c084fc", life: 1.0, maxLife: 1.0
-            });
-            spawnSparks(target.x, target.y, "#a855f7", 12);
-          }
-          
-          game.screenShake = Math.max(game.screenShake, 20);
-          spawnDust(wrestlerBall.x, wrestlerBall.y, 16);
-        }
-      }
-    };
 
     const updateShield = (shieldBall, target, currentTime, stepDt) => {
       const bal = game.balance;
@@ -2310,8 +2151,7 @@ export default function BallWeaponSimulator() {
       ctx.fillStyle = "#f8fafc"; ctx.font = "bold 17px sans-serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       
-      const isGrabbing = ball.type === "wrestler" && ball.wrestlerState === "grabbing";
-      const displayHp = isGrabbing ? "SLAM" : Math.ceil(ball.health);
+      const displayHp = Math.ceil(ball.health);
       ctx.fillText(displayHp, ball.x, ball.y + 2);
       ctx.font = "bold 9px sans-serif"; ctx.fillStyle = "rgba(248,250,252,0.82)";
       ctx.fillText(ball.type === "gun" ? `${ball.ammo}/6` : ball.shortName, ball.x, ball.y - 16);
@@ -2784,154 +2624,7 @@ export default function BallWeaponSimulator() {
       drawHealthInsideBall(ball);
     };
 
-    const drawWrestlerBall = (ball) => {
-      const config = BALL_TYPES.wrestler;
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      
-      const isGrabbing = ball.wrestlerState === "grabbing";
-      const isDashing = ball.wrestlerDashUntil && ball.wrestlerDashUntil > game.simTime;
-      const target = game.balls.find(o => o.side !== ball.side);
-      const grabRange = game.balance.wrestler.grabRange;
-      const grabReady = ball.nextShotAt <= game.simTime;
-      const targetDistance = target ? distance(ball, target) : Infinity;
-      const targetInGrabRange = targetDistance < grabRange;
-      
-      // Draw dash speed lines (trailing wind lines)
-      if (isDashing) {
-        ctx.save();
-        const angle = Math.atan2(ball.vy, ball.vx);
-        ctx.strokeStyle = "rgba(168, 85, 247, 0.75)";
-        ctx.lineWidth = 3.5;
-        for (let i = -1; i <= 1; i++) {
-          const offsetAngle = angle + Math.PI + i * 0.3;
-          ctx.beginPath();
-          ctx.moveTo(Math.cos(offsetAngle) * (ball.r + 4), Math.sin(offsetAngle) * (ball.r + 4));
-          ctx.lineTo(Math.cos(offsetAngle) * (ball.r + 34), Math.sin(offsetAngle) * (ball.r + 34));
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
 
-      // Draw grab threat indicator
-      if (!isGrabbing && !isDashing) {
-        ctx.save();
-        const pulse = 0.5 + Math.sin(game.simTime * 0.012) * 0.5;
-        ctx.setLineDash(grabReady ? [] : [10, 10]);
-        ctx.strokeStyle = targetInGrabRange && grabReady
-          ? `rgba(250, 204, 21, ${0.65 + pulse * 0.25})`
-          : grabReady
-            ? "rgba(168, 85, 247, 0.55)"
-            : "rgba(148, 163, 184, 0.28)";
-        ctx.lineWidth = targetInGrabRange && grabReady ? 5 : 2.5;
-        ctx.beginPath();
-        ctx.arc(0, 0, grabRange, 0, Math.PI * 2);
-        ctx.stroke();
-
-        if (target) {
-          const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-          ctx.setLineDash([]);
-          ctx.strokeStyle = targetInGrabRange && grabReady ? "#facc15" : "rgba(168, 85, 247, 0.6)";
-          ctx.lineWidth = targetInGrabRange && grabReady ? 7 : 4;
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.arc(0, 0, grabRange - 8, targetAngle - 0.28, targetAngle + 0.28);
-          ctx.stroke();
-
-          if (targetInGrabRange && grabReady) {
-            ctx.fillStyle = "#facc15";
-            ctx.font = "900 20px sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.shadowColor = "#f97316";
-            ctx.shadowBlur = 12;
-            ctx.fillText("SLAM", 0, -ball.r - 34);
-          }
-        }
-        ctx.restore();
-      }
-
-      // Draw Super Armor Glow Ring
-      if (isGrabbing || isDashing) {
-        ctx.save();
-        ctx.shadowColor = "#a855f7";
-        ctx.shadowBlur = 15;
-        ctx.strokeStyle = "#c084fc";
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(0, 0, ball.r + 5, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // Draw Larger Arms
-      ctx.strokeStyle = "#166534"; ctx.fillStyle = "#22c55e"; ctx.lineWidth = 19; // Bigger arms (19 vs 14)
-      ctx.lineCap = "round"; ctx.lineJoin = "round";
-
-      const armTime = game.simTime * 0.012;
-      let baseAngle = target ? Math.atan2(target.y - ball.y, target.x - ball.x) : 0;
-      let bodyRotation = 0;
-      if (isGrabbing && ball.angle !== undefined) {
-        baseAngle = ball.angle;
-        bodyRotation = ball.angle - (target ? Math.atan2(target.y - ball.y, target.x - ball.x) : 0);
-      }
-
-      const leftArmAngle = isGrabbing ? baseAngle + 0.45 : -Math.PI * 0.1 + Math.sin(armTime) * 0.15;
-      const rightArmAngle = isGrabbing ? baseAngle - 0.45 : -Math.PI * 0.9 - Math.sin(armTime) * 0.15;
-
-      const shoulder1Angle = isGrabbing ? baseAngle + 0.55 : Math.PI * 0.2;
-      const shoulder2Angle = isGrabbing ? baseAngle - 0.55 : Math.PI * 0.8;
-
-      ctx.beginPath(); ctx.moveTo(Math.cos(shoulder1Angle) * ball.r, Math.sin(shoulder1Angle) * ball.r);
-      const lElbowX = Math.cos(leftArmAngle) * (ball.r + 22), lElbowY = Math.sin(leftArmAngle) * (ball.r + 22);
-      const lHandX = Math.cos(leftArmAngle + 0.5) * (ball.r + 42), lHandY = Math.sin(leftArmAngle + 0.5) * (ball.r + 42);
-      ctx.lineTo(lElbowX, lElbowY); ctx.lineTo(lHandX, lHandY); ctx.stroke();
-
-      ctx.beginPath(); ctx.moveTo(Math.cos(shoulder2Angle) * ball.r, Math.sin(shoulder2Angle) * ball.r);
-      const rElbowX = Math.cos(rightArmAngle) * (ball.r + 22), rElbowY = Math.sin(rightArmAngle) * (ball.r + 22);
-      const rHandX = Math.cos(rightArmAngle - 0.5) * (ball.r + 42), rHandY = Math.sin(rightArmAngle - 0.5) * (ball.r + 42);
-      ctx.lineTo(rElbowX, rElbowY); ctx.lineTo(rHandX, rHandY); ctx.stroke();
-
-      // Draw Hands (Fists) with Purple wraps
-      ctx.fillStyle = "#22c55e";
-      ctx.strokeStyle = "#a855f7";
-      ctx.lineWidth = 3.5;
-      
-      ctx.beginPath(); ctx.arc(lHandX, lHandY, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.save();
-      ctx.strokeStyle = "rgba(168, 85, 247, 0.7)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(lHandX - 8, lHandY - 8); ctx.lineTo(lHandX + 8, lHandY + 8);
-      ctx.moveTo(lHandX - 8, lHandY + 8); ctx.lineTo(lHandX + 8, lHandY - 8);
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.beginPath(); ctx.arc(rHandX, rHandY, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.save();
-      ctx.strokeStyle = "rgba(168, 85, 247, 0.7)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(rHandX - 8, rHandY - 8); ctx.lineTo(rHandX + 8, rHandY + 8);
-      ctx.moveTo(rHandX - 8, rHandY + 8); ctx.lineTo(rHandX + 8, rHandY - 8);
-      ctx.stroke();
-      ctx.restore();
-
-      // Body
-      ctx.save();
-      ctx.rotate(bodyRotation);
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-
-      // Belt
-      ctx.strokeStyle = "#a855f7"; ctx.lineWidth = 6; ctx.beginPath(); // Purple belt straps
-      ctx.arc(0, 0, ball.r - 3, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
-      ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.arc(0, ball.r - 3, 6, 0, Math.PI * 2); ctx.fill(); // Gold buckle
-      ctx.restore();
-      
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
 
     const drawHammerBall = (ball) => {
       const config = BALL_TYPES.hammer;
@@ -3077,30 +2770,10 @@ export default function BallWeaponSimulator() {
       else if (ball.type === "shield") drawShieldBall(ball);
       else if (ball.type === "spider") drawSpiderBall(ball);
       else if (ball.type === "bomber") drawBomberBall(ball);
-      else if (ball.type === "wrestler") drawWrestlerBall(ball);
       else if (ball.type === "spore") drawSporeBall(ball);
       else if (ball.type === "hammer") drawHammerBall(ball);
       else if (ball.type === "wallSpike") drawWallSpikeBall(ball);
       else if (ball.type === "stringWeb") drawStringWebBall(ball);
-
-      // Draw slow swirl if target is slowed by wrestler slam
-      if (ball.wrestlerSlowUntil && ball.wrestlerSlowUntil > currentTime) {
-        ctx.save();
-        ctx.translate(ball.x, ball.y);
-        ctx.strokeStyle = "rgba(192, 132, 252, 0.75)";
-        ctx.lineWidth = 3.5;
-        ctx.beginPath();
-        const swirlAngle = (currentTime * 0.007) % (Math.PI * 2);
-        for (let a = 0; a < Math.PI * 2; a += 0.1) {
-          const r = ball.r + 5 + Math.sin(a * 3 + swirlAngle) * 3;
-          const sx = Math.cos(a + swirlAngle) * r;
-          const sy = Math.sin(a + swirlAngle) * r;
-          if (a === 0) ctx.moveTo(sx, sy);
-          else ctx.lineTo(sx, sy);
-        }
-        ctx.stroke();
-        ctx.restore();
-      }
     };
 
     const drawBallTrail = (ball) => {
@@ -3673,8 +3346,7 @@ export default function BallWeaponSimulator() {
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
-            const isWrestlerSlowed = ball.wrestlerSlowUntil && ball.wrestlerSlowUntil > game.simTime;
-            const slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : (isWrestlerSlowed ? 0.5 : 1.0);
+            const slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
 
             if (!isPulling && !isWebbedTarget && !isLatchedSelf && !isChargingHammer) {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
@@ -3751,7 +3423,6 @@ export default function BallWeaponSimulator() {
                 // New Weapon Ticks
                 if (ball.type === "spider") updateSpider(ball, target, game.simTime, stepDt);
                 if (ball.type === "bomber") updateBomber(ball, target, game.simTime);
-                if (ball.type === "wrestler") updateWrestler(ball, target, game.simTime);
                 if (ball.type === "spore") updateSpore(ball, target, game.simTime);
                 if (ball.type === "hammer") updateHammer(ball, target, game.simTime);
                 
@@ -3957,17 +3628,7 @@ export default function BallWeaponSimulator() {
               {renderSlider("Knockback Force", "bomber", "knockback", 5, 40, 1)}
             </>
           )}
-          {type === "wrestler" && (
-            <>
-              {renderSlider("Slam Damage", "wrestler", "slamDamage", 5, 40)}
-              {renderSlider("Grab Distance", "wrestler", "grabRange", 35, 140, 5, "px")}
-              {renderSlider("Grab Duration", "wrestler", "grabDuration", 200, 2000, 50, "ms")}
-              {renderSlider("Slam Knockback", "wrestler", "slamKnockback", 5, 45, 1)}
-              {renderSlider("Cooldown", "wrestler", "cooldown", 1000, 6000, 100, "ms")}
-              {renderSlider("Shoulder Dash Speed", "wrestler", "dashSpeed", 200, 1000, 20, "px/s")}
-              {renderSlider("Passive Grit Ratio", "wrestler", "gritRatio", 0.0, 0.8, 0.05)}
-            </>
-          )}
+
           {type === "spore" && (
             <>
               {renderSlider("Hydra Damage", "spore", "cactusDamage", 2, 30)}

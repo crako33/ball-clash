@@ -164,15 +164,7 @@ export function useSoundEngine() {
       osc(ctx, dest, "triangle", 180, 0.1, t, 0.25, 100);
     },
 
-    // Wrestler Ball
-    wrestlerGrab: (ctx, dest, t) => {
-      noise(ctx, dest, 0.4, t, 0.15, 600, 0.6);
-      osc(ctx, dest, "sine", 140, 0.25, t, 0.2, 80);
-    },
-    wrestlerSlam: (ctx, dest, t) => {
-      noise(ctx, dest, 0.7, t, 0.25, 200, 0.4);
-      osc(ctx, dest, "sine", 90, 0.5, t, 0.3, 40);
-    },
+
 
     // Spore Ball
     sporeShoot: (ctx, dest, t) => {
