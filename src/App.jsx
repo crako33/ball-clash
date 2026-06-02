@@ -53,8 +53,8 @@ const BALL_TYPES = {
     id: "laser",
     name: "Laser Ball",
     shortName: "LASER",
-    color: "#10b981",
-    stroke: "#a7f3d0",
+    color: "#ef4444",
+    stroke: "#facc15",
     radius: 30,
     description: "Charges and fires a powerful continuous laser beam.",
   },
@@ -98,8 +98,8 @@ const BALL_TYPES = {
     id: "hammer",
     name: "Hammer Ball",
     shortName: "HAMR",
-    color: "#1e3a8a",
-    stroke: "#93c5fd",
+    color: "#ef4444",
+    stroke: "#facc15",
     radius: 30,
     description: "Spins hammer 5 times, then charges and launches itself like a rocket.",
   },
@@ -121,6 +121,24 @@ const BALL_TYPES = {
     radius: 30,
     description: "Creates a network of laser strings that damage the opponent on contact.",
   },
+  arm: {
+    id: "arm",
+    name: "Arm Ball",
+    shortName: "ARM",
+    color: "#a16207",
+    stroke: "#fef08a",
+    radius: 31,
+    description: "Extends a giant swinging arm to grab the opponent, ragdolling them and slamming them into corners.",
+  },
+  chess: {
+    id: "chess",
+    name: "Chess Ball",
+    shortName: "CHES",
+    color: "#e2e8f0",
+    stroke: "#fbbf24",
+    radius: 30,
+    description: "Moves to the center to summon a random crown (Knight, Bishop, or Rook) and expands to damage the opponent.",
+  },
 };
 
 const GRID_SIZE = 7;
@@ -132,19 +150,21 @@ const SHIELD_PICKUP_RADIUS = 30;
 const BOUNCE_SPEED_MULTIPLIER = 1;
 
 const BALANCE = {
-  knife: { damage: 7, cooldown: 390, bladeLength: 42, spinSpeed: 0.09 },
-  spike: { collisionDamage: 4, touchDamage: 3, cooldown: 380, spikeReach: 11 },
-  gun: { bulletDamage: 7, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55 },
-  vampire: { drainPerTick: 3, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
-  bomb: { damage: 15, fuseTime: 1200, radius: 65, cooldown: 1800, throwSpeed: 250, knockback: 18 },
-  laser: { damagePerTick: 3, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16 },
-  shield: { damage: 14, arcWidth: 1.57, knockback: 14, cooldown: 2200, shieldSpeed: 550, returnSpeed: 650, duration: 1200 },
-  spider: { fangDamage: 3, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000 },
-  bomber: { mineDamage: 14, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16 },
-  spore: { cactusDamage: 12, growthDuration: 1000, speedBoost: 1.5, cactusLife: 6000, cooldown: 4000 },
-  hammer: { spinDamage: 5, launchDamage: 22, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
-  wallSpike: { spikeDamage: 12, spikeLifetime: 8000, maxSpikes: 8 },
-  stringWeb: { stringDamage: 10, stringLifetime: 6000, maxStrings: 8 },
+  knife: { damage: 7, cooldown: 390, bladeLength: 60, spinSpeed: 0.09 },
+  spike: { collisionDamage: 10, touchDamage: 10, cooldown: 380, spikeReach: 11 },
+  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55 },
+  vampire: { drainPerTick: 2, healPerTick: 2, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
+  bomb: { damage: 10, fuseTime: 1200, radius: 65, cooldown: 1800, throwSpeed: 250, knockback: 18 },
+  laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16 },
+  shield: { damage: 5, arcWidth: 1.57, knockback: 14, cooldown: 2200, shieldSpeed: 550, returnSpeed: 650, duration: 1200 },
+  spider: { fangDamage: 2, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000 },
+  bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16 },
+  spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 6000, cooldown: 4000 },
+  hammer: { spinDamage: 1, launchDamage: 1, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
+  wallSpike: { spikeDamage: 1, spikeLifetime: 8000, maxSpikes: 8 },
+  stringWeb: { stringDamage: 1, stringLifetime: 6000, maxStrings: 10 },
+  arm: { slamDamage: 7, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 3500 },
+  chess: { cooldown: 6000, centerSpeed: 350, crownDuration: 2500, damage: 7, tickCooldown: 400 },
 };
 
 const linePointDist = (px, py, x1, y1, x2, y2) => {
@@ -192,7 +212,7 @@ export default function App() {
   const animationRef = useRef(null);
   const [selectedBalls, setSelectedBalls] = useState(["knife", "spike"]);
   const [gameStarted, setGameStarted] = useState(false);
-  const [simulationSpeed, setSimulationSpeed] = useState(1);
+  const [simulationSpeed, setSimulationSpeed] = useState(1.5);
   const [balanceSettings, setBalanceSettings] = useState(BALANCE);
   const [elapsedTime, setElapsedTime] = useState(0);
   
@@ -267,6 +287,15 @@ export default function App() {
       nextSporeAt: 0,
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
+      // Arm Specific
+      armState: "idle", armStateUntil: 0, armAngle: 0, armBaseAngle: 0, armDirection: 1,
+      // Chess Specific
+      chessState: "idle",
+      chessCrown: null,
+      chessTimer: 0,
+      chessScale: 1.0,
+      chessAttackWaypoints: [],
+      chessWaypointIndex: 0,
     };
   };
 
@@ -286,7 +315,7 @@ export default function App() {
     strings: [],
     cacti: [],
     screenShake: 0,
-    simulationSpeed: 1,
+    simulationSpeed: 1.5,
     balance: BALANCE,
     balls: [makeBall("knife", "left", 20), makeBall("spike", "right", 20)],
     stats: {
@@ -317,6 +346,8 @@ export default function App() {
     gameRef.current.wallSpikes = [];
     gameRef.current.strings = [];
     gameRef.current.cacti = [];
+    gameRef.current.portals = [];
+    gameRef.current.portalProjectiles = [];
   };
 
   const startFight = () => {
@@ -341,7 +372,7 @@ export default function App() {
       screenShake: 0,
       simulationSpeed,
       balls,
-      balance: balanceSettings,
+      balance: { ...BALANCE, ...balanceSettings },
       roundOverSoundPlayed: false,
       stats: {
         left: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 },
@@ -397,7 +428,7 @@ export default function App() {
   const runTournament = (roundsCount) => {
     setSimulatingTournament(true);
     setTimeout(() => {
-      const balance = gameRef.current.balance || BALANCE;
+      const balance = { ...BALANCE, ...gameRef.current.balance };
       let leftWins = 0, rightWins = 0, totalDuration = 0;
       let leftRemainingHpTotal = 0, rightRemainingHpTotal = 0;
       const leftType = selectedBalls[0], rightType = selectedBalls[1];
@@ -406,7 +437,7 @@ export default function App() {
         const leftBall = makeBall(leftType, "left", 20);
         const rightBall = makeBall(rightType, "right", 20);
         const balls = [leftBall, rightBall];
-        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [];
+        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [], localPortalProjectiles = [], localPortals = [];
         let damageCooldowns = {};
         let simTime = 0, dt = 0.016, maxTicks = 10000;
 
@@ -421,9 +452,10 @@ export default function App() {
             
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
-            const slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
+            const isArmGrabbed = balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > simTime && b.id !== ball.id);
+            let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
 
-            if (!isPulling && !isWebbedTarget && !isLatchedSelf && !isChargingHammer) {
+            if (!isPulling && !isWebbedTarget && !isLatchedSelf && !isChargingHammer && !isArmGrabbed) {
               ball.x += ball.vx * dt * slowMult;
               ball.y += ball.vy * dt * slowMult;
               const pad = 18;
@@ -440,9 +472,6 @@ export default function App() {
                     life: balance.wallSpike.spikeLifetime, charges: 1
                   };
                   localWallSpikes.push(newSpike);
-                  if (localWallSpikes.length > balance.wallSpike.maxSpikes) {
-                    localWallSpikes.shift();
-                  }
                 }
                 if (ball.type === "stringWeb") {
                   if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
@@ -451,9 +480,6 @@ export default function App() {
                       life: balance.stringWeb.stringLifetime
                     };
                     localStrings.push(newString);
-                    if (localStrings.length > balance.stringWeb.maxStrings) {
-                      localStrings.shift();
-                    }
                   }
                   ball.lastBounceX = bx;
                   ball.lastBounceY = by;
@@ -481,28 +507,45 @@ export default function App() {
             collided = true;
             if (leftBall.type !== "vampire" && rightBall.type !== "vampire") {
               const nx = dx / dist, ny = dy / dist, overlap = minDist - dist;
-              leftBall.x -= (overlap / 2) * nx; leftBall.y -= (overlap / 2) * ny;
-              rightBall.x += (overlap / 2) * nx; rightBall.y += (overlap / 2) * ny;
+              const aAnchored = leftBall.type === "chess" && (leftBall.chessState === "activeCrown" || leftBall.chessState === "movingToCenter" || leftBall.chessState === "attacking");
+              const bAnchored = rightBall.type === "chess" && (rightBall.chessState === "activeCrown" || rightBall.chessState === "movingToCenter" || rightBall.chessState === "attacking");
+              
+              if (aAnchored) {
+                rightBall.x += overlap * nx; rightBall.y += overlap * ny;
+              } else if (bAnchored) {
+                leftBall.x -= overlap * nx; leftBall.y -= overlap * ny;
+              } else {
+                leftBall.x -= (overlap / 2) * nx; leftBall.y -= (overlap / 2) * ny;
+                rightBall.x += (overlap / 2) * nx; rightBall.y += (overlap / 2) * ny;
+              }
+
               const tx = -ny, ty = nx;
               const dpTanA = leftBall.vx * tx + leftBall.vy * ty;
               const dpTanB = rightBall.vx * tx + rightBall.vy * ty;
               const dpNormA = leftBall.vx * nx + leftBall.vy * ny;
               const dpNormB = rightBall.vx * nx + rightBall.vy * ny;
-              const mA = (dpNormA * (leftBall.mass - rightBall.mass) + 2 * rightBall.mass * dpNormB) / (leftBall.mass + rightBall.mass);
-              const mB = (dpNormB * (rightBall.mass - leftBall.mass) + 2 * leftBall.mass * dpNormA) / (leftBall.mass + rightBall.mass);
-              leftBall.vx = tx * dpTanA + nx * mA; leftBall.vy = ty * dpTanA + ny * mA;
-              rightBall.vx = tx * dpTanB + nx * mB; rightBall.vy = ty * dpTanB + ny * mB;
+
+              if (aAnchored) {
+                rightBall.vx = tx * dpTanB - nx * dpNormB;
+                rightBall.vy = ty * dpTanB - ny * dpNormB;
+              } else if (bAnchored) {
+                leftBall.vx = tx * dpTanA - nx * dpNormA;
+                leftBall.vy = ty * dpTanA - ny * dpNormA;
+              } else {
+                const mA = (dpNormA * (leftBall.mass - rightBall.mass) + 2 * rightBall.mass * dpNormB) / (leftBall.mass + rightBall.mass);
+                const mB = (dpNormB * (rightBall.mass - leftBall.mass) + 2 * leftBall.mass * dpNormA) / (leftBall.mass + rightBall.mass);
+                leftBall.vx = tx * dpTanA + nx * mA; leftBall.vy = ty * dpTanA + ny * mA;
+                rightBall.vx = tx * dpTanB + nx * mB; rightBall.vy = ty * dpTanB + ny * mB;
+              }
             }
           }
 
             const localApplyDamage = (defender, amount, cooldownKey, cd = 360) => {
               if (damageCooldowns[cooldownKey] > simTime) return;
-              let finalAmount = amount;
-
-            finalAmount = Math.max(MIN_DAMAGE, Math.round(finalAmount));
-            defender.health = Math.max(0, defender.health - finalAmount);
-            damageCooldowns[cooldownKey] = simTime + cd;
-          };
+              let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
+              defender.health = Math.max(0, defender.health - finalAmount);
+              damageCooldowns[cooldownKey] = simTime + cd;
+            };
 
           if (collided) {
             if (leftBall.type === "spike") localApplyDamage(rightBall, balance.spike.collisionDamage, `${leftBall.id}-spike-hit`, balance.spike.cooldown);
@@ -799,6 +842,211 @@ export default function App() {
               ball.nextShotAt = simTime + balance.bomber.cooldown;
             }
 
+            // Arm Ball Physics in Tournament
+            if (ball.type === "arm") {
+              const grabRange = balance.arm.grabRange;
+              if (ball.armState === "idle") {
+                ball.armAngle = (ball.armAngle || 0) + balance.arm.swingSpeed;
+                if (ball.nextShotAt <= simTime) {
+                  const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
+                  const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
+                  const dist = Math.hypot(handX - enemy.x, handY - enemy.y);
+                  if (dist < enemy.r + 22) {
+                    ball.armState = "grabbing";
+                    ball.armStateUntil = simTime + balance.arm.grabDuration;
+                    
+                    const pad = 18;
+                    const distLeft = ball.x - pad;
+                    const distRight = ARENA_SIZE - pad - ball.x;
+                    const distTop = ball.y - pad;
+                    const distBottom = ARENA_SIZE - pad - ball.y;
+                    
+                    let wallAngle = 0;
+                    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+                    if (minDist === distLeft) {
+                      wallAngle = Math.PI;
+                    } else if (minDist === distRight) {
+                      wallAngle = 0;
+                    } else if (minDist === distTop) {
+                      wallAngle = -Math.PI / 2;
+                    } else {
+                      wallAngle = Math.PI / 2;
+                    }
+                    ball.armBaseAngle = wallAngle;
+                    
+                    ball.armDirection = 1;
+                    ball.nextShotAt = simTime + balance.arm.cooldown;
+                  }
+                }
+              } else if (ball.armState === "grabbing") {
+                const elapsed = simTime - (ball.armStateUntil - balance.arm.grabDuration);
+                const swayAngle = Math.sin(elapsed * 0.012) * 1.3;
+                ball.armAngle = ball.armBaseAngle + swayAngle;
+                
+                const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
+                const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
+                
+                const pad = 18;
+                const targetX = clamp(handX, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
+                const targetY = clamp(handY, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
+                
+                enemy.x = targetX;
+                enemy.y = targetY;
+                enemy.vx = 0; enemy.vy = 0;
+                
+                const corners = [
+                  { x: pad + enemy.r, y: pad + enemy.r },
+                  { x: ARENA_SIZE - pad - enemy.r, y: pad + enemy.r },
+                  { x: pad + enemy.r, y: ARENA_SIZE - pad - enemy.r },
+                  { x: ARENA_SIZE - pad - enemy.r, y: ARENA_SIZE - pad - enemy.r }
+                ];
+                const isNearCorner = corners.some(c => Math.hypot(enemy.x - c.x, enemy.y - c.y) < 32);
+                if (isNearCorner) {
+                  localApplyDamage(enemy, balance.arm.slamDamage, `${ball.id}-arm-corner`, 500);
+                }
+                
+                if (simTime >= ball.armStateUntil) {
+                  ball.armState = "idle";
+                  const swingDirSign = Math.cos(elapsed * 0.012) >= 0 ? 1 : -1;
+                  const launchAngle = ball.armAngle + (Math.PI / 2) * swingDirSign;
+                  const launchForce = 520;
+                  enemy.vx = Math.cos(launchAngle) * launchForce;
+                  enemy.vy = Math.sin(launchAngle) * launchForce;
+                }
+              }
+            }
+
+            // Chess Ball Physics in Tournament
+            if (ball.type === "chess") {
+              if (ball.chessState === "idle") {
+                if (ball.nextShotAt <= simTime) {
+                  ball.chessState = "movingToCenter";
+                }
+              } else if (ball.chessState === "movingToCenter") {
+                const cx = ARENA_SIZE / 2;
+                const cy = ARENA_SIZE / 2;
+                const dx = cx - ball.x;
+                const dy = cy - ball.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < 10) {
+                  ball.x = cx;
+                  ball.y = cy;
+                  ball.vx = 0;
+                  ball.vy = 0;
+                  ball.chessState = "activeCrown";
+                  ball.chessTimer = simTime + balance.chess.crownDuration;
+                  ball.chessScale = 1.0;
+                  
+                  const crowns = ["knight", "bishop", "rook"];
+                  ball.chessCrown = crowns[Math.floor(Math.random() * crowns.length)];
+                } else {
+                  const angle = Math.atan2(dy, dx);
+                  ball.vx = Math.cos(angle) * balance.chess.centerSpeed;
+                  ball.vy = Math.sin(angle) * balance.chess.centerSpeed;
+                }
+              } else if (ball.chessState === "activeCrown") {
+                ball.x = ARENA_SIZE / 2;
+                ball.y = ARENA_SIZE / 2;
+                ball.vx = 0;
+                ball.vy = 0;
+
+                const duration = balance.chess.crownDuration;
+                const timeLeft = ball.chessTimer - simTime;
+                const elapsed = duration - timeLeft;
+                const progress = clamp(elapsed / duration, 0, 1);
+
+                if (ball.chessCrown === "knight") {
+                  ball.chessScale = 1.0 + 1.6 * Math.abs(Math.sin(progress * Math.PI * 2));
+                } else if (ball.chessCrown === "bishop") {
+                  ball.chessScale = 1.0 + 1.8 * Math.sin(progress * Math.PI);
+                } else if (ball.chessCrown === "rook") {
+                  if (progress >= 0.25 && progress <= 0.75) {
+                    ball.chessScale = 3.0;
+                  } else {
+                    ball.chessScale = 1.0;
+                  }
+                } else {
+                  ball.chessScale = 1.0;
+                }
+
+
+
+                if (simTime >= ball.chessTimer) {
+                  ball.chessState = "attacking";
+                  ball.chessScale = 1.0;
+                  ball.chessWaypointIndex = 0;
+                  
+                  const cx = ARENA_SIZE / 2;
+                  const cy = ARENA_SIZE / 2;
+                  const pad = 18 + ball.r;
+                  
+                  if (ball.chessCrown === "bishop") {
+                    ball.chessAttackWaypoints = [
+                      { x: pad, y: pad },
+                      { x: ARENA_SIZE - pad, y: ARENA_SIZE - pad },
+                      { x: cx, y: cy },
+                      { x: ARENA_SIZE - pad, y: pad },
+                      { x: pad, y: ARENA_SIZE - pad },
+                      { x: cx, y: cy }
+                    ];
+                  } else if (ball.chessCrown === "rook") {
+                    ball.chessAttackWaypoints = [
+                      { x: pad, y: cy },
+                      { x: ARENA_SIZE - pad, y: cy },
+                      { x: cx, y: cy },
+                      { x: cx, y: pad },
+                      { x: cx, y: ARENA_SIZE - pad },
+                      { x: cx, y: cy }
+                    ];
+                  } else { // knight
+                    ball.chessAttackWaypoints = [
+                      { x: cx, y: cy - 160 }, { x: cx - 80, y: cy - 160 }, { x: cx, y: cy },
+                      { x: cx, y: cy - 160 }, { x: cx + 80, y: cy - 160 }, { x: cx, y: cy },
+                      { x: cx, y: cy + 160 }, { x: cx - 80, y: cy + 160 }, { x: cx, y: cy },
+                      { x: cx, y: cy + 160 }, { x: cx + 80, y: cy + 160 }, { x: cx, y: cy }
+                    ];
+                  }
+                }
+              } else if (ball.chessState === "attacking") {
+                const waypoints = ball.chessAttackWaypoints;
+                const idx = ball.chessWaypointIndex;
+                if (idx < waypoints.length) {
+                  const wp = waypoints[idx];
+                  const dx = wp.x - ball.x;
+                  const dy = wp.y - ball.y;
+                  const dist = Math.hypot(dx, dy);
+                  const speed = balance.chess.centerSpeed * 4;
+                  
+                  if (dist < 12) {
+                    ball.x = wp.x;
+                    ball.y = wp.y;
+                    ball.chessWaypointIndex++;
+                    ball.vx = 0;
+                    ball.vy = 0;
+                  } else {
+                    const angle = Math.atan2(dy, dx);
+                    ball.vx = Math.cos(angle) * speed;
+                    ball.vy = Math.sin(angle) * speed;
+                  }
+                  
+                  const distTarget = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                  if (distTarget < ball.r + enemy.r + 5) {
+                    localApplyDamage(enemy, balance.chess.damage, `${ball.id}-chess-attack`, balance.chess.tickCooldown);
+                  }
+                } else {
+                  ball.chessState = "idle";
+                  ball.chessCrown = null;
+                  ball.chessScale = 1.0;
+                  
+                  const angle = Math.random() * Math.PI * 2;
+                  const launchForce = 350;
+                  ball.vx = Math.cos(angle) * launchForce;
+                  ball.vy = Math.sin(angle) * launchForce;
+                  ball.nextShotAt = simTime + balance.chess.cooldown;
+                }
+              }
+            }
+
             if (ball.type === "spore" && ball.nextSporeAt <= simTime) {
               for (let i = 0; i < 5; i++) {
                 const rx = clamp(ball.x + (Math.random() - 0.5) * 280, 120, ARENA_SIZE - 120);
@@ -1052,11 +1300,70 @@ export default function App() {
 
               const dist = linePointDist(ball.x, ball.y, str.x1, str.y1, str.x2, str.y2);
               if (dist < ball.r) {
-                localApplyDamage(ball, balance.stringWeb.stringDamage, `${ball.id}-string-${str.createdTime}`, 500);
+                if (!str.damagedIds) str.damagedIds = {};
+                if (str.damagedIds[ball.id]) return;
+                str.damagedIds[ball.id] = true;
+                localApplyDamage(ball, balance.stringWeb.stringDamage, `${ball.id}-string-${str.createdTime}`, 9999999);
               }
             });
 
             return true;
+          });
+
+          // Headless portal projectile updates
+          localPortalProjectiles = localPortalProjectiles.filter((proj) => {
+            proj.x += proj.vx * dt;
+            proj.y += proj.vy * dt;
+            const pad = 18;
+            let hit = false;
+            let hitX = proj.x, hitY = proj.y;
+            let wallSide = null;
+            if (proj.x < pad) { hit = true; hitX = pad; wallSide = "left"; }
+            else if (proj.x > ARENA_SIZE - pad) { hit = true; hitX = ARENA_SIZE - pad; wallSide = "right"; }
+            else if (proj.y < pad) { hit = true; hitY = pad; wallSide = "top"; }
+            else if (proj.y > ARENA_SIZE - pad) { hit = true; hitY = ARENA_SIZE - pad; wallSide = "bottom"; }
+            
+            if (hit) {
+              const ownerPortals = localPortals.filter(p => p.ownerId === proj.ownerId);
+              let portalType = "A";
+              if (ownerPortals.length === 1) {
+                if (ownerPortals[0].type === "A") portalType = "B";
+              } else if (ownerPortals.length >= 2) {
+                ownerPortals.sort((a, b) => a.createdTime - b.createdTime);
+                const oldest = ownerPortals[0];
+                localPortals = localPortals.filter(p => p !== oldest);
+                portalType = oldest.type;
+              }
+              const newPortal = {
+                x: hitX, y: hitY, side: wallSide, type: portalType,
+                ownerId: proj.ownerId, createdTime: simTime, life: balance.portal.portalDuration
+              };
+              localPortals.push(newPortal);
+              return false;
+            }
+            return true;
+          });
+
+          // Headless portals expiration updates
+          localPortals = localPortals.filter((portal) => {
+            portal.life -= dt * 1000;
+            return portal.life > 0;
+          });
+
+          // Headless teleportation checks
+          balls.forEach((ball) => {
+            localPortals.forEach((p1) => {
+              const p2 = localPortals.find(other => other.ownerId === p1.ownerId && other.type !== p1.type);
+              if (!p2) return;
+              const dist = Math.hypot(ball.x - p1.x, ball.y - p1.y);
+              if (dist < ball.r + 14) {
+                if (!ball.lastTeleportTime || ball.lastTeleportTime < simTime - 500) {
+                  ball.x = p2.x;
+                  ball.y = p2.y;
+                  ball.lastTeleportTime = simTime;
+                }
+              }
+            });
           });
         }
 
@@ -1139,6 +1446,8 @@ export default function App() {
         playSound("hammerHit", 1, 150);
       } else if (keyLower.includes("string")) {
         playSound("stringHit", 1, 100);
+      } else if (keyLower.includes("arm-corner")) {
+        playSound("armSlam", 1, 150);
       } else {
         playSound("damage", 1, 100);
       }
@@ -1277,9 +1586,6 @@ export default function App() {
             };
             game.wallSpikes.push(newSpike);
             playSound("spikePlant");
-            if (game.wallSpikes.length > game.balance.wallSpike.maxSpikes) {
-              game.wallSpikes.shift();
-            }
           } else if (ball.type === "stringWeb") {
             if (!game.strings) game.strings = [];
             if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
@@ -1294,9 +1600,6 @@ export default function App() {
               };
               game.strings.push(newString);
               playSound("stringTwang");
-              if (game.strings.length > game.balance.stringWeb.maxStrings) {
-                game.strings.shift();
-              }
             }
             ball.lastBounceX = bx;
             ball.lastBounceY = by;
@@ -1315,17 +1618,35 @@ export default function App() {
       if (a.type === "vampire" || b.type === "vampire") return true;
 
       const nx = dx / dist, ny = dy / dist, overlap = minDist - dist;
-      a.x -= (overlap / 2) * nx; a.y -= (overlap / 2) * ny;
-      b.x += (overlap / 2) * nx; b.y += (overlap / 2) * ny;
+      
+      const aAnchored = a.type === "chess" && (a.chessState === "activeCrown" || a.chessState === "movingToCenter" || a.chessState === "attacking");
+      const bAnchored = b.type === "chess" && (b.chessState === "activeCrown" || b.chessState === "movingToCenter" || b.chessState === "attacking");
+      
+      if (aAnchored) {
+        b.x += overlap * nx; b.y += overlap * ny;
+      } else if (bAnchored) {
+        a.x -= overlap * nx; a.y -= overlap * ny;
+      } else {
+        a.x -= (overlap / 2) * nx; a.y -= (overlap / 2) * ny;
+        b.x += (overlap / 2) * nx; b.y += (overlap / 2) * ny;
+      }
 
       const tx = -ny, ty = nx;
       const dpTanA = a.vx * tx + a.vy * ty, dpTanB = b.vx * tx + b.vy * ty;
       const dpNormA = a.vx * nx + a.vy * ny, dpNormB = b.vx * nx + b.vy * ny;
-      const mA = (dpNormA * (a.mass - b.mass) + 2 * b.mass * dpNormB) / (a.mass + b.mass);
-      const mB = (dpNormB * (b.mass - a.mass) + 2 * a.mass * dpNormA) / (a.mass + b.mass);
-
-      a.vx = tx * dpTanA + nx * mA; a.vy = ty * dpTanA + ny * mA;
-      b.vx = tx * dpTanB + nx * mB; b.vy = ty * dpTanB + ny * mB;
+      
+      if (aAnchored) {
+        b.vx = tx * dpTanB - nx * dpNormB;
+        b.vy = ty * dpTanB - ny * dpNormB;
+      } else if (bAnchored) {
+        a.vx = tx * dpTanA - nx * dpNormA;
+        a.vy = ty * dpTanA - ny * dpNormA;
+      } else {
+        const mA = (dpNormA * (a.mass - b.mass) + 2 * b.mass * dpNormB) / (a.mass + b.mass);
+        const mB = (dpNormB * (b.mass - a.mass) + 2 * a.mass * dpNormA) / (a.mass + b.mass);
+        a.vx = tx * dpTanA + nx * mA; a.vy = ty * dpTanA + ny * mA;
+        b.vx = tx * dpTanB + nx * mB; b.vy = ty * dpTanB + ny * mB;
+      }
       return true;
     };
 
@@ -1391,6 +1712,231 @@ export default function App() {
 
         playSound("vampireDrain", 0.6, 50);
         vampire.nextDrainAt = currentTime + game.balance.vampire.tickCooldown;
+      }
+    };
+
+    const updateArm = (armBall, target, currentTime, stepDt) => {
+      const bal = game.balance;
+      const grabRange = bal.arm.grabRange;
+
+      if (armBall.armState === "idle") {
+        armBall.armAngle = (armBall.armAngle || 0) + bal.arm.swingSpeed;
+        if (armBall.nextShotAt <= currentTime) {
+          const handX = armBall.x + Math.cos(armBall.armAngle) * grabRange;
+          const handY = armBall.y + Math.sin(armBall.armAngle) * grabRange;
+          const dist = Math.hypot(handX - target.x, handY - target.y);
+          if (dist < target.r + 22) {
+            armBall.armState = "grabbing";
+            armBall.armStateUntil = currentTime + bal.arm.grabDuration;
+            
+            const pad = 18;
+            const distLeft = armBall.x - pad;
+            const distRight = game.width - pad - armBall.x;
+            const distTop = armBall.y - pad;
+            const distBottom = game.height - pad - armBall.y;
+            
+            let wallAngle = 0;
+            const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+            if (minDist === distLeft) {
+              wallAngle = Math.PI;
+            } else if (minDist === distRight) {
+              wallAngle = 0;
+            } else if (minDist === distTop) {
+              wallAngle = -Math.PI / 2;
+            } else {
+              wallAngle = Math.PI / 2;
+            }
+            armBall.armBaseAngle = wallAngle;
+            
+            armBall.armDirection = 1;
+            
+            if (armBall.side === "left") game.stats.left.totalShots++;
+            else game.stats.right.totalShots++;
+            
+            armBall.nextShotAt = currentTime + bal.arm.cooldown;
+            playSound("armGrab");
+          }
+        }
+      } else if (armBall.armState === "grabbing") {
+        const elapsed = currentTime - (armBall.armStateUntil - bal.arm.grabDuration);
+        const swayAngle = Math.sin(elapsed * 0.012) * 1.3;
+        armBall.armAngle = armBall.armBaseAngle + swayAngle;
+        
+        const handX = armBall.x + Math.cos(armBall.armAngle) * grabRange;
+        const handY = armBall.y + Math.sin(armBall.armAngle) * grabRange;
+        
+        const pad = 18;
+        const targetX = clamp(handX, pad + target.r, game.width - pad - target.r);
+        const targetY = clamp(handY, pad + target.r, game.height - pad - target.r);
+        
+        target.x = targetX;
+        target.y = targetY;
+        target.vx = 0; target.vy = 0;
+        
+        const corners = [
+          { x: pad + target.r, y: pad + target.r },
+          { x: game.width - pad - target.r, y: pad + target.r },
+          { x: pad + target.r, y: game.height - pad - target.r },
+          { x: game.width - pad - target.r, y: game.height - pad - target.r }
+        ];
+        
+        const isNearCorner = corners.some(c => Math.hypot(target.x - c.x, target.y - c.y) < 32);
+        if (isNearCorner) {
+          applyDamage(target, bal.arm.slamDamage, `${armBall.id}-arm-corner`, currentTime, 500);
+          spawnSparks(target.x, target.y, "#eab308", 12);
+          game.screenShake = Math.max(game.screenShake, 14);
+        }
+        
+        if (currentTime >= armBall.armStateUntil) {
+          armBall.armState = "idle";
+          const swingDirSign = Math.cos(elapsed * 0.012) >= 0 ? 1 : -1;
+          const launchAngle = armBall.armAngle + (Math.PI / 2) * swingDirSign;
+          const launchForce = 520;
+          target.vx = Math.cos(launchAngle) * launchForce;
+          target.vy = Math.sin(launchAngle) * launchForce;
+          spawnDust(target.x, target.y, 10);
+        }
+      }
+    };
+
+    const updateChess = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance || BALANCE;
+      const chessBal = bal.chess || BALANCE.chess;
+
+      if (ball.chessState === "idle") {
+        if (ball.nextShotAt <= currentTime) {
+          ball.chessState = "movingToCenter";
+          playSound("chessMove");
+        }
+      } else if (ball.chessState === "movingToCenter") {
+        const cx = ARENA_SIZE / 2;
+        const cy = ARENA_SIZE / 2;
+        const dx = cx - ball.x;
+        const dy = cy - ball.y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist < 10) {
+          ball.x = cx;
+          ball.y = cy;
+          ball.vx = 0;
+          ball.vy = 0;
+          ball.chessState = "activeCrown";
+          ball.chessTimer = currentTime + chessBal.crownDuration;
+          ball.chessScale = 1.0;
+          
+          const crowns = ["knight", "bishop", "rook"];
+          ball.chessCrown = crowns[Math.floor(Math.random() * crowns.length)];
+          
+          playSound("chessSlam");
+          spawnSparks(cx, cy, "#fbbf24", 15);
+        } else {
+          const angle = Math.atan2(dy, dx);
+          ball.vx = Math.cos(angle) * chessBal.centerSpeed;
+          ball.vy = Math.sin(angle) * chessBal.centerSpeed;
+        }
+      } else if (ball.chessState === "activeCrown") {
+        ball.x = ARENA_SIZE / 2;
+        ball.y = ARENA_SIZE / 2;
+        ball.vx = 0;
+        ball.vy = 0;
+
+        const duration = chessBal.crownDuration;
+        const timeLeft = ball.chessTimer - currentTime;
+        const elapsed = duration - timeLeft;
+        const progress = clamp(elapsed / duration, 0, 1);
+
+        if (ball.chessCrown === "knight") {
+          ball.chessScale = 1.0 + 1.6 * Math.abs(Math.sin(progress * Math.PI * 2));
+        } else if (ball.chessCrown === "bishop") {
+          ball.chessScale = 1.0 + 1.8 * Math.sin(progress * Math.PI);
+        } else if (ball.chessCrown === "rook") {
+          if (progress >= 0.25 && progress <= 0.75) {
+            ball.chessScale = 3.0;
+          } else {
+            ball.chessScale = 1.0;
+          }
+        } else {
+          ball.chessScale = 1.0;
+        }
+
+
+
+        if (currentTime >= ball.chessTimer) {
+          ball.chessState = "attacking";
+          ball.chessScale = 1.0;
+          ball.chessWaypointIndex = 0;
+          
+          const cx = ARENA_SIZE / 2;
+          const cy = ARENA_SIZE / 2;
+          const pad = 18 + ball.r;
+          
+          if (ball.chessCrown === "bishop") {
+            ball.chessAttackWaypoints = [
+              { x: pad, y: pad },
+              { x: ARENA_SIZE - pad, y: ARENA_SIZE - pad },
+              { x: cx, y: cy },
+              { x: ARENA_SIZE - pad, y: pad },
+              { x: pad, y: ARENA_SIZE - pad },
+              { x: cx, y: cy }
+            ];
+          } else if (ball.chessCrown === "rook") {
+            ball.chessAttackWaypoints = [
+              { x: pad, y: cy },
+              { x: ARENA_SIZE - pad, y: cy },
+              { x: cx, y: cy },
+              { x: cx, y: pad },
+              { x: cx, y: ARENA_SIZE - pad },
+              { x: cx, y: cy }
+            ];
+          } else { // knight
+            ball.chessAttackWaypoints = [
+              { x: cx, y: cy - 160 }, { x: cx - 80, y: cy - 160 }, { x: cx, y: cy },
+              { x: cx, y: cy - 160 }, { x: cx + 80, y: cy - 160 }, { x: cx, y: cy },
+              { x: cx, y: cy + 160 }, { x: cx - 80, y: cy + 160 }, { x: cx, y: cy },
+              { x: cx, y: cy + 160 }, { x: cx + 80, y: cy + 160 }, { x: cx, y: cy }
+            ];
+          }
+          playSound("chessMove");
+        }
+      } else if (ball.chessState === "attacking") {
+        const waypoints = ball.chessAttackWaypoints;
+        const idx = ball.chessWaypointIndex;
+        if (idx < waypoints.length) {
+          const wp = waypoints[idx];
+          const dx = wp.x - ball.x;
+          const dy = wp.y - ball.y;
+          const dist = Math.hypot(dx, dy);
+          const speed = chessBal.centerSpeed * 4;
+          
+          if (dist < 12) {
+            ball.x = wp.x;
+            ball.y = wp.y;
+            ball.chessWaypointIndex++;
+            ball.vx = 0;
+            ball.vy = 0;
+          } else {
+            const angle = Math.atan2(dy, dx);
+            ball.vx = Math.cos(angle) * speed;
+            ball.vy = Math.sin(angle) * speed;
+          }
+          
+          const distTarget = Math.hypot(target.x - ball.x, target.y - ball.y);
+          if (distTarget < ball.r + target.r + 5) {
+            applyDamage(target, chessBal.damage, `${ball.id}-chess-attack`, currentTime, chessBal.tickCooldown);
+          }
+        } else {
+          ball.chessState = "idle";
+          ball.chessCrown = null;
+          ball.chessScale = 1.0;
+          
+          const angle = Math.random() * Math.PI * 2;
+          const launchForce = 350;
+          ball.vx = Math.cos(angle) * launchForce;
+          ball.vy = Math.sin(angle) * launchForce;
+          ball.nextShotAt = currentTime + chessBal.cooldown;
+          
+          playSound("chessMove");
+        }
       }
     };
 
@@ -2289,79 +2835,104 @@ export default function App() {
 
     const drawGunBall = (ball, currentTime) => {
       const config = BALL_TYPES.gun;
-      ctx.save(); ctx.translate(ball.x, ball.y); ctx.rotate(ball.angle);
       
-      // Draw gun barrel (black and white theme)
-      ctx.fillStyle = "#0f172a"; 
-      ctx.fillRect(ball.r - 2, -6, 28, 12);
-      ctx.strokeStyle = "#f1f5f9";
+      // Save context to draw rotated gun barrels first
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(ball.angle);
+      
+      // Dual futuristic railgun barrels
+      // Top Barrel
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(ball.r - 2, -7, 30, 5);
+      ctx.fillStyle = "#06b6d4"; // Cyan glow rail
+      ctx.fillRect(ball.r + 8, -6, 18, 3);
+
+      // Bottom Barrel
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(ball.r - 2, 2, 30, 5);
+      ctx.fillStyle = "#06b6d4"; // Cyan glow rail
+      ctx.fillRect(ball.r + 8, 3, 18, 3);
+      
+      // Gun base connector
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(ball.r - 6, -9, 8, 18);
+      ctx.strokeStyle = "#0891b2";
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(ball.r - 2, -6, 28, 12);
+      ctx.strokeRect(ball.r - 6, -9, 8, 18);
 
-      // Gun grip
-      ctx.fillStyle = "#0f172a"; 
-      ctx.fillRect(ball.r + 8, 5, 8, 14);
-      ctx.strokeRect(ball.r + 8, 5, 8, 14);
+      // Laser guide line (faint cyan)
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(ball.r + 28, 0);
+      ctx.lineTo(ball.r + 150, 0);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
+      // Muzzle flash
       if (ball.flashUntil > currentTime) {
-        ctx.fillStyle = "#fde68a"; ctx.beginPath(); ctx.moveTo(ball.r + 26, 0);
-        ctx.lineTo(ball.r + 42, -7); ctx.lineTo(ball.r + 37, 0);
-        ctx.lineTo(ball.r + 42, 7); ctx.closePath(); ctx.fill();
+        const flashGrad = ctx.createRadialGradient(ball.r + 28, 0, 2, ball.r + 40, 0, 15);
+        flashGrad.addColorStop(0, "#ffffff");
+        flashGrad.addColorStop(0.3, "#22d3ee");
+        flashGrad.addColorStop(1, "rgba(6, 182, 212, 0)");
+        ctx.fillStyle = flashGrad;
+        ctx.beginPath();
+        ctx.arc(ball.r + 32, 0, 16, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
 
-      // Ball shell
-      ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+      // Ball shell - Radial Gradient for carbon/metallic feel
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+      const metalGrad = ctx.createRadialGradient(
+        ball.x - ball.r * 0.2, ball.y - ball.r * 0.2, 2,
+        ball.x, ball.y, ball.r
+      );
+      metalGrad.addColorStop(0, "#475569");
+      metalGrad.addColorStop(0.5, "#1e293b");
+      metalGrad.addColorStop(1, "#0f172a");
+      ctx.fillStyle = metalGrad;
+      ctx.fill();
 
-      // Rotating cylinder slots (white outline detail)
-      ctx.save(); ctx.translate(ball.x, ball.y); ctx.rotate(ball.angle);
-      ctx.strokeStyle = "#f1f5f9";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(4, -4, 20, 8);
+      // Cyber outer border
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = "#06b6d4";
+      ctx.stroke();
 
-      // Draw Skull Symbol in the center
-      ctx.fillStyle = "#f8fafc"; // White skull
-      ctx.strokeStyle = "#0f172a"; // Black outline
-      ctx.lineWidth = 1;
+      // Outer targeting scope ticks
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(ball.angle);
       
-      // Skull dome
+      // Thin cyan reticle circle
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.85)";
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.arc(0, -3, 8, Math.PI, 0);
-      ctx.lineTo(7, 4);
-      ctx.lineTo(4.5, 4);
-      ctx.lineTo(4.5, 8);
-      ctx.lineTo(-4.5, 8);
-      ctx.lineTo(-4.5, 4);
-      ctx.lineTo(-7, 4);
-      ctx.closePath();
-      ctx.fill();
+      ctx.arc(0, 0, ball.r * 0.65, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Skull eyes
-      ctx.fillStyle = "#0f172a";
+      // Crosshairs
+      ctx.strokeStyle = "#06b6d4";
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(-3, -2, 2, 0, Math.PI * 2);
-      ctx.arc(3, -2, 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Skull nose
-      ctx.beginPath();
-      ctx.moveTo(0, 0.5);
-      ctx.lineTo(-1, 2);
-      ctx.lineTo(1, 2);
-      ctx.closePath();
-      ctx.fill();
-
-      // Skull teeth vertical slits
-      ctx.strokeStyle = "#0f172a";
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(-2, 4); ctx.lineTo(-2, 7.5);
-      ctx.moveTo(0, 4); ctx.lineTo(0, 7.5);
-      ctx.moveTo(2, 4); ctx.lineTo(2, 7.5);
+      // Top tick
+      ctx.moveTo(0, -ball.r * 0.65); ctx.lineTo(0, -ball.r * 0.45);
+      // Bottom tick
+      ctx.moveTo(0, ball.r * 0.65); ctx.lineTo(0, ball.r * 0.45);
+      // Left tick
+      ctx.moveTo(-ball.r * 0.65, 0); ctx.lineTo(-ball.r * 0.45, 0);
+      // Right tick
+      ctx.moveTo(ball.r * 0.65, 0); ctx.lineTo(ball.r * 0.45, 0);
       ctx.stroke();
+
+      // Center glowing dot
+      ctx.fillStyle = "#22d3ee";
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+      ctx.fill();
 
       ctx.restore();
       drawHealthInsideBall(ball);
@@ -2384,8 +2955,8 @@ export default function App() {
     const drawLaserBall = (ball, target) => {
       const config = BALL_TYPES.laser;
       ctx.save(); ctx.translate(ball.x, ball.y); ctx.rotate(ball.laserTargetAngle);
-      ctx.fillStyle = "#047857"; ctx.fillRect(ball.r - 6, -10, 16, 20);
-      ctx.fillStyle = "#34d399"; ctx.fillRect(ball.r + 4, -7, 6, 14);
+      ctx.fillStyle = "#b91c1c"; ctx.fillRect(ball.r - 6, -10, 16, 20);
+      ctx.fillStyle = "#facc15"; ctx.fillRect(ball.r + 4, -7, 6, 14);
       ctx.restore();
 
       ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
@@ -2398,7 +2969,7 @@ export default function App() {
         ctx.save(); ctx.strokeStyle = `rgba(239, 68, 68, ${progress * 0.6})`; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(ball.x + Math.cos(ball.laserTargetAngle) * ball.r, ball.y + Math.sin(ball.laserTargetAngle) * ball.r);
         ctx.lineTo(target.x, target.y); ctx.stroke();
-        ctx.strokeStyle = "#34d399"; ctx.lineWidth = 2; ctx.beginPath();
+        ctx.strokeStyle = "#facc15"; ctx.lineWidth = 2; ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 20 * (1 - progress), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       }
 
@@ -2406,7 +2977,7 @@ export default function App() {
         const mX = ball.x + Math.cos(ball.laserTargetAngle) * ball.r;
         const mY = ball.y + Math.sin(ball.laserTargetAngle) * ball.r;
         ctx.save();
-        ctx.shadowColor = "#10b981";
+        ctx.shadowColor = "#ef4444";
         ctx.shadowBlur = 15;
         const tracePath = () => {
           ctx.beginPath();
@@ -2426,7 +2997,7 @@ export default function App() {
         ctx.lineWidth = game.balance.laser.beamWidth / 2;
         tracePath();
         ctx.stroke();
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.45)";
         ctx.lineWidth = game.balance.laser.beamWidth;
         tracePath();
         ctx.stroke();
@@ -2741,57 +3312,42 @@ export default function App() {
       ctx.stroke();
       ctx.setLineDash([]);
       
-      // Hammer head
+      // Hammer head (red, yellow, blue gradient)
       const headGrad = ctx.createLinearGradient(ball.r + 22, -14, ball.r + 42, 14);
-      headGrad.addColorStop(0, "#e5e7eb");
-      headGrad.addColorStop(0.5, "#94a3b8");
-      headGrad.addColorStop(1, "#f8fafc");
+      headGrad.addColorStop(0, "#ef4444");
+      headGrad.addColorStop(0.5, "#facc15");
+      headGrad.addColorStop(1, "#1d4ed8");
       ctx.fillStyle = headGrad;
-      ctx.strokeStyle = "#38bdf8";
+      ctx.strokeStyle = "#1d4ed8";
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.rect(ball.r + 22, -14, 20, 28);
       ctx.fill();
       ctx.stroke();
-      
-      // Lightning rune on hammer head
-      ctx.strokeStyle = "#facc15";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(ball.r + 34, -11);
-      ctx.lineTo(ball.r + 29, -1);
-      ctx.lineTo(ball.r + 35, -1);
-      ctx.lineTo(ball.r + 30, 11);
-      ctx.stroke();
 
       ctx.restore();
 
-      // Main ball
+      // Main ball: flat outer red, inner blue, center yellow (no gradient)
+      // Outer Red
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.4, 4, 0, 0, ball.r);
-      bodyGrad.addColorStop(0, "#bfdbfe");
-      bodyGrad.addColorStop(0.35, config.color);
-      bodyGrad.addColorStop(1, "#0f172a");
-      ctx.fillStyle = bodyGrad;
+      ctx.fillStyle = "#ef4444";
       ctx.fill();
       ctx.lineWidth = 4;
       ctx.strokeStyle = config.stroke;
       ctx.stroke();
 
-      // Lightning crest
-      ctx.strokeStyle = "#facc15";
-      ctx.lineWidth = 3;
-      ctx.lineJoin = "round";
+      // Inner Blue
       ctx.beginPath();
-      ctx.moveTo(-6, -18);
-      ctx.lineTo(-13, -2);
-      ctx.lineTo(-3, -2);
-      ctx.lineTo(-10, 17);
-      ctx.lineTo(11, -7);
-      ctx.lineTo(1, -7);
-      ctx.lineTo(8, -18);
-      ctx.stroke();
+      ctx.arc(0, 0, ball.r * 0.65, 0, Math.PI * 2);
+      ctx.fillStyle = "#1d4ed8";
+      ctx.fill();
+
+      // Center Yellow
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = "#facc15";
+      ctx.fill();
 
       ctx.strokeStyle = "rgba(147, 197, 253, 0.75)";
       ctx.lineWidth = 2;
@@ -2816,6 +3372,346 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawArmBall = (ball) => {
+      const config = BALL_TYPES.arm;
+      const bal = game.balance;
+      const L = bal.arm.grabRange;
+      
+      const armAngle = ball.armAngle || 0;
+      const handX = ball.x + Math.cos(armAngle) * L;
+      const handY = ball.y + Math.sin(armAngle) * L;
+
+      // Draw the arm line / segments
+      ctx.save();
+      
+      // Compute joint bend offset
+      const bendAmp = ball.armState === "grabbing" ? 14 : 6;
+      const bendFreq = ball.armState === "grabbing" ? 0.03 : 0.01;
+      const bendOffset = Math.sin(game.simTime * bendFreq) * bendAmp;
+      
+      const midX = ball.x + Math.cos(armAngle) * L * 0.5;
+      const midY = ball.y + Math.sin(armAngle) * L * 0.5;
+      const perpAngle = armAngle + Math.PI / 2;
+      const jointX = midX + Math.cos(perpAngle) * bendOffset;
+      const jointY = midY + Math.sin(perpAngle) * bendOffset;
+
+      // Draw shoulder plate/joint connection
+      ctx.strokeStyle = "#451a03";
+      ctx.lineWidth = 10;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(ball.x, ball.y);
+      ctx.lineTo(jointX, jointY);
+      ctx.stroke();
+
+      ctx.strokeStyle = config.stroke;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(ball.x, ball.y);
+      ctx.lineTo(jointX, jointY);
+      ctx.stroke();
+
+      // Draw forearm
+      ctx.strokeStyle = "#451a03";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(jointX, jointY);
+      ctx.lineTo(handX, handY);
+      ctx.stroke();
+
+      ctx.strokeStyle = config.stroke;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(jointX, jointY);
+      ctx.lineTo(handX, handY);
+      ctx.stroke();
+
+      // Joint bolt (gear)
+      ctx.fillStyle = "#eab308";
+      ctx.strokeStyle = "#451a03";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(jointX, jointY, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Draw inner rivet on joint bolt
+      ctx.fillStyle = "#fef08a";
+      ctx.beginPath();
+      ctx.arc(jointX, jointY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw the grabbing Claw/Hand
+      ctx.save();
+      ctx.translate(handX, handY);
+      ctx.rotate(armAngle);
+      
+      // Claw finger opening angle
+      let fingerAngle = 0.5;
+      if (ball.armState === "grabbing") {
+        fingerAngle = 0.15 + Math.sin(game.simTime * 0.05) * 0.05; // clamp/vibrate claw
+      } else {
+        fingerAngle = 0.4 + Math.sin(game.simTime * 0.015) * 0.15; // idle breathing claw
+      }
+
+      ctx.strokeStyle = "#451a03";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.fillStyle = "#eab308";
+
+      // Finger 1 (top/left)
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(Math.cos(fingerAngle) * 15, Math.sin(fingerAngle) * 15, Math.cos(fingerAngle) * 20 - Math.sin(fingerAngle) * 5, Math.sin(fingerAngle) * 20 + Math.cos(fingerAngle) * 5);
+      ctx.stroke();
+
+      // Finger 2 (bottom/right)
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(Math.cos(-fingerAngle) * 15, Math.sin(-fingerAngle) * 15, Math.cos(-fingerAngle) * 20 - Math.sin(-fingerAngle) * -5, Math.sin(-fingerAngle) * 20 + Math.cos(-fingerAngle) * -5);
+      ctx.stroke();
+
+      // Wrist joint
+      ctx.fillStyle = "#78350f";
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+      ctx.restore();
+
+      // Draw main body ball
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.3, 3, 0, 0, ball.r);
+      grad.addColorStop(0, "#fef08a");
+      grad.addColorStop(0.4, config.color);
+      grad.addColorStop(1, "#451a03");
+      ctx.fillStyle = grad;
+      ctx.fill();
+      
+      ctx.strokeStyle = config.stroke;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Steampunk plate decoration on the shell
+      ctx.strokeStyle = "rgba(254, 240, 138, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.65, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Rivets along the inner plate
+      ctx.fillStyle = "rgba(254, 240, 138, 0.7)";
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * ball.r * 0.65, Math.sin(a) * ball.r * 0.65, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawLightning = (x1, y1, x2, y2, color, thickness) => {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      
+      const dist = Math.hypot(x2 - x1, y2 - y1);
+      const segments = Math.max(5, Math.floor(dist / 20));
+      const dx = (x2 - x1) / segments;
+      const dy = (y2 - y1) / segments;
+      
+      const px = -dy;
+      const py = dx;
+      const hyp = Math.hypot(px, py);
+      
+      for (let i = 1; i < segments; i++) {
+        const cx = x1 + dx * i;
+        const cy = y1 + dy * i;
+        const offset = (Math.random() - 0.5) * Math.min(25, dist * 0.15);
+        ctx.lineTo(cx + (px * offset) / (hyp || 1), cy + (py * offset) / (hyp || 1));
+      }
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    const drawChessBall = (ball) => {
+      const drawKnightCrown = (size) => {
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.4, size * 0.5);
+        ctx.lineTo(-size * 0.4, -size * 0.2);
+        ctx.quadraticCurveTo(-size * 0.4, -size * 0.6, 0, -size * 0.6);
+        ctx.quadraticCurveTo(size * 0.4, -size * 0.6, size * 0.3, -size * 0.2);
+        ctx.lineTo(size * 0.4, -size * 0.1);
+        ctx.lineTo(size * 0.1, -size * 0.1);
+        ctx.lineTo(size * 0.3, size * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(-size * 0.05, -size * 0.35, size * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      const drawBishopCrown = (size) => {
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.3, size * 0.5);
+        ctx.quadraticCurveTo(-size * 0.4, -size * 0.1, -size * 0.1, -size * 0.5);
+        ctx.lineTo(0, -size * 0.4);
+        ctx.lineTo(size * 0.1, -size * 0.5);
+        ctx.quadraticCurveTo(size * 0.4, -size * 0.1, size * 0.3, size * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = size * 0.09;
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.15);
+        ctx.lineTo(0, size * 0.25);
+        ctx.moveTo(-size * 0.12, size * 0.02);
+        ctx.lineTo(size * 0.12, size * 0.02);
+        ctx.stroke();
+      };
+
+      const drawRookCrown = (size) => {
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.3, size * 0.5);
+        ctx.lineTo(-size * 0.3, -size * 0.3);
+        ctx.lineTo(-size * 0.4, -size * 0.3);
+        ctx.lineTo(-size * 0.4, -size * 0.5);
+        ctx.lineTo(-size * 0.2, -size * 0.5);
+        ctx.lineTo(-size * 0.2, -size * 0.35);
+        ctx.lineTo(-size * 0.1, -size * 0.35);
+        ctx.lineTo(-size * 0.1, -size * 0.5);
+        ctx.lineTo(size * 0.1, -size * 0.5);
+        ctx.lineTo(size * 0.1, -size * 0.35);
+        ctx.lineTo(size * 0.2, -size * 0.35);
+        ctx.lineTo(size * 0.2, -size * 0.5);
+        ctx.lineTo(size * 0.4, -size * 0.5);
+        ctx.lineTo(size * 0.4, -size * 0.3);
+        ctx.lineTo(size * 0.3, -size * 0.3);
+        ctx.lineTo(size * 0.3, size * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      };
+
+      if (ball.chessState === "activeCrown") {
+        ctx.save();
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.45)";
+        ctx.fillStyle = "rgba(251, 191, 36, 0.04)";
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.arc(ARENA_SIZE / 2, ARENA_SIZE / 2, ball.r * ball.chessScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw attack path indicators (faint dashed red lines)
+        ctx.save();
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.35)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 6]);
+        
+        const cx = ARENA_SIZE / 2;
+        const cy = ARENA_SIZE / 2;
+        const pad = 18 + ball.r;
+
+        if (ball.chessCrown === "bishop") {
+          ctx.beginPath();
+          ctx.moveTo(pad, pad);
+          ctx.lineTo(ARENA_SIZE - pad, ARENA_SIZE - pad);
+          ctx.moveTo(ARENA_SIZE - pad, pad);
+          ctx.lineTo(pad, ARENA_SIZE - pad);
+          ctx.stroke();
+        } else if (ball.chessCrown === "rook") {
+          ctx.beginPath();
+          ctx.moveTo(pad, cy);
+          ctx.lineTo(ARENA_SIZE - pad, cy);
+          ctx.moveTo(cx, pad);
+          ctx.lineTo(cx, ARENA_SIZE - pad);
+          ctx.stroke();
+        } else if (ball.chessCrown === "knight") {
+          ctx.beginPath();
+          ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 160); ctx.lineTo(cx - 80, cy - 160);
+          ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 160); ctx.lineTo(cx + 80, cy - 160);
+          ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + 160); ctx.lineTo(cx - 80, cy + 160);
+          ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + 160); ctx.lineTo(cx + 80, cy + 160);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.clip();
+      
+      const sqSize = ball.r / 2;
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(-ball.r, -ball.r, ball.r * 2, ball.r * 2);
+      
+      ctx.fillStyle = "#f8fafc";
+      for (let i = -2; i < 2; i++) {
+        for (let j = -2; j < 2; j++) {
+          if ((i + j) % 2 === 0) {
+            ctx.fillRect(i * sqSize, j * sqSize, sqSize, sqSize);
+          }
+        }
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.strokeStyle = "#fbbf24";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      
+      if (ball.chessCrown) {
+        ctx.fillStyle = "#fbbf24";
+        ctx.strokeStyle = "#78350f";
+        ctx.lineWidth = 2.5;
+        
+        ctx.save();
+        const baseSize = ball.r * 0.7;
+        ctx.scale(ball.chessScale, ball.chessScale);
+        
+        if (ball.chessCrown === "knight") {
+          drawKnightCrown(baseSize);
+        } else if (ball.chessCrown === "bishop") {
+          drawBishopCrown(baseSize);
+        } else if (ball.chessCrown === "rook") {
+          drawRookCrown(baseSize);
+        }
+        ctx.restore();
+      }
+      
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawBall = (ball, currentTime) => {
       if (ball.type === "knife") drawKnifeBall(ball);
       else if (ball.type === "spike") drawSpikeBall(ball);
@@ -2836,6 +3732,8 @@ export default function App() {
       else if (ball.type === "hammer") drawHammerBall(ball);
       else if (ball.type === "wallSpike") drawWallSpikeBall(ball);
       else if (ball.type === "stringWeb") drawStringWebBall(ball);
+      else if (ball.type === "arm") drawArmBall(ball);
+      else if (ball.type === "chess") drawChessBall(ball);
     };
 
     const drawBallTrail = (ball) => {
@@ -3049,7 +3947,10 @@ export default function App() {
 
           const dist = linePointDist(ball.x, ball.y, str.x1, str.y1, str.x2, str.y2);
           if (dist < ball.r) {
-            applyDamage(ball, game.balance.stringWeb.stringDamage, `${ball.id}-string-${str.createdTime}`, game.simTime, 500);
+            if (!str.damagedIds) str.damagedIds = {};
+            if (str.damagedIds[ball.id]) return;
+            str.damagedIds[ball.id] = true;
+            applyDamage(ball, game.balance.stringWeb.stringDamage, `${ball.id}-string-${str.createdTime}`, game.simTime, 9999999);
             
             const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
             const dot = A * C + B * D, lenSq = C * C + D * D;
@@ -3236,8 +4137,7 @@ export default function App() {
         ctx.save();
         ctx.translate(spike.x, spike.y);
 
-        const alpha = Math.max(0, spike.life / 1000);
-        ctx.globalAlpha = Math.min(1.0, alpha);
+        ctx.globalAlpha = 1.0;
 
         ctx.fillStyle = spike.ownerSide === "left" ? "#f59e0b" : "#ea580c";
         ctx.strokeStyle = "#ffedd5";
@@ -3408,9 +4308,10 @@ export default function App() {
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
-            const slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
+            const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > game.simTime && b.id !== ball.id);
+            let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
 
-            if (!isPulling && !isWebbedTarget && !isLatchedSelf && !isChargingHammer) {
+            if (!isPulling && !isWebbedTarget && !isLatchedSelf && !isChargingHammer && !isArmGrabbed) {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
               handleWallBounce(ball);
             }
@@ -3490,6 +4391,8 @@ export default function App() {
                 if (ball.type === "bomber") updateBomber(ball, target, game.simTime);
                 if (ball.type === "spore") updateSpore(ball, target, game.simTime);
                 if (ball.type === "hammer") updateHammer(ball, target, game.simTime);
+                if (ball.type === "arm") updateArm(ball, target, game.simTime, stepDt);
+                if (ball.type === "chess") updateChess(ball, target, game.simTime, stepDt);
                 
                 if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
               }
@@ -3731,6 +4634,24 @@ export default function App() {
               {renderSlider("Max Strings", "stringWeb", "maxStrings", 2, 16)}
             </>
           )}
+          {type === "arm" && (
+            <>
+              {renderSlider("Slam Damage", "arm", "slamDamage", 5, 50)}
+              {renderSlider("Grab Range", "arm", "grabRange", 40, 200, 5, "px")}
+              {renderSlider("Grab Duration", "arm", "grabDuration", 500, 3000, 100, "ms")}
+              {renderSlider("Swing Speed", "arm", "swingSpeed", 0.02, 0.2, 0.01)}
+              {renderSlider("Cooldown", "arm", "cooldown", 1000, 8000, 100, "ms")}
+            </>
+          )}
+          {type === "chess" && (
+            <>
+              {renderSlider("Cooldown", "chess", "cooldown", 1000, 12000, 100, "ms")}
+              {renderSlider("Center Travel Speed", "chess", "centerSpeed", 100, 800, 10, "px/s")}
+              {renderSlider("Crown Duration", "chess", "crownDuration", 500, 6000, 100, "ms")}
+              {renderSlider("Crown Damage", "chess", "damage", 2, 40)}
+              {renderSlider("Damage Tick Rate", "chess", "tickCooldown", 100, 1500, 50, "ms")}
+            </>
+          )}
         </div>
       </div>
     );
@@ -3809,7 +4730,7 @@ export default function App() {
         <div className="flex flex-wrap items-center gap-3 bg-slate-900/40 border border-slate-900 rounded-2xl px-4 py-2.5 backdrop-blur-sm justify-center md:justify-start">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Simulation Speed:</span>
           <div className="flex gap-1.5">
-            {[0.25, 0.5, 1, 2, 4].map((speed) => (
+            {[1, 1.5, 2].map((speed) => (
               <button
                 key={speed}
                 onClick={() => { setSimulationSpeed(speed); gameRef.current.simulationSpeed = speed; }}

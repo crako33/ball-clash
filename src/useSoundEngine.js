@@ -211,6 +211,27 @@ export function useSoundEngine() {
       osc(ctx, dest, "triangle", 700, 0.15, t, 0.12, 200);
     },
 
+    // Arm Ball
+    armGrab: (ctx, dest, t) => {
+      noise(ctx, dest, 0.25, t, 0.12, 1000, 2);
+      osc(ctx, dest, "sine", 350, 0.18, t, 0.12, 180);
+    },
+    armSlam: (ctx, dest, t) => {
+      noise(ctx, dest, 0.5, t, 0.25, 400, 0.5);
+      osc(ctx, dest, "triangle", 120, 0.35, t, 0.25, 60);
+    },
+
+    // Chess Ball
+    chessMove: (ctx, dest, t) => {
+      noise(ctx, dest, 0.15, t, 0.18, 1200, 2);
+      osc(ctx, dest, "sine", 250, 0.15, t, 0.18, 500);
+    },
+    chessSlam: (ctx, dest, t) => {
+      noise(ctx, dest, 0.4, t, 0.25, 400, 0.8);
+      osc(ctx, dest, "sine", 180, 0.45, t, 0.35, 80);
+      osc(ctx, dest, "triangle", 360, 0.25, t, 0.25, 120);
+    },
+
     // Round result
     roundWin: (ctx, dest, t) => {
       [0, 0.15, 0.30, 0.5].forEach((dt, i) => {
