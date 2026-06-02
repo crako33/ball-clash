@@ -6,44 +6,44 @@ import { useSoundEngine } from "./useSoundEngine";
 const BALL_TYPES = {
   knife: {
     id: "knife",
-    name: "Knife Ball",
-    shortName: "KNIFE",
+    name: "Knifer Ball",
+    shortName: "KNIFR",
     color: "#38bdf8",
     stroke: "#bae6fd",
     radius: 30,
-    description: "Rotating knife deals close-range damage.",
+    description: "Rotating knife brawler. Secondary: Blade Throw.",
   },
   spike: {
     id: "spike",
-    name: "Spike Ball",
-    shortName: "SPIKE",
+    name: "Spiker Ball",
+    shortName: "SPIKR",
     color: "#fb7185",
     stroke: "#fecdd3",
     radius: 31,
-    description: "Spiked sides damage enemies on contact.",
+    description: "Spiked brawler. Spikes damage enemies on contact.",
   },
   gun: {
     id: "gun",
-    name: "Gun Ball",
-    shortName: "GUN",
+    name: "Gunner Ball",
+    shortName: "GUNR",
     color: "#0f172a",
     stroke: "#f1f5f9",
     radius: 30,
-    description: "Black and white skull brawler. Fires 6 shots, then reloads.",
+    description: "Skull brawler. Fires 6 shots, then reloads. Secondary: Dash.",
   },
   vampire: {
     id: "vampire",
-    name: "Vampire Ball",
+    name: "Vampirer Ball",
     shortName: "VAMP",
     color: "#f87171",
     stroke: "#fee2e2",
     radius: 30,
-    description: "Bites, sticks for 1 second, and drains HP.",
+    description: "Vampiric brawler. HP drain on latch.",
   },
   bomb: {
     id: "bomb",
-    name: "Bomb Ball",
-    shortName: "BOMB",
+    name: "Grenader Ball",
+    shortName: "GREN",
     color: "#64748b",
     stroke: "#cbd5e1",
     radius: 29,
@@ -52,20 +52,20 @@ const BALL_TYPES = {
   laser: {
     id: "laser",
     name: "Laser Ball",
-    shortName: "LASER",
+    shortName: "LASR",
     color: "#ef4444",
     stroke: "#facc15",
     radius: 30,
-    description: "Charges and fires a powerful continuous laser beam.",
+    description: "Fires continuous laser. Secondary: Sweep Laser.",
   },
   shield: {
     id: "shield",
-    name: "Shield",
-    shortName: "SHIELD",
+    name: "Shielder Ball",
+    shortName: "SHLD",
     color: "#3b82f6",
     stroke: "#ef4444",
     radius: 32,
-    description: "Throws its star-spangled shield which bounces off walls and returns.",
+    description: "Throws star-spangled shield. Secondary: Bash & Emergency Recall.",
   },
   spider: {
     id: "spider",
@@ -74,7 +74,7 @@ const BALL_TYPES = {
     color: "#ef4444",
     stroke: "#3b82f6",
     radius: 30,
-    description: "Webs enemies in place, then pulls in and bounces away three times.",
+    description: "Webs enemies, pulls them in. Secondary: Slow Web.",
   },
   bomber: {
     id: "bomber",
@@ -83,61 +83,61 @@ const BALL_TYPES = {
     color: "#facc15",
     stroke: "#78350f",
     radius: 29,
-    description: "Lays up to 3 proximity landmines that explode.",
+    description: "Lays up to 3 proximity landmines.",
   },
   spore: {
     id: "spore",
-    name: "Hydra Ball",
-    shortName: "HYDR",
+    name: "Sporer Ball",
+    shortName: "SPOR",
     color: "#020617",
     stroke: "#ef4444",
     radius: 30,
-    description: "Drops spores that grow wiggling hydras with octopus symbols.",
+    description: "Drops spores that grow wiggling hydras.",
   },
   hammer: {
     id: "hammer",
-    name: "Hammer Ball",
+    name: "Hammerer Ball",
     shortName: "HAMR",
     color: "#cbd5e1",
     stroke: "#64748b",
     radius: 30,
-    description: "Spins hammer 5 times, then charges and launches itself like a rocket.",
+    description: "Spins hammer then launches itself rocket-like.",
   },
   wallSpike: {
     id: "wallSpike",
-    name: "Wall Spike Ball",
+    name: "Wall Spiker Ball",
     shortName: "WSPK",
     color: "#ea580c",
     stroke: "#ffedd5",
     radius: 30,
-    description: "Spawns damaging spikes on walls it bounces off.",
+    description: "Spawns spikes on arena walls.",
   },
   stringWeb: {
     id: "stringWeb",
-    name: "String Web Ball",
+    name: "String Weber Ball",
     shortName: "WEB",
     color: "#d946ef",
     stroke: "#fdf4ff",
     radius: 30,
-    description: "Creates a network of laser strings that damage the opponent on contact.",
+    description: "Creates laser string nets.",
   },
   arm: {
     id: "arm",
-    name: "Arm Ball",
+    name: "Armer Ball",
     shortName: "ARM",
     color: "#020617",
     stroke: "#cbd5e1",
     radius: 31,
-    description: "Extends a giant swinging arm to grab the opponent, ragdolling them and slamming them into corners.",
+    description: "Grabs opponent, slams them into corners. Secondary: Elbow Drop.",
   },
   chess: {
     id: "chess",
-    name: "Chess Ball",
+    name: "Chesser Ball",
     shortName: "CHES",
     color: "#e2e8f0",
     stroke: "#fbbf24",
     radius: 30,
-    description: "Moves to the center to summon a random crown (Knight, Bishop, or Rook) and expands to damage the opponent.",
+    description: "Summons random chess crown. Castles to swap positions.",
   },
 };
 
@@ -157,20 +157,20 @@ const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
 
 const BALANCE = {
-  knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09 },
+  knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
   spike: { collisionDamage: 10, touchDamage: 10, cooldown: 380, spikeReach: 11 },
-  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55 },
+  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
   bomb: { damage: 10, fuseTime: 1200, radius: 65, cooldown: 1800, throwSpeed: 250, knockback: 18 },
-  laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16 },
-  shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200 },
-  spider: { fangDamage: 2, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000 },
+  laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16, secCooldown: 4000, secDamage: 5 },
+  shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secCooldownThrown: 4000, secBashDamage: 4 },
+  spider: { fangDamage: 2, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000, secCooldown: 5000, secPoolRadius: 35, secDamage: 3 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
   wallSpike: { spikeDamage: 2, spikeLifetime: 8000, maxSpikes: 8 },
   stringWeb: { stringDamage: 2, stringLifetime: 6000, maxStrings: 10 },
-  arm: { slamDamage: 2, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 6000 },
+  arm: { slamDamage: 2, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 6000, secCooldown: 5000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
 };
 
@@ -308,6 +308,25 @@ export default function App() {
       chessScale: 1.0,
       chessAttackWaypoints: [],
       chessWaypointIndex: 0,
+      // Secondary Skills State
+      nextSecondaryAt: 0,
+      knifeBladeState: "rotating",
+      knifeBladeX: 0,
+      knifeBladeY: 0,
+      knifeBladeVx: 0,
+      knifeBladeVy: 0,
+      knifeBladeTargetX: 0,
+      knifeBladeTargetY: 0,
+      knifeBladeHoverUntil: 0,
+      knifeBladeAngle: 0,
+      shieldBashUntil: 0,
+      elbowDropUntil: 0,
+      laserSweepState: "idle",
+      laserSweepStateUntil: 0,
+      laserSweepAngle: 0,
+      laserSweepStartAngle: 0,
+      laserSweepEndAngle: 0,
+      laserSweepHitDone: false,
     };
   };
 
@@ -326,6 +345,7 @@ export default function App() {
     wallSpikes: [],
     strings: [],
     cacti: [],
+    venomPools: [],
     screenShake: 0,
     simulationSpeed: 1.5,
     balance: BALANCE,
@@ -358,6 +378,7 @@ export default function App() {
     gameRef.current.wallSpikes = [];
     gameRef.current.strings = [];
     gameRef.current.cacti = [];
+    gameRef.current.venomPools = [];
     gameRef.current.portals = [];
     gameRef.current.portalProjectiles = [];
   };
@@ -381,6 +402,7 @@ export default function App() {
       wallSpikes: [],
       strings: [],
       cacti: [],
+      venomPools: [],
       screenShake: 0,
       simulationSpeed,
       balls,
@@ -423,6 +445,7 @@ export default function App() {
     gameRef.current.wallSpikes = [];
     gameRef.current.strings = [];
     gameRef.current.cacti = [];
+    gameRef.current.venomPools = [];
   };
 
   const resetFight = () => {
@@ -449,7 +472,7 @@ export default function App() {
         const leftBall = makeBall(leftType, "left", 20);
         const rightBall = makeBall(rightType, "right", 20);
         const balls = [leftBall, rightBall];
-        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [], localPortalProjectiles = [], localPortals = [];
+        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [], localPortalProjectiles = [], localPortals = [], localVenomPools = [];
         let damageCooldowns = {};
         let simTime = 0, dt = 0.016, maxTicks = 10000;
 
@@ -465,6 +488,12 @@ export default function App() {
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
             const isArmGrabbed = balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > simTime && b.id !== ball.id);
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
+            const insideWeb = localVenomPools.some((pool) => {
+              if (ball.side === pool.ownerSide) return false;
+              const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
+              return dist < ball.r + pool.r;
+            });
+            if (insideWeb) slowMult *= 0.6;
 
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
               ball.x += ball.vx * dt * slowMult;
@@ -602,13 +631,60 @@ export default function App() {
             const enemy = idx === 0 ? rightBall : leftBall;
             if (simTime >= 3000) {
               if (ball.type === "knife") {
-                ball.spinAngle += balance.knife.spinSpeed;
-                const tip = {
-                  x: ball.x + Math.cos(ball.spinAngle) * (ball.r + balance.knife.bladeLength),
-                  y: ball.y + Math.sin(ball.spinAngle) * (ball.r + balance.knife.bladeLength),
-                };
-                if (Math.hypot(tip.x - enemy.x, tip.y - enemy.y) < enemy.r + 14) {
-                  localApplyDamage(enemy, balance.knife.damage, `${ball.id}-knife-hit`, balance.knife.cooldown);
+                const bal = balance.knife;
+                if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
+                
+                if (ball.knifeBladeState === "rotating") {
+                  ball.spinAngle += bal.spinSpeed;
+                  const tip = {
+                    x: ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength),
+                    y: ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength),
+                  };
+                  if (Math.hypot(tip.x - enemy.x, tip.y - enemy.y) < enemy.r + 14) {
+                    localApplyDamage(enemy, bal.damage, `${ball.id}-knife-hit`, bal.cooldown);
+                  }
+                  
+                  const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                  if (dist >= 120 && dist <= 240 && simTime >= (ball.nextSecondaryAt || 0)) {
+                    ball.knifeBladeState = "thrown";
+                    ball.knifeBladeX = ball.x;
+                    ball.knifeBladeY = ball.y;
+                    const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                    ball.knifeBladeTargetX = enemy.x;
+                    ball.knifeBladeTargetY = enemy.y;
+                    ball.knifeBladeVx = Math.cos(angle) * 500;
+                    ball.knifeBladeVy = Math.sin(angle) * 500;
+                    ball.knifeBladeAngle = angle;
+                    ball.nextSecondaryAt = simTime + bal.secCooldown;
+                  }
+                } else {
+                  if (ball.knifeBladeState === "thrown") {
+                    ball.knifeBladeX += ball.knifeBladeVx * dt;
+                    ball.knifeBladeY += ball.knifeBladeVy * dt;
+                    const dToTar = Math.hypot(ball.knifeBladeTargetX - ball.knifeBladeX, ball.knifeBladeTargetY - ball.knifeBladeY);
+                    if (dToTar < 15) {
+                      ball.knifeBladeState = "hovering";
+                      ball.knifeBladeHoverUntil = simTime + 300;
+                    }
+                  } else if (ball.knifeBladeState === "hovering") {
+                    if (simTime >= ball.knifeBladeHoverUntil) {
+                      ball.knifeBladeState = "returning";
+                    }
+                  } else if (ball.knifeBladeState === "returning") {
+                    const returnAngle = Math.atan2(ball.y - ball.knifeBladeY, ball.x - ball.knifeBladeX);
+                    ball.knifeBladeVx = Math.cos(returnAngle) * 550;
+                    ball.knifeBladeVy = Math.sin(returnAngle) * 550;
+                    ball.knifeBladeAngle = returnAngle;
+                    ball.knifeBladeX += ball.knifeBladeVx * dt;
+                    ball.knifeBladeY += ball.knifeBladeVy * dt;
+                    if (Math.hypot(ball.x - ball.knifeBladeX, ball.y - ball.knifeBladeY) < ball.r + 10) {
+                      ball.knifeBladeState = "rotating";
+                    }
+                  }
+                  
+                  if (Math.hypot(ball.knifeBladeX - enemy.x, ball.knifeBladeY - enemy.y) < enemy.r + 16) {
+                    localApplyDamage(enemy, bal.secDamage, `${ball.id}-knife-sec`, 300);
+                  }
                 }
               }
               if (ball.type === "spike" && Math.hypot(ball.x - enemy.x, ball.y - enemy.y) < ball.r + enemy.r + balance.spike.spikeReach) {
@@ -616,6 +692,19 @@ export default function App() {
               }
               if (ball.type === "gun") {
                 ball.angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                
+                if (ball.ammo <= 0 || ball.reloadUntil > simTime) {
+                  const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                  if (dist < 160 && simTime >= (ball.nextSecondaryAt || 0)) {
+                    ball.nextSecondaryAt = simTime + balance.gun.secCooldown;
+                    const awayAngle = Math.atan2(ball.y - enemy.y, ball.x - enemy.x);
+                    ball.vx += Math.cos(awayAngle) * balance.gun.secDashForce;
+                    ball.vy += Math.sin(awayAngle) * balance.gun.secDashForce;
+                    ball.ammo = Math.min(ball.maxAmmo, (ball.ammo || 0) + 2);
+                    ball.reloadUntil = 0;
+                  }
+                }
+                
                 if (ball.reloadUntil <= simTime) {
                   if (ball.ammo <= 0) {
                     ball.reloadUntil = simTime + balance.gun.reloadTime;
@@ -626,14 +715,14 @@ export default function App() {
                       x: ball.x + Math.cos(ball.angle) * (ball.r + 26),
                       y: ball.y + Math.sin(ball.angle) * (ball.r + 26),
                       vx: Math.cos(ball.angle) * balance.gun.bulletSpeed,
-                    vy: Math.sin(ball.angle) * balance.gun.bulletSpeed,
-                    r: 5, damage: balance.gun.bulletDamage, life: balance.gun.bulletLife
-                  });
-                  ball.ammo--;
-                  ball.nextShotAt = simTime + balance.gun.shotCooldown;
+                      vy: Math.sin(ball.angle) * balance.gun.bulletSpeed,
+                      r: 5, damage: balance.gun.bulletDamage, life: balance.gun.bulletLife
+                    });
+                    ball.ammo--;
+                    ball.nextShotAt = simTime + balance.gun.shotCooldown;
+                  }
                 }
               }
-            }
             if (ball.type === "vampire") {
               const latched = ball.latchedTo === enemy.id && ball.latchUntil > simTime;
               if (!latched) {
@@ -682,6 +771,37 @@ export default function App() {
               ball.nextBombAt = simTime + balance.bomb.cooldown;
             }
             if (ball.type === "laser") {
+              const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+              if (ball.laserSweepState === "idle" && simTime >= (ball.nextSecondaryAt || 0) && dist < 250) {
+                ball.laserSweepState = "sweeping";
+                ball.laserSweepStateUntil = simTime + 400;
+                const angleToEnemy = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                ball.laserSweepStartAngle = angleToEnemy - Math.PI / 6;
+                ball.laserSweepEndAngle = angleToEnemy + Math.PI / 6;
+                ball.laserSweepHitDone = false;
+                ball.nextSecondaryAt = simTime + balance.laser.secCooldown;
+              }
+
+              if (ball.laserSweepState === "sweeping") {
+                const progress = Math.min(1, Math.max(0, (simTime - (ball.laserSweepStateUntil - 400)) / 400));
+                ball.laserSweepAngle = ball.laserSweepStartAngle + (ball.laserSweepEndAngle - ball.laserSweepStartAngle) * progress;
+                
+                const sx = ball.x + Math.cos(ball.laserSweepAngle) * ball.r;
+                const sy = ball.y + Math.sin(ball.laserSweepAngle) * ball.r;
+                const ex = ball.x + Math.cos(ball.laserSweepAngle) * 300;
+                const ey = ball.y + Math.sin(ball.laserSweepAngle) * 300;
+                
+                const dSeg = linePointDist(enemy.x, enemy.y, sx, sy, ex, ey);
+                if (dSeg < enemy.r + balance.laser.beamWidth / 2 && !ball.laserSweepHitDone) {
+                  ball.laserSweepHitDone = true;
+                  localApplyDamage(enemy, balance.laser.secDamage, `${ball.id}-laser-sec`, 9999999);
+                }
+                
+                if (simTime >= ball.laserSweepStateUntil) {
+                  ball.laserSweepState = "idle";
+                }
+              }
+
               if (ball.laserState === "idle" && ball.nextShotAt <= simTime) {
                 ball.laserState = "charging"; ball.laserStateUntil = simTime + balance.laser.chargeTime;
                 ball.laserTargetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
@@ -711,9 +831,28 @@ export default function App() {
               }
             }
             if (ball.type === "shield") {
+              if (ball.shieldBashUntil && simTime < ball.shieldBashUntil) {
+                const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                if (dist < ball.r + enemy.r + 5) {
+                  localApplyDamage(enemy, balance.shield.secBashDamage, `${ball.id}-shield-bash`, 250);
+                  const pushAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                  enemy.vx += Math.cos(pushAngle) * balance.shield.knockback * 15;
+                  enemy.vy += Math.sin(pushAngle) * balance.shield.knockback * 15;
+                  ball.shieldBashUntil = 0;
+                }
+              }
+
               if (ball.shieldState === "held") {
                 ball.shieldAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                if (ball.nextThrowAt <= simTime) {
+                
+                const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                if (dist < 85 && simTime >= (ball.nextSecondaryAt || 0)) {
+                  ball.nextSecondaryAt = simTime + balance.shield.secCooldownHeld;
+                  ball.shieldBashUntil = simTime + 250;
+                  const bashAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                  ball.vx = Math.cos(bashAngle) * 480;
+                  ball.vy = Math.sin(bashAngle) * 480;
+                } else if (ball.nextThrowAt <= simTime) {
                   ball.shieldState = "thrown";
                   ball.shieldGuardHits = 0;
                   ball.shieldBonusDamage = 0;
@@ -733,9 +872,17 @@ export default function App() {
                   ball.shieldState = "held";
                   ball.shieldGuardHits = 0;
                   ball.shieldBonusDamage = 0;
+                  ball.shieldFastRecall = false;
                   ball.nextThrowAt = simTime + balance.shield.cooldown;
                 }
               } else {
+                const distToEnemy = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                if (distToEnemy < 100 && simTime >= (ball.nextSecondaryAt || 0)) {
+                  ball.nextSecondaryAt = simTime + balance.shield.secCooldownThrown;
+                  ball.shieldState = "returning";
+                  ball.shieldFastRecall = true;
+                }
+
                 ball.shieldX += ball.shieldVx * dt;
                 ball.shieldY += ball.shieldVy * dt;
 
@@ -764,13 +911,15 @@ export default function App() {
 
                 if (ball.shieldState === "returning") {
                   const returnAngle = Math.atan2(ball.y - ball.shieldY, ball.x - ball.shieldX);
-                  ball.shieldVx = Math.cos(returnAngle) * balance.shield.returnSpeed;
-                  ball.shieldVy = Math.sin(returnAngle) * balance.shield.returnSpeed;
+                  const mult = ball.shieldFastRecall ? 1.5 : 1.0;
+                  ball.shieldVx = Math.cos(returnAngle) * balance.shield.returnSpeed * mult;
+                  ball.shieldVy = Math.sin(returnAngle) * balance.shield.returnSpeed * mult;
                   const distToOwner = Math.hypot(ball.x - ball.shieldX, ball.y - ball.shieldY);
                   if (distToOwner < ball.r + 10) {
                     ball.shieldState = "held";
                     ball.shieldGuardHits = 0;
                     ball.shieldBonusDamage = 0;
+                    ball.shieldFastRecall = false;
                     ball.nextThrowAt = simTime + balance.shield.cooldown;
                   }
                 }
@@ -778,6 +927,21 @@ export default function App() {
             }
             // Spider Ball Physics in Tournament
             if (ball.type === "spider") {
+              const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+              if (dist < 240 && simTime >= (ball.nextSecondaryAt || 0)) {
+                ball.nextSecondaryAt = simTime + balance.spider.secCooldown;
+                const spitX = clamp(ball.x + (enemy.x - ball.x) * 0.4 + (Math.random() - 0.5) * 20, 30, ARENA_SIZE - 30);
+                const spitY = clamp(ball.y + (enemy.y - ball.y) * 0.4 + (Math.random() - 0.5) * 20, 30, ARENA_SIZE - 30);
+                localVenomPools.push({
+                  x: spitX,
+                  y: spitY,
+                  r: balance.spider.secPoolRadius,
+                  ownerSide: ball.side,
+                  createdTime: simTime,
+                  duration: 4000
+                });
+              }
+
               if (ball.webState === "idle" && ball.nextShotAt <= simTime) {
                 ball.webState = "shooting";
                 ball.webX = ball.x; ball.webY = ball.y;
@@ -871,8 +1035,32 @@ export default function App() {
             // Arm Ball Physics in Tournament
             if (ball.type === "arm") {
               const grabRange = balance.arm.grabRange;
-              if (ball.armState === "idle") {
+              if (ball.armState === "elbow_dropping") {
+                ball.x += (enemy.x - ball.x) * 0.18;
+                ball.y += (enemy.y - ball.y) * 0.18;
+                enemy.x = ball.x;
+                enemy.y = ball.y;
+                enemy.vx = 0; enemy.vy = 0;
+                if (simTime >= ball.armStateUntil) {
+                  ball.armState = "idle";
+                  localApplyDamage(enemy, balance.arm.secSlamDamage, `${ball.id}-elbow-slam`, 500);
+                  const launchAngle = Math.random() * Math.PI * 2;
+                  const launchForce = 650;
+                  enemy.vx = Math.cos(launchAngle) * launchForce;
+                  enemy.vy = Math.sin(launchAngle) * launchForce;
+                }
+              } else if (ball.armState === "idle") {
                 ball.armAngle = (ball.armAngle || 0) + balance.arm.swingSpeed;
+                
+                // Leap Lunge Trigger
+                const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                const targetDist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                if (targetDist > 220 && simTime >= (ball.nextSecondaryAt || 0)) {
+                  ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
+                  ball.vx += Math.cos(targetAngle) * 450;
+                  ball.vy += Math.sin(targetAngle) * 450;
+                }
+                
                 if (ball.nextShotAt <= simTime) {
                   const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
                   const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
@@ -907,40 +1095,48 @@ export default function App() {
                 }
               } else if (ball.armState === "grabbing") {
                 const elapsed = simTime - (ball.armStateUntil - balance.arm.grabDuration);
-                const swayAngle = Math.sin(elapsed * 0.012) * 1.3;
-                ball.armAngle = ball.armBaseAngle + swayAngle;
                 
-                const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
-                const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
-                
-                const pad = 18;
-                const targetX = clamp(handX, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
-                const targetY = clamp(handY, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
-                
-                enemy.x = targetX;
-                enemy.y = targetY;
-                enemy.vx = 0; enemy.vy = 0;
-                
-                const corners = [
-                  { x: pad + enemy.r, y: pad + enemy.r },
-                  { x: ARENA_SIZE - pad - enemy.r, y: pad + enemy.r },
-                  { x: pad + enemy.r, y: ARENA_SIZE - pad - enemy.r },
-                  { x: ARENA_SIZE - pad - enemy.r, y: ARENA_SIZE - pad - enemy.r }
-                ];
-                const isNearCorner = corners.some(c => Math.hypot(enemy.x - c.x, enemy.y - c.y) < 32);
-                const damageKey = `${ball.id}-arm-corner`;
-                if (isNearCorner && (ball.armGrabDamageHits || 0) < 2 && (!damageCooldowns[damageKey] || damageCooldowns[damageKey] <= simTime)) {
-                  localApplyDamage(enemy, balance.arm.slamDamage, damageKey, 500);
-                  ball.armGrabDamageHits = (ball.armGrabDamageHits || 0) + 1;
-                }
-                
-                if (simTime >= ball.armStateUntil) {
-                  ball.armState = "idle";
-                  const swingDirSign = Math.cos(elapsed * 0.012) >= 0 ? 1 : -1;
-                  const launchAngle = ball.armAngle + (Math.PI / 2) * swingDirSign;
-                  const launchForce = 520;
-                  enemy.vx = Math.cos(launchAngle) * launchForce;
-                  enemy.vy = Math.sin(launchAngle) * launchForce;
+                // Elbow Drop Trigger
+                if (elapsed >= 500 && simTime >= (ball.nextSecondaryAt || 0)) {
+                  ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
+                  ball.armState = "elbow_dropping";
+                  ball.armStateUntil = simTime + 400;
+                } else {
+                  const swayAngle = Math.sin(elapsed * 0.012) * 1.3;
+                  ball.armAngle = ball.armBaseAngle + swayAngle;
+                  
+                  const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
+                  const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
+                  
+                  const pad = 18;
+                  const targetX = clamp(handX, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
+                  const targetY = clamp(handY, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
+                  
+                  enemy.x = targetX;
+                  enemy.y = targetY;
+                  enemy.vx = 0; enemy.vy = 0;
+                  
+                  const corners = [
+                    { x: pad + enemy.r, y: pad + enemy.r },
+                    { x: ARENA_SIZE - pad - enemy.r, y: pad + enemy.r },
+                    { x: pad + enemy.r, y: ARENA_SIZE - pad - enemy.r },
+                    { x: ARENA_SIZE - pad - enemy.r, y: ARENA_SIZE - pad - enemy.r }
+                  ];
+                  const isNearCorner = corners.some(c => Math.hypot(enemy.x - c.x, enemy.y - c.y) < 32);
+                  const damageKey = `${ball.id}-arm-corner`;
+                  if (isNearCorner && (ball.armGrabDamageHits || 0) < 2 && (!damageCooldowns[damageKey] || damageCooldowns[damageKey] <= simTime)) {
+                    localApplyDamage(enemy, balance.arm.slamDamage, damageKey, 500);
+                    ball.armGrabDamageHits = (ball.armGrabDamageHits || 0) + 1;
+                  }
+                  
+                  if (simTime >= ball.armStateUntil) {
+                    ball.armState = "idle";
+                    const swingDirSign = Math.cos(elapsed * 0.012) >= 0 ? 1 : -1;
+                    const launchAngle = ball.armAngle + (Math.PI / 2) * swingDirSign;
+                    const launchForce = 520;
+                    enemy.vx = Math.cos(launchAngle) * launchForce;
+                    enemy.vy = Math.sin(launchAngle) * launchForce;
+                  }
                 }
               }
             }
@@ -1337,6 +1533,18 @@ export default function App() {
               }
             });
 
+            return true;
+          });
+
+          localVenomPools = localVenomPools.filter((pool) => {
+            if (simTime >= pool.createdTime + pool.duration) return false;
+            balls.forEach((ball) => {
+              if (ball.side === pool.ownerSide) return;
+              const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
+              if (dist < ball.r + pool.r) {
+                localApplyDamage(ball, balance.spider.secDamage, `${ball.id}-venom-tick-${pool.createdTime}`, 250);
+              }
+            });
             return true;
           });
 
@@ -1760,6 +1968,30 @@ export default function App() {
       const bal = game.balance;
       const grabRange = bal.arm.grabRange;
 
+      if (armBall.armState === "elbow_dropping") {
+        armBall.x += (target.x - armBall.x) * 0.18;
+        armBall.y += (target.y - armBall.y) * 0.18;
+        target.x = armBall.x;
+        target.y = armBall.y;
+        target.vx = 0; target.vy = 0;
+        
+        if (currentTime >= armBall.armStateUntil) {
+          armBall.armState = "idle";
+          applyDamage(target, bal.arm.secSlamDamage, `${armBall.id}-elbow-slam`, currentTime, 500);
+          const launchAngle = Math.random() * Math.PI * 2;
+          const launchForce = 650;
+          target.vx = Math.cos(launchAngle) * launchForce;
+          target.vy = Math.sin(launchAngle) * launchForce;
+          target.armThrowWallUntil = currentTime + 1600;
+          target.armThrowWallSourceId = armBall.id;
+          playSound("armSlam");
+          spawnDust(target.x, target.y, 16);
+          spawnSparks(target.x, target.y, "#ef4444", 15);
+          game.screenShake = Math.max(game.screenShake, 18);
+        }
+        return;
+      }
+
       if (armBall.armState === "idle") {
         const targetAngle = Math.atan2(target.y - armBall.y, target.x - armBall.x);
         let diff = targetAngle - (armBall.armAngle || 0);
@@ -1767,11 +1999,36 @@ export default function App() {
         while (diff < -Math.PI) diff += Math.PI * 2;
         const sweep = Math.sin(currentTime * 0.006) * 0.55;
         armBall.armAngle = (armBall.armAngle || 0) + diff * 0.11 + bal.arm.swingSpeed * 0.45 + sweep * 0.025;
+        
+        // Trigger Leap Lunge
+        const targetDist = Math.hypot(target.x - armBall.x, target.y - armBall.y);
+        if (targetDist > 220 && currentTime >= (armBall.nextSecondaryAt || 0)) {
+          armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
+          armBall.vx += Math.cos(targetAngle) * 450;
+          armBall.vy += Math.sin(targetAngle) * 450;
+          playSound("hammerLaunch");
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: armBall.x, y: armBall.y - armBall.r - 20, vy: -50,
+            text: "LEAP LUNGE", color: "#cbd5e1", life: 0.8, maxLife: 0.8
+          });
+          
+          for (let i = 0; i < 8; i++) {
+            const sa = targetAngle + Math.PI + (Math.random() - 0.5) * 0.5;
+            const spd = 60 + Math.random() * 80;
+            game.particles.push({
+              x: armBall.x, y: armBall.y,
+              vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd,
+              color: "#cbd5e1", radius: 2, life: 0.3, maxLife: 0.3
+            });
+          }
+        }
+
         if (armBall.nextShotAt <= currentTime) {
           const handX = armBall.x + Math.cos(armBall.armAngle) * grabRange;
           const handY = armBall.y + Math.sin(armBall.armAngle) * grabRange;
           const dist = Math.hypot(handX - target.x, handY - target.y);
-          const targetDist = Math.hypot(target.x - armBall.x, target.y - armBall.y);
           if (dist < target.r + 26 || targetDist < grabRange + target.r * 0.8) {
             armBall.armState = "grabbing";
             armBall.armStateUntil = currentTime + bal.arm.grabDuration;
@@ -1792,6 +2049,22 @@ export default function App() {
       } else if (armBall.armState === "grabbing") {
         const elapsed = currentTime - (armBall.armStateUntil - bal.arm.grabDuration);
         const progress = clamp(elapsed / bal.arm.grabDuration, 0, 1);
+        
+        // Trigger Elbow Drop mid-grab
+        if (elapsed >= 500 && currentTime >= (armBall.nextSecondaryAt || 0)) {
+          armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
+          armBall.armState = "elbow_dropping";
+          armBall.armStateUntil = currentTime + 400;
+          playSound("armGrab");
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: armBall.x, y: armBall.y - armBall.r - 20, vy: -50,
+            text: "ELBOW DROP", color: "#f87171", life: 0.8, maxLife: 0.8
+          });
+          return;
+        }
+
         const whip = Math.sin(progress * Math.PI * 2.4) * 0.8;
         armBall.armAngle = armBall.armBaseAngle + armBall.armDirection * (progress * Math.PI * 1.35 + whip);
         
@@ -1985,6 +2258,37 @@ export default function App() {
 
     const updateGun = (gun, target, currentTime) => {
       gun.angle = Math.atan2(target.y - gun.y, target.x - gun.x);
+      
+      // Tactical Reload Dash
+      if (gun.ammo <= 0 || gun.reloadUntil > currentTime) {
+        const dist = Math.hypot(target.x - gun.x, target.y - gun.y);
+        if (dist < 160 && currentTime >= (gun.nextSecondaryAt || 0)) {
+          gun.nextSecondaryAt = currentTime + game.balance.gun.secCooldown;
+          const awayAngle = Math.atan2(gun.y - target.y, gun.x - target.x);
+          gun.vx += Math.cos(awayAngle) * game.balance.gun.secDashForce;
+          gun.vy += Math.sin(awayAngle) * game.balance.gun.secDashForce;
+          gun.ammo = Math.min(gun.maxAmmo, (gun.ammo || 0) + 2);
+          gun.reloadUntil = 0; // Interrupt reload
+          playSound("gunReload");
+          
+          for (let i = 0; i < 8; i++) {
+            const a = awayAngle + (Math.random() - 0.5) * 0.5;
+            const spd = 60 + Math.random() * 80;
+            game.particles.push({
+              x: gun.x, y: gun.y,
+              vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+              color: "#e2e8f0", radius: 2, life: 0.35, maxLife: 0.35
+            });
+          }
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: gun.x, y: gun.y - gun.r - 20, vy: -50,
+            text: "DASH +2 AMMO", color: "#67e8f9", life: 0.8, maxLife: 0.8
+          });
+        }
+      }
+
       if (gun.reloadUntil > currentTime) return;
       if (gun.ammo <= 0) {
         gun.reloadUntil = currentTime + game.balance.gun.reloadTime;
@@ -2033,6 +2337,76 @@ export default function App() {
 
     const updateLaser = (laserBall, target, currentTime) => {
       const bal = game.balance;
+
+      const dist = Math.hypot(target.x - laserBall.x, target.y - laserBall.y);
+      if (laserBall.laserSweepState === "idle" && currentTime >= (laserBall.nextSecondaryAt || 0) && dist < 250) {
+        laserBall.laserSweepState = "sweeping";
+        laserBall.laserSweepStateUntil = currentTime + 400;
+        const angleToTarget = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+        laserBall.laserSweepStartAngle = angleToTarget - Math.PI / 6;
+        laserBall.laserSweepEndAngle = angleToTarget + Math.PI / 6;
+        laserBall.laserSweepHitDone = false;
+        laserBall.nextSecondaryAt = currentTime + bal.laser.secCooldown;
+        playSound("laserFire");
+        
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
+          text: "LASER SWEEP", color: "#22d3ee", life: 0.8, maxLife: 0.8
+        });
+      }
+
+      if (laserBall.laserSweepState === "sweeping") {
+        const progress = Math.min(1, Math.max(0, (currentTime - (laserBall.laserSweepStateUntil - 400)) / 400));
+        laserBall.laserSweepAngle = laserBall.laserSweepStartAngle + (laserBall.laserSweepEndAngle - laserBall.laserSweepStartAngle) * progress;
+        
+        const sx = laserBall.x + Math.cos(laserBall.laserSweepAngle) * laserBall.r;
+        const sy = laserBall.y + Math.sin(laserBall.laserSweepAngle) * laserBall.r;
+        const ex = laserBall.x + Math.cos(laserBall.laserSweepAngle) * 300;
+        const ey = laserBall.y + Math.sin(laserBall.laserSweepAngle) * 300;
+        
+        if (Math.random() < 0.3) {
+          const pDist = Math.random() * 300;
+          game.particles.push({
+            x: sx + Math.cos(laserBall.laserSweepAngle) * pDist,
+            y: sy + Math.sin(laserBall.laserSweepAngle) * pDist,
+            vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30,
+            color: "#22d3ee", radius: 1.5, life: 0.2, maxLife: 0.2
+          });
+        }
+
+        const dSeg = linePointDist(target.x, target.y, sx, sy, ex, ey);
+        if (dSeg < target.r + bal.laser.beamWidth / 2 && !laserBall.laserSweepHitDone) {
+          laserBall.laserSweepHitDone = true;
+          if (!isChessCrownActive(target)) {
+            const dmg = Math.max(MIN_DAMAGE, bal.laser.secDamage);
+            target.health = clamp(target.health - dmg, 0, 100);
+            
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x + (Math.random() - 0.5) * 20, y: target.y - target.r - 5, vy: -60,
+              text: `-${dmg}`, color: "#22d3ee", life: 0.8, maxLife: 0.8
+            });
+            
+            if (laserBall.side === "left") { game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++; }
+            else { game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++; }
+            
+            playSound("laserFire");
+            for (let i = 0; i < 5; i++) {
+              const sa = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 60;
+              game.particles.push({
+                x: target.x + (Math.random() - 0.5) * target.r, y: target.y + (Math.random() - 0.5) * target.r,
+                vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd, color: "#22d3ee", radius: 2, life: 0.25, maxLife: 0.25
+              });
+            }
+          }
+        }
+        
+        if (currentTime >= laserBall.laserSweepStateUntil) {
+          laserBall.laserSweepState = "idle";
+        }
+      }
+
       if (laserBall.laserState === "idle" && laserBall.nextShotAt <= currentTime) {
         laserBall.laserState = "charging";
         laserBall.laserStateUntil = currentTime + bal.laser.chargeTime;
@@ -2163,6 +2537,29 @@ export default function App() {
     const updateSpider = (spiderBall, target, currentTime, stepDt) => {
       const bal = game.balance;
 
+      // Venomous Web Spit Trigger
+      const dist = Math.hypot(target.x - spiderBall.x, target.y - spiderBall.y);
+      if (dist < 240 && currentTime >= (spiderBall.nextSecondaryAt || 0)) {
+        spiderBall.nextSecondaryAt = currentTime + bal.spider.secCooldown;
+        const spitX = clamp(spiderBall.x + (target.x - spiderBall.x) * 0.4 + (Math.random() - 0.5) * 20, 30, game.width - 30);
+        const spitY = clamp(spiderBall.y + (target.y - spiderBall.y) * 0.4 + (Math.random() - 0.5) * 20, 30, game.height - 30);
+        game.venomPools.push({
+          x: spitX,
+          y: spitY,
+          r: bal.spider.secPoolRadius,
+          ownerSide: spiderBall.side,
+          createdTime: currentTime,
+          duration: 4000
+        });
+        playSound("webShoot");
+        
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: spiderBall.x, y: spiderBall.y - spiderBall.r - 20, vy: -50,
+          text: "WEB", color: "#10b981", life: 0.8, maxLife: 0.8
+        });
+      }
+
       if (spiderBall.webState === "idle") {
         if (spiderBall.nextShotAt <= currentTime) {
           spiderBall.webState = "shooting";
@@ -2279,8 +2676,50 @@ export default function App() {
         return true;
       };
 
+      // Update active Shield Bash
+      if (shieldBall.shieldBashUntil && currentTime < shieldBall.shieldBashUntil) {
+        const dist = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
+        if (dist < shieldBall.r + target.r + 5) {
+          applyDamage(target, bal.shield.secBashDamage, `${shieldBall.id}-shield-bash`, currentTime, 250);
+          const pushAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
+          target.vx += Math.cos(pushAngle) * bal.shield.knockback * 15;
+          target.vy += Math.sin(pushAngle) * bal.shield.knockback * 15;
+          spawnSparks(target.x, target.y, "#3b82f6", 10);
+          shieldBall.shieldBashUntil = 0; // stop lunge
+        }
+      }
+
       if (shieldBall.shieldState === "held") {
         shieldBall.shieldAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
+        
+        // Trigger Shield Bash
+        const dist = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
+        if (dist < 85 && currentTime >= (shieldBall.nextSecondaryAt || 0)) {
+          shieldBall.nextSecondaryAt = currentTime + bal.shield.secCooldownHeld;
+          shieldBall.shieldBashUntil = currentTime + 250;
+          const bashAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
+          shieldBall.vx = Math.cos(bashAngle) * 480;
+          shieldBall.vy = Math.sin(bashAngle) * 480;
+          playSound("wallBounce");
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: shieldBall.x, y: shieldBall.y - shieldBall.r - 20, vy: -50,
+            text: "SHIELD BASH", color: "#3b82f6", life: 0.8, maxLife: 0.8
+          });
+          
+          for (let i = 0; i < 6; i++) {
+            const sa = bashAngle + (Math.random() - 0.5) * 0.5;
+            const spd = 50 + Math.random() * 60;
+            game.particles.push({
+              x: shieldBall.x, y: shieldBall.y,
+              vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd,
+              color: "#3b82f6", radius: 2, life: 0.35, maxLife: 0.35
+            });
+          }
+          return;
+        }
+
         if (shieldBall.nextThrowAt <= currentTime) {
           shieldBall.shieldState = "thrown";
           shieldBall.shieldGuardHits = 0;
@@ -2307,11 +2746,27 @@ export default function App() {
           shieldBall.shieldState = "held";
           shieldBall.shieldGuardHits = 0;
           shieldBall.shieldBonusDamage = 0;
+          shieldBall.shieldFastRecall = false;
           shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
           spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 8);
           playSound("shieldCatch");
         }
       } else {
+        // Trigger Emergency Fast Recall
+        const distToEnemy = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
+        if (distToEnemy < 100 && currentTime >= (shieldBall.nextSecondaryAt || 0)) {
+          shieldBall.nextSecondaryAt = currentTime + bal.shield.secCooldownThrown;
+          shieldBall.shieldState = "returning";
+          shieldBall.shieldFastRecall = true;
+          playSound("shieldCatch");
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: shieldBall.x, y: shieldBall.y - shieldBall.r - 20, vy: -50,
+            text: "FAST RECALL", color: "#60a5fa", life: 0.8, maxLife: 0.8
+          });
+        }
+
         shieldBall.shieldX += shieldBall.shieldVx * stepDt;
         shieldBall.shieldY += shieldBall.shieldVy * stepDt;
         shieldBall.shieldSpinAngle = (shieldBall.shieldSpinAngle || 0) + 0.25;
@@ -2380,14 +2835,16 @@ export default function App() {
 
         if (shieldBall.shieldState === "returning") {
           const returnAngle = Math.atan2(shieldBall.y - shieldBall.shieldY, shieldBall.x - shieldBall.shieldX);
-          shieldBall.shieldVx = Math.cos(returnAngle) * bal.shield.returnSpeed;
-          shieldBall.shieldVy = Math.sin(returnAngle) * bal.shield.returnSpeed;
+          const mult = shieldBall.shieldFastRecall ? 1.5 : 1.0;
+          shieldBall.shieldVx = Math.cos(returnAngle) * bal.shield.returnSpeed * mult;
+          shieldBall.shieldVy = Math.sin(returnAngle) * bal.shield.returnSpeed * mult;
 
           const distToOwner = Math.hypot(shieldBall.x - shieldBall.shieldX, shieldBall.y - shieldBall.shieldY);
           if (distToOwner < shieldBall.r + 10) {
             shieldBall.shieldState = "held";
             shieldBall.shieldGuardHits = 0;
             shieldBall.shieldBonusDamage = 0;
+            shieldBall.shieldFastRecall = false;
             shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
             spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 6);
             playSound("shieldCatch");
@@ -2635,6 +3092,43 @@ export default function App() {
       });
     };
 
+    const updateVenomPools = (dt) => {
+      if (!game.venomPools) return;
+      const bal = game.balance;
+      game.venomPools = game.venomPools.filter((pool) => {
+        if (game.simTime >= pool.createdTime + pool.duration) return false;
+
+        game.balls.forEach((ball) => {
+          if (ball.side === pool.ownerSide) return;
+          const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
+          if (dist < ball.r + pool.r) {
+            applyDamage(ball, bal.spider.secDamage, `${ball.id}-venom-tick-${pool.createdTime}`, game.simTime, 250);
+
+            if (Math.random() < 0.15) {
+              game.particles.push({
+                x: ball.x + (Math.random() - 0.5) * ball.r,
+                y: ball.y + (Math.random() - 0.5) * ball.r,
+                vx: (Math.random() - 0.5) * 20, vy: -20 - Math.random() * 20,
+                color: "#10b981", radius: 1.5, life: 0.35, maxLife: 0.35
+              });
+            }
+          }
+        });
+
+        if (Math.random() < 0.04) {
+          const a = Math.random() * Math.PI * 2;
+          const d = Math.random() * pool.r;
+          game.particles.push({
+            x: pool.x + Math.cos(a) * d, y: pool.y + Math.sin(a) * d,
+            vx: 0, vy: -8 - Math.random() * 12,
+            color: "#34d399", radius: 1.2, life: 0.4, maxLife: 0.4
+          });
+        }
+
+        return true;
+      });
+    };
+
     const updateBullets = (dt, balls) => {
       game.bullets = game.bullets.filter((bullet) => {
         bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt; bullet.life -= dt;
@@ -2820,15 +3314,30 @@ export default function App() {
       ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = config.color; ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-
-      ctx.rotate(ball.spinAngle);
-      ctx.fillStyle = "#e5e7eb"; ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(ball.r - 4, -7);
-      ctx.lineTo(ball.r + game.balance.knife.bladeLength, 0);
-      ctx.lineTo(ball.r - 4, 7); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#0f172a"; ctx.fillRect(ball.r - 8, -4, 14, 8);
       ctx.restore();
+
+      const bladeState = ball.knifeBladeState || "rotating";
+      if (bladeState === "rotating") {
+        ctx.save(); ctx.translate(ball.x, ball.y);
+        ctx.rotate(ball.spinAngle);
+        ctx.fillStyle = "#e5e7eb"; ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(ball.r - 4, -7);
+        ctx.lineTo(ball.r + game.balance.knife.bladeLength, 0);
+        ctx.lineTo(ball.r - 4, 7); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#0f172a"; ctx.fillRect(ball.r - 8, -4, 14, 8);
+        ctx.restore();
+      } else {
+        ctx.save(); ctx.translate(ball.knifeBladeX, ball.knifeBladeY);
+        ctx.rotate(ball.knifeBladeAngle);
+        ctx.fillStyle = "#e5e7eb"; ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(-12, -7);
+        ctx.lineTo(game.balance.knife.bladeLength - 12, 0);
+        ctx.lineTo(-12, 7); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#0f172a"; ctx.fillRect(-16, -4, 14, 8);
+        ctx.restore();
+      }
       drawHealthInsideBall(ball);
     };
 
@@ -3045,6 +3554,25 @@ export default function App() {
         ctx.strokeStyle = "rgba(250, 204, 21, 0.45)";
         ctx.lineWidth = game.balance.laser.beamWidth;
         tracePath();
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (ball.laserSweepState === "sweeping") {
+        const sx = ball.x + Math.cos(ball.laserSweepAngle) * ball.r;
+        const sy = ball.y + Math.sin(ball.laserSweepAngle) * ball.r;
+        const ex = ball.x + Math.cos(ball.laserSweepAngle) * 300;
+        const ey = ball.y + Math.sin(ball.laserSweepAngle) * 300;
+        ctx.save();
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.strokeStyle = "rgba(34, 211, 238, 0.55)";
+        ctx.lineWidth = game.balance.laser.beamWidth;
+        ctx.stroke();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = game.balance.laser.beamWidth / 2;
         ctx.stroke();
         ctx.restore();
       }
@@ -3446,41 +3974,46 @@ export default function App() {
       const bal = game.balance;
       const L = bal.arm.grabRange;
       
+      let yOffset = 0;
+      if (ball.armState === "elbow_dropping") {
+        const elapsed = game.simTime - (ball.armStateUntil - 400);
+        const progress = clamp(elapsed / 400, 0, 1);
+        yOffset = -70 * Math.sin(progress * Math.PI);
+      }
+      
       const armAngle = ball.armAngle || 0;
-      const handX = ball.x + Math.cos(armAngle) * L;
-      const handY = ball.y + Math.sin(armAngle) * L;
+      const enemy = game.balls.find(b => b.id !== ball.id);
+      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : ball.x + Math.cos(armAngle) * L;
+      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : ball.y + Math.sin(armAngle) * L;
 
       // Draw the arm line / segments
       ctx.save();
       
-      // Compute joint bend offset
-      const bendAmp = ball.armState === "grabbing" ? 14 : 6;
-      const bendFreq = ball.armState === "grabbing" ? 0.03 : 0.01;
+      const bendAmp = (ball.armState === "grabbing" || ball.armState === "elbow_dropping") ? 14 : 6;
+      const bendFreq = (ball.armState === "grabbing" || ball.armState === "elbow_dropping") ? 0.03 : 0.01;
       const bendOffset = Math.sin(game.simTime * bendFreq) * bendAmp;
       
-      const midX = ball.x + Math.cos(armAngle) * L * 0.5;
-      const midY = ball.y + Math.sin(armAngle) * L * 0.5;
+      const midX = (ball.x + handX) / 2;
+      const midY = (ball.y + yOffset + handY) / 2;
       const perpAngle = armAngle + Math.PI / 2;
       const jointX = midX + Math.cos(perpAngle) * bendOffset;
       const jointY = midY + Math.sin(perpAngle) * bendOffset;
 
-      // Draw shoulder plate/joint connection
       ctx.strokeStyle = "#64748b";
       ctx.lineWidth = 10;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y);
+      ctx.moveTo(ball.x, ball.y + yOffset);
       ctx.lineTo(jointX, jointY);
       ctx.stroke();
 
       ctx.strokeStyle = "#e2e8f0";
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y);
+      ctx.moveTo(ball.x, ball.y + yOffset);
       ctx.lineTo(jointX, jointY);
       ctx.stroke();
 
-      // Draw forearm
       ctx.strokeStyle = "#64748b";
       ctx.lineWidth = 7;
       ctx.beginPath();
@@ -3495,7 +4028,6 @@ export default function App() {
       ctx.lineTo(handX, handY);
       ctx.stroke();
 
-      // Joint bolt (gear)
       ctx.fillStyle = "#cbd5e1";
       ctx.strokeStyle = "#f8fafc";
       ctx.lineWidth = 2;
@@ -3504,23 +4036,20 @@ export default function App() {
       ctx.fill();
       ctx.stroke();
       
-      // Draw inner rivet on joint bolt
       ctx.fillStyle = "#ef4444";
       ctx.beginPath();
       ctx.arc(jointX, jointY, 3, 0, Math.PI * 2);
       ctx.fill();
 
-      // Draw the grabbing Claw/Hand
       ctx.save();
       ctx.translate(handX, handY);
       ctx.rotate(armAngle);
       
-      // Claw finger opening angle
       let fingerAngle = 0.5;
-      if (ball.armState === "grabbing") {
-        fingerAngle = 0.15 + Math.sin(game.simTime * 0.05) * 0.05; // clamp/vibrate claw
+      if (ball.armState === "grabbing" || ball.armState === "elbow_dropping") {
+        fingerAngle = 0.12 + Math.sin(game.simTime * 0.05) * 0.05;
       } else {
-        fingerAngle = 0.4 + Math.sin(game.simTime * 0.015) * 0.15; // idle breathing claw
+        fingerAngle = 0.4 + Math.sin(game.simTime * 0.015) * 0.15;
       }
 
       ctx.strokeStyle = "#475569";
@@ -3528,19 +4057,16 @@ export default function App() {
       ctx.lineCap = "round";
       ctx.fillStyle = "#e5e7eb";
 
-      // Finger 1 (top/left)
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.quadraticCurveTo(Math.cos(fingerAngle) * 15, Math.sin(fingerAngle) * 15, Math.cos(fingerAngle) * 20 - Math.sin(fingerAngle) * 5, Math.sin(fingerAngle) * 20 + Math.cos(fingerAngle) * 5);
       ctx.stroke();
 
-      // Finger 2 (bottom/right)
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.quadraticCurveTo(Math.cos(-fingerAngle) * 15, Math.sin(-fingerAngle) * 15, Math.cos(-fingerAngle) * 20 - Math.sin(-fingerAngle) * -5, Math.sin(-fingerAngle) * 20 + Math.cos(-fingerAngle) * -5);
       ctx.stroke();
 
-      // Wrist joint
       ctx.fillStyle = "#cbd5e1";
       ctx.beginPath();
       ctx.arc(0, 0, 5, 0, Math.PI * 2);
@@ -3550,9 +4076,8 @@ export default function App() {
       ctx.restore();
       ctx.restore();
 
-      // Draw main body ball
       ctx.save();
-      ctx.translate(ball.x, ball.y);
+      ctx.translate(ball.x, ball.y + yOffset);
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       const grad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.3, 3, 0, 0, ball.r);
@@ -3566,14 +4091,12 @@ export default function App() {
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      // Silver socket plate on the shell
       ctx.strokeStyle = "rgba(226, 232, 240, 0.9)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.65, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Red star socket
       ctx.fillStyle = "#ef4444";
       ctx.beginPath();
       for (let i = 0; i < 10; i++) {
@@ -3587,7 +4110,6 @@ export default function App() {
       ctx.closePath();
       ctx.fill();
 
-      // Silver rivets along the inner plate
       ctx.fillStyle = "rgba(226, 232, 240, 0.85)";
       for (let i = 0; i < 6; i++) {
         const a = (i * Math.PI) / 3;
@@ -4328,6 +4850,35 @@ export default function App() {
       });
     };
 
+    const drawVenomPools = () => {
+      if (!game.venomPools) return;
+      game.venomPools.forEach((pool) => {
+        ctx.save();
+        ctx.strokeStyle = "rgba(209, 213, 219, 0.4)"; // light gray/silver color for spider web
+        ctx.lineWidth = 1.5;
+        
+        // 1. Draw radial spokes
+        const numSpokes = 8;
+        for (let i = 0; i < numSpokes; i++) {
+          const angle = (i * Math.PI * 2) / numSpokes;
+          ctx.beginPath();
+          ctx.moveTo(pool.x, pool.y);
+          ctx.lineTo(pool.x + Math.cos(angle) * pool.r, pool.y + Math.sin(angle) * pool.r);
+          ctx.stroke();
+        }
+        
+        // 2. Draw concentric rings
+        const numRings = 3;
+        for (let r = 1; r <= numRings; r++) {
+          const ringRad = (pool.r * r) / numRings;
+          ctx.beginPath();
+          ctx.arc(pool.x, pool.y, ringRad, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+    };
+
     const drawWallSpikeBall = (ball) => {
       const config = BALL_TYPES.wallSpike;
       ctx.save(); ctx.translate(ball.x, ball.y);
@@ -4438,6 +4989,12 @@ export default function App() {
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
             const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > game.simTime && b.id !== ball.id);
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
+            const insideWeb = game.venomPools.some((pool) => {
+              if (ball.side === pool.ownerSide) return false;
+              const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
+              return dist < ball.r + pool.r;
+            });
+            if (insideWeb) slowMult *= 0.6;
 
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
@@ -4501,14 +5058,63 @@ export default function App() {
             const target = ball.side === "left" ? right : left;
             if (game.simTime >= 3000) {
                 if (ball.type === "knife") {
-                  ball.spinAngle += game.balance.knife.spinSpeed;
-                  const tip = {
-                    x: ball.x + Math.cos(ball.spinAngle) * (ball.r + game.balance.knife.bladeLength),
-                    y: ball.y + Math.sin(ball.spinAngle) * (ball.r + game.balance.knife.bladeLength),
-                  };
-                  if (Math.hypot(tip.x - target.x, tip.y - target.y) < target.r + 14) {
-                    applyDamage(target, game.balance.knife.damage, `${ball.id}-knife-hit`, game.simTime, game.balance.knife.cooldown);
-                    spawnSparks(tip.x, tip.y, "#bae6fd", 5);
+                  const bal = game.balance.knife;
+                  if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
+                  
+                  if (ball.knifeBladeState === "rotating") {
+                    ball.spinAngle += bal.spinSpeed;
+                    const tip = {
+                      x: ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength),
+                      y: ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength),
+                    };
+                    if (Math.hypot(tip.x - target.x, tip.y - target.y) < target.r + 14) {
+                      applyDamage(target, bal.damage, `${ball.id}-knife-hit`, game.simTime, bal.cooldown);
+                      spawnSparks(tip.x, tip.y, "#bae6fd", 5);
+                    }
+                    
+                    const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+                    if (dist >= 120 && dist <= 240 && game.simTime >= (ball.nextSecondaryAt || 0)) {
+                      ball.knifeBladeState = "thrown";
+                      ball.knifeBladeX = ball.x;
+                      ball.knifeBladeY = ball.y;
+                      const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+                      ball.knifeBladeTargetX = target.x;
+                      ball.knifeBladeTargetY = target.y;
+                      ball.knifeBladeVx = Math.cos(angle) * 500;
+                      ball.knifeBladeVy = Math.sin(angle) * 500;
+                      ball.knifeBladeAngle = angle;
+                      ball.nextSecondaryAt = game.simTime + bal.secCooldown;
+                      playSound("shieldThrow");
+                    }
+                  } else {
+                    if (ball.knifeBladeState === "thrown") {
+                      ball.knifeBladeX += ball.knifeBladeVx * stepDt;
+                      ball.knifeBladeY += ball.knifeBladeVy * stepDt;
+                      const dToTar = Math.hypot(ball.knifeBladeTargetX - ball.knifeBladeX, ball.knifeBladeTargetY - ball.knifeBladeY);
+                      if (dToTar < 15) {
+                        ball.knifeBladeState = "hovering";
+                        ball.knifeBladeHoverUntil = game.simTime + 300;
+                      }
+                    } else if (ball.knifeBladeState === "hovering") {
+                      if (game.simTime >= ball.knifeBladeHoverUntil) {
+                        ball.knifeBladeState = "returning";
+                      }
+                    } else if (ball.knifeBladeState === "returning") {
+                      const angle = Math.atan2(ball.y - ball.knifeBladeY, ball.x - ball.knifeBladeX);
+                      ball.knifeBladeVx = Math.cos(angle) * 550;
+                      ball.knifeBladeVy = Math.sin(angle) * 550;
+                      ball.knifeBladeAngle = angle;
+                      ball.knifeBladeX += ball.knifeBladeVx * stepDt;
+                      ball.knifeBladeY += ball.knifeBladeVy * stepDt;
+                      if (Math.hypot(ball.x - ball.knifeBladeX, ball.y - ball.knifeBladeY) < ball.r + 10) {
+                        ball.knifeBladeState = "rotating";
+                      }
+                    }
+                    
+                    if (Math.hypot(ball.knifeBladeX - target.x, ball.knifeBladeY - target.y) < target.r + 16) {
+                      applyDamage(target, bal.secDamage, `${ball.id}-knife-sec`, game.simTime, 300);
+                      spawnSparks(ball.knifeBladeX, ball.knifeBladeY, "#38bdf8", 6);
+                    }
                   }
                 }
                 if (ball.type === "spike" && distance(ball, target) < ball.r + target.r + game.balance.spike.spikeReach) {
@@ -4542,6 +5148,7 @@ export default function App() {
           updateCacti(stepDt);
           updateWallSpikes(stepDt);
           updateStrings(stepDt);
+          updateVenomPools(stepDt);
         }
       } else if (!gameStarted) {
         game.balls.forEach((ball) => {
@@ -4581,7 +5188,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawWallSpikes(); drawStrings();
+      drawWallSpikes(); drawStrings(); drawVenomPools();
       drawMines(); drawBullets(); drawBombs(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
@@ -4658,6 +5265,8 @@ export default function App() {
               {renderSlider("Hit Cooldown", "knife", "cooldown", 100, 1500, 10, "ms")}
               {renderSlider("Blade Length", "knife", "bladeLength", 15, 100, 1, "px")}
               {renderSlider("Rotation Speed", "knife", "spinSpeed", 0.02, 0.3, 0.01)}
+              {renderSlider("Sec: Throw Cooldown", "knife", "secCooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Throw Damage", "knife", "secDamage", 1, 20)}
             </>
           )}
           {type === "spike" && (
@@ -4674,6 +5283,8 @@ export default function App() {
               {renderSlider("Shot Cooldown", "gun", "shotCooldown", 100, 1500, 10, "ms")}
               {renderSlider("Reload Time", "gun", "reloadTime", 500, 4000, 50, "ms")}
               {renderSlider("Bullet Speed", "gun", "bulletSpeed", 100, 800, 10, "px/s")}
+              {renderSlider("Sec: Dash Cooldown", "gun", "secCooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Dash Force", "gun", "secDashForce", 100, 800, 20, "px/s")}
             </>
           )}
           {type === "vampire" && (
@@ -4702,6 +5313,8 @@ export default function App() {
               {renderSlider("Fire Duration", "laser", "fireDuration", 300, 2000, 50, "ms")}
               {renderSlider("Beam Width", "laser", "beamWidth", 6, 40, 2, "px")}
               {renderSlider("Cooldown", "laser", "cooldown", 1000, 5000, 100, "ms")}
+              {renderSlider("Sec: Sweep Cooldown", "laser", "secCooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Sweep Damage", "laser", "secDamage", 1, 20)}
             </>
           )}
           {type === "shield" && (
@@ -4712,6 +5325,9 @@ export default function App() {
               {renderSlider("Throw Cooldown", "shield", "cooldown", 500, 4000, 50, "ms")}
               {renderSlider("Shield Speed", "shield", "shieldSpeed", 200, 1000, 20, "px/s")}
               {renderSlider("Return Speed", "shield", "returnSpeed", 200, 1200, 20, "px/s")}
+              {renderSlider("Sec: Bash Cooldown (Held)", "shield", "secCooldownHeld", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Recall Cooldown (Thrown)", "shield", "secCooldownThrown", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Bash Damage", "shield", "secBashDamage", 1, 20)}
             </>
           )}
           {type === "spider" && (
@@ -4722,6 +5338,9 @@ export default function App() {
               {renderSlider("Bounce Speed", "spider", "bounceSpeed", 100, 600, 10, "px/s")}
               {renderSlider("Pull Duration", "spider", "pullDuration", 300, 1800, 50, "ms")}
               {renderSlider("Cooldown", "spider", "cooldown", 1000, 6000, 100, "ms")}
+              {renderSlider("Sec: Web Cooldown", "spider", "secCooldown", 1000, 10000, 100, "ms")}
+              {renderSlider("Sec: Web Radius", "spider", "secPoolRadius", 15, 80, 1, "px")}
+              {renderSlider("Sec: Web Damage", "spider", "secDamage", 1, 15)}
             </>
           )}
           {type === "bomber" && (
@@ -4772,6 +5391,8 @@ export default function App() {
               {renderSlider("Grab Duration", "arm", "grabDuration", 500, 3000, 100, "ms")}
               {renderSlider("Swing Speed", "arm", "swingSpeed", 0.02, 0.2, 0.01)}
               {renderSlider("Cooldown", "arm", "cooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Elbow Drop Cooldown", "arm", "secCooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Elbow Drop Damage", "arm", "secSlamDamage", 2, 30)}
             </>
           )}
           {type === "chess" && (
