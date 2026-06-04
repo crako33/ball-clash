@@ -7,8 +7,8 @@ const BALL_TYPES = {
     id: "knife",
     name: "Knifer Ball",
     shortName: "KNIFR",
-    color: "#38bdf8",
-    stroke: "#bae6fd",
+    color: "#22c55e",
+    stroke: "#15803d",
     radius: 30,
     description: "Rotating knife brawler. Secondary: Blade Throw.",
   },
@@ -28,7 +28,7 @@ const BALL_TYPES = {
     color: "#0f172a",
     stroke: "#f1f5f9",
     radius: 30,
-    description: "Skull brawler. Fires 6 shots, then reloads. Secondary: Dash.",
+    description: "Skull brawler. Fires 6 shots, then reloads.",
   },
   vampire: {
     id: "vampire",
@@ -55,7 +55,7 @@ const BALL_TYPES = {
     color: "#ef4444",
     stroke: "#facc15",
     radius: 30,
-    description: "Fires continuous laser. Secondary: Sweep Laser.",
+    description: "Fires continuous laser at the opponent.",
   },
   shield: {
     id: "shield",
@@ -126,8 +126,8 @@ const BALL_TYPES = {
     shortName: "ARM",
     color: "#020617",
     stroke: "#cbd5e1",
-    radius: 31,
-    description: "Grabs opponent, slams them into corners. Secondary: Elbow Drop.",
+    radius: 32,
+    description: "Grabs with a left arm and carries a right-side gun. Secondary: Elbow Drop.",
   },
   chess: {
     id: "chess",
@@ -150,25 +150,25 @@ const SHIELD_DROP_COOLDOWN = 1000;
 const HYDRA_MAX_GLOW_STACKS = 3;
 const HYDRA_RAGE_PER_BOUNCE = 1;
 const SPIDER_FINAL_BOUNCE_MULTIPLIER = 1.8;
-const ARM_RAGDOLL_WALL_DAMAGE = 7;
-const ARM_THROW_WALL_DAMAGE = 10;
 const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
+const FINISHER_SLOWMO_DURATION = 1000;
+const FINISHER_SLOWMO_SCALE = 0.18;
 const BALANCE = {
-  knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
+  knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.04, secCooldown: 3500, secDamage: 5 },
   spike: { collisionDamage: 10, touchDamage: 10, cooldown: 380, spikeReach: 11 },
-  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380 },
-  vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
+  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55 },
+  vampire: { drainPerTick: 3, healPerTick: 3, tickCooldown: 350, latchDuration: 650, latchCooldown: 3000, latchDistance: -6 },
   bomb: { damage: 10, fuseTime: 1200, radius: 65, cooldown: 1800, throwSpeed: 250, knockback: 18 },
-  laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16, secCooldown: 4000, secDamage: 5 },
+  laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16, secCooldown: 4000, secDamage: 5, trackingSpeed: 2.1 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secCooldownThrown: 4000, secBashDamage: 4 },
-  spider: { fangDamage: 2, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000, secCooldown: 5000, secPoolRadius: 35, secDamage: 3 },
+  spider: { fangDamage: 2, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000, webSlow: 5, secCooldown: 5000, secPoolRadius: 35, secDamage: 2 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16 },
-  spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
+  spore: { cactusDamage: 2, growthDuration: 1250, speedBoost: 1.7, cactusLife: 5500, cooldown: 5000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
   wallSpike: { spikeDamage: 2, spikeLifetime: 8000, maxSpikes: 8 },
   stringWeb: { stringDamage: 2, stringLifetime: 6000, maxStrings: 10 },
-  arm: { slamDamage: 2, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 6000, secCooldown: 5000, secSlamDamage: 6 },
+  arm: { grabRange: 95, grabDuration: 900, swingSpeed: 0.075, cooldown: 5200, secCooldown: 4800, secSlamDamage: 7, reflectChance: 0.25 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
 };
 
@@ -221,7 +221,16 @@ export default function BallWeaponSimulator() {
   const [selectedBalls, setSelectedBalls] = useState(["knife", "spike"]);
   const [gameStarted, setGameStarted] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1.5);
-  const [balanceSettings, setBalanceSettings] = useState(BALANCE);
+  const [balanceSettings, setBalanceSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ball_fighters_balance");
+      return saved ? { ...BALANCE, ...JSON.parse(saved) } : BALANCE;
+    } catch (e) {
+      console.error("Failed to parse saved balance settings", e);
+      return BALANCE;
+    }
+  });
+  const [balanceSaved, setBalanceSaved] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   
   const [gameState, setGameState] = useState({
@@ -240,7 +249,7 @@ export default function BallWeaponSimulator() {
 
   const [tournamentResults, setTournamentResults] = useState(null);
   const [simulatingTournament, setSimulatingTournament] = useState(false);
-  const [viewMode, setViewMode] = useState("desktop");
+  const viewMode = "desktop";
 
   const makeBall = (type, side, speedJitter = 0) => {
     const config = BALL_TYPES[type];
@@ -269,10 +278,11 @@ export default function BallWeaponSimulator() {
       health: 100,
       angle: side === "left" ? 0 : Math.PI,
       spinAngle: 0,
-      ammo: type === "gun" ? 6 : null,
-      maxAmmo: type === "gun" ? 6 : null,
+      ammo: type === "gun" || type === "arm" ? 6 : null,
+      maxAmmo: type === "gun" || type === "arm" ? 6 : null,
       reloadUntil: 0,
       nextShotAt: 0,
+      nextGunAt: 0,
       flashUntil: 0,
       latchedTo: null,
       latchUntil: 0,
@@ -296,7 +306,7 @@ export default function BallWeaponSimulator() {
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
-      armState: "idle", armStateUntil: 0, armAngle: 0, armBaseAngle: 0, armDirection: 1, armThrowWallUntil: 0, armThrowWallSourceId: null, armGrabDamageHits: 0,
+      armState: "idle", armStateUntil: 0, armAngle: 0, armGunAngle: side === "left" ? 0 : Math.PI, armBaseAngle: 0, armDirection: 1, armThrowWallUntil: 0, armThrowWallSourceId: null, armGrabDamageHits: 0,
       // Chess Specific
       chessState: "idle",
       chessCrown: null,
@@ -317,12 +327,8 @@ export default function BallWeaponSimulator() {
       knifeBladeAngle: 0,
       shieldBashUntil: 0,
       elbowDropUntil: 0,
-      laserSweepState: "idle",
-      laserSweepStateUntil: 0,
-      laserSweepAngle: 0,
-      laserSweepStartAngle: 0,
-      laserSweepEndAngle: 0,
-      laserSweepHitDone: false,
+      shieldCatchCount: 0,
+      laserFireCount: 0,
     };
   };
 
@@ -343,6 +349,8 @@ export default function BallWeaponSimulator() {
     cacti: [],
     venomPools: [],
     screenShake: 0,
+    finisherUntilReal: 0,
+    finisherLoserId: null,
     simulationSpeed: 1.5,
     balance: BALANCE,
     balls: [makeBall("knife", "left", 20), makeBall("spike", "right", 20)],
@@ -400,6 +408,8 @@ export default function BallWeaponSimulator() {
       cacti: [],
       venomPools: [],
       screenShake: 0,
+      finisherUntilReal: 0,
+      finisherLoserId: null,
       simulationSpeed,
       balls,
       balance: { ...BALANCE, ...balanceSettings },
@@ -454,6 +464,18 @@ export default function BallWeaponSimulator() {
     });
   };
 
+  const saveBalanceAdjustments = () => {
+    localStorage.setItem("ball_fighters_balance", JSON.stringify(balanceSettings));
+    setBalanceSaved(true);
+    setTimeout(() => setBalanceSaved(false), 2000);
+  };
+
+  const resetBalanceAdjustments = () => {
+    localStorage.removeItem("ball_fighters_balance");
+    setBalanceSettings(BALANCE);
+    gameRef.current.balance = BALANCE;
+  };
+
   const runTournament = (roundsCount) => {
     setSimulatingTournament(true);
     setTimeout(() => {
@@ -466,7 +488,7 @@ export default function BallWeaponSimulator() {
         const leftBall = makeBall(leftType, "left", 20);
         const rightBall = makeBall(rightType, "right", 20);
         const balls = [leftBall, rightBall];
-        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [], localPortalProjectiles = [], localPortals = [], localVenomPools = [];
+        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [], localPortalProjectiles = [], localPortals = [], localVenomPools = [], localLaserCanons = [];
         let damageCooldowns = {};
         let simTime = 0, dt = 0.016, maxTicks = 10000;
 
@@ -481,14 +503,18 @@ export default function BallWeaponSimulator() {
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
             const isArmGrabbed = balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > simTime && b.id !== ball.id);
+            const isWebTetheredTarget = balls.some(b => b.type === "spider" && b.webTargetId === ball.id && (b.webState === "pulling" || b.webState === "webBouncing"));
+            const isParalyzed = ball.paralyzedUntil && ball.paralyzedUntil > simTime;
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
+            if (isParalyzed) slowMult *= 0.1;
             const insideWeb = localVenomPools.some((pool) => {
               if (ball.side === pool.ownerSide) return false;
               const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
               return dist < ball.r + pool.r;
             });
-            if (insideWeb) slowMult *= 0.6;
-            if (ball.type === "spider" && ball.webState === "pulling") slowMult *= 0.6;
+            const webSlowMult = 1 - clamp(balance.spider.webSlow ?? 5, 0, 5) * 0.1;
+            if (insideWeb) slowMult *= webSlowMult;
+            if (isWebTetheredTarget) slowMult *= webSlowMult;
 
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
               ball.x += ball.vx * dt * slowMult;
@@ -578,6 +604,11 @@ export default function BallWeaponSimulator() {
             const localApplyDamage = (defender, amount, cooldownKey, cd = 360) => {
               if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
               if (damageCooldowns[cooldownKey] > simTime) return;
+              if (defender.type === "spore" && (defender.hydraGlowStacks || 0) > 0) {
+                defender.hydraGlowStacks--;
+                damageCooldowns[cooldownKey] = simTime + cd;
+                return;
+              }
               let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
               defender.health = Math.max(0, defender.health - finalAmount);
               damageCooldowns[cooldownKey] = simTime + cd;
@@ -625,7 +656,9 @@ export default function BallWeaponSimulator() {
           balls.forEach((ball, idx) => {
             const enemy = idx === 0 ? rightBall : leftBall;
             if (simTime >= 3000) {
-              if (ball.type === "knife") {
+              const isParalyzed = ball.paralyzedUntil && ball.paralyzedUntil > simTime;
+              if (!isParalyzed) {
+                if (ball.type === "knife") {
                 const bal = balance.knife;
                 if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
                 
@@ -685,20 +718,9 @@ export default function BallWeaponSimulator() {
               if (ball.type === "spike" && Math.hypot(ball.x - enemy.x, ball.y - enemy.y) < ball.r + enemy.r + balance.spike.spikeReach) {
                 localApplyDamage(enemy, balance.spike.touchDamage, `${ball.id}-spike-touch`, balance.spike.cooldown);
               }
-              if (ball.type === "gun") {
+              if (ball.type === "gun" || ball.type === "arm") {
                 ball.angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                
-                if (ball.ammo <= 0 || ball.reloadUntil > simTime) {
-                  const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                  if (dist < 160 && simTime >= (ball.nextSecondaryAt || 0)) {
-                    ball.nextSecondaryAt = simTime + balance.gun.secCooldown;
-                    const awayAngle = Math.atan2(ball.y - enemy.y, ball.x - enemy.x);
-                    ball.vx += Math.cos(awayAngle) * balance.gun.secDashForce;
-                    ball.vy += Math.sin(awayAngle) * balance.gun.secDashForce;
-                    ball.ammo = Math.min(ball.maxAmmo, (ball.ammo || 0) + 2);
-                    ball.reloadUntil = 0;
-                  }
-                }
+                if (ball.type === "arm") ball.armGunAngle = ball.angle;
                 
                 if (ball.reloadUntil <= simTime) {
                   if (ball.ammo <= 0) {
@@ -714,7 +736,7 @@ export default function BallWeaponSimulator() {
                       r: 5, damage: balance.gun.bulletDamage, life: balance.gun.bulletLife
                     });
                     ball.ammo--;
-                    ball.nextShotAt = simTime + balance.gun.shotCooldown;
+                    ball.nextShotAt = simTime + balance.gun.shotCooldown * (ball.type === "arm" ? 1.25 : 1);
                   }
                 }
               }
@@ -724,18 +746,19 @@ export default function BallWeaponSimulator() {
                 if (ball.latchedTo === enemy.id) {
                   ball.latchedTo = null;
                   const pushAngle = Math.atan2(ball.y - enemy.y, ball.x - enemy.x);
-                  const pushForce = 480;
+                  const pushForce = 380;
                   ball.vx = Math.cos(pushAngle) * pushForce;
                   ball.vy = Math.sin(pushAngle) * pushForce;
                   enemy.vx = -Math.cos(pushAngle) * pushForce;
                   enemy.vy = -Math.sin(pushAngle) * pushForce;
+                  ball.nextLatchAt = simTime + balance.vampire.latchCooldown;
                 }
                 const dist = Math.hypot(ball.x - enemy.x, ball.y - enemy.y);
                 const latchLimit = ball.r + enemy.r + balance.vampire.latchDistance;
                 if (dist >= latchLimit) {
                   ball.hasStuck = false;
                 }
-                if (dist < latchLimit && !ball.hasStuck) {
+                if (dist < latchLimit && !ball.hasStuck && simTime >= (ball.nextLatchAt || 0)) {
                   ball.latchedTo = enemy.id;
                   ball.latchUntil = simTime + balance.vampire.latchDuration;
                   ball.hasStuck = true;
@@ -798,14 +821,60 @@ export default function BallWeaponSimulator() {
               }
 
               if (ball.laserState === "idle" && ball.nextShotAt <= simTime) {
-                ball.laserState = "charging"; ball.laserStateUntil = simTime + balance.laser.chargeTime;
-                ball.laserTargetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                if ((ball.laserFireCount || 0) >= 5) {
+                  ball.laserState = "canon_charging";
+                  ball.laserStateUntil = simTime + balance.laser.chargeTime;
+                  ball.laserTargetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                } else {
+                  ball.laserState = "charging";
+                  ball.laserStateUntil = simTime + balance.laser.chargeTime;
+                  ball.laserTargetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                  ball.laserBlockedHits = 0; // Reset block hits for this new shot!
+                }
+              } else if (ball.laserState === "canon_charging") {
+                const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                let diff = targetAngle - ball.laserTargetAngle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                const maxChange = (balance.laser.trackingSpeed || 2.1) * (1 / 60);
+                if (Math.abs(diff) <= maxChange) {
+                  ball.laserTargetAngle = targetAngle;
+                } else {
+                  ball.laserTargetAngle += Math.sign(diff) * maxChange;
+                }
+                if (simTime >= ball.laserStateUntil) {
+                  ball.laserState = "idle";
+                  ball.nextShotAt = simTime + balance.laser.cooldown;
+                  ball.laserFireCount = 0;
+
+                  const spawnDist = ball.r + 15;
+                  const projX = ball.x + Math.cos(ball.laserTargetAngle) * spawnDist;
+                  const projY = ball.y + Math.sin(ball.laserTargetAngle) * spawnDist;
+                  const projVx = Math.cos(ball.laserTargetAngle) * 550;
+                  const projVy = Math.sin(ball.laserTargetAngle) * 550;
+
+                  localLaserCanons.push({
+                    ownerId: ball.id,
+                    ownerSide: ball.side,
+                    x: projX,
+                    y: projY,
+                    vx: projVx,
+                    vy: projVy,
+                    r: 12,
+                    fuseUntil: simTime + 1200
+                  });
+                }
               } else if (ball.laserState === "charging") {
                 const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                 let diff = targetAngle - ball.laserTargetAngle;
-                while (diff > Math.PI) diff -= Math.PI * 2;
                 while (diff < -Math.PI) diff += Math.PI * 2;
-                ball.laserTargetAngle += diff * 0.05;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                const maxChange = (balance.laser.trackingSpeed || 2.1) * (1 / 60);
+                if (Math.abs(diff) <= maxChange) {
+                  ball.laserTargetAngle = targetAngle;
+                } else {
+                  ball.laserTargetAngle += Math.sign(diff) * maxChange;
+                }
                 if (simTime >= ball.laserStateUntil) {
                   ball.laserState = "firing"; ball.laserStateUntil = simTime + balance.laser.fireDuration;
                   ball.laserNextTickAt = simTime;
@@ -813,21 +882,53 @@ export default function BallWeaponSimulator() {
               } else if (ball.laserState === "firing") {
                 const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                 let diff = targetAngle - ball.laserTargetAngle;
-                while (diff > Math.PI) diff -= Math.PI * 2;
                 while (diff < -Math.PI) diff += Math.PI * 2;
-                ball.laserTargetAngle += diff * 0.02;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                const maxChange = (balance.laser.trackingSpeed || 2.1) * (1 / 60);
+                if (Math.abs(diff) <= maxChange) {
+                  ball.laserTargetAngle = targetAngle;
+                } else {
+                  ball.laserTargetAngle += Math.sign(diff) * maxChange;
+                }
                 const mX = ball.x + Math.cos(ball.laserTargetAngle) * ball.r;
                 const mY = ball.y + Math.sin(ball.laserTargetAngle) * ball.r;
                 const eX = mX + Math.cos(ball.laserTargetAngle) * 1500;
                 const eY = mY + Math.sin(ball.laserTargetAngle) * 1500;
-                const d = linePointDist(enemy.x, enemy.y, mX, mY, eX, eY);
-                if (d < enemy.r + balance.laser.beamWidth / 2 && simTime >= ball.laserNextTickAt) {
-                  if (isChessCrownActive(enemy)) return;
-                  enemy.health = Math.max(0, enemy.health - Math.max(MIN_DAMAGE, balance.laser.damagePerTick));
-                  ball.laserNextTickAt = simTime + balance.laser.tickCooldown;
+                
+                const shieldBlock = getShieldBeamBlock(enemy.type === "shield" ? enemy : null, mX, mY, eX, eY, balance.laser.beamWidth);
+                if (shieldBlock && (ball.laserBlockedHits || 0) < 4) {
+                  if (simTime >= ball.laserNextTickAt) {
+                    ball.laserNextTickAt = simTime + balance.laser.tickCooldown;
+                    ball.laserBlockedHits = (ball.laserBlockedHits || 0) + 1;
+                    
+                    enemy.shieldGuardHits = (enemy.shieldGuardHits || 0) + 1;
+                    if (enemy.shieldGuardHits >= 3) { // SHIELD_GUARD_HITS is 3
+                      enemy.shieldGuardHits = 0;
+                      enemy.shieldState = "dropped";
+                      enemy.shieldX = enemy.x + Math.cos(shieldBlock.angle) * (enemy.r + 8);
+                      enemy.shieldY = enemy.y + Math.sin(shieldBlock.angle) * (enemy.r + 8);
+                      enemy.shieldVx = 0;
+                      enemy.shieldVy = 0;
+                      enemy.shieldThrownUntil = 0;
+                      enemy.shieldNextHitAt = 0;
+                    }
+                  }
+                } else {
+                  const d = linePointDist(enemy.x, enemy.y, mX, mY, eX, eY);
+                  if (d < enemy.r + balance.laser.beamWidth / 2 && simTime >= ball.laserNextTickAt) {
+                    if (isChessCrownActive(enemy)) return;
+                    if (enemy.type === "spore" && (enemy.hydraGlowStacks || 0) > 0) {
+                      enemy.hydraGlowStacks--;
+                      ball.laserNextTickAt = simTime + balance.laser.tickCooldown;
+                    } else {
+                      enemy.health = Math.max(0, enemy.health - Math.max(MIN_DAMAGE, balance.laser.damagePerTick));
+                      ball.laserNextTickAt = simTime + balance.laser.tickCooldown;
+                    }
+                  }
                 }
                 if (simTime >= ball.laserStateUntil) {
                   ball.laserState = "idle"; ball.nextShotAt = simTime + balance.laser.cooldown;
+                  ball.laserFireCount = (ball.laserFireCount || 0) + 1;
                 }
               }
             }
@@ -847,8 +948,8 @@ export default function BallWeaponSimulator() {
                 ball.shieldAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                 
                 const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (dist < 85 && simTime >= (ball.nextSecondaryAt || 0)) {
-                  ball.nextSecondaryAt = simTime + balance.shield.secCooldownHeld;
+                if (dist < 85 && (ball.shieldCatchCount || 0) >= 3) {
+                  ball.shieldCatchCount = 0;
                   ball.shieldBashUntil = simTime + 250;
                   const bashAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                   ball.vx = Math.cos(bashAngle) * 480;
@@ -871,6 +972,7 @@ export default function BallWeaponSimulator() {
                 const pickupDist = Math.hypot(ball.x - ball.shieldX, ball.y - ball.shieldY);
                 if (pickupDist < ball.r + SHIELD_PICKUP_RADIUS) {
                   ball.shieldState = "held";
+                  ball.shieldCatchCount = (ball.shieldCatchCount || 0) + 1;
                   ball.shieldGuardHits = 0;
                   ball.shieldBonusDamage = 0;
                   ball.shieldFastRecall = false;
@@ -918,6 +1020,7 @@ export default function BallWeaponSimulator() {
                   const distToOwner = Math.hypot(ball.x - ball.shieldX, ball.y - ball.shieldY);
                   if (distToOwner < ball.r + 10) {
                     ball.shieldState = "held";
+                    ball.shieldCatchCount = (ball.shieldCatchCount || 0) + 1;
                     ball.shieldGuardHits = 0;
                     ball.shieldBonusDamage = 0;
                     ball.shieldFastRecall = false;
@@ -939,6 +1042,7 @@ export default function BallWeaponSimulator() {
                   r: balance.spider.secPoolRadius,
                   ownerSide: ball.side,
                   createdTime: simTime,
+                  tickCounts: {},
                   duration: 4000
                 });
               }
@@ -1051,22 +1155,24 @@ export default function BallWeaponSimulator() {
                   enemy.vy = Math.sin(launchAngle) * launchForce;
                 }
               } else if (ball.armState === "idle") {
-                ball.armAngle = (ball.armAngle || 0) + balance.arm.swingSpeed;
-                
-                // Leap Lunge Trigger
-                const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                const targetDist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (targetDist > 220 && simTime >= (ball.nextSecondaryAt || 0)) {
-                  ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
-                  ball.vx += Math.cos(targetAngle) * 450;
-                  ball.vy += Math.sin(targetAngle) * 450;
-                }
+                const shoulderBaseX = ball.x - ball.r * 0.65;
+                const shoulderBaseY = ball.y;
+                const targetDist = Math.hypot(enemy.x - shoulderBaseX, enemy.y - shoulderBaseY);
+                const targetAngle = Math.atan2(enemy.y - shoulderBaseY, enemy.x - shoulderBaseX);
+                const restAngle = Math.PI;
+                const desiredAngle = targetDist < grabRange + enemy.r * 1.35 ? targetAngle : restAngle;
+                let diff = desiredAngle - (ball.armAngle || 0);
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                ball.armAngle = (ball.armAngle || 0) + diff * 0.12 + Math.sin(simTime * 0.004) * 0.01;
                 
                 if (ball.nextShotAt <= simTime) {
-                  const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
-                  const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
+                  const shoulderX = shoulderBaseX;
+                  const shoulderY = shoulderBaseY;
+                  const handX = shoulderX + Math.cos(ball.armAngle) * grabRange;
+                  const handY = shoulderY + Math.sin(ball.armAngle) * grabRange;
                   const dist = Math.hypot(handX - enemy.x, handY - enemy.y);
-                  if (dist < enemy.r + 22) {
+                  if (dist < enemy.r + 30 || targetDist < grabRange + enemy.r) {
                     ball.armState = "grabbing";
                     ball.armStateUntil = simTime + balance.arm.grabDuration;
                     ball.armGrabDamageHits = 0;
@@ -1106,8 +1212,10 @@ export default function BallWeaponSimulator() {
                   const swayAngle = Math.sin(elapsed * 0.012) * 1.3;
                   ball.armAngle = ball.armBaseAngle + swayAngle;
                   
-                  const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
-                  const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
+                  const shoulderX = ball.x - ball.r * 0.65;
+                  const shoulderY = ball.y;
+                  const handX = shoulderX + Math.cos(ball.armAngle) * grabRange;
+                  const handY = shoulderY + Math.sin(ball.armAngle) * grabRange;
                   
                   const pad = 18;
                   const targetX = clamp(handX, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
@@ -1116,19 +1224,6 @@ export default function BallWeaponSimulator() {
                   enemy.x = targetX;
                   enemy.y = targetY;
                   enemy.vx = 0; enemy.vy = 0;
-                  
-                  const corners = [
-                    { x: pad + enemy.r, y: pad + enemy.r },
-                    { x: ARENA_SIZE - pad - enemy.r, y: pad + enemy.r },
-                    { x: pad + enemy.r, y: ARENA_SIZE - pad - enemy.r },
-                    { x: ARENA_SIZE - pad - enemy.r, y: ARENA_SIZE - pad - enemy.r }
-                  ];
-                  const isNearCorner = corners.some(c => Math.hypot(enemy.x - c.x, enemy.y - c.y) < 32);
-                  const damageKey = `${ball.id}-arm-corner`;
-                  if (isNearCorner && (ball.armGrabDamageHits || 0) < 2 && (!damageCooldowns[damageKey] || damageCooldowns[damageKey] <= simTime)) {
-                    localApplyDamage(enemy, balance.arm.slamDamage, damageKey, 500);
-                    ball.armGrabDamageHits = (ball.armGrabDamageHits || 0) + 1;
-                  }
                   
                   if (simTime >= ball.armStateUntil) {
                     ball.armState = "idle";
@@ -1277,7 +1372,7 @@ export default function BallWeaponSimulator() {
                 const ry = clamp(ball.y + (Math.random() - 0.5) * 280, 120, ARENA_SIZE - 120);
                 localCacti.push({
                   ownerId: ball.id, ownerSide: ball.side, x: rx, y: ry, r: 0, targetR: 22,
-                  createdTime: simTime, growthDuration: balance.spore.growthDuration, life: balance.spore.cactusLife, charges: 2
+                  createdTime: simTime, growthDuration: balance.spore.growthDuration, life: balance.spore.growthDuration + balance.spore.cactusLife, charges: 2
                 });
               }
               ball.nextSporeAt = simTime + balance.spore.cooldown;
@@ -1323,6 +1418,7 @@ export default function BallWeaponSimulator() {
                   ball.hammerState = "spinning";
                   ball.hammerAngle = 0;
                 }
+              }
               }
             }
           }
@@ -1378,7 +1474,11 @@ export default function BallWeaponSimulator() {
             const target = bullet.targetSide === "left" ? leftBall : rightBall;
             if (bullet.targetSide && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
               if (isChessCrownActive(target)) return false;
-              target.health = Math.max(0, target.health - bullet.damage);
+              if (target.type === "spore" && (target.hydraGlowStacks || 0) > 0) {
+                target.hydraGlowStacks--;
+              } else {
+                target.health = Math.max(0, target.health - bullet.damage);
+              }
               return false;
             }
             return true;
@@ -1394,7 +1494,11 @@ export default function BallWeaponSimulator() {
                   if (db < balance.bomber.mineRadius + ball.r) {
                     if (isChessCrownActive(ball)) return;
                     const falloff = 1 - (db / (balance.bomber.mineRadius + ball.r));
-                    ball.health = Math.max(0, ball.health - Math.max(MIN_DAMAGE, Math.round(balance.bomber.mineDamage * falloff)));
+                    if (ball.type === "spore" && (ball.hydraGlowStacks || 0) > 0) {
+                      ball.hydraGlowStacks--;
+                    } else {
+                      ball.health = Math.max(0, ball.health - Math.max(MIN_DAMAGE, Math.round(balance.bomber.mineDamage * falloff)));
+                    }
                     const angle = Math.atan2(ball.y - mine.y, ball.x - mine.x);
                     const force = balance.bomber.knockback * 25 * falloff;
                     ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
@@ -1406,6 +1510,36 @@ export default function BallWeaponSimulator() {
             }
             if (d < enemy.r + balance.bomber.mineTriggerDist) {
               mine.triggerTime = simTime + 150;
+            }
+            return true;
+          });
+
+          localLaserCanons = localLaserCanons.filter((canon) => {
+            canon.x += canon.vx * dt;
+            canon.y += canon.vy * dt;
+            const pad = 18;
+            if (canon.x - canon.r < pad || canon.x + canon.r > ARENA_SIZE - pad ||
+                canon.y - canon.r < pad || canon.y + canon.r > ARENA_SIZE - pad) {
+              return false;
+            }
+            const enemy = canon.ownerSide === "left" ? rightBall : leftBall;
+            const dist = Math.hypot(enemy.x - canon.x, enemy.y - canon.y);
+            if (dist < enemy.r + canon.r) {
+              if (!isChessCrownActive(enemy)) {
+                if (enemy.type === "spore" && (enemy.hydraGlowStacks || 0) > 0) {
+                  enemy.hydraGlowStacks--;
+                } else {
+                  enemy.health = Math.max(0, enemy.health - 15);
+                  enemy.paralyzedUntil = simTime + 1200;
+                  const pushAngle = Math.atan2(enemy.y - canon.y, enemy.x - canon.x);
+                  enemy.vx += Math.cos(pushAngle) * 350;
+                  enemy.vy += Math.sin(pushAngle) * 350;
+                }
+              }
+              return false;
+            }
+            if (simTime >= canon.fuseUntil) {
+              return false;
             }
             return true;
           });
@@ -1426,7 +1560,11 @@ export default function BallWeaponSimulator() {
                 if (db < balance.bomb.radius + ball.r) {
                   if (isChessCrownActive(ball)) return;
                   const falloff = 1 - (db / (balance.bomb.radius + ball.r));
-                  ball.health = Math.max(0, ball.health - Math.max(MIN_DAMAGE, Math.round(balance.bomb.damage * falloff)));
+                  if (ball.type === "spore" && (ball.hydraGlowStacks || 0) > 0) {
+                    ball.hydraGlowStacks--;
+                  } else {
+                    ball.health = Math.max(0, ball.health - Math.max(MIN_DAMAGE, Math.round(balance.bomb.damage * falloff)));
+                  }
                   const angle = Math.atan2(ball.y - bomb.y, ball.x - bomb.x);
                   const force = balance.bomb.knockback * 25 * falloff;
                   ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
@@ -1541,7 +1679,12 @@ export default function BallWeaponSimulator() {
               if (ball.side === pool.ownerSide) return;
               const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
               if (dist < ball.r + pool.r) {
-                localApplyDamage(ball, balance.spider.secDamage, `${ball.id}-venom-tick-${pool.createdTime}`, 250);
+                if (!pool.tickCounts) pool.tickCounts = {};
+                if ((pool.tickCounts[ball.id] || 0) >= 3) return;
+                const damageKey = `${ball.id}-venom-tick-${pool.createdTime}`;
+                if (damageCooldowns[damageKey] > simTime) return;
+                localApplyDamage(ball, balance.spider.secDamage, damageKey, 250);
+                pool.tickCounts[ball.id] = (pool.tickCounts[ball.id] || 0) + 1;
               }
             });
             return true;
@@ -1640,13 +1783,84 @@ export default function BallWeaponSimulator() {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
+    const triggerFinisher = (defender, amount, currentTime) => {
+      if (game.finisherLoserId === defender.id) return true;
+      if (game.finisherLoserId || defender.health <= 0 || defender.health - amount > 0) return false;
+
+      game.finisherLoserId = defender.id;
+      game.finisherUntilReal = (game.realTime || performance.now()) + FINISHER_SLOWMO_DURATION;
+      game.roundOverSoundPlayed = true;
+      defender.brokenUntil = currentTime + FINISHER_SLOWMO_DURATION;
+      const shatterConfig = BALL_TYPES[defender.type] || BALL_TYPES.knife;
+      const shatterPalette = [shatterConfig.color, shatterConfig.stroke, shatterConfig.color, shatterConfig.stroke];
+      defender.shattered = true;
+      defender.shatterFragments = Array.from({ length: 18 }, (_, i) => {
+        const angle = (i / 18) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+        return {
+          angle,
+          dist: 10 + Math.random() * defender.r * 0.9,
+          size: 5 + Math.random() * 9,
+          rot: Math.random() * Math.PI,
+          color: shatterPalette[i % shatterPalette.length]
+        };
+      });
+      defender.health = 0.1;
+      defender.vx *= 0.25;
+      defender.vy *= 0.25;
+      game.screenShake = Math.max(game.screenShake, 45);
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({
+        x: defender.x,
+        y: defender.y - defender.r - 28,
+        vy: -45,
+        text: "BREAK!",
+        color: "#f8fafc",
+        life: 1.1,
+        maxLife: 1.1
+      });
+
+      for (let i = 0; i < 34; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const spd = 120 + Math.random() * 260;
+        game.particles.push({
+          x: defender.x + Math.cos(a) * defender.r * 0.45,
+          y: defender.y + Math.sin(a) * defender.r * 0.45,
+          vx: Math.cos(a) * spd,
+          vy: Math.sin(a) * spd,
+          color: shatterPalette[i % shatterPalette.length],
+          radius: 2 + Math.random() * 3,
+          life: 0.9,
+          maxLife: 0.9
+        });
+      }
+      return true;
+    };
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
       if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
       if (game.damageCooldowns[cooldownKey] > currentTime) return;
       
+      if (defender.type === "spore" && (defender.hydraGlowStacks || 0) > 0) {
+        defender.hydraGlowStacks--;
+        game.damageCooldowns[cooldownKey] = currentTime + cooldown;
+        spawnSparks(defender.x, defender.y, "#fb7185", 12);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: defender.x,
+          y: defender.y - defender.r - 18,
+          vy: -60,
+          text: "RAGE BLOCK!",
+          color: "#fb7185",
+          glowColor: "#f43f5e",
+          life: 0.8,
+          maxLife: 0.8
+        });
+        return;
+      }
+
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
 
-      defender.health = clamp(defender.health - finalAmount, 0, 100);
+      const isFinalHit = triggerFinisher(defender, finalAmount, currentTime);
+      if (!isFinalHit) defender.health = clamp(defender.health - finalAmount, 0, 100);
       game.damageCooldowns[cooldownKey] = currentTime + cooldown;
 
       game.floatingTexts = game.floatingTexts || [];
@@ -1659,7 +1873,40 @@ export default function BallWeaponSimulator() {
         life: 0.8,
         maxLife: 0.8
       });
+
+      // Apply screen shake based on the source
+      const keyLower = cooldownKey.toLowerCase();
+      let shakeAmount = 6;
+      if (keyLower.includes("knife")) {
+        shakeAmount = 8;
+      } else if (keyLower.includes("wallspike")) {
+        shakeAmount = 14;
+      } else if (keyLower.includes("spike")) {
+        shakeAmount = 12;
+      } else if (keyLower.includes("bullet")) {
+        shakeAmount = 16;
+      } else if (keyLower.includes("vampire")) {
+        shakeAmount = 4;
+      } else if (keyLower.includes("laser")) {
+        shakeAmount = 8;
+      } else if (keyLower.includes("shield")) {
+        shakeAmount = 16;
+      } else if (keyLower.includes("spider") || keyLower.includes("fang")) {
+        shakeAmount = 8;
+      } else if (keyLower.includes("cactus")) {
+        shakeAmount = 10;
+      } else if (keyLower.includes("hammer")) {
+        shakeAmount = 35;
+      } else if (keyLower.includes("string")) {
+        shakeAmount = 10;
+      } else if (keyLower.includes("arm")) {
+        shakeAmount = 25;
+      } else if (keyLower.includes("chess")) {
+        shakeAmount = 30;
+      }
+      game.screenShake = Math.max(game.screenShake, shakeAmount);
     };
+
 
     const spawnSparks = (x, y, color, count = 8) => {
       for (let i = 0; i < count; i++) {
@@ -1781,12 +2028,10 @@ export default function BallWeaponSimulator() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        game.screenShake = Math.max(game.screenShake, 3);
         if (ball.armThrowWallUntil && game.simTime <= ball.armThrowWallUntil) {
-          applyDamage(ball, ARM_THROW_WALL_DAMAGE, `${ball.armThrowWallSourceId || ball.id}-arm-throw-wall`, game.simTime, 500);
           ball.armThrowWallUntil = 0;
           ball.armThrowWallSourceId = null;
-          spawnSparks(ball.x, ball.y, "#ef4444", 14);
-          game.screenShake = Math.max(game.screenShake, 14);
         }
         if (gameStarted && game.simTime >= 3000) {
           if (ball.type === "wallSpike") {
@@ -1868,11 +2113,12 @@ export default function BallWeaponSimulator() {
         if (vampire.latchedTo === target.id) {
           vampire.latchedTo = null;
           const pushAngle = Math.atan2(vampire.y - target.y, vampire.x - target.x);
-          const pushForce = 480;
+          const pushForce = 380;
           vampire.vx = Math.cos(pushAngle) * pushForce;
           vampire.vy = Math.sin(pushAngle) * pushForce;
           target.vx = -Math.cos(pushAngle) * pushForce;
           target.vy = -Math.sin(pushAngle) * pushForce;
+          vampire.nextLatchAt = currentTime + game.balance.vampire.latchCooldown;
           spawnSparks(vampire.x, vampire.y, "#f87171", 10);
           spawnDust(vampire.x, vampire.y, 6);
         }
@@ -1883,7 +2129,7 @@ export default function BallWeaponSimulator() {
           vampire.hasStuck = false;
         }
 
-        if (dist < latchLimit && !vampire.hasStuck) {
+        if (dist < latchLimit && !vampire.hasStuck && currentTime >= (vampire.nextLatchAt || 0)) {
           vampire.latchedTo = target.id;
           vampire.latchUntil = currentTime + game.balance.vampire.latchDuration;
           vampire.hasStuck = true;
@@ -1900,7 +2146,8 @@ export default function BallWeaponSimulator() {
 
       if (vampire.nextDrainAt <= currentTime) {
         const drainAmount = Math.max(MIN_DAMAGE, game.balance.vampire.drainPerTick);
-        target.health = clamp(target.health - drainAmount, 0, 100);
+        const isFinalHit = triggerFinisher(target, drainAmount, currentTime);
+        if (!isFinalHit) target.health = clamp(target.health - drainAmount, 0, 100);
         vampire.health = clamp(vampire.health + game.balance.vampire.healPerTick, 0, 100);
         
         if (vampire.side === "left") {
@@ -1929,73 +2176,68 @@ export default function BallWeaponSimulator() {
       if (isChessCrownActive(target)) return;
       const bal = game.balance;
       const grabRange = bal.arm.grabRange;
+      updateArmGun(armBall, target, currentTime);
 
       if (armBall.armState === "elbow_dropping") {
-        armBall.x += (target.x - armBall.x) * 0.18;
-        armBall.y += (target.y - armBall.y) * 0.18;
-        target.x = armBall.x;
-        target.y = armBall.y;
-        target.vx = 0; target.vy = 0;
+        const slamAngle = Math.atan2(target.y - armBall.y, target.x - armBall.x);
+        const holdDist = armBall.r + target.r - 4;
+        const holdX = armBall.x + Math.cos(slamAngle) * holdDist;
+        const holdY = armBall.y + Math.sin(slamAngle) * holdDist;
+        const holdPull = Math.min(1, stepDt * 10);
+        target.x += (holdX - target.x) * holdPull;
+        target.y += (holdY - target.y) * holdPull;
+        target.vx *= 0.35;
+        target.vy *= 0.35;
         
         if (currentTime >= armBall.armStateUntil) {
           armBall.armState = "idle";
           applyDamage(target, bal.arm.secSlamDamage, `${armBall.id}-elbow-slam`, currentTime, 500);
           const launchAngle = Math.random() * Math.PI * 2;
-          const launchForce = 650;
+          const launchForce = 460;
+          const releaseDist = armBall.r + target.r + 3;
+          target.x = armBall.x + Math.cos(launchAngle) * releaseDist;
+          target.y = armBall.y + Math.sin(launchAngle) * releaseDist;
           target.vx = Math.cos(launchAngle) * launchForce;
           target.vy = Math.sin(launchAngle) * launchForce;
-          target.armThrowWallUntil = currentTime + 1600;
-          target.armThrowWallSourceId = armBall.id;
+          armBall.vx = -Math.cos(launchAngle) * 260;
+          armBall.vy = -Math.sin(launchAngle) * 260;
+          armBall.x -= Math.cos(launchAngle) * 10;
+          armBall.y -= Math.sin(launchAngle) * 10;
+          handleWallBounce(armBall);
+          handleWallBounce(target);
           spawnDust(target.x, target.y, 16);
           spawnSparks(target.x, target.y, "#ef4444", 15);
-          game.screenShake = Math.max(game.screenShake, 18);
+          game.screenShake = Math.max(game.screenShake, 32);
         }
         return;
       }
 
       if (armBall.armState === "idle") {
-        const targetAngle = Math.atan2(target.y - armBall.y, target.x - armBall.x);
-        let diff = targetAngle - (armBall.armAngle || 0);
+        const shoulderBaseX = armBall.x - armBall.r * 0.65;
+        const shoulderBaseY = armBall.y;
+        const targetAngle = Math.atan2(target.y - shoulderBaseY, target.x - shoulderBaseX);
+        const targetDist = Math.hypot(target.x - shoulderBaseX, target.y - shoulderBaseY);
+        const restAngle = Math.PI;
+        const desiredAngle = targetDist < grabRange + target.r * 1.35 ? targetAngle : restAngle;
+        let diff = desiredAngle - (armBall.armAngle || 0);
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         const sweep = Math.sin(currentTime * 0.006) * 0.55;
         armBall.armAngle = (armBall.armAngle || 0) + diff * 0.11 + bal.arm.swingSpeed * 0.45 + sweep * 0.025;
-        
-        // Trigger Leap Lunge
-        const targetDist = Math.hypot(target.x - armBall.x, target.y - armBall.y);
-        if (targetDist > 220 && currentTime >= (armBall.nextSecondaryAt || 0)) {
-          armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
-          armBall.vx += Math.cos(targetAngle) * 450;
-          armBall.vy += Math.sin(targetAngle) * 450;
-          
-          game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({
-            x: armBall.x, y: armBall.y - armBall.r - 20, vy: -50,
-            text: "LEAP LUNGE", color: "#cbd5e1", life: 0.8, maxLife: 0.8
-          });
-          
-          for (let i = 0; i < 8; i++) {
-            const sa = targetAngle + Math.PI + (Math.random() - 0.5) * 0.5;
-            const spd = 60 + Math.random() * 80;
-            game.particles.push({
-              x: armBall.x, y: armBall.y,
-              vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd,
-              color: "#cbd5e1", radius: 2, life: 0.35, maxLife: 0.35
-            });
-          }
-        }
 
         if (armBall.nextShotAt <= currentTime) {
-          const handX = armBall.x + Math.cos(armBall.armAngle) * grabRange;
-          const handY = armBall.y + Math.sin(armBall.armAngle) * grabRange;
+          const shoulderX = shoulderBaseX;
+          const shoulderY = shoulderBaseY;
+          const handX = shoulderX + Math.cos(armBall.armAngle) * grabRange;
+          const handY = shoulderY + Math.sin(armBall.armAngle) * grabRange;
           const dist = Math.hypot(handX - target.x, handY - target.y);
-          if (dist < target.r + 26 || targetDist < grabRange + target.r * 0.8) {
+          if (dist < target.r + 32 || targetDist < grabRange + target.r * 1.05) {
             armBall.armState = "grabbing";
             armBall.armStateUntil = currentTime + bal.arm.grabDuration;
             armBall.armGrabDamageHits = 0;
             armBall.armBaseAngle = targetAngle;
             armBall.armDirection = target.y < armBall.y ? 1 : -1;
-            armBall.armGrabRadius = Math.max(armBall.r + target.r + 8, Math.min(grabRange, targetDist));
+            armBall.armGrabRadius = Math.max(armBall.r + target.r + 8, Math.min(grabRange + target.r * 0.35, targetDist));
             armBall.armLastHandX = target.x;
             armBall.armLastHandY = target.y;
             
@@ -2027,8 +2269,10 @@ export default function BallWeaponSimulator() {
         armBall.armAngle = armBall.armBaseAngle + armBall.armDirection * (progress * Math.PI * 1.35 + whip);
         
         const reach = (armBall.armGrabRadius || grabRange) * (0.85 + Math.sin(progress * Math.PI) * 0.25);
-        const handX = armBall.x + Math.cos(armBall.armAngle) * reach;
-        const handY = armBall.y + Math.sin(armBall.armAngle) * reach;
+        const shoulderX = armBall.x - armBall.r * 0.65;
+        const shoulderY = armBall.y;
+        const handX = shoulderX + Math.cos(armBall.armAngle) * reach;
+        const handY = shoulderY + Math.sin(armBall.armAngle) * reach;
         
         const pad = 18;
         const targetX = clamp(handX, pad + target.r, game.width - pad - target.r);
@@ -2042,31 +2286,12 @@ export default function BallWeaponSimulator() {
         target.vy = (target.y - prevY) / Math.max(stepDt, 0.001);
         target.spinAngle = (target.spinAngle || 0) + armBall.armDirection * 0.35;
         
-        const corners = [
-          { x: pad + target.r, y: pad + target.r },
-          { x: game.width - pad - target.r, y: pad + target.r },
-          { x: pad + target.r, y: game.height - pad - target.r },
-          { x: game.width - pad - target.r, y: game.height - pad - target.r }
-        ];
-        
-        const isNearWall = target.x <= pad + target.r + 4 || target.x >= game.width - pad - target.r - 4 || target.y <= pad + target.r + 4 || target.y >= game.height - pad - target.r - 4;
-        const isNearCorner = corners.some(c => Math.hypot(target.x - c.x, target.y - c.y) < 34);
-        const damageKey = `${armBall.id}-arm-wall-ragdoll`;
-        if ((isNearWall || isNearCorner) && (armBall.armGrabDamageHits || 0) < 2 && (!game.damageCooldowns[damageKey] || game.damageCooldowns[damageKey] <= currentTime)) {
-          applyDamage(target, ARM_RAGDOLL_WALL_DAMAGE, damageKey, currentTime, 500);
-          armBall.armGrabDamageHits = (armBall.armGrabDamageHits || 0) + 1;
-          spawnSparks(target.x, target.y, "#e5e7eb", 12);
-          game.screenShake = Math.max(game.screenShake, 14);
-        }
-        
         if (currentTime >= armBall.armStateUntil) {
           armBall.armState = "idle";
           const launchAngle = armBall.armAngle + (Math.PI / 2) * armBall.armDirection;
-          const launchForce = 650;
+          const launchForce = 460;
           target.vx = Math.cos(launchAngle) * launchForce;
           target.vy = Math.sin(launchAngle) * launchForce;
-          target.armThrowWallUntil = currentTime + 1600;
-          target.armThrowWallSourceId = armBall.id;
           spawnDust(target.x, target.y, 10);
           spawnSparks(target.x, target.y, "#facc15", 10);
         }
@@ -2212,35 +2437,6 @@ export default function BallWeaponSimulator() {
     const updateGun = (gun, target, currentTime) => {
       gun.angle = Math.atan2(target.y - gun.y, target.x - gun.x);
       
-      // Tactical Reload Dash
-      if (gun.ammo <= 0 || gun.reloadUntil > currentTime) {
-        const dist = Math.hypot(target.x - gun.x, target.y - gun.y);
-        if (dist < 160 && currentTime >= (gun.nextSecondaryAt || 0)) {
-          gun.nextSecondaryAt = currentTime + game.balance.gun.secCooldown;
-          const awayAngle = Math.atan2(gun.y - target.y, gun.x - target.x);
-          gun.vx += Math.cos(awayAngle) * game.balance.gun.secDashForce;
-          gun.vy += Math.sin(awayAngle) * game.balance.gun.secDashForce;
-          gun.ammo = Math.min(gun.maxAmmo, (gun.ammo || 0) + 2);
-          gun.reloadUntil = 0; // Interrupt reload
-          
-          for (let i = 0; i < 8; i++) {
-            const a = awayAngle + (Math.random() - 0.5) * 0.5;
-            const spd = 60 + Math.random() * 80;
-            game.particles.push({
-              x: gun.x, y: gun.y,
-              vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
-              color: "#e2e8f0", radius: 2, life: 0.35, maxLife: 0.35
-            });
-          }
-          
-          game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({
-            x: gun.x, y: gun.y - gun.r - 20, vy: -50,
-            text: "DASH +2 AMMO", color: "#67e8f9", life: 0.8, maxLife: 0.8
-          });
-        }
-      }
-
       if (gun.reloadUntil > currentTime) return;
       if (gun.ammo <= 0) {
         gun.reloadUntil = currentTime + game.balance.gun.reloadTime;
@@ -2266,6 +2462,38 @@ export default function BallWeaponSimulator() {
       gun.flashUntil = currentTime + 90;
     };
 
+    const updateArmGun = (armBall, target, currentTime) => {
+      if (armBall.armState !== "idle") return;
+      const bal = game.balance.gun;
+      armBall.armGunAngle = Math.atan2(target.y - armBall.y, target.x - armBall.x);
+
+      if (armBall.reloadUntil > currentTime) return;
+      if (armBall.ammo <= 0) {
+        armBall.reloadUntil = currentTime + bal.reloadTime;
+        armBall.ammo = armBall.maxAmmo;
+        return;
+      }
+      if ((armBall.nextGunAt || 0) > currentTime) return;
+
+      const mountX = armBall.x + armBall.r * 0.65;
+      const mountY = armBall.y;
+      const mX = mountX + Math.cos(armBall.armGunAngle) * 30;
+      const mY = mountY + Math.sin(armBall.armGunAngle) * 30;
+      game.bullets.push({
+        ownerId: armBall.id, targetSide: target.side, x: mX, y: mY,
+        vx: Math.cos(armBall.armGunAngle) * bal.bulletSpeed,
+        vy: Math.sin(armBall.armGunAngle) * bal.bulletSpeed,
+        r: 3.5, damage: Math.max(2, bal.bulletDamage + 1), life: bal.bulletLife,
+      });
+
+      if (armBall.side === "left") game.stats.left.totalShots++;
+      else game.stats.right.totalShots++;
+
+      armBall.ammo--;
+      armBall.nextGunAt = currentTime + bal.shotCooldown * 1.05;
+      armBall.flashUntil = currentTime + 90;
+    };
+
     const updateBomb = (bombBall, target, currentTime) => {
       if (bombBall.nextBombAt > currentTime) return;
       const angle = Math.atan2(target.y - bombBall.y, target.x - bombBall.x);
@@ -2284,85 +2512,91 @@ export default function BallWeaponSimulator() {
       bombBall.nextBombAt = currentTime + game.balance.bomb.cooldown;
     };
 
-    const updateLaser = (laserBall, target, currentTime) => {
+    const updateLaser = (laserBall, target, currentTime, dt = 0.016) => {
       const bal = game.balance;
-
-      const dist = Math.hypot(target.x - laserBall.x, target.y - laserBall.y);
-      if (laserBall.laserSweepState === "idle" && currentTime >= (laserBall.nextSecondaryAt || 0) && dist < 250) {
-        laserBall.laserSweepState = "sweeping";
-        laserBall.laserSweepStateUntil = currentTime + 400;
-        const angleToTarget = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-        laserBall.laserSweepStartAngle = angleToTarget - Math.PI / 6;
-        laserBall.laserSweepEndAngle = angleToTarget + Math.PI / 6;
-        laserBall.laserSweepHitDone = false;
-        laserBall.nextSecondaryAt = currentTime + bal.laser.secCooldown;
-        
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
-          text: "LASER SWEEP", color: "#22d3ee", life: 0.8, maxLife: 0.8
-        });
-      }
-
-      if (laserBall.laserSweepState === "sweeping") {
-        const progress = Math.min(1, Math.max(0, (currentTime - (laserBall.laserSweepStateUntil - 400)) / 400));
-        laserBall.laserSweepAngle = laserBall.laserSweepStartAngle + (laserBall.laserSweepEndAngle - laserBall.laserSweepStartAngle) * progress;
-        
-        const sx = laserBall.x + Math.cos(laserBall.laserSweepAngle) * laserBall.r;
-        const sy = laserBall.y + Math.sin(laserBall.laserSweepAngle) * laserBall.r;
-        const ex = laserBall.x + Math.cos(laserBall.laserSweepAngle) * 300;
-        const ey = laserBall.y + Math.sin(laserBall.laserSweepAngle) * 300;
-        
-        if (Math.random() < 0.3) {
-          const pDist = Math.random() * 300;
-          game.particles.push({
-            x: sx + Math.cos(laserBall.laserSweepAngle) * pDist,
-            y: sy + Math.sin(laserBall.laserSweepAngle) * pDist,
-            vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30,
-            color: "#22d3ee", radius: 1.5, life: 0.2, maxLife: 0.2
-          });
-        }
-
-        const dSeg = linePointDist(target.x, target.y, sx, sy, ex, ey);
-        if (dSeg < target.r + bal.laser.beamWidth / 2 && !laserBall.laserSweepHitDone) {
-          laserBall.laserSweepHitDone = true;
-          if (!isChessCrownActive(target)) {
-            const dmg = Math.max(MIN_DAMAGE, bal.laser.secDamage);
-            target.health = clamp(target.health - dmg, 0, 100);
-            
-            game.floatingTexts = game.floatingTexts || [];
-            game.floatingTexts.push({
-              x: target.x + (Math.random() - 0.5) * 20, y: target.y - target.r - 5, vy: -60,
-              text: `-${dmg}`, color: "#22d3ee", life: 0.8, maxLife: 0.8
-            });
-            
-            if (laserBall.side === "left") { game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++; }
-            else { game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++; }
-            
-            for (let i = 0; i < 5; i++) {
-              const sa = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 60;
-              game.particles.push({
-                x: target.x + (Math.random() - 0.5) * target.r, y: target.y + (Math.random() - 0.5) * target.r,
-                vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd, color: "#22d3ee", radius: 2, life: 0.25, maxLife: 0.25
-              });
-            }
-          }
-        }
-        
-        if (currentTime >= laserBall.laserSweepStateUntil) {
-          laserBall.laserSweepState = "idle";
-        }
+      if ((laserBall.laserState === "charging" || laserBall.laserState === "firing" || laserBall.laserState === "canon_charging") && currentTime > laserBall.laserStateUntil + 250) {
+        laserBall.laserState = "idle";
+        laserBall.nextShotAt = currentTime + bal.laser.cooldown;
+        laserBall.laserReflect = null;
       }
 
       if (laserBall.laserState === "idle" && laserBall.nextShotAt <= currentTime) {
-        laserBall.laserState = "charging";
-        laserBall.laserStateUntil = currentTime + bal.laser.chargeTime;
-        laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+        if ((laserBall.laserFireCount || 0) >= 5) {
+          laserBall.laserState = "canon_charging";
+          laserBall.laserStateUntil = currentTime + bal.laser.chargeTime;
+          laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+          laserBall.laserReflect = null;
+        } else {
+          laserBall.laserState = "charging";
+          laserBall.laserStateUntil = currentTime + bal.laser.chargeTime;
+          laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+          laserBall.laserReflect = null;
+          laserBall.laserBlockedHits = 0; // Reset block hits for this new shot!
+        }
+      } else if (laserBall.laserState === "canon_charging") {
         laserBall.laserReflect = null;
+        const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+        
+        let diff = targetAngle - laserBall.laserTargetAngle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        const maxChange = (bal.laser.trackingSpeed || 2.1) * dt;
+        if (Math.abs(diff) <= maxChange) {
+          laserBall.laserTargetAngle = targetAngle;
+        } else {
+          laserBall.laserTargetAngle += Math.sign(diff) * maxChange;
+        }
+
+        if (Math.random() < 0.4) {
+          const a = Math.random() * Math.PI * 2, dst = laserBall.r + 20 + Math.random() * 20;
+          game.particles.push({
+            x: laserBall.x + Math.cos(a) * dst, y: laserBall.y + Math.sin(a) * dst,
+            vx: -Math.cos(a) * 60, vy: -Math.sin(a) * 60, color: "#22d3ee", radius: 2, life: 0.3, maxLife: 0.3
+          });
+        }
+
+        if (currentTime >= laserBall.laserStateUntil) {
+          laserBall.laserState = "idle";
+          laserBall.nextShotAt = currentTime + bal.laser.cooldown;
+          laserBall.laserFireCount = 0; // Reset count
+          
+          const spawnDist = laserBall.r + 15;
+          const projX = laserBall.x + Math.cos(laserBall.laserTargetAngle) * spawnDist;
+          const projY = laserBall.y + Math.sin(laserBall.laserTargetAngle) * spawnDist;
+          const projVx = Math.cos(laserBall.laserTargetAngle) * 550;
+          const projVy = Math.sin(laserBall.laserTargetAngle) * 550;
+
+          game.laserCanons = game.laserCanons || [];
+          game.laserCanons.push({
+            ownerId: laserBall.id,
+            ownerSide: laserBall.side,
+            x: projX,
+            y: projY,
+            vx: projVx,
+            vy: projVy,
+            r: 12,
+            fuseUntil: currentTime + 1200
+          });
+
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
+            text: "LASER CANON!", color: "#22d3ee", life: 0.8, maxLife: 0.8
+          });
+        }
       } else if (laserBall.laserState === "charging") {
         laserBall.laserReflect = null;
         const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-        laserBall.laserTargetAngle = targetAngle;
+        
+        let diff = targetAngle - laserBall.laserTargetAngle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        const maxChange = (bal.laser.trackingSpeed || 2.1) * dt;
+        if (Math.abs(diff) <= maxChange) {
+          laserBall.laserTargetAngle = targetAngle;
+        } else {
+          laserBall.laserTargetAngle += Math.sign(diff) * maxChange;
+        }
 
         if (Math.random() < 0.3) {
           const a = Math.random() * Math.PI * 2, dst = laserBall.r + 20 + Math.random() * 20;
@@ -2376,11 +2610,28 @@ export default function BallWeaponSimulator() {
           laserBall.laserState = "firing";
           laserBall.laserStateUntil = currentTime + bal.laser.fireDuration;
           laserBall.laserNextTickAt = currentTime;
-          game.screenShake = Math.max(game.screenShake, 5);
+          game.screenShake = Math.max(game.screenShake, 12);
         }
       } else if (laserBall.laserState === "firing") {
+        if (currentTime >= laserBall.laserStateUntil) {
+          laserBall.laserState = "idle";
+          laserBall.nextShotAt = currentTime + bal.laser.cooldown;
+          laserBall.laserReflect = null;
+          laserBall.laserFireCount = (laserBall.laserFireCount || 0) + 1; // Increment fire count!
+          return;
+        }
+
         const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-        laserBall.laserTargetAngle = targetAngle;
+        
+        let diff = targetAngle - laserBall.laserTargetAngle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        const maxChange = (bal.laser.trackingSpeed || 2.1) * dt;
+        if (Math.abs(diff) <= maxChange) {
+          laserBall.laserTargetAngle = targetAngle;
+        } else {
+          laserBall.laserTargetAngle += Math.sign(diff) * maxChange;
+        }
 
         const mX = laserBall.x + Math.cos(laserBall.laserTargetAngle) * laserBall.r;
         const mY = laserBall.y + Math.sin(laserBall.laserTargetAngle) * laserBall.r;
@@ -2398,13 +2649,14 @@ export default function BallWeaponSimulator() {
         }
 
         const shieldBlock = getShieldBeamBlock(target.type === "shield" ? target : null, mX, mY, eX, eY, bal.laser.beamWidth);
-        if (shieldBlock) {
+        if (shieldBlock && (laserBall.laserBlockedHits || 0) < 4) {
           // Calculate laser reflection: 2 * normalAngle - PI - incomingAngle
           const reflectedAngle = 2 * shieldBlock.angle - Math.PI - laserBall.laserTargetAngle;
           laserBall.laserReflect = { x: shieldBlock.x, y: shieldBlock.y, angle: reflectedAngle };
 
           if (currentTime >= laserBall.laserNextTickAt) {
             laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
+            laserBall.laserBlockedHits = (laserBall.laserBlockedHits || 0) + 1;
             if (target.side === "left") game.stats.left.blocked++;
             else game.stats.right.blocked++;
             spawnShieldSparks(shieldBlock.x, shieldBlock.y, shieldBlock.angle);
@@ -2420,7 +2672,20 @@ export default function BallWeaponSimulator() {
         if (d < target.r + bal.laser.beamWidth / 2 && currentTime >= laserBall.laserNextTickAt) {
           const beamDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
           if (isChessCrownActive(target)) return;
-          target.health = clamp(target.health - beamDamage, 0, 100);
+          if (target.type === "spore" && (target.hydraGlowStacks || 0) > 0) {
+            target.hydraGlowStacks--;
+            laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
+            spawnSparks(target.x, target.y, "#fb7185", 12);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x, y: target.y - target.r - 18, vy: -60,
+              text: "RAGE BLOCK!", color: "#fb7185", glowColor: "#f43f5e", life: 0.8, maxLife: 0.8
+            });
+            return;
+          }
+          const isFinalHit = triggerFinisher(target, beamDamage, currentTime);
+          if (!isFinalHit) target.health = clamp(target.health - beamDamage, 0, 100);
+          game.screenShake = Math.max(game.screenShake, 8);
 
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
@@ -2441,11 +2706,6 @@ export default function BallWeaponSimulator() {
           laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
         }
 
-        if (currentTime >= laserBall.laserStateUntil) {
-          laserBall.laserState = "idle";
-          laserBall.nextShotAt = currentTime + bal.laser.cooldown;
-          laserBall.laserReflect = null;
-        }
       }
     };
 
@@ -2493,6 +2753,7 @@ export default function BallWeaponSimulator() {
           r: bal.spider.secPoolRadius,
           ownerSide: spiderBall.side,
           createdTime: currentTime,
+          tickCounts: {},
           duration: 4000
         });
         
@@ -2636,8 +2897,8 @@ export default function BallWeaponSimulator() {
         
         // Trigger Shield Bash
         const dist = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
-        if (dist < 85 && currentTime >= (shieldBall.nextSecondaryAt || 0)) {
-          shieldBall.nextSecondaryAt = currentTime + bal.shield.secCooldownHeld;
+        if (dist < 85 && (shieldBall.shieldCatchCount || 0) >= 3) {
+          shieldBall.shieldCatchCount = 0;
           shieldBall.shieldBashUntil = currentTime + 250;
           const bashAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
           shieldBall.vx = Math.cos(bashAngle) * 480;
@@ -2684,6 +2945,7 @@ export default function BallWeaponSimulator() {
         const pickupDist = Math.hypot(shieldBall.x - shieldBall.shieldX, shieldBall.y - shieldBall.shieldY);
         if (pickupDist < shieldBall.r + SHIELD_PICKUP_RADIUS) {
           shieldBall.shieldState = "held";
+          shieldBall.shieldCatchCount = (shieldBall.shieldCatchCount || 0) + 1;
           shieldBall.shieldGuardHits = 0;
           shieldBall.shieldBonusDamage = 0;
           shieldBall.shieldFastRecall = false;
@@ -2761,7 +3023,7 @@ export default function BallWeaponSimulator() {
             shieldBall.shieldVy = -Math.sin(knockAngle) * bal.shield.shieldSpeed;
             shieldBall.shieldNextHitAt = currentTime + 300;
 
-            game.screenShake = Math.max(game.screenShake, 8);
+            game.screenShake = Math.max(game.screenShake, 16);
             spawnSparks(shieldBall.shieldX, shieldBall.shieldY, "#ef4444", 8);
             spawnDust(shieldBall.shieldX, shieldBall.shieldY, 5);
           }
@@ -2780,6 +3042,7 @@ export default function BallWeaponSimulator() {
           const distToOwner = Math.hypot(shieldBall.x - shieldBall.shieldX, shieldBall.y - shieldBall.shieldY);
           if (distToOwner < shieldBall.r + 10) {
             shieldBall.shieldState = "held";
+            shieldBall.shieldCatchCount = (shieldBall.shieldCatchCount || 0) + 1;
             shieldBall.shieldGuardHits = 0;
             shieldBall.shieldBonusDamage = 0;
             shieldBall.shieldFastRecall = false;
@@ -2851,7 +3114,7 @@ export default function BallWeaponSimulator() {
           if (hammerBall.side === "left") game.stats.left.totalShots++;
           else game.stats.right.totalShots++;
           
-          game.screenShake = Math.max(game.screenShake, 10);
+          game.screenShake = Math.max(game.screenShake, 20);
           spawnDust(hammerBall.x, hammerBall.y, 8);
           spawnSparks(hammerBall.x, hammerBall.y, "#f97316", 10);
         }
@@ -2897,7 +3160,7 @@ export default function BallWeaponSimulator() {
             target.vx += Math.cos(hammerBall.hammerLaunchAngle) * 600;
             target.vy += Math.sin(hammerBall.hammerLaunchAngle) * 600;
             
-            game.screenShake = Math.max(game.screenShake, 18);
+            game.screenShake = Math.max(game.screenShake, 35);
             spawnSparks(target.x, target.y, "#f59e0b", 16);
             spawnDust(target.x, target.y, 10);
             
@@ -2930,7 +3193,7 @@ export default function BallWeaponSimulator() {
           targetR: 22,
           createdTime: currentTime,
           growthDuration: bal.spore.growthDuration,
-          life: bal.spore.cactusLife,
+          life: bal.spore.growthDuration + bal.spore.cactusLife,
           charges: 2
         });
 
@@ -2976,7 +3239,7 @@ export default function BallWeaponSimulator() {
               ownerId: mine.ownerId, x: mine.x, y: mine.y, r: 0,
               maxRadius: game.balance.bomber.mineRadius, duration: 400, life: 400
             });
-            game.screenShake = Math.max(game.screenShake, 12);
+            game.screenShake = Math.max(game.screenShake, 24);
             spawnExplosionParticles(mine.x, mine.y);
 
             balls.forEach(ball => {
@@ -2985,23 +3248,35 @@ export default function BallWeaponSimulator() {
                 const falloff = 1 - (db / (game.balance.bomber.mineRadius + ball.r));
                 const dmg = Math.max(MIN_DAMAGE, Math.round(game.balance.bomber.mineDamage * falloff));
                 if (isChessCrownActive(ball)) return;
-                ball.health = clamp(ball.health - dmg, 0, 100);
+                
+                if (ball.type === "spore" && (ball.hydraGlowStacks || 0) > 0) {
+                  ball.hydraGlowStacks--;
+                  spawnSparks(ball.x, ball.y, "#fb7185", 12);
+                  game.floatingTexts = game.floatingTexts || [];
+                  game.floatingTexts.push({
+                    x: ball.x, y: ball.y - ball.r - 18, vy: -60,
+                    text: "RAGE BLOCK!", color: "#fb7185", glowColor: "#f43f5e", life: 0.8, maxLife: 0.8
+                  });
+                } else {
+                  const isFinalHit = triggerFinisher(ball, dmg, game.simTime);
+                  if (!isFinalHit) ball.health = clamp(ball.health - dmg, 0, 100);
 
-                game.floatingTexts = game.floatingTexts || [];
-                game.floatingTexts.push({
-                  x: ball.x + (Math.random() - 0.5) * 20, y: ball.y - ball.r - 5, vy: -60,
-                  text: `-${dmg}`, color: "#f87171", life: 0.8, maxLife: 0.8
-                });
+                  game.floatingTexts = game.floatingTexts || [];
+                  game.floatingTexts.push({
+                    x: ball.x + (Math.random() - 0.5) * 20, y: ball.y - ball.r - 5, vy: -60,
+                    text: `-${dmg}`, color: "#f87171", life: 0.8, maxLife: 0.8
+                  });
+
+                  if (mine.ownerId.startsWith("left") && ball.side === "right") {
+                    game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++;
+                  } else if (mine.ownerId.startsWith("right") && ball.side === "left") {
+                    game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++;
+                  }
+                }
 
                 const angle = Math.atan2(ball.y - mine.y, ball.x - mine.x);
                 const force = game.balance.bomber.knockback * 20 * falloff;
                 ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
-
-                if (mine.ownerId.startsWith("left") && ball.side === "right") {
-                  game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++;
-                } else if (mine.ownerId.startsWith("right") && ball.side === "left") {
-                  game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++;
-                }
               }
             });
             return false;
@@ -3018,10 +3293,133 @@ export default function BallWeaponSimulator() {
       });
     };
 
+    const triggerCanonExplosion = (canon) => {
+      game.screenShake = Math.max(game.screenShake, 20);
+      for (let i = 0; i < 20; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 80 + Math.random() * 140;
+        game.particles.push({
+          x: canon.x,
+          y: canon.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: "#22d3ee",
+          radius: 2 + Math.random() * 2.5,
+          life: 0.4 + Math.random() * 0.3,
+          maxLife: 0.7
+        });
+      }
+      game.particles.push({
+        x: canon.x,
+        y: canon.y,
+        vx: 0, vy: 0,
+        color: "#ffffff",
+        radius: 18,
+        life: 0.15,
+        maxLife: 0.15
+      });
+    };
+
+    const updateLaserCanons = (dt, balls) => {
+      if (!game.laserCanons) return;
+      game.laserCanons = game.laserCanons.filter((canon) => {
+        canon.x += canon.vx * dt;
+        canon.y += canon.vy * dt;
+
+        if (Math.random() < 0.3) {
+          game.particles.push({
+            x: canon.x, y: canon.y,
+            vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+            color: "#22d3ee", radius: 2, life: 0.25, maxLife: 0.25
+          });
+        }
+
+        const pad = 18;
+        if (canon.x - canon.r < pad || canon.x + canon.r > game.width - pad ||
+            canon.y - canon.r < pad || canon.y + canon.r > game.height - pad) {
+          triggerCanonExplosion(canon);
+          return false;
+        }
+
+        const enemy = balls.find(b => b.side !== canon.ownerSide);
+        const dist = Math.hypot(enemy.x - canon.x, enemy.y - canon.y);
+        if (dist < enemy.r + canon.r) {
+          if (!isChessCrownActive(enemy)) {
+            if (enemy.type === "spore" && (enemy.hydraGlowStacks || 0) > 0) {
+              enemy.hydraGlowStacks--;
+              spawnSparks(enemy.x, enemy.y, "#fb7185", 12);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: enemy.x, y: enemy.y - enemy.r - 18, vy: -60,
+                text: "RAGE BLOCK!", color: "#fb7185", glowColor: "#f43f5e", life: 0.8, maxLife: 0.8
+              });
+            } else {
+              const dmg = 15;
+              const isFinalHit = triggerFinisher(enemy, dmg, game.simTime);
+              if (!isFinalHit) enemy.health = clamp(enemy.health - dmg, 0, 100);
+
+              enemy.paralyzedUntil = game.simTime + 1200;
+
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: enemy.x + (Math.random() - 0.5) * 20, y: enemy.y - enemy.r - 5, vy: -60,
+                text: `-${dmg}`, color: "#22d3ee", life: 0.8, maxLife: 0.8
+              });
+              game.floatingTexts.push({
+                x: enemy.x, y: enemy.y - enemy.r - 24, vy: -50,
+                text: "PARALYZED!", color: "#22d3ee", glowColor: "#06b6d4", life: 1.0, maxLife: 1.0
+              });
+
+              const owner = balls.find(b => b.id === canon.ownerId);
+              if (owner) {
+                if (owner.side === "left") { game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++; }
+                else { game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++; }
+              }
+
+              const pushAngle = Math.atan2(enemy.y - canon.y, enemy.x - canon.x);
+              enemy.vx += Math.cos(pushAngle) * 350;
+              enemy.vy += Math.sin(pushAngle) * 350;
+            }
+          }
+          triggerCanonExplosion(canon);
+          return false;
+        }
+
+        if (game.simTime >= canon.fuseUntil) {
+          triggerCanonExplosion(canon);
+          return false;
+        }
+
+        return true;
+      });
+    };
+
     const updateBullets = (dt, balls) => {
       game.bullets = game.bullets.filter((bullet) => {
         bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt; bullet.life -= dt;
         if (bullet.x < 18 || bullet.x > game.width - 18 || bullet.y < 18 || bullet.y > game.height - 18 || bullet.life <= 0) return false;
+
+        for (const activeShield of balls) {
+          if (activeShield.type !== "shield" || (activeShield.shieldState !== "thrown" && activeShield.shieldState !== "returning")) continue;
+          if (bullet.ownerId === activeShield.id) continue;
+          const dShield = Math.hypot(bullet.x - activeShield.shieldX, bullet.y - activeShield.shieldY);
+          if (dShield < 32 + bullet.r) {
+            const awayAngle = Math.atan2(bullet.y - activeShield.shieldY, bullet.x - activeShield.shieldX);
+            const spd = Math.max(Math.hypot(bullet.vx, bullet.vy), game.balance.gun.bulletSpeed);
+            bullet.x = activeShield.shieldX + Math.cos(awayAngle) * (32 + bullet.r + 1);
+            bullet.y = activeShield.shieldY + Math.sin(awayAngle) * (32 + bullet.r + 1);
+            bullet.vx = Math.cos(awayAngle) * spd;
+            bullet.vy = Math.sin(awayAngle) * spd;
+            bullet.targetSide = activeShield.side === "left" ? "right" : "left";
+            bullet.ownerId = activeShield.id;
+            activeShield.shieldBonusDamage = (activeShield.shieldBonusDamage || 0) + 1;
+            if (activeShield.side === "left") game.stats.left.blocked++;
+            else game.stats.right.blocked++;
+            spawnShieldSparks(bullet.x, bullet.y, awayAngle);
+            spawnSparks(activeShield.shieldX, activeShield.shieldY, "#93c5fd", 5);
+            return true;
+          }
+        }
 
         const side = bullet.targetSide, shieldBall = balls.find(b => b.side === side);
         if (shieldBall && shieldBall.type === "shield") {
@@ -3068,9 +3466,44 @@ export default function BallWeaponSimulator() {
         }
 
         const target = bullet.targetSide ? balls.find((ball) => ball.side === bullet.targetSide) : null;
+
+        // Arm Ball: 25% chance to reflect incoming projectiles
+        if (target && target.type === "arm") {
+          const dist = Math.hypot(bullet.x - target.x, bullet.y - target.y);
+          if (dist < target.r + bullet.r + 6 && Math.random() < (game.balance.arm.reflectChance || 0.25)) {
+            const attacker = balls.find(b => b.side !== target.side);
+            if (attacker) {
+              const refAngle = Math.atan2(attacker.y - bullet.y, attacker.x - bullet.x) + (Math.random() - 0.5) * 0.3;
+              const spd = Math.hypot(bullet.vx, bullet.vy);
+              bullet.vx = Math.cos(refAngle) * spd;
+              bullet.vy = Math.sin(refAngle) * spd;
+              bullet.targetSide = attacker.side;
+              bullet.ownerId = target.id + "-reflect";
+              if (target.side === "left") game.stats.left.blocked++;
+              else game.stats.right.blocked++;
+              spawnSparks(bullet.x, bullet.y, "#f59e0b", 6);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({ x: target.x, y: target.y - target.r - 18, vy: -55, text: "REFLECT!", color: "#f59e0b", life: 0.6, maxLife: 0.6 });
+              return true;
+            }
+          }
+        }
+
         if (target && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
           if (isChessCrownActive(target)) return false;
-          target.health = clamp(target.health - bullet.damage, 0, 100);
+          if (target.type === "spore" && (target.hydraGlowStacks || 0) > 0) {
+            target.hydraGlowStacks--;
+            spawnSparks(target.x, target.y, "#fb7185", 12);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x, y: target.y - target.r - 18, vy: -60,
+              text: "RAGE BLOCK!", color: "#fb7185", glowColor: "#f43f5e", life: 0.8, maxLife: 0.8
+            });
+            return false;
+          }
+          const isFinalHit = triggerFinisher(target, bullet.damage, game.simTime);
+          if (!isFinalHit) target.health = clamp(target.health - bullet.damage, 0, 100);
+          game.screenShake = Math.max(game.screenShake, 16);
 
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
@@ -3107,7 +3540,7 @@ export default function BallWeaponSimulator() {
             ownerId: bomb.ownerId, x: bomb.x, y: bomb.y, r: 0,
             maxRadius: game.balance.bomb.radius, duration: 400, life: 400
           });
-          game.screenShake = Math.max(game.screenShake, 14);
+          game.screenShake = Math.max(game.screenShake, 28);
           spawnExplosionParticles(bomb.x, bomb.y);
 
           balls.forEach(ball => {
@@ -3116,23 +3549,35 @@ export default function BallWeaponSimulator() {
               const falloff = 1 - (db / (game.balance.bomb.radius + ball.r));
               const dmg = Math.max(MIN_DAMAGE, Math.round(game.balance.bomb.damage * falloff));
               if (isChessCrownActive(ball)) return;
-              ball.health = clamp(ball.health - dmg, 0, 100);
+              
+              if (ball.type === "spore" && (ball.hydraGlowStacks || 0) > 0) {
+                ball.hydraGlowStacks--;
+                spawnSparks(ball.x, ball.y, "#fb7185", 12);
+                game.floatingTexts = game.floatingTexts || [];
+                game.floatingTexts.push({
+                  x: ball.x, y: ball.y - ball.r - 18, vy: -60,
+                  text: "RAGE BLOCK!", color: "#fb7185", glowColor: "#f43f5e", life: 0.8, maxLife: 0.8
+                });
+              } else {
+                const isFinalHit = triggerFinisher(ball, dmg, game.simTime);
+                if (!isFinalHit) ball.health = clamp(ball.health - dmg, 0, 100);
 
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({
-                x: ball.x + (Math.random() - 0.5) * 20, y: ball.y - ball.r - 5, vy: -60,
-                text: `-${dmg}`, color: "#f87171", life: 0.8, maxLife: 0.8
-              });
+                game.floatingTexts = game.floatingTexts || [];
+                game.floatingTexts.push({
+                  x: ball.x + (Math.random() - 0.5) * 20, y: ball.y - ball.r - 5, vy: -60,
+                  text: `-${dmg}`, color: "#f87171", life: 0.8, maxLife: 0.8
+                });
+
+                if (bomb.ownerId.startsWith("left")) {
+                  if (ball.side === "right") { game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++; }
+                } else {
+                  if (ball.side === "left") { game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++; }
+                }
+              }
 
               const angle = Math.atan2(ball.y - bomb.y, ball.x - bomb.x);
               const force = game.balance.bomb.knockback * 20 * falloff;
               ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
-
-              if (bomb.ownerId.startsWith("left")) {
-                if (ball.side === "right") { game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++; }
-              } else {
-                if (ball.side === "left") { game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++; }
-              }
             }
           });
           return false;
@@ -3186,13 +3631,62 @@ export default function BallWeaponSimulator() {
       const displayHp = Math.ceil(ball.health);
       ctx.fillText(displayHp, ball.x, ball.y + 2);
       ctx.font = "bold 9px sans-serif"; ctx.fillStyle = "rgba(248,250,252,0.82)";
-      ctx.fillText(ball.type === "gun" ? `${ball.ammo}/6` : ball.shortName, ball.x, ball.y - 16);
+      ctx.fillText(ball.type === "gun" || ball.type === "arm" ? `${ball.ammo}/6` : ball.shortName, ball.x, ball.y - 16);
       ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
     };
 
     const drawKnifeBall = (ball) => {
       const config = BALL_TYPES.knife;
       ctx.save(); ctx.translate(ball.x, ball.y);
+      
+      // Draw Yoda Pointy Ears
+      ctx.fillStyle = config.color;
+      ctx.strokeStyle = config.stroke;
+      ctx.lineWidth = 3.5;
+      
+      // Left ear
+      ctx.save();
+      ctx.translate(-ball.r * 0.7, -ball.r * 0.2);
+      ctx.rotate(-Math.PI / 12);
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 0.2);
+      ctx.quadraticCurveTo(-ball.r * 0.8, -ball.r * 0.4, -ball.r * 1.5, -ball.r * 0.2);
+      ctx.quadraticCurveTo(-ball.r * 0.8, ball.r * 0.1, 0, ball.r * 0.3);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      
+      // Left inner ear highlight (pink)
+      ctx.fillStyle = "#f472b6";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.15, -ball.r * 0.1);
+      ctx.quadraticCurveTo(-ball.r * 0.7, -ball.r * 0.3, -ball.r * 1.25, -ball.r * 0.2);
+      ctx.quadraticCurveTo(-ball.r * 0.7, 0, -ball.r * 0.1, ball.r * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      
+      // Right ear
+      ctx.save();
+      ctx.translate(ball.r * 0.7, -ball.r * 0.2);
+      ctx.rotate(Math.PI / 12);
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 0.2);
+      ctx.quadraticCurveTo(ball.r * 0.8, -ball.r * 0.4, ball.r * 1.5, -ball.r * 0.2);
+      ctx.quadraticCurveTo(ball.r * 0.8, ball.r * 0.1, 0, ball.r * 0.3);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      
+      // Right inner ear highlight (pink)
+      ctx.fillStyle = "#f472b6";
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.15, -ball.r * 0.1);
+      ctx.quadraticCurveTo(ball.r * 0.7, -ball.r * 0.3, ball.r * 1.25, -ball.r * 0.2);
+      ctx.quadraticCurveTo(ball.r * 0.7, 0, ball.r * 0.1, ball.r * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Main body
       ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = config.color; ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
@@ -3202,22 +3696,76 @@ export default function BallWeaponSimulator() {
       if (bladeState === "rotating") {
         ctx.save(); ctx.translate(ball.x, ball.y);
         ctx.rotate(ball.spinAngle);
-        ctx.fillStyle = "#e5e7eb"; ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(ball.r - 4, -7);
+        
+        // Blade glow
+        ctx.save();
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 15;
+        ctx.lineWidth = 6.5;
+        ctx.strokeStyle = "#4ade80";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(ball.r + 8, 0);
         ctx.lineTo(ball.r + game.balance.knife.bladeLength, 0);
-        ctx.lineTo(ball.r - 4, 7); ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#0f172a"; ctx.fillRect(ball.r - 8, -4, 14, 8);
+        ctx.stroke();
+        
+        // White core
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(ball.r + 8, 0);
+        ctx.lineTo(ball.r + game.balance.knife.bladeLength - 2, 0);
+        ctx.stroke();
+        ctx.restore();
+
+        // Handle (hilt)
+        ctx.fillStyle = "#334155";
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(ball.r - 8, -4, 16, 8);
+        ctx.strokeRect(ball.r - 8, -4, 16, 8);
+        
+        // Emitter guard
+        ctx.fillStyle = "#64748b";
+        ctx.fillRect(ball.r + 5, -5, 3, 10);
+        
         ctx.restore();
       } else {
         ctx.save(); ctx.translate(ball.knifeBladeX, ball.knifeBladeY);
         ctx.rotate(ball.knifeBladeAngle);
-        ctx.fillStyle = "#e5e7eb"; ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.moveTo(-12, -7);
-        ctx.lineTo(game.balance.knife.bladeLength - 12, 0);
-        ctx.lineTo(-12, 7); ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#0f172a"; ctx.fillRect(-16, -4, 14, 8);
+        
+        // Blade glow
+        ctx.save();
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 15;
+        ctx.lineWidth = 6.5;
+        ctx.strokeStyle = "#4ade80";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(game.balance.knife.bladeLength - 8, 0);
+        ctx.stroke();
+        
+        // White core
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(game.balance.knife.bladeLength - 10, 0);
+        ctx.stroke();
+        ctx.restore();
+
+        // Handle (hilt)
+        ctx.fillStyle = "#334155";
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(-16, -4, 16, 8);
+        ctx.strokeRect(-16, -4, 16, 8);
+
+        // Emitter guard
+        ctx.fillStyle = "#64748b";
+        ctx.fillRect(-3, -5, 3, 10);
+
         ctx.restore();
       }
       drawHealthInsideBall(ball);
@@ -3409,6 +3957,37 @@ export default function BallWeaponSimulator() {
         ctx.arc(ball.x, ball.y, ball.r + 20 * (1 - progress), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       }
 
+      if (ball.laserState === "canon_charging" && target) {
+        const timeLeft = ball.laserStateUntil - game.simTime;
+        const progress = 1 - Math.max(0, timeLeft / game.balance.laser.chargeTime);
+        ctx.save();
+        ctx.strokeStyle = `rgba(34, 211, 238, ${progress * 0.65})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ball.x + Math.cos(ball.laserTargetAngle) * ball.r, ball.y + Math.sin(ball.laserTargetAngle) * ball.r);
+        ctx.lineTo(target.x, target.y);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#22d3ee";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 25 * (1 - progress), 0, Math.PI * 2);
+        ctx.stroke();
+
+        const bx = ball.x + Math.cos(ball.laserTargetAngle) * (ball.r + 10);
+        const by = ball.y + Math.sin(ball.laserTargetAngle) * (ball.r + 10);
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(bx, by, 15 * progress, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#22d3ee";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+      }
+
       if (ball.laserState === "firing") {
         const mX = ball.x + Math.cos(ball.laserTargetAngle) * ball.r;
         const mY = ball.y + Math.sin(ball.laserTargetAngle) * ball.r;
@@ -3436,25 +4015,6 @@ export default function BallWeaponSimulator() {
         ctx.strokeStyle = "rgba(250, 204, 21, 0.45)";
         ctx.lineWidth = game.balance.laser.beamWidth;
         tracePath();
-        ctx.stroke();
-        ctx.restore();
-      }
-      if (ball.laserSweepState === "sweeping") {
-        const sx = ball.x + Math.cos(ball.laserSweepAngle) * ball.r;
-        const sy = ball.y + Math.sin(ball.laserSweepAngle) * ball.r;
-        const ex = ball.x + Math.cos(ball.laserSweepAngle) * 300;
-        const ey = ball.y + Math.sin(ball.laserSweepAngle) * 300;
-        ctx.save();
-        ctx.shadowColor = "#22d3ee";
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(ex, ey);
-        ctx.strokeStyle = "rgba(34, 211, 238, 0.55)";
-        ctx.lineWidth = game.balance.laser.beamWidth;
-        ctx.stroke();
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = game.balance.laser.beamWidth / 2;
         ctx.stroke();
         ctx.restore();
       }
@@ -3756,6 +4316,19 @@ export default function BallWeaponSimulator() {
         ctx.restore();
       }
 
+      if (ball.hammerState === "charging") {
+        ctx.save();
+        ctx.font = "bold 12px Inter, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(15, 23, 42, 0.9)";
+        ctx.fillStyle = "#facc15";
+        ctx.strokeText("CHARGE", ball.x, ball.y - ball.r - 18);
+        ctx.fillText("CHARGE", ball.x, ball.y - ball.r - 18);
+        ctx.restore();
+      }
+
       ctx.save();
       
       // Vibrate if charging
@@ -3858,6 +4431,7 @@ export default function BallWeaponSimulator() {
       const config = BALL_TYPES.arm;
       const bal = game.balance;
       const L = bal.arm.grabRange;
+      const gunAngle = ball.armGunAngle ?? ball.angle ?? 0;
       
       let yOffset = 0;
       if (ball.armState === "elbow_dropping") {
@@ -3868,18 +4442,30 @@ export default function BallWeaponSimulator() {
       
       const armAngle = ball.armAngle || 0;
       const enemy = game.balls.find(b => b.id !== ball.id);
-      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : ball.x + Math.cos(armAngle) * L;
-      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : ball.y + Math.sin(armAngle) * L;
+      const shoulderX = ball.x - ball.r * 0.65;
+      const shoulderY = ball.y + yOffset;
+      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : shoulderX + Math.cos(armAngle) * L;
+      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : shoulderY + Math.sin(armAngle) * L;
 
       // Draw the arm line / segments
       ctx.save();
       
+      let shadowColor = "#fbbf24";
+      let shadowBlur = 8;
+      if (ball.armState === "grabbing" || ball.armState === "elbow_dropping") {
+        const pulse = 0.5 + 0.5 * Math.sin(game.simTime * 0.025);
+        shadowBlur = 10 + 10 * pulse;
+        shadowColor = pulse > 0.5 ? "#f97316" : "#fbbf24";
+      }
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = shadowBlur;
+
       const bendAmp = (ball.armState === "grabbing" || ball.armState === "elbow_dropping") ? 14 : 6;
       const bendFreq = (ball.armState === "grabbing" || ball.armState === "elbow_dropping") ? 0.03 : 0.01;
       const bendOffset = Math.sin(game.simTime * bendFreq) * bendAmp;
       
-      const midX = (ball.x + handX) / 2;
-      const midY = (ball.y + yOffset + handY) / 2;
+      const midX = (shoulderX + handX) / 2;
+      const midY = (shoulderY + handY) / 2;
       const perpAngle = armAngle + Math.PI / 2;
       const jointX = midX + Math.cos(perpAngle) * bendOffset;
       const jointY = midY + Math.sin(perpAngle) * bendOffset;
@@ -3888,14 +4474,14 @@ export default function BallWeaponSimulator() {
       ctx.lineWidth = 10;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y + yOffset);
+      ctx.moveTo(shoulderX, shoulderY);
       ctx.lineTo(jointX, jointY);
       ctx.stroke();
 
       ctx.strokeStyle = "#e2e8f0";
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y + yOffset);
+      ctx.moveTo(shoulderX, shoulderY);
       ctx.lineTo(jointX, jointY);
       ctx.stroke();
 
@@ -3975,6 +4561,37 @@ export default function BallWeaponSimulator() {
       ctx.strokeStyle = config.stroke;
       ctx.lineWidth = 4;
       ctx.stroke();
+
+      ctx.save();
+      ctx.translate(ball.r * 0.68, 0);
+      ctx.rotate(gunAngle);
+      ctx.fillStyle = "#0f172a";
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(-6, -8, 24, 16, 4);
+      else ctx.rect(-6, -8, 24, 16);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(8, -3, 24, 6);
+      ctx.strokeStyle = "#06b6d4";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(12, 0);
+      ctx.lineTo(32, 0);
+      ctx.stroke();
+      ctx.fillStyle = "#64748b";
+      ctx.beginPath();
+      ctx.arc(-2, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+      if (ball.flashUntil > game.simTime) {
+        ctx.fillStyle = "rgba(34, 211, 238, 0.75)";
+        ctx.beginPath();
+        ctx.arc(34, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
 
       ctx.strokeStyle = "rgba(226, 232, 240, 0.9)";
       ctx.lineWidth = 2;
@@ -4202,7 +4819,46 @@ export default function BallWeaponSimulator() {
       drawHealthInsideBall(ball);
     };
 
+    const drawShatteredBall = (ball, currentTime) => {
+      const fragments = ball.shatterFragments || [];
+      const config = BALL_TYPES[ball.type] || BALL_TYPES.knife;
+      const scatter = ball.brokenUntil ? clamp(1 - Math.max(0, (ball.brokenUntil - currentTime) / FINISHER_SLOWMO_DURATION), 0, 1) : 1;
+      ctx.save();
+      fragments.forEach((frag, idx) => {
+        const drift = frag.dist * (0.45 + scatter * 1.25);
+        const x = ball.x + Math.cos(frag.angle) * drift;
+        const y = ball.y + Math.sin(frag.angle) * drift;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(frag.rot + scatter * (idx % 2 ? 1 : -1) * 1.2);
+        ctx.fillStyle = frag.color;
+        ctx.strokeStyle = "rgba(15, 23, 42, 0.75)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-frag.size * 0.8, -frag.size * 0.45);
+        ctx.lineTo(frag.size * 0.75, -frag.size * 0.2);
+        ctx.lineTo(frag.size * 0.25, frag.size * 0.85);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = config.stroke;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r * 0.55, 0.15, Math.PI * 1.25);
+      ctx.stroke();
+      ctx.restore();
+    };
+
     const drawBall = (ball, currentTime) => {
+      if (ball.shattered) {
+        drawShatteredBall(ball, currentTime);
+        return;
+      }
+
       if (ball.type === "knife") drawKnifeBall(ball);
       else if (ball.type === "spike") drawSpikeBall(ball);
       else if (ball.type === "gun") drawGunBall(ball, currentTime);
@@ -4224,6 +4880,49 @@ export default function BallWeaponSimulator() {
       else if (ball.type === "stringWeb") drawStringWebBall(ball);
       else if (ball.type === "arm") drawArmBall(ball);
       else if (ball.type === "chess") drawChessBall(ball);
+
+      if (ball.paralyzedUntil && currentTime <= ball.paralyzedUntil) {
+        ctx.save();
+        ctx.strokeStyle = "#22d3ee";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#06b6d4";
+        ctx.shadowBlur = 10;
+        for (let i = 0; i < 4; i++) {
+          const angle = (i / 4) * Math.PI * 2 + (currentTime * 0.01);
+          ctx.beginPath();
+          ctx.moveTo(ball.x, ball.y);
+          const midX = ball.x + Math.cos(angle) * ball.r * 0.6 + (Math.random() - 0.5) * 8;
+          const midY = ball.y + Math.sin(angle) * ball.r * 0.6 + (Math.random() - 0.5) * 8;
+          const endX = ball.x + Math.cos(angle) * ball.r * 1.1;
+          const endY = ball.y + Math.sin(angle) * ball.r * 1.1;
+          ctx.lineTo(midX, midY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      if (ball.brokenUntil && currentTime <= ball.brokenUntil) {
+        ctx.save();
+        ctx.strokeStyle = "#f8fafc";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 8;
+        const cracks = [
+          [-0.55, -0.65, -0.1, -0.12, -0.35, 0.45],
+          [0.45, -0.55, 0.08, -0.08, 0.52, 0.38],
+          [-0.15, -0.75, 0.1, -0.1, 0.0, 0.72],
+          [-0.7, 0.05, -0.12, 0.02, 0.7, -0.1]
+        ];
+        cracks.forEach(([x1, y1, x2, y2, x3, y3]) => {
+          ctx.beginPath();
+          ctx.moveTo(ball.x + x1 * ball.r, ball.y + y1 * ball.r);
+          ctx.lineTo(ball.x + x2 * ball.r, ball.y + y2 * ball.r);
+          ctx.lineTo(ball.x + x3 * ball.r, ball.y + y3 * ball.r);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
     };
 
     const drawBallTrail = (ball) => {
@@ -4280,6 +4979,23 @@ export default function BallWeaponSimulator() {
       });
     };
 
+    const drawLaserCanons = () => {
+      if (!game.laserCanons) return;
+      game.laserCanons.forEach(canon => {
+        ctx.save();
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(canon.x, canon.y, canon.r, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = "#22d3ee";
+        ctx.stroke();
+        ctx.restore();
+      });
+    };
+
     const drawExplosions = () => {
       game.explosions.forEach((exp) => {
         ctx.save(); const progress = 1 - (exp.life / exp.duration);
@@ -4322,10 +5038,13 @@ export default function BallWeaponSimulator() {
         const alpha = Math.max(0, ft.life / ft.maxLife);
         ctx.globalAlpha = alpha;
         ctx.fillStyle = ft.color;
-        ctx.font = "bold 15px sans-serif";
+        ctx.font = "bold 16px 'Russo One', sans-serif";
         ctx.textAlign = "center";
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 4;
+        const glow = ft.glowColor || ft.color;
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 10;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.shadowBlur = 3;
         ctx.fillText(ft.text, ft.x, ft.y);
         ctx.restore();
       });
@@ -4474,7 +5193,12 @@ export default function BallWeaponSimulator() {
           if (ball.side === pool.ownerSide) return;
           const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
           if (dist < ball.r + pool.r) {
-            applyDamage(ball, bal.spider.secDamage, `${ball.id}-venom-tick-${pool.createdTime}`, game.simTime, 250);
+            if (!pool.tickCounts) pool.tickCounts = {};
+            if ((pool.tickCounts[ball.id] || 0) >= 3) return;
+            const damageKey = `${ball.id}-venom-tick-${pool.createdTime}`;
+            if (game.damageCooldowns[damageKey] > game.simTime) return;
+            applyDamage(ball, bal.spider.secDamage, damageKey, game.simTime, 250);
+            pool.tickCounts[ball.id] = (pool.tickCounts[ball.id] || 0) + 1;
 
             if (Math.random() < 0.15) {
               game.particles.push({
@@ -4886,20 +5610,30 @@ export default function BallWeaponSimulator() {
 
     const drawWinner = (winner) => {
       if (!winner) return;
-      ctx.fillStyle = "rgba(15, 23, 42, 0.85)"; ctx.fillRect(0, 0, game.width, game.height);
-      ctx.fillStyle = "#f8fafc"; ctx.font = "bold 36px sans-serif";
-      ctx.textAlign = "center"; ctx.fillText(`${winner} wins!`, game.width / 2, game.height / 2);
-      ctx.font = "16px sans-serif"; ctx.fillText("Reset fight or choose new balls", game.width / 2, game.height / 2 + 36);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.72)";
+      ctx.fillRect(0, 0, game.width, 74);
+      ctx.fillStyle = "#f8fafc"; ctx.font = "bold 28px sans-serif";
+      ctx.textAlign = "center"; ctx.fillText(`${winner} wins!`, game.width / 2, 34);
+      ctx.font = "13px sans-serif"; ctx.fillText("Defeated ball shattered", game.width / 2, 57);
       ctx.textAlign = "start";
     };
 
     const loop = (time) => {
       const dt = Math.min((time - (game.lastTime || time)) / 1000, 0.025);
       game.lastTime = time;
+      game.realTime = time;
       const left = game.balls[0], right = game.balls[1];
+      if (game.finisherLoserId && time >= game.finisherUntilReal) {
+        const loser = game.balls.find((ball) => ball.id === game.finisherLoserId);
+        if (loser) loser.health = 0;
+        game.finisherLoserId = null;
+        game.finisherUntilReal = 0;
+      }
 
       if (gameStarted && left.health > 0 && right.health > 0) {
-        const steps = Math.ceil(game.simulationSpeed), stepDt = (dt * game.simulationSpeed) / steps;
+        const speedScale = game.finisherLoserId && time < game.finisherUntilReal ? FINISHER_SLOWMO_SCALE : 1;
+        const activeSpeed = game.simulationSpeed * speedScale;
+        const steps = Math.ceil(activeSpeed), stepDt = (dt * activeSpeed) / steps;
         for (let s = 0; s < steps; s++) {
           game.simTime += stepDt * 1000;
 
@@ -4910,13 +5644,18 @@ export default function BallWeaponSimulator() {
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
             const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > game.simTime && b.id !== ball.id);
+            const isWebTetheredTarget = game.balls.some(b => b.type === "spider" && b.webTargetId === ball.id && (b.webState === "pulling" || b.webState === "webBouncing"));
+            const isParalyzed = ball.paralyzedUntil && ball.paralyzedUntil > game.simTime;
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
+            if (isParalyzed) slowMult *= 0.1;
             const insideWeb = game.venomPools.some((pool) => {
               if (ball.side === pool.ownerSide) return false;
               const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
               return dist < ball.r + pool.r;
             });
-            if (insideWeb) slowMult *= 0.6;
+            const webSlowMult = 1 - clamp((game.balance.spider || BALANCE.spider).webSlow ?? 5, 0, 5) * 0.1;
+            if (insideWeb) slowMult *= webSlowMult;
+            if (isWebTetheredTarget) slowMult *= webSlowMult;
 
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
@@ -4939,7 +5678,9 @@ export default function BallWeaponSimulator() {
           });
 
           const collided = resolveBallCollision(left, right);
-          if (collided && game.simTime >= 3000) {
+          if (collided) {
+            game.screenShake = Math.max(game.screenShake, 8);
+            if (game.simTime >= 3000) {
             if (left.type === "spike") applyDamage(right, game.balance.spike.collisionDamage, `${left.id}-spike-hit`, game.simTime, game.balance.spike.cooldown);
             if (right.type === "spike") applyDamage(left, game.balance.spike.collisionDamage, `${right.id}-spike-hit`, game.simTime, game.balance.spike.cooldown);
             if (left.type === "spore" && left.hydraGlowStacks > 0) {
@@ -4972,10 +5713,13 @@ export default function BallWeaponSimulator() {
               }
             });
           }
+        }
 
           game.balls.forEach((ball) => {
             const target = ball.side === "left" ? right : left;
             if (game.simTime >= 3000) {
+              const isParalyzed = ball.paralyzedUntil && ball.paralyzedUntil > game.simTime;
+              if (!isParalyzed) {
                 if (ball.type === "knife") {
                   const bal = game.balance.knife;
                   if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
@@ -5042,7 +5786,7 @@ export default function BallWeaponSimulator() {
                 if (ball.type === "gun") updateGun(ball, target, game.simTime);
                 if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
                 if (ball.type === "bomb") updateBomb(ball, target, game.simTime);
-                if (ball.type === "laser") updateLaser(ball, target, game.simTime);
+                if (ball.type === "laser") updateLaser(ball, target, game.simTime, stepDt);
                 
                 // New Weapon Ticks
                 if (ball.type === "spider") updateSpider(ball, target, game.simTime, stepDt);
@@ -5053,6 +5797,7 @@ export default function BallWeaponSimulator() {
                 if (ball.type === "chess") updateChess(ball, target, game.simTime, stepDt);
                 
                 if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
+              }
             }
           });
 
@@ -5060,6 +5805,7 @@ export default function BallWeaponSimulator() {
           updateBombs(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
           updateMines(stepDt, game.balls);
+          updateLaserCanons(stepDt, game.balls);
           updateExplosions(stepDt);
           updateParticles(stepDt);
           updateFloatingTexts(stepDt);
@@ -5107,7 +5853,7 @@ export default function BallWeaponSimulator() {
 
       game.balls.forEach(drawBallTrail);
       drawWallSpikes(); drawStrings(); drawVenomPools();
-      drawMines(); drawBullets(); drawBombs(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
+      drawMines(); drawBullets(); drawBombs(); drawLaserCanons(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
 
@@ -5197,8 +5943,6 @@ export default function BallWeaponSimulator() {
               {renderSlider("Shot Cooldown", "gun", "shotCooldown", 100, 1500, 10, "ms")}
               {renderSlider("Reload Time", "gun", "reloadTime", 500, 4000, 50, "ms")}
               {renderSlider("Bullet Speed", "gun", "bulletSpeed", 100, 800, 10, "px/s")}
-              {renderSlider("Sec: Dash Cooldown", "gun", "secCooldown", 1000, 8000, 100, "ms")}
-              {renderSlider("Sec: Dash Force", "gun", "secDashForce", 100, 800, 20, "px/s")}
             </>
           )}
           {type === "vampire" && (
@@ -5227,8 +5971,9 @@ export default function BallWeaponSimulator() {
               {renderSlider("Fire Duration", "laser", "fireDuration", 300, 2000, 50, "ms")}
               {renderSlider("Beam Width", "laser", "beamWidth", 6, 40, 2, "px")}
               {renderSlider("Cooldown", "laser", "cooldown", 1000, 5000, 100, "ms")}
-              {renderSlider("Sec: Sweep Cooldown", "laser", "secCooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Sec: Sweep Cooldown", "laser", "secCooldown", 1000, 10000, 100, "ms")}
               {renderSlider("Sec: Sweep Damage", "laser", "secDamage", 1, 20)}
+              {renderSlider("Tracking Speed", "laser", "trackingSpeed", 0.5, 8.0, 0.1, " rad/s")}
             </>
           )}
           {type === "shield" && (
@@ -5246,15 +5991,16 @@ export default function BallWeaponSimulator() {
           )}
           {type === "spider" && (
             <>
-              {renderSlider("Fang Damage", "spider", "fangDamage", 3, 20)}
+              {renderSlider("Fang Damage", "spider", "fangDamage", 1, 5)}
               {renderSlider("Web Speed", "spider", "webSpeed", 200, 1000, 20, "px/s")}
               {renderSlider("Pull Speed", "spider", "pullSpeed", 200, 1000, 20, "px/s")}
               {renderSlider("Bounce Speed", "spider", "bounceSpeed", 100, 600, 10, "px/s")}
               {renderSlider("Pull Duration", "spider", "pullDuration", 300, 1800, 50, "ms")}
               {renderSlider("Cooldown", "spider", "cooldown", 1000, 6000, 100, "ms")}
+              {renderSlider("Web Slow", "spider", "webSlow", 1, 5, 1)}
               {renderSlider("Sec: Web Cooldown", "spider", "secCooldown", 1000, 10000, 100, "ms")}
               {renderSlider("Sec: Web Radius", "spider", "secPoolRadius", 15, 80, 1, "px")}
-              {renderSlider("Sec: Web Damage", "spider", "secDamage", 1, 15)}
+              {renderSlider("Sec: Web Damage", "spider", "secDamage", 1, 7)}
             </>
           )}
           {type === "bomber" && (
@@ -5272,7 +6018,7 @@ export default function BallWeaponSimulator() {
               {renderSlider("Hydra Damage", "spore", "cactusDamage", 2, 30)}
               {renderSlider("Growth Duration", "spore", "growthDuration", 300, 2500, 50, "ms")}
               {renderSlider("Speed Boost Force", "spore", "speedBoost", 1.1, 2.0, 0.05)}
-              {renderSlider("Hydra Lifetime", "spore", "cactusLife", 3000, 12000, 500, "ms")}
+              {renderSlider("Hydra Lifetime", "spore", "cactusLife", 300, 12000, 50, "ms")}
               {renderSlider("Drop Cooldown", "spore", "cooldown", 1000, 8000, 100, "ms")}
             </>
           )}
@@ -5300,13 +6046,13 @@ export default function BallWeaponSimulator() {
           )}
           {type === "arm" && (
             <>
-              {renderSlider("Slam Damage", "arm", "slamDamage", 2, 50)}
-              {renderSlider("Grab Range", "arm", "grabRange", 40, 200, 5, "px")}
+              {renderSlider("Grab Range", "arm", "grabRange", 40, 160, 5, "px")}
               {renderSlider("Grab Duration", "arm", "grabDuration", 500, 3000, 100, "ms")}
               {renderSlider("Swing Speed", "arm", "swingSpeed", 0.02, 0.2, 0.01)}
               {renderSlider("Cooldown", "arm", "cooldown", 1000, 8000, 100, "ms")}
               {renderSlider("Sec: Elbow Drop Cooldown", "arm", "secCooldown", 1000, 8000, 100, "ms")}
               {renderSlider("Sec: Elbow Drop Damage", "arm", "secSlamDamage", 2, 30)}
+              {renderSlider("Reflect Chance", "arm", "reflectChance", 0, 1.0, 0.05)}
             </>
           )}
           {type === "chess" && (
@@ -5335,32 +6081,7 @@ export default function BallWeaponSimulator() {
               Customize balances, run simulations, or trigger automated tournament models in memory.
             </p>
           </div>
-          <div className={`flex flex-wrap gap-2.5 items-center ${viewMode === "mobile" ? "justify-center" : ""}`}>
-            {/* View Mode Toggle Switch */}
-            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 shadow-inner">
-              <button
-                type="button"
-                onClick={() => setViewMode("desktop")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === "desktop"
-                    ? "bg-sky-600 text-white shadow-md shadow-sky-500/25"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Desktop
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("mobile")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === "mobile"
-                    ? "bg-sky-600 text-white shadow-md shadow-sky-500/25"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Mobile
-              </button>
-            </div>
+          <div className="flex flex-wrap gap-2.5 items-center">
 
             <Button onClick={resetFight} className="rounded-xl px-4 py-1.5 bg-sky-600 hover:bg-sky-500 font-bold text-xs" disabled={!gameStarted}>
               Reset Fight
@@ -5564,6 +6285,21 @@ export default function BallWeaponSimulator() {
                 <div className="space-y-4">
                   {renderSettingsForBall(selectedBalls[0])}
                   {selectedBalls[0] !== selectedBalls[1] && renderSettingsForBall(selectedBalls[1])}
+                </div>
+                <div className="flex gap-2 pt-2 border-t border-slate-900 mt-2">
+                  <Button
+                    onClick={saveBalanceAdjustments}
+                    className="flex-1 rounded-xl py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/25"
+                  >
+                    {balanceSaved ? "Saved!" : "Save Adjustments"}
+                  </Button>
+                  <Button
+                    onClick={resetBalanceAdjustments}
+                    variant="outline"
+                    className="rounded-xl py-2 text-xs font-bold bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  >
+                    Reset
+                  </Button>
                 </div>
               </CardContent>
             </Card>

@@ -24,6 +24,10 @@ export function useSoundEngine() {
       masterGainRef.current = ctxRef.current.createGain();
       masterGainRef.current.gain.value = 0.55;
       masterGainRef.current.connect(ctxRef.current.destination);
+
+      // Create stream destination node to allow recording audio
+      ctxRef.current.recStreamDestination = ctxRef.current.createMediaStreamDestination();
+      masterGainRef.current.connect(ctxRef.current.recStreamDestination);
     }
     // Resume if suspended (browsers require user gesture first)
     if (ctxRef.current.state === "suspended") {
@@ -76,172 +80,199 @@ export function useSoundEngine() {
   const sounds = useRef({
     // Generic
     wallBounce: (ctx, dest, t) => {
-      noise(ctx, dest, 0.25, t, 0.07, 300, 0.8);
-      osc(ctx, dest, "sine", 120, 0.18, t, 0.07, 60);
+      noise(ctx, dest, 0.35, t, 0.1, 150, 0.6);
+      osc(ctx, dest, "sine", 90, 0.3, t, 0.12, 40);
+      osc(ctx, dest, "triangle", 160, 0.15, t, 0.08, 80);
     },
     ballCollision: (ctx, dest, t) => {
-      noise(ctx, dest, 0.3, t, 0.09, 800, 0.7);
-      osc(ctx, dest, "sine", 200, 0.2, t, 0.08, 80);
+      noise(ctx, dest, 0.4, t, 0.15, 600, 0.5);
+      osc(ctx, dest, "sine", 180, 0.3, t, 0.14, 60);
+      osc(ctx, dest, "triangle", 350, 0.15, t, 0.06, 120);
     },
     damage: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 180, 0.12, t, 0.06, 90);
+      noise(ctx, dest, 0.3, t, 0.08, 800, 1.2);
+      osc(ctx, dest, "sawtooth", 140, 0.18, t, 0.08, 50);
     },
 
     // Knife Ball
     knifeHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.4, t, 0.08, 4000, 2);
-      osc(ctx, dest, "sawtooth", 600, 0.15, t, 0.06, 200);
+      noise(ctx, dest, 0.5, t, 0.14, 5000, 1.8);
+      osc(ctx, dest, "sawtooth", 1200, 0.2, t, 0.12, 400);
+      osc(ctx, dest, "sine", 800, 0.15, t, 0.1, 900);
     },
 
     // Spike Ball
     spikeHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.35, t, 0.1, 1200, 1.5);
-      osc(ctx, dest, "square", 150, 0.15, t, 0.1, 80);
+      noise(ctx, dest, 0.45, t, 0.15, 1000, 1.0);
+      osc(ctx, dest, "sawtooth", 220, 0.25, t, 0.15, 60);
+      osc(ctx, dest, "triangle", 90, 0.3, t, 0.18, 30);
     },
 
     // Gun Ball
     gunShot: (ctx, dest, t) => {
-      noise(ctx, dest, 0.55, t, 0.12, 1800, 0.5);
-      osc(ctx, dest, "sawtooth", 220, 0.35, t, 0.1, 55);
+      noise(ctx, dest, 0.7, t, 0.25, 1200, 0.4);
+      osc(ctx, dest, "sawtooth", 160, 0.5, t, 0.2, 30);
+      osc(ctx, dest, "sine", 80, 0.6, t, 0.28, 20);
     },
     bulletHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.3, t, 0.07, 3000, 1.2);
-      osc(ctx, dest, "sine", 440, 0.1, t, 0.05, 110);
+      noise(ctx, dest, 0.4, t, 0.1, 2500, 1.0);
+      osc(ctx, dest, "sawtooth", 300, 0.25, t, 0.08, 90);
+      osc(ctx, dest, "sine", 120, 0.3, t, 0.12, 40);
     },
     gunReload: (ctx, dest, t) => {
-      osc(ctx, dest, "sine", 320, 0.08, t, 0.05, 280);
-      osc(ctx, dest, "sine", 500, 0.06, t + 0.06, 0.05, 420);
+      noise(ctx, dest, 0.2, t, 0.08, 3000, 1.5);
+      osc(ctx, dest, "triangle", 200, 0.15, t, 0.06, 300);
+      osc(ctx, dest, "triangle", 400, 0.12, t + 0.08, 0.07, 250);
     },
 
     // Vampire Ball
     vampireLatch: (ctx, dest, t) => {
-      osc(ctx, dest, "sine", 220, 0.1, t, 0.4, 180);
-      osc(ctx, dest, "sawtooth", 110, 0.05, t, 0.4, 90);
+      noise(ctx, dest, 0.35, t, 0.4, 1500, 2);
+      osc(ctx, dest, "sawtooth", 140, 0.2, t, 0.45, 70);
+      osc(ctx, dest, "sine", 60, 0.3, t, 0.45, 50);
     },
     vampireDrain: (ctx, dest, t) => {
-      osc(ctx, dest, "sine", 180, 0.07, t, 0.2, 200);
+      noise(ctx, dest, 0.15, t, 0.25, 400, 1.0);
+      osc(ctx, dest, "triangle", 100, 0.15, t, 0.25, 130);
     },
 
     // Bomb Ball
     bombFuse: (ctx, dest, t) => {
-      osc(ctx, dest, "square", 600, 0.06, t, 0.06, 650);
+      noise(ctx, dest, 0.2, t, 0.08, 4500, 3);
+      osc(ctx, dest, "square", 800, 0.05, t, 0.05, 900);
     },
     explosion: (ctx, dest, t) => {
-      noise(ctx, dest, 0.9, t, 0.4, 250, 0.3);
-      osc(ctx, dest, "sine", 80, 0.6, t, 0.35, 30);
-      osc(ctx, dest, "sawtooth", 55, 0.4, t, 0.4, 20);
+      noise(ctx, dest, 0.95, t, 0.6, 200, 0.4);
+      noise(ctx, dest, 0.4, t, 0.3, 1500, 0.8);
+      osc(ctx, dest, "sine", 60, 0.8, t, 0.5, 20);
+      osc(ctx, dest, "sawtooth", 45, 0.6, t, 0.55, 10);
+      osc(ctx, dest, "triangle", 120, 0.5, t, 0.4, 30);
     },
 
     // Laser Ball
     laserCharge: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 300, 0.08, t, 0.8, 1200);
+      osc(ctx, dest, "sawtooth", 200, 0.15, t, 0.8, 1000);
+      osc(ctx, dest, "square", 100, 0.08, t, 0.8, 500);
+      noise(ctx, dest, 0.1, t, 0.8, 3000, 1.5);
     },
     laserFire: (ctx, dest, t) => {
-      osc(ctx, dest, "square", 800, 0.2, t, 0.6, 1200);
-      noise(ctx, dest, 0.2, t, 0.6, 6000, 3);
+      osc(ctx, dest, "sawtooth", 120, 0.4, t, 0.65, 80);
+      osc(ctx, dest, "square", 400, 0.25, t, 0.6, 200);
+      noise(ctx, dest, 0.4, t, 0.65, 2500, 0.6);
     },
 
     // Shield Ball
     shieldThrow: (ctx, dest, t) => {
-      noise(ctx, dest, 0.2, t, 0.12, 2500, 2);
-      osc(ctx, dest, "sine", 500, 0.12, t, 0.1, 300);
+      noise(ctx, dest, 0.25, t, 0.2, 1800, 1.5);
+      osc(ctx, dest, "triangle", 350, 0.2, t, 0.18, 480);
     },
     shieldBlock: (ctx, dest, t) => {
-      noise(ctx, dest, 0.35, t, 0.15, 1800, 1);
-      osc(ctx, dest, "triangle", 350, 0.25, t, 0.15, 200);
+      noise(ctx, dest, 0.45, t, 0.2, 1000, 0.7);
+      osc(ctx, dest, "triangle", 220, 0.35, t, 0.22, 90);
+      osc(ctx, dest, "sine", 950, 0.25, t, 0.18, 800);
     },
     shieldCatch: (ctx, dest, t) => {
-      osc(ctx, dest, "sine", 700, 0.1, t, 0.12, 900);
+      noise(ctx, dest, 0.25, t, 0.1, 800, 1);
+      osc(ctx, dest, "triangle", 400, 0.2, t, 0.12, 250);
     },
 
     // Spider Ball
     webShoot: (ctx, dest, t) => {
-      noise(ctx, dest, 0.15, t, 0.1, 3500, 3);
-      osc(ctx, dest, "sine", 900, 0.08, t, 0.08, 200);
+      noise(ctx, dest, 0.3, t, 0.18, 1500, 1.2);
+      osc(ctx, dest, "sine", 500, 0.15, t, 0.15, 180);
     },
     webHit: (ctx, dest, t) => {
-      osc(ctx, dest, "sine", 300, 0.12, t, 0.25, 150);
-      osc(ctx, dest, "triangle", 180, 0.1, t, 0.25, 100);
+      noise(ctx, dest, 0.35, t, 0.28, 700, 0.9);
+      osc(ctx, dest, "triangle", 180, 0.2, t, 0.25, 80);
     },
-
-
 
     // Spore Ball
     sporeShoot: (ctx, dest, t) => {
-      osc(ctx, dest, "sine", 400, 0.08, t, 0.12, 600);
-      noise(ctx, dest, 0.1, t, 0.1, 1200, 2);
+      noise(ctx, dest, 0.25, t, 0.15, 2000, 1.5);
+      osc(ctx, dest, "triangle", 320, 0.15, t, 0.12, 550);
     },
     cactusHit: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 250, 0.12, t, 0.08, 180);
-      noise(ctx, dest, 0.15, t, 0.08, 900, 1);
+      noise(ctx, dest, 0.35, t, 0.12, 1200, 1.8);
+      osc(ctx, dest, "sawtooth", 280, 0.2, t, 0.1, 140);
     },
 
     // Hammer Ball
     hammerSpin: (ctx, dest, t) => {
-      noise(ctx, dest, 0.12, t, 0.08, 1500, 2.5);
+      noise(ctx, dest, 0.25, t, 0.12, 350, 0.6);
+      osc(ctx, dest, "sine", 110, 0.15, t, 0.12, 90);
     },
     hammerCharge: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 200, 0.1, t, 0.3, 600);
+      osc(ctx, dest, "sawtooth", 150, 0.2, t, 0.35, 450);
+      osc(ctx, dest, "triangle", 90, 0.15, t, 0.35, 180);
     },
     hammerLaunch: (ctx, dest, t) => {
-      noise(ctx, dest, 0.5, t, 0.35, 400, 0.5);
-      osc(ctx, dest, "sawtooth", 150, 0.35, t, 0.3, 50);
+      noise(ctx, dest, 0.65, t, 0.45, 600, 0.4);
+      osc(ctx, dest, "sawtooth", 180, 0.45, t, 0.4, 40);
+      osc(ctx, dest, "sine", 70, 0.5, t, 0.45, 30);
     },
     hammerHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.6, t, 0.2, 300, 0.4);
-      osc(ctx, dest, "sine", 100, 0.5, t, 0.25, 40);
+      noise(ctx, dest, 0.8, t, 0.38, 250, 0.3);
+      osc(ctx, dest, "sine", 55, 0.8, t, 0.35, 25);
+      osc(ctx, dest, "sawtooth", 100, 0.5, t, 0.3, 35);
+      osc(ctx, dest, "triangle", 220, 0.4, t, 0.25, 110);
     },
 
     // Wall Spike Ball
     spikePlant: (ctx, dest, t) => {
-      noise(ctx, dest, 0.3, t, 0.1, 800, 1);
-      osc(ctx, dest, "sine", 180, 0.2, t, 0.1, 90);
+      noise(ctx, dest, 0.4, t, 0.16, 600, 0.8);
+      osc(ctx, dest, "triangle", 150, 0.3, t, 0.14, 50);
     },
     wallSpikeHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.3, t, 0.08, 2000, 1.5);
-      osc(ctx, dest, "sawtooth", 300, 0.15, t, 0.07, 150);
+      noise(ctx, dest, 0.4, t, 0.15, 1500, 1.2);
+      osc(ctx, dest, "sawtooth", 350, 0.25, t, 0.12, 100);
     },
 
     // String Web Ball
     stringTwang: (ctx, dest, t) => {
-      osc(ctx, dest, "triangle", 550, 0.12, t, 0.35, 80);
-      osc(ctx, dest, "sine", 280, 0.08, t, 0.35, 50);
+      osc(ctx, dest, "triangle", 480, 0.25, t, 0.45, 60);
+      osc(ctx, dest, "sine", 200, 0.18, t, 0.45, 30);
+      noise(ctx, dest, 0.12, t, 0.15, 2000, 1.5);
     },
     stringHit: (ctx, dest, t) => {
-      osc(ctx, dest, "triangle", 700, 0.15, t, 0.12, 200);
+      osc(ctx, dest, "triangle", 550, 0.25, t, 0.15, 120);
+      noise(ctx, dest, 0.25, t, 0.1, 3000, 1.8);
     },
 
     // Arm Ball
     armGrab: (ctx, dest, t) => {
-      noise(ctx, dest, 0.25, t, 0.12, 1000, 2);
-      osc(ctx, dest, "sine", 350, 0.18, t, 0.12, 180);
+      noise(ctx, dest, 0.35, t, 0.16, 800, 1.5);
+      osc(ctx, dest, "triangle", 300, 0.25, t, 0.14, 150);
     },
     armSlam: (ctx, dest, t) => {
-      noise(ctx, dest, 0.5, t, 0.25, 400, 0.5);
-      osc(ctx, dest, "triangle", 120, 0.35, t, 0.25, 60);
+      noise(ctx, dest, 0.75, t, 0.32, 250, 0.3);
+      osc(ctx, dest, "sine", 65, 0.75, t, 0.3, 30);
+      osc(ctx, dest, "triangle", 130, 0.5, t, 0.25, 50);
     },
 
     // Chess Ball
     chessMove: (ctx, dest, t) => {
-      noise(ctx, dest, 0.15, t, 0.18, 1200, 2);
-      osc(ctx, dest, "sine", 250, 0.15, t, 0.18, 500);
+      noise(ctx, dest, 0.25, t, 0.22, 500, 0.8);
+      osc(ctx, dest, "triangle", 180, 0.2, t, 0.22, 350);
     },
     chessSlam: (ctx, dest, t) => {
-      noise(ctx, dest, 0.4, t, 0.25, 400, 0.8);
-      osc(ctx, dest, "sine", 180, 0.45, t, 0.35, 80);
-      osc(ctx, dest, "triangle", 360, 0.25, t, 0.25, 120);
+      noise(ctx, dest, 0.8, t, 0.35, 200, 0.4);
+      osc(ctx, dest, "sine", 50, 0.85, t, 0.38, 20);
+      osc(ctx, dest, "sawtooth", 90, 0.45, t, 0.32, 30);
+      osc(ctx, dest, "triangle", 280, 0.4, t, 0.28, 90);
     },
 
     // Round result
     roundWin: (ctx, dest, t) => {
-      [0, 0.15, 0.30, 0.5].forEach((dt, i) => {
-        const freqs = [523, 659, 784, 1047];
-        osc(ctx, dest, "triangle", freqs[i], 0.18, t + dt, 0.3);
-      });
+      noise(ctx, dest, 0.95, t, 1.2, 350, 0.4);
+      noise(ctx, dest, 0.65, t + 0.1, 2.0, 1800, 0.8);
+      osc(ctx, dest, "sine", 70, 0.9, t, 0.8, 20);
+      osc(ctx, dest, "sawtooth", 45, 0.7, t, 0.9, 10);
     },
     roundLose: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 220, 0.15, t, 0.3, 110);
-      osc(ctx, dest, "sawtooth", 185, 0.12, t + 0.15, 0.35, 90);
+      noise(ctx, dest, 0.95, t, 1.2, 350, 0.4);
+      noise(ctx, dest, 0.65, t + 0.1, 2.0, 1800, 0.8);
+      osc(ctx, dest, "sine", 70, 0.9, t, 0.8, 20);
+      osc(ctx, dest, "sawtooth", 45, 0.7, t, 0.9, 10);
     },
   });
 
@@ -287,5 +318,10 @@ export function useSoundEngine() {
 
   const isMuted = useCallback(() => mutedRef.current, []);
 
-  return { playSound, toggleMute, isMuted };
+  const getAudioStream = useCallback(() => {
+    getCtx();
+    return ctxRef.current ? ctxRef.current.recStreamDestination?.stream : null;
+  }, [getCtx]);
+
+  return { playSound, toggleMute, isMuted, getAudioStream };
 }
