@@ -148,7 +148,7 @@ const BALANCE = {
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
-  stringWeb: { stringDamage: 2, stringLifetime: 6000, maxStrings: 10 },
+  stringWeb: { stringDamage: 3, stringLifetime: 9000, maxStrings: 14, stringSlowDuration: 1400, stringSlowMultiplier: 0.32, stringHitPadding: 10, stringPullForce: 260, trampolineCooldown: 1100, trampolineBoost: 1.45, trampolineMinSpeed: 310 },
   arm: { slamDamage: 2, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 6000, punchDamage: 5, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 5000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
   wrecker: { cooldown: 1000, leapDamage: 22, megaLeapDamage: 34, shockwaveRadius: 105, megaShockwaveRadius: 160, knockbackForce: 760, rageRequired: 4, megaRageRequired: 9, pushCooldown: 1450, pushRange: 46, pushForce: 650, pushDamage: 6, leapCooldown: 5600, bounceBoost: 1.18, maxBounceSpeed: 340, sizePerRage: 0.022, maxRageSizeScale: 1.24, megaSizeScale: 1.35 },
@@ -175,6 +175,8 @@ const loadSavedBalanceSettings = () => {
     return BALANCE;
   }
 };
+
+const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
 
 const linePointDist = (px, py, x1, y1, x2, y2) => {
   const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
@@ -532,6 +534,7 @@ export default function App() {
               return dist < ball.r + pool.r;
             });
             if (insideWeb) slowMult *= 0.5;
+            if (ball.stringSlowUntil && simTime < ball.stringSlowUntil) slowMult *= (balance.stringWeb.stringSlowMultiplier || 0.45);
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) slowMult = 0;
 
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
@@ -669,8 +672,10 @@ export default function App() {
                 let diff = Math.abs(angle - b.shieldAngle);
                 while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
                 if (diff < balance.shield.arcWidth / 2) {
-                  enemy.vx += Math.cos(angle) * balance.shield.knockback * 15;
-                  enemy.vy += Math.sin(angle) * balance.shield.knockback * 15;
+                  if (!hasStringBounceGuard(enemy)) {
+                    enemy.vx += Math.cos(angle) * balance.shield.knockback * 15;
+                    enemy.vy += Math.sin(angle) * balance.shield.knockback * 15;
+                  }
                   b.shieldGuardHits = (b.shieldGuardHits || 0) + 1;
                   if (b.shieldGuardHits >= SHIELD_GUARD_HITS) {
                     b.shieldGuardHits = 0;
@@ -797,8 +802,10 @@ export default function App() {
                   const pushForce = 480;
                   ball.vx = Math.cos(pushAngle) * pushForce;
                   ball.vy = Math.sin(pushAngle) * pushForce;
-                  enemy.vx = -Math.cos(pushAngle) * pushForce;
-                  enemy.vy = -Math.sin(pushAngle) * pushForce;
+                  if (!hasStringBounceGuard(enemy)) {
+                    enemy.vx = -Math.cos(pushAngle) * pushForce;
+                    enemy.vy = -Math.sin(pushAngle) * pushForce;
+                  }
                 }
                 const dist = Math.hypot(ball.x - enemy.x, ball.y - enemy.y);
                 const latchLimit = ball.r + enemy.r + balance.vampire.latchDistance;
@@ -860,8 +867,10 @@ export default function App() {
                 if (dist < ball.r + enemy.r + 5) {
                   localApplyDamage(enemy, balance.shield.secBashDamage, `${ball.id}-shield-bash`, 250);
                   const pushAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  enemy.vx += Math.cos(pushAngle) * balance.shield.knockback * 15;
-                  enemy.vy += Math.sin(pushAngle) * balance.shield.knockback * 15;
+                  if (!hasStringBounceGuard(enemy)) {
+                    enemy.vx += Math.cos(pushAngle) * balance.shield.knockback * 15;
+                    enemy.vy += Math.sin(pushAngle) * balance.shield.knockback * 15;
+                  }
                   ball.shieldBashUntil = 0;
                 }
               }
@@ -921,8 +930,10 @@ export default function App() {
                   if (simTime >= ball.shieldNextHitAt) {
                     localApplyDamage(enemy, balance.shield.damage + (ball.shieldBonusDamage || 0), `${ball.id}-shield-hit`, balance.shield.cooldown);
                     const knockAngle = Math.atan2(enemy.y - ball.shieldY, enemy.x - ball.shieldX);
-                    enemy.vx += Math.cos(knockAngle) * balance.shield.knockback * 12;
-                    enemy.vy += Math.sin(knockAngle) * balance.shield.knockback * 12;
+                    if (!hasStringBounceGuard(enemy)) {
+                      enemy.vx += Math.cos(knockAngle) * balance.shield.knockback * 12;
+                      enemy.vy += Math.sin(knockAngle) * balance.shield.knockback * 12;
+                    }
                     ball.shieldVx = -Math.cos(knockAngle) * balance.shield.shieldSpeed;
                     ball.shieldVy = -Math.sin(knockAngle) * balance.shield.shieldSpeed;
                     ball.shieldNextHitAt = simTime + 300;
@@ -1128,8 +1139,10 @@ export default function App() {
                     localApplyDamage(enemy, balance.wrecker.leapDamage, `${ball.id}-wrecker-leap`, 9999999);
                     const knockAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                     const knockForce = 18 * 2.5;
-                    enemy.vx += Math.cos(knockAngle) * knockForce;
-                    enemy.vy += Math.sin(knockAngle) * knockForce;
+                    if (!hasStringBounceGuard(enemy)) {
+                      enemy.vx += Math.cos(knockAngle) * knockForce;
+                      enemy.vy += Math.sin(knockAngle) * knockForce;
+                    }
                     enemy.paralyzedUntil = simTime + 1200;
                   }
 
@@ -1453,8 +1466,10 @@ export default function App() {
                 if (d < ball.r + enemy.r) {
                   if (simTime >= ball.hammerNextHitAt) {
                     localApplyDamage(enemy, balance.hammer.launchDamage, `${ball.id}-hammer-launch-hit`, balance.hammer.launchDuration);
-                    enemy.vx += Math.cos(ball.hammerLaunchAngle) * 600;
-                    enemy.vy += Math.sin(ball.hammerLaunchAngle) * 600;
+                    if (!hasStringBounceGuard(enemy)) {
+                      enemy.vx += Math.cos(ball.hammerLaunchAngle) * 600;
+                      enemy.vy += Math.sin(ball.hammerLaunchAngle) * 600;
+                    }
                     ball.hammerNextHitAt = simTime + balance.hammer.launchDuration;
                   }
                 }
@@ -1536,7 +1551,9 @@ export default function App() {
                     ball.health = Math.max(0, ball.health - Math.max(MIN_DAMAGE, Math.round(balance.bomber.mineDamage * falloff)));
                     const angle = Math.atan2(ball.y - mine.y, ball.x - mine.x);
                     const force = balance.bomber.knockback * 25 * falloff;
-                    ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
+                    if (!hasStringBounceGuard(ball)) {
+                      ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
+                    }
                   }
                 });
                 return false;
@@ -1590,14 +1607,43 @@ export default function App() {
             str.life -= dt * 1000;
             if (str.life <= 0) return false;
             balls.forEach((ball) => {
-              if (ball.side === str.ownerSide) return;
-
               const dist = linePointDist(ball.x, ball.y, str.x1, str.y1, str.x2, str.y2);
-              if (dist < ball.r) {
-                if (!str.damagedIds) str.damagedIds = {};
-                if (str.damagedIds[ball.id]) return;
-                str.damagedIds[ball.id] = true;
+              const stringBal = balance.stringWeb || BALANCE.stringWeb;
+              if (ball.side === str.ownerSide) {
+                if (ball.type !== "stringWeb" || dist >= ball.r + (stringBal.stringHitPadding || 0) || simTime < (ball.nextStringTrampolineAt || 0)) return;
+                const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
+                const dot = A * C + B * D, lenSq = C * C + D * D;
+                const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
+                const xx = str.x1 + param * C, yy = str.y1 + param * D;
+                let bounceAngle = Math.atan2(ball.y - yy, ball.x - xx);
+                if (!Number.isFinite(bounceAngle) || Math.hypot(ball.x - xx, ball.y - yy) < 1) {
+                  bounceAngle = Math.atan2(ball.vy, ball.vx) || Math.atan2(D, C) + Math.PI / 2;
+                }
+                const speed = Math.hypot(ball.vx, ball.vy);
+                const nextSpeed = Math.max(stringBal.trampolineMinSpeed || 300, speed * (stringBal.trampolineBoost || 1.4));
+                ball.vx = Math.cos(bounceAngle) * nextSpeed;
+                ball.vy = Math.sin(bounceAngle) * nextSpeed;
+                ball.nextStringTrampolineAt = simTime + (stringBal.trampolineCooldown || 1100);
+                ball.stringBounceWallBouncesLeft = 2;
+                return;
+              }
+              if (dist < ball.r + (stringBal.stringHitPadding || 0)) {
+                if (!str.insideIds) str.insideIds = {};
+                if (str.insideIds[ball.id]) return;
+                str.insideIds[ball.id] = true;
                 localApplyDamage(ball, balance.stringWeb.stringDamage, `${ball.id}-string-${str.createdTime}`, 9999999);
+                const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
+                const dot = A * C + B * D, lenSq = C * C + D * D;
+                const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
+                const xx = str.x1 + param * C, yy = str.y1 + param * D;
+                const pullAngle = Math.atan2(yy - ball.y, xx - ball.x);
+                ball.vx += Math.cos(pullAngle) * (stringBal.stringPullForce || 220);
+                ball.vy += Math.sin(pullAngle) * (stringBal.stringPullForce || 220);
+                ball.vx *= stringBal.stringSlowMultiplier || 0.45;
+                ball.vy *= stringBal.stringSlowMultiplier || 0.45;
+                ball.stringSlowUntil = simTime + (stringBal.stringSlowDuration || 1000);
+              } else if (str.insideIds) {
+                delete str.insideIds[ball.id];
               }
             });
 
@@ -1892,6 +1938,16 @@ export default function App() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        if (hasStringBounceGuard(ball)) {
+          ball.stringBounceWallBouncesLeft = Math.max(0, (ball.stringBounceWallBouncesLeft || 0) - 1);
+          if (ball.stringBounceWallBouncesLeft > 0) {
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -45,
+              text: `GUARD ${ball.stringBounceWallBouncesLeft}`, color: "#f0abfc", life: 0.55, maxLife: 0.55
+            });
+          }
+        }
         if (ball.type === "wrecker") {
           ball.consecutiveWallBounces = (ball.consecutiveWallBounces || 0) + 1;
           ball.rageStacks = (ball.rageStacks || 0) + 1;
@@ -2068,9 +2124,11 @@ export default function App() {
           if (dist < radius) {
             applyDamage(target, damage, `${ball.id}-leap-slam`, currentTime, 0);
             const knockAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-            target.vx += Math.cos(knockAngle) * bal.knockbackForce;
-            target.vy += Math.sin(knockAngle) * bal.knockbackForce;
-            target.knockbackActiveUntil = currentTime + 600;
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(knockAngle) * bal.knockbackForce;
+              target.vy += Math.sin(knockAngle) * bal.knockbackForce;
+              target.knockbackActiveUntil = currentTime + 600;
+            }
           }
 
           game.screenShake = Math.max(game.screenShake, ball.isMegaLeap ? 14 : 8);
@@ -2135,9 +2193,11 @@ export default function App() {
               applyDamage(target, pushDamage, `${ball.id}-ground-push`, currentTime, 0);
 
               const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-              target.vx = Math.cos(angle) * pushForce;
-              target.vy = Math.sin(angle) * pushForce;
-              target.knockbackActiveUntil = currentTime + 600;
+              if (!hasStringBounceGuard(target)) {
+                target.vx = Math.cos(angle) * pushForce;
+                target.vy = Math.sin(angle) * pushForce;
+                target.knockbackActiveUntil = currentTime + 600;
+              }
               playSound("hammerHit");
             }
           }
@@ -2253,8 +2313,10 @@ export default function App() {
           armBall.armNextPunchAt = currentTime + bal.arm.punchCooldown;
           armBall.armPunchUntil = currentTime + 220;
           applyDamage(target, bal.arm.punchDamage, `${armBall.id}-arm-punch`, currentTime, 350);
-          target.vx += Math.cos(targetAngle) * bal.arm.punchKnockback;
-          target.vy += Math.sin(targetAngle) * bal.arm.punchKnockback;
+          if (!hasStringBounceGuard(target)) {
+            target.vx += Math.cos(targetAngle) * bal.arm.punchKnockback;
+            target.vy += Math.sin(targetAngle) * bal.arm.punchKnockback;
+          }
           spawnSparks(target.x, target.y, "#e5e7eb", 10);
           playSound("hammerHit");
           game.floatingTexts = game.floatingTexts || [];
@@ -2571,8 +2633,10 @@ export default function App() {
           applyDamage(target, gunBal.dogDamage, `${gun.id}-dog-bite`, currentTime, 500);
           dog.nextBiteAt = currentTime + 650;
           dog.health -= Math.max(2, Math.round(gunBal.dogDamage * 0.7));
-          target.vx += Math.cos(chaseAngle) * 120;
-          target.vy += Math.sin(chaseAngle) * 120;
+          if (!hasStringBounceGuard(target)) {
+            target.vx += Math.cos(chaseAngle) * 120;
+            target.vy += Math.sin(chaseAngle) * 120;
+          }
           spawnSparks(dog.x, dog.y, "#fbbf24", 8);
         }
 
@@ -3019,8 +3083,10 @@ export default function App() {
         if (dist < shieldBall.r + target.r + 5) {
           applyDamage(target, bal.shield.secBashDamage, `${shieldBall.id}-shield-bash`, currentTime, 250);
           const pushAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
-          target.vx += Math.cos(pushAngle) * bal.shield.knockback * 15;
-          target.vy += Math.sin(pushAngle) * bal.shield.knockback * 15;
+          if (!hasStringBounceGuard(target)) {
+            target.vx += Math.cos(pushAngle) * bal.shield.knockback * 15;
+            target.vy += Math.sin(pushAngle) * bal.shield.knockback * 15;
+          }
           spawnSparks(target.x, target.y, "#3b82f6", 10);
           shieldBall.shieldBashUntil = 0; // stop lunge
         }
@@ -3153,8 +3219,10 @@ export default function App() {
             }
 
             const knockAngle = Math.atan2(target.y - shieldBall.shieldY, target.x - shieldBall.x);
-            target.vx += Math.cos(knockAngle) * bal.shield.knockback * 12;
-            target.vy += Math.sin(knockAngle) * bal.shield.knockback * 12;
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(knockAngle) * bal.shield.knockback * 12;
+              target.vy += Math.sin(knockAngle) * bal.shield.knockback * 12;
+            }
 
             shieldBall.shieldVx = -Math.cos(knockAngle) * bal.shield.shieldSpeed;
             shieldBall.shieldVy = -Math.sin(knockAngle) * bal.shield.shieldSpeed;
@@ -3301,8 +3369,10 @@ export default function App() {
             }
 
             // High knockback
-            target.vx += Math.cos(hammerBall.hammerLaunchAngle) * 600;
-            target.vy += Math.sin(hammerBall.hammerLaunchAngle) * 600;
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(hammerBall.hammerLaunchAngle) * 600;
+              target.vy += Math.sin(hammerBall.hammerLaunchAngle) * 600;
+            }
             
             game.screenShake = Math.max(game.screenShake, 18);
             spawnSparks(target.x, target.y, "#f59e0b", 16);
@@ -3421,14 +3491,18 @@ export default function App() {
                   dmg = 2;
                   const angle = Math.atan2(ball.y - mine.y, ball.x - mine.x);
                   force = game.balance.bomber.knockback * 20 * 2.8;
-                  ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
+                  if (!hasStringBounceGuard(ball)) {
+                    ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
+                  }
                   floatColor = "#38bdf8";
                 } else {
                   const falloff = 1 - (db / (game.balance.bomber.mineRadius + ball.r));
                   dmg = Math.max(MIN_DAMAGE, Math.round(game.balance.bomber.mineDamage * falloff));
                   const angle = Math.atan2(ball.y - mine.y, ball.x - mine.x);
                   force = game.balance.bomber.knockback * 20 * falloff;
-                  ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
+                  if (!hasStringBounceGuard(ball)) {
+                    ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
+                  }
                 }
 
                 ball.health = clamp(ball.health - dmg, 0, 100);
@@ -4774,6 +4848,20 @@ export default function App() {
       else if (ball.type === "arm") drawArmBall(ball);
       else if (ball.type === "chess") drawChessBall(ball);
 
+      if (ball.webHitFlashUntil && game.simTime < ball.webHitFlashUntil) {
+        const progress = (ball.webHitFlashUntil - game.simTime) / 180;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, progress);
+        ctx.strokeStyle = "#f0abfc";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#d946ef";
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 8 + (1 - progress) * 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) {
         ctx.save();
         ctx.fillStyle = "#38bdf8";
@@ -4974,13 +5062,39 @@ export default function App() {
         str.life -= dt * 1000;
         if (str.life <= 0) return false;
         game.balls.forEach((ball) => {
-          if (ball.side === str.ownerSide) return;
-
           const dist = linePointDist(ball.x, ball.y, str.x1, str.y1, str.x2, str.y2);
-          if (dist < ball.r) {
-            if (!str.damagedIds) str.damagedIds = {};
-            if (str.damagedIds[ball.id]) return;
-            str.damagedIds[ball.id] = true;
+          const stringBal = game.balance.stringWeb || BALANCE.stringWeb;
+          if (ball.side === str.ownerSide) {
+            if (ball.type !== "stringWeb" || dist >= ball.r + (stringBal.stringHitPadding || 0) || game.simTime < (ball.nextStringTrampolineAt || 0)) return;
+            const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
+            const dot = A * C + B * D, lenSq = C * C + D * D;
+            const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
+            const xx = str.x1 + param * C, yy = str.y1 + param * D;
+            let bounceAngle = Math.atan2(ball.y - yy, ball.x - xx);
+            if (!Number.isFinite(bounceAngle) || Math.hypot(ball.x - xx, ball.y - yy) < 1) {
+              bounceAngle = Math.atan2(ball.vy, ball.vx) || Math.atan2(D, C) + Math.PI / 2;
+            }
+            const speed = Math.hypot(ball.vx, ball.vy);
+            const nextSpeed = Math.max(stringBal.trampolineMinSpeed || 300, speed * (stringBal.trampolineBoost || 1.4));
+            ball.vx = Math.cos(bounceAngle) * nextSpeed;
+            ball.vy = Math.sin(bounceAngle) * nextSpeed;
+            ball.nextStringTrampolineAt = game.simTime + (stringBal.trampolineCooldown || 1100);
+            ball.stringBounceWallBouncesLeft = 2;
+            ball.webHitFlashUntil = game.simTime + 160;
+            game.screenShake = Math.max(game.screenShake, 5);
+            spawnSparks(xx, yy, "#f0abfc", 12);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -55,
+              text: "STRING BOUNCE", color: "#f0abfc", life: 0.7, maxLife: 0.7
+            });
+            playSound("stringTwang", 0.8, 140);
+            return;
+          }
+          if (dist < ball.r + (stringBal.stringHitPadding || 0)) {
+            if (!str.insideIds) str.insideIds = {};
+            if (str.insideIds[ball.id]) return;
+            str.insideIds[ball.id] = true;
             applyDamage(ball, game.balance.stringWeb.stringDamage, `${ball.id}-string-${str.createdTime}`, game.simTime, 9999999);
             
             const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
@@ -4992,7 +5106,24 @@ export default function App() {
             else if (param > 1) { xx = str.x2; yy = str.y2; }
             else { xx = str.x1 + param * C; yy = str.y1 + param * D; }
             
-            spawnSparks(xx, yy, "#d946ef", 8);
+            const pullAngle = Math.atan2(yy - ball.y, xx - ball.x);
+            ball.vx += Math.cos(pullAngle) * (stringBal.stringPullForce || 220);
+            ball.vy += Math.sin(pullAngle) * (stringBal.stringPullForce || 220);
+            ball.vx *= stringBal.stringSlowMultiplier || 0.45;
+            ball.vy *= stringBal.stringSlowMultiplier || 0.45;
+            ball.stringSlowUntil = game.simTime + (stringBal.stringSlowDuration || 1000);
+            ball.spinAngle = (ball.spinAngle || 0) + 0.6;
+            ball.webHitFlashUntil = game.simTime + 180;
+            game.screenShake = Math.max(game.screenShake, 7);
+            spawnSparks(xx, yy, "#d946ef", 16);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -55,
+              text: "WEB HIT - SLOWED", color: "#f0abfc", life: 0.75, maxLife: 0.75
+            });
+            playSound("webHit", 0.7, 100);
+          } else if (str.insideIds) {
+            delete str.insideIds[ball.id];
           }
         });
 
@@ -5191,9 +5322,17 @@ export default function App() {
       game.strings.forEach((str) => {
         ctx.save();
 
-        ctx.strokeStyle = str.ownerSide === "left" ? "#c084fc" : "#e879f9";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = str.ownerSide === "left" ? "rgba(192, 132, 252, 0.24)" : "rgba(232, 121, 249, 0.24)";
+        ctx.lineWidth = 12;
         ctx.shadowColor = str.ownerSide === "left" ? "#a855f7" : "#d946ef";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(str.x1, str.y1);
+        ctx.lineTo(str.x2, str.y2);
+        ctx.stroke();
+
+        ctx.strokeStyle = str.ownerSide === "left" ? "#c084fc" : "#e879f9";
+        ctx.lineWidth = 4;
         ctx.shadowBlur = 8;
 
         ctx.beginPath();
@@ -5209,7 +5348,7 @@ export default function App() {
         ctx.lineTo(str.x2, str.y2);
         ctx.stroke();
 
-        const drawEndpoint = (x, y, label) => {
+        const drawEndpoint = (x, y) => {
           ctx.save();
           ctx.shadowBlur = 0;
           ctx.fillStyle = str.ownerSide === "left" ? "#581c87" : "#86198f";
@@ -5219,15 +5358,25 @@ export default function App() {
           ctx.arc(x, y, 8, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
-          ctx.fillStyle = "#ffffff";
-          ctx.font = "bold 10px ui-sans-serif, system-ui";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(label, x, y + 0.5);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x - 11, y);
+          ctx.lineTo(x - 5, y);
+          ctx.moveTo(x + 5, y);
+          ctx.lineTo(x + 11, y);
+          ctx.moveTo(x, y - 11);
+          ctx.lineTo(x, y - 5);
+          ctx.moveTo(x, y + 5);
+          ctx.lineTo(x, y + 11);
+          ctx.stroke();
           ctx.restore();
         };
-        drawEndpoint(str.x1, str.y1, "1");
-        drawEndpoint(str.x2, str.y2, "2");
+        drawEndpoint(str.x1, str.y1);
+        drawEndpoint(str.x2, str.y2);
 
         ctx.restore();
       });
@@ -5331,6 +5480,7 @@ export default function App() {
               return dist < ball.r + pool.r;
             });
             if (insideWeb) slowMult *= 0.5;
+            if (ball.stringSlowUntil && game.simTime < ball.stringSlowUntil) slowMult *= ((game.balance.stringWeb || BALANCE.stringWeb).stringSlowMultiplier || 0.45);
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
 
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
@@ -5386,8 +5536,10 @@ export default function App() {
                   let diff = Math.abs(angle - b.shieldAngle);
                   while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
                   if (diff < game.balance.shield.arcWidth / 2) {
-                    enemy.vx += Math.cos(angle) * game.balance.shield.knockback * 15;
-                    enemy.vy += Math.sin(angle) * game.balance.shield.knockback * 15;
+                    if (!hasStringBounceGuard(enemy)) {
+                      enemy.vx += Math.cos(angle) * game.balance.shield.knockback * 15;
+                      enemy.vy += Math.sin(angle) * game.balance.shield.knockback * 15;
+                    }
                     spawnShieldSparks(enemy.x - Math.cos(angle) * enemy.r, enemy.y - Math.sin(angle) * enemy.r, angle);
                     registerShieldGuardHit(b, angle, game.simTime);
                   }
@@ -5713,6 +5865,13 @@ export default function App() {
               {renderSlider("String Damage", "stringWeb", "stringDamage", 1, 35)}
               {renderSlider("String Lifetime", "stringWeb", "stringLifetime", 1000, 20000, 500, "ms")}
               {renderSlider("Max Strings", "stringWeb", "maxStrings", 1, 20, 1)}
+              {renderSlider("String Slow Duration", "stringWeb", "stringSlowDuration", 200, 3000, 50, "ms")}
+              {renderSlider("String Slow Multiplier", "stringWeb", "stringSlowMultiplier", 0.1, 1, 0.05, "x")}
+              {renderSlider("String Hit Padding", "stringWeb", "stringHitPadding", 0, 24, 1, "px")}
+              {renderSlider("String Pull Force", "stringWeb", "stringPullForce", 0, 600, 20)}
+              {renderSlider("Trampoline Cooldown", "stringWeb", "trampolineCooldown", 200, 4000, 50, "ms")}
+              {renderSlider("Trampoline Boost", "stringWeb", "trampolineBoost", 1, 2.5, 0.05, "x")}
+              {renderSlider("Trampoline Min Speed", "stringWeb", "trampolineMinSpeed", 120, 700, 10, "px/s")}
             </>
           )}
           {type === "arm" && (
