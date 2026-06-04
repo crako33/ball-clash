@@ -53,10 +53,10 @@ const BALL_TYPES = {
     id: "laser",
     name: "Laser Ball",
     shortName: "LASR",
-    color: "#ffffff",
-    stroke: "#3b82f6",
+    color: "#facc15",
+    stroke: "#ef4444",
     radius: 30,
-    description: "Fires continuous laser. Secondary: Laser Canon.",
+    description: "Fires continuous laser.",
   },
   shield: {
     id: "shield",
@@ -812,35 +812,6 @@ export default function App() {
             }
             if (ball.type === "laser") {
               const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-              if (ball.laserSweepState === "idle" && simTime >= (ball.nextSecondaryAt || 0) && dist < 250) {
-                ball.laserSweepState = "sweeping";
-                ball.laserSweepStateUntil = simTime + 400;
-                const angleToEnemy = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                ball.laserSweepStartAngle = angleToEnemy - Math.PI / 6;
-                ball.laserSweepEndAngle = angleToEnemy + Math.PI / 6;
-                ball.laserSweepHitDone = false;
-                ball.nextSecondaryAt = simTime + balance.laser.secCooldown;
-              }
-
-              if (ball.laserSweepState === "sweeping") {
-                const progress = Math.min(1, Math.max(0, (simTime - (ball.laserSweepStateUntil - 400)) / 400));
-                ball.laserSweepAngle = ball.laserSweepStartAngle + (ball.laserSweepEndAngle - ball.laserSweepStartAngle) * progress;
-                
-                const sx = ball.x + Math.cos(ball.laserSweepAngle) * ball.r;
-                const sy = ball.y + Math.sin(ball.laserSweepAngle) * ball.r;
-                const ex = ball.x + Math.cos(ball.laserSweepAngle) * 300;
-                const ey = ball.y + Math.sin(ball.laserSweepAngle) * 300;
-                
-                const dSeg = linePointDist(enemy.x, enemy.y, sx, sy, ex, ey);
-                if (dSeg < enemy.r + balance.laser.beamWidth / 2 && !ball.laserSweepHitDone) {
-                  ball.laserSweepHitDone = true;
-                  localApplyDamage(enemy, balance.laser.secDamage, `${ball.id}-laser-sec`, 9999999);
-                }
-                
-                if (simTime >= ball.laserSweepStateUntil) {
-                  ball.laserSweepState = "idle";
-                }
-              }
 
               if (ball.laserState === "idle" && ball.nextShotAt <= simTime) {
                 ball.laserState = "charging"; ball.laserStateUntil = simTime + balance.laser.chargeTime;
@@ -1105,6 +1076,12 @@ export default function App() {
             // Wrecker Ball Physics in Tournament
             if (ball.type === "wrecker") {
               const wreckerCD = balance.wrecker.cooldown !== undefined ? balance.wrecker.cooldown : 1200;
+              let sizeScale = 1 + Math.min(10, ball.rageStacks || 0) * 0.012;
+              if (ball.wreckerEnlargedUntil > 0 && simTime < ball.wreckerEnlargedUntil) {
+                ball.r = ball.originalRadius * 1.15;
+              } else {
+                ball.r = ball.originalRadius * sizeScale;
+              }
               
               if (!ball.wreckerState) ball.wreckerState = "idle";
               if (ball.wreckerState === "leaping") {
@@ -2054,9 +2031,9 @@ export default function App() {
       const bal = game.balance.wrecker || BALANCE.wrecker;
 
       // Dynamically set physical hitbox size based on rage stacks and mega enlargement
-      let sizeScale = 1 + (ball.rageStacks || 0) * 0.03;
+      let sizeScale = 1 + Math.min(10, ball.rageStacks || 0) * 0.012;
       if (ball.wreckerEnlargedUntil > 0 && currentTime < ball.wreckerEnlargedUntil) {
-        ball.r = ball.originalRadius * 1.4;
+        ball.r = ball.originalRadius * 1.15;
       } else {
         ball.r = ball.originalRadius * sizeScale;
       }
@@ -2641,79 +2618,7 @@ export default function App() {
     const updateLaser = (laserBall, target, currentTime) => {
       const bal = game.balance;
 
-      const dist = Math.hypot(target.x - laserBall.x, target.y - laserBall.y);
-      if (laserBall.laserSweepState === "idle" && currentTime >= (laserBall.nextSecondaryAt || 0) && dist < 250) {
-        laserBall.laserSweepState = "sweeping";
-        laserBall.laserSweepStateUntil = currentTime + 400;
-        const angleToTarget = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-        laserBall.laserSweepStartAngle = angleToTarget - Math.PI / 6;
-        laserBall.laserSweepEndAngle = angleToTarget + Math.PI / 6;
-        laserBall.laserSweepHitDone = false;
-        laserBall.nextSecondaryAt = currentTime + bal.laser.secCooldown;
-        playSound("laserFire");
-        
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
-          text: "LASER CANON", color: "#38bdf8", life: 0.8, maxLife: 0.8
-        });
-      }
 
-      if (laserBall.laserSweepState === "sweeping") {
-        const progress = Math.min(1, Math.max(0, (currentTime - (laserBall.laserSweepStateUntil - 400)) / 400));
-        laserBall.laserSweepAngle = laserBall.laserSweepStartAngle + (laserBall.laserSweepEndAngle - laserBall.laserSweepStartAngle) * progress;
-        
-        const sx = laserBall.x + Math.cos(laserBall.laserSweepAngle) * laserBall.r;
-        const sy = laserBall.y + Math.sin(laserBall.laserSweepAngle) * laserBall.r;
-        const ex = laserBall.x + Math.cos(laserBall.laserSweepAngle) * 300;
-        const ey = laserBall.y + Math.sin(laserBall.laserSweepAngle) * 300;
-        
-        if (Math.random() < 0.3) {
-          const pDist = Math.random() * 300;
-          game.particles.push({
-            x: sx + Math.cos(laserBall.laserSweepAngle) * pDist,
-            y: sy + Math.sin(laserBall.laserSweepAngle) * pDist,
-            vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30,
-            color: "#38bdf8", radius: 1.5, life: 0.2, maxLife: 0.2
-          });
-        }
-
-        const dSeg = linePointDist(target.x, target.y, sx, sy, ex, ey);
-        if (dSeg < target.r + bal.laser.beamWidth / 2 && !laserBall.laserSweepHitDone) {
-          laserBall.laserSweepHitDone = true;
-          if (!isChessCrownActive(target)) {
-            const dmg = Math.max(MIN_DAMAGE, bal.laser.secDamage);
-            target.health = clamp(target.health - dmg, 0, 100);
-            target.paralyzedUntil = currentTime + 1200; // Paralyze for 1200ms
-            
-            game.floatingTexts = game.floatingTexts || [];
-            game.floatingTexts.push({
-              x: target.x + (Math.random() - 0.5) * 20, y: target.y - target.r - 5, vy: -60,
-              text: `-${dmg}`, color: "#38bdf8", life: 0.8, maxLife: 0.8
-            });
-            game.floatingTexts.push({
-              x: target.x, y: target.y - target.r - 25, vy: -50,
-              text: "PARALYZED", color: "#3b82f6", life: 1.0, maxLife: 1.0
-            });
-            
-            if (laserBall.side === "left") { game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++; }
-            else { game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++; }
-            
-            playSound("laserFire");
-            for (let i = 0; i < 8; i++) {
-              const sa = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 80;
-              game.particles.push({
-                x: target.x + (Math.random() - 0.5) * target.r, y: target.y + (Math.random() - 0.5) * target.r,
-                vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd, color: "#38bdf8", radius: 2, life: 0.3, maxLife: 0.3
-              });
-            }
-          }
-        }
-        
-        if (currentTime >= laserBall.laserSweepStateUntil) {
-          laserBall.laserSweepState = "idle";
-        }
-      }
 
       if (laserBall.laserState === "idle" && laserBall.nextShotAt <= currentTime) {
         laserBall.laserState = "charging";
@@ -2730,7 +2635,7 @@ export default function App() {
           const a = Math.random() * Math.PI * 2, dst = laserBall.r + 20 + Math.random() * 20;
           game.particles.push({
             x: laserBall.x + Math.cos(a) * dst, y: laserBall.y + Math.sin(a) * dst,
-            vx: -Math.cos(a) * 60, vy: -Math.sin(a) * 60, color: "#38bdf8", radius: 1.5, life: 0.3, maxLife: 0.3
+            vx: -Math.cos(a) * 60, vy: -Math.sin(a) * 60, color: "#f59e0b", radius: 1.5, life: 0.3, maxLife: 0.3
           });
         }
 
@@ -2762,7 +2667,6 @@ export default function App() {
 
         const shieldBlock = getShieldBeamBlock(target.type === "shield" ? target : null, mX, mY, eX, eY, bal.laser.beamWidth);
         if (shieldBlock) {
-          // Calculate laser reflection: 2 * normalAngle - PI - incomingAngle
           const reflectedAngle = 2 * shieldBlock.angle - Math.PI - laserBall.laserTargetAngle;
           laserBall.laserReflect = { x: shieldBlock.x, y: shieldBlock.y, angle: reflectedAngle };
 
@@ -3995,9 +3899,9 @@ export default function App() {
     const drawLaserBall = (ball, target) => {
       const config = BALL_TYPES.laser;
       ctx.save(); ctx.translate(ball.x, ball.y); ctx.rotate(ball.laserTargetAngle);
-      // White and blue highlights for the canon barrel
-      ctx.fillStyle = "#ffffff"; ctx.fillRect(ball.r - 6, -10, 16, 20);
-      ctx.fillStyle = "#38bdf8"; ctx.fillRect(ball.r + 4, -7, 6, 14);
+      // Yellow and red highlights for the canon barrel
+      ctx.fillStyle = "#facc15"; ctx.fillRect(ball.r - 6, -10, 16, 20);
+      ctx.fillStyle = "#ef4444"; ctx.fillRect(ball.r + 4, -7, 6, 14);
       ctx.restore();
 
       ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
@@ -4007,12 +3911,12 @@ export default function App() {
       if (ball.laserState === "charging" && target) {
         const timeLeft = ball.laserStateUntil - game.simTime;
         const progress = 1 - Math.max(0, timeLeft / game.balance.laser.chargeTime);
-        // Blue charging guide line
-        ctx.save(); ctx.strokeStyle = `rgba(59, 130, 246, ${progress * 0.6})`; ctx.lineWidth = 1.5;
+        // Red charging guide line
+        ctx.save(); ctx.strokeStyle = `rgba(239, 68, 68, ${progress * 0.65})`; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(ball.x + Math.cos(ball.laserTargetAngle) * ball.r, ball.y + Math.sin(ball.laserTargetAngle) * ball.r);
         ctx.lineTo(target.x, target.y); ctx.stroke();
-        // Sky blue outer ring
-        ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2; ctx.beginPath();
+        // Red outer ring
+        ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2; ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 20 * (1 - progress), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       }
 
@@ -4048,27 +3952,7 @@ export default function App() {
         ctx.stroke();
         ctx.restore();
       }
-      if (ball.laserSweepState === "sweeping") {
-        const sx = ball.x + Math.cos(ball.laserSweepAngle) * ball.r;
-        const sy = ball.y + Math.sin(ball.laserSweepAngle) * ball.r;
-        const ex = ball.x + Math.cos(ball.laserSweepAngle) * 300;
-        const ey = ball.y + Math.sin(ball.laserSweepAngle) * 300;
-        ctx.save();
-        // Sky blue/blue sweep laser shadow
-        ctx.shadowColor = "#3b82f6";
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(ex, ey);
-        // Sky blue outer sweep stroke
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.75)";
-        ctx.lineWidth = game.balance.laser.beamWidth;
-        ctx.stroke();
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = game.balance.laser.beamWidth / 2;
-        ctx.stroke();
-        ctx.restore();
-      }
+
       drawHealthInsideBall(ball);
     };
 
@@ -5852,8 +5736,7 @@ export default function App() {
               {renderSlider("Fire Duration", "laser", "fireDuration", 300, 2000, 50, "ms")}
               {renderSlider("Beam Width", "laser", "beamWidth", 6, 40, 2, "px")}
               {renderSlider("Cooldown", "laser", "cooldown", 1000, 5000, 100, "ms")}
-              {renderSlider("Sec: Sweep Cooldown", "laser", "secCooldown", 1000, 8000, 100, "ms")}
-              {renderSlider("Sec: Sweep Damage", "laser", "secDamage", 1, 20)}
+
             </>
           )}
           {type === "shield" && (
