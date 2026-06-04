@@ -8,19 +8,10 @@ const BALL_TYPES = {
     id: "knife",
     name: "Knifer Ball",
     shortName: "KNIFR",
-    color: "#38bdf8",
-    stroke: "#bae6fd",
+    color: "#4ade80",
+    stroke: "#15803d",
     radius: 30,
-    description: "Rotating knife brawler. Secondary: Blade Throw.",
-  },
-  spike: {
-    id: "spike",
-    name: "Spiker Ball",
-    shortName: "SPIKR",
-    color: "#fb7185",
-    stroke: "#fecdd3",
-    radius: 31,
-    description: "Spiked brawler. Spikes damage enemies on contact.",
+    description: "Yoda-like brawler with a green lightsaber. Secondary: Saber Throw.",
   },
   gun: {
     id: "gun",
@@ -35,19 +26,10 @@ const BALL_TYPES = {
     id: "vampire",
     name: "Vampirer Ball",
     shortName: "VAMP",
-    color: "#f87171",
-    stroke: "#fee2e2",
+    color: "#1e1b4b",
+    stroke: "#b91c1c",
     radius: 30,
-    description: "Vampiric brawler. HP drain on latch.",
-  },
-  bomb: {
-    id: "bomb",
-    name: "Grenader Ball",
-    shortName: "GREN",
-    color: "#64748b",
-    stroke: "#cbd5e1",
-    radius: 29,
-    description: "Throws bombs that explode and knock back enemies.",
+    description: "Vampiric brawler. Latch to drain health. Cape and glowing red eyes.",
   },
   laser: {
     id: "laser",
@@ -103,15 +85,6 @@ const BALL_TYPES = {
     radius: 30,
     description: "Spins hammer then launches itself rocket-like.",
   },
-  wallSpike: {
-    id: "wallSpike",
-    name: "Wall Spiker Ball",
-    shortName: "WSPK",
-    color: "#ea580c",
-    stroke: "#ffedd5",
-    radius: 30,
-    description: "Spawns spikes on arena walls.",
-  },
   stringWeb: {
     id: "stringWeb",
     name: "String Weber Ball",
@@ -145,7 +118,7 @@ const BALL_TYPES = {
     shortName: "WREK",
     color: "#22c55e",
     stroke: "#15803d",
-    radius: 30,
+    radius: 36,
     description: "Hulk-like brawler. Leaps to smash, rage boosts size. Secondary: Ground Push.",
   },
 };
@@ -167,21 +140,40 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 
 const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
-  spike: { collisionDamage: 10, touchDamage: 10, cooldown: 380, spikeReach: 11 },
-  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380 },
+  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireDuration: 1400, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
-  bomb: { damage: 10, fuseTime: 1200, radius: 65, cooldown: 1800, throwSpeed: 250, knockback: 18 },
-  laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16, secCooldown: 4000, secDamage: 5 },
+  laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16, pulseEvery: 5, pulseDamage: 15, pulseSpeed: 520, pulseStunDuration: 900 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secCooldownThrown: 4000, secBashDamage: 4 },
   spider: { fangDamage: 2, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000, secCooldown: 5000, secPoolRadius: 35, secDamage: 3 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
-  wallSpike: { spikeDamage: 2, spikeLifetime: 8000, maxSpikes: 8 },
   stringWeb: { stringDamage: 2, stringLifetime: 6000, maxStrings: 10 },
-  arm: { slamDamage: 2, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 6000, secCooldown: 5000, secSlamDamage: 6 },
+  arm: { slamDamage: 2, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 6000, punchDamage: 5, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 5000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
-  wrecker: { cooldown: 1200, leapDamage: 26, megaLeapDamage: 38, shockwaveRadius: 90, megaShockwaveRadius: 145, knockbackForce: 700, rageRequired: 5, megaRageRequired: 10, pushCooldown: 1600, pushRange: 38, pushForce: 600, pushDamage: 7, leapCooldown: 6500 },
+  wrecker: { cooldown: 1000, leapDamage: 22, megaLeapDamage: 34, shockwaveRadius: 105, megaShockwaveRadius: 160, knockbackForce: 760, rageRequired: 4, megaRageRequired: 9, pushCooldown: 1450, pushRange: 46, pushForce: 650, pushDamage: 6, leapCooldown: 5600, bounceBoost: 1.18, maxBounceSpeed: 340, sizePerRage: 0.022, maxRageSizeScale: 1.24, megaSizeScale: 1.35 },
+};
+
+const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
+const WRECKER_GRUMBLES = ["Grrrr!", "RAAHH!", "SMASH!", "HRRRGH!", "MAD!"];
+
+const mergeBalanceSettings = (base, saved = {}) => {
+  const merged = {};
+  Object.entries(base).forEach(([type, settings]) => {
+    merged[type] = { ...settings, ...(saved[type] || {}) };
+  });
+  return merged;
+};
+
+const loadSavedBalanceSettings = () => {
+  if (typeof window === "undefined") return BALANCE;
+  try {
+    const raw = window.localStorage.getItem(BALANCE_STORAGE_KEY);
+    if (!raw) return BALANCE;
+    return mergeBalanceSettings(BALANCE, JSON.parse(raw));
+  } catch {
+    return BALANCE;
+  }
 };
 
 const linePointDist = (px, py, x1, y1, x2, y2) => {
@@ -228,21 +220,21 @@ const drawStar = (ctx, cx, cy, spikes, outerRadius, innerRadius) => {
 };
 
 export default function App() {
-  const { playSound, toggleMute, isMuted } = useSoundEngine();
-  const [mutedState, setMutedState] = useState(false);
+  const { playSound } = useSoundEngine();
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
-  const [selectedBalls, setSelectedBalls] = useState(["knife", "spike"]);
+  const [selectedBalls, setSelectedBalls] = useState(["knife", "laser"]);
   const [gameStarted, setGameStarted] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1.5);
-  const [balanceSettings, setBalanceSettings] = useState(BALANCE);
+  const [balanceSettings, setBalanceSettings] = useState(loadSavedBalanceSettings);
+  const [balanceSaveStatus, setBalanceSaveStatus] = useState("");
   const [elapsedTime, setElapsedTime] = useState(0);
   
   const [gameState, setGameState] = useState({
     leftHealth: 100,
     rightHealth: 100,
-    leftName: "Knife Ball",
-    rightName: "Spike Ball",
+    leftName: "Knifer Ball",
+    rightName: "Laser Ball",
     winner: null,
     running: false,
   });
@@ -254,7 +246,6 @@ export default function App() {
 
   const [tournamentResults, setTournamentResults] = useState(null);
   const [simulatingTournament, setSimulatingTournament] = useState(false);
-  const [viewMode, setViewMode] = useState("desktop");
 
   const makeBall = (type, side, speedJitter = 0) => {
     const config = BALL_TYPES[type];
@@ -280,7 +271,7 @@ export default function App() {
       vy: vyVal,
       r,
       originalRadius: r,
-      mass: type === "shield" ? 1.5 : 1,
+      mass: type === "wrecker" ? 1.8 : type === "shield" ? 1.5 : 1,
       health: 100,
       wreckerState: "normal",
       wreckerLeapStart: 0,
@@ -301,6 +292,14 @@ export default function App() {
       reloadUntil: 0,
       nextShotAt: 0,
       flashUntil: 0,
+      dogSummoned: false,
+      dog: null,
+      dogRespawnAt: 0,
+      dogDied: false,
+      permanentRapidFire: false,
+      rapidFireUntil: 0,
+      nextRapidFireAt: 0,
+      rapidPierceShotsRemaining: 0,
       latchedTo: null,
       latchUntil: 0,
       nextDrainAt: 0,
@@ -312,6 +311,7 @@ export default function App() {
       laserTargetAngle: 0,
       laserNextTickAt: 0,
       laserReflect: null,
+      laserShotCount: 0,
       shieldAngle: side === "left" ? 0 : Math.PI,
       shieldState: "held", shieldX: 0, shieldY: 0, shieldVx: 0, shieldVy: 0, shieldThrownUntil: 0, shieldNextHitAt: 0, nextThrowAt: 0, shieldSpinAngle: 0, shieldGuardHits: 0, shieldBonusDamage: 0,
       // Spider Specific
@@ -324,6 +324,8 @@ export default function App() {
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
       armState: "idle", armStateUntil: 0, armAngle: 0, armBaseAngle: 0, armDirection: 1, armThrowWallUntil: 0, armThrowWallSourceId: null, armGrabDamageHits: 0,
+      armNextPunchAt: 0,
+      armPunchUntil: 0,
       // Chess Specific
       chessState: "idle",
       chessCrown: null,
@@ -371,8 +373,8 @@ export default function App() {
     venomPools: [],
     screenShake: 0,
     simulationSpeed: 1.5,
-    balance: BALANCE,
-    balls: [makeBall("knife", "left", 20), makeBall("spike", "right", 20)],
+    balance: balanceSettings,
+    balls: [makeBall("knife", "left", 20), makeBall("laser", "right", 20)],
     stats: {
       left: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 },
       right: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 }
@@ -481,6 +483,19 @@ export default function App() {
       gameRef.current.balance = next;
       return next;
     });
+    setBalanceSaveStatus("");
+  };
+
+  const saveBalanceSettings = () => {
+    const next = mergeBalanceSettings(BALANCE, balanceSettings);
+    setBalanceSettings(next);
+    gameRef.current.balance = next;
+    try {
+      window.localStorage.setItem(BALANCE_STORAGE_KEY, JSON.stringify(next));
+      setBalanceSaveStatus("Saved");
+    } catch {
+      setBalanceSaveStatus("Save failed");
+    }
   };
 
   const runTournament = (roundsCount) => {
@@ -536,24 +551,31 @@ export default function App() {
                   if (ball.type === "wrecker") {
                     ball.consecutiveWallBounces = (ball.consecutiveWallBounces || 0) + 1;
                     ball.rageStacks = (ball.rageStacks || 0) + 1;
+                    const boost = balance.wrecker.bounceBoost || 1.14;
+                    const maxBounceSpeed = balance.wrecker.maxBounceSpeed || 330;
+                    const speed = Math.hypot(ball.vx, ball.vy);
+                    if (speed > 0) {
+                      const nextSpeed = Math.min(maxBounceSpeed, Math.max(230, speed * boost));
+                      ball.vx = (ball.vx / speed) * nextSpeed;
+                      ball.vy = (ball.vy / speed) * nextSpeed;
+                    }
                   }
                 }
                 
                 if (bounced && simTime >= 3000) {
-                  if (ball.type === "wallSpike") {
-                    const newSpike = {
-                      x: bx, y: by, side: sideHit, ownerSide: ball.side, createdTime: simTime,
-                      life: balance.wallSpike.spikeLifetime, charges: 1
-                    };
-                    localWallSpikes.push(newSpike);
-                  }
-                  if (ball.type === "stringWeb") {
+                if (ball.type === "stringWeb") {
                     if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
                       const newString = {
                         x1: ball.lastBounceX, y1: ball.lastBounceY, x2: bx, y2: by, ownerSide: ball.side, createdTime: simTime,
-                        life: Infinity
+                        life: balance.stringWeb.stringLifetime
                       };
                       localStrings.push(newString);
+                      const maxStrings = balance.stringWeb.maxStrings || 10;
+                      const ownerStrings = localStrings.filter((str) => str.ownerSide === ball.side);
+                      if (ownerStrings.length > maxStrings) {
+                        const oldest = ownerStrings.sort((a, b) => a.createdTime - b.createdTime)[0];
+                        localStrings = localStrings.filter((str) => str !== oldest);
+                      }
                     }
                     ball.lastBounceX = bx;
                     ball.lastBounceY = by;
@@ -565,9 +587,12 @@ export default function App() {
             if (ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) {
               // bypass base speed limits
             } else {
-              const baseSpeed = 220, currentSpeed = Math.hypot(ball.vx, ball.vy);
-              if (currentSpeed > baseSpeed) {
-                const newSpeed = baseSpeed + (currentSpeed - baseSpeed) * 0.95;
+              const isWrecker = ball.type === "wrecker";
+              const baseSpeed = isWrecker ? 245 : 220;
+              const maxSpeed = isWrecker ? (balance.wrecker.maxBounceSpeed || 340) : baseSpeed;
+              const currentSpeed = Math.hypot(ball.vx, ball.vy);
+              if (currentSpeed > maxSpeed) {
+                const newSpeed = maxSpeed + (currentSpeed - maxSpeed) * 0.9;
                 ball.vx = (ball.vx / currentSpeed) * newSpeed;
                 ball.vy = (ball.vy / currentSpeed) * newSpeed;
               } else if (currentSpeed < baseSpeed * 0.7 && currentSpeed > 10) {
@@ -628,8 +653,6 @@ export default function App() {
             };
 
           if (collided) {
-            if (leftBall.type === "spike") localApplyDamage(rightBall, balance.spike.collisionDamage, `${leftBall.id}-spike-hit`, balance.spike.cooldown);
-            if (rightBall.type === "spike") localApplyDamage(leftBall, balance.spike.collisionDamage, `${rightBall.id}-spike-hit`, balance.spike.cooldown);
             if (leftBall.type === "spore" && leftBall.hydraGlowStacks > 0) {
               localApplyDamage(rightBall, leftBall.hydraGlowStacks * balance.spore.cactusDamage, `${leftBall.id}-hydra-glow-hit`, 250);
               leftBall.hydraGlowStacks = 0;
@@ -727,9 +750,6 @@ export default function App() {
                   }
                 }
               }
-              if (ball.type === "spike" && Math.hypot(ball.x - enemy.x, ball.y - enemy.y) < ball.r + enemy.r + balance.spike.spikeReach) {
-                localApplyDamage(enemy, balance.spike.touchDamage, `${ball.id}-spike-touch`, balance.spike.cooldown);
-              }
               if (ball.type === "gun") {
                 ball.angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                 
@@ -742,6 +762,8 @@ export default function App() {
                     ball.vy += Math.sin(awayAngle) * balance.gun.secDashForce;
                     ball.ammo = Math.min(ball.maxAmmo, (ball.ammo || 0) + 2);
                     ball.reloadUntil = 0;
+                    ball.rapidFireUntil = simTime + balance.gun.rapidFireDuration;
+                    ball.rapidPierceShotsRemaining = balance.gun.rapidPierceShots || 2;
                   }
                 }
                 
@@ -750,16 +772,19 @@ export default function App() {
                     ball.reloadUntil = simTime + balance.gun.reloadTime;
                     ball.ammo = ball.maxAmmo;
                   } else if (ball.nextShotAt <= simTime) {
+                    const isRapidShot = ball.rapidFireUntil && simTime < ball.rapidFireUntil;
+                    const piercesDefense = isRapidShot && (ball.rapidPierceShotsRemaining || 0) > 0;
+                    if (piercesDefense) ball.rapidPierceShotsRemaining -= 1;
                     localBullets.push({
                       ownerId: ball.id, targetSide: enemy.side,
                       x: ball.x + Math.cos(ball.angle) * (ball.r + 26),
                       y: ball.y + Math.sin(ball.angle) * (ball.r + 26),
                       vx: Math.cos(ball.angle) * balance.gun.bulletSpeed,
                       vy: Math.sin(ball.angle) * balance.gun.bulletSpeed,
-                      r: 5, damage: balance.gun.bulletDamage, life: balance.gun.bulletLife
+                      r: 5, damage: balance.gun.bulletDamage, life: balance.gun.bulletLife, piercesDefense
                     });
                     ball.ammo--;
-                    ball.nextShotAt = simTime + balance.gun.shotCooldown;
+                    ball.nextShotAt = simTime + (isRapidShot ? balance.gun.rapidFireCooldown : balance.gun.shotCooldown);
                   }
                 }
               }
@@ -797,18 +822,6 @@ export default function App() {
                   ball.nextDrainAt = simTime + balance.vampire.tickCooldown;
                 }
               }
-            }
-            if (ball.type === "bomb" && ball.nextBombAt <= simTime) {
-              const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-              localBombs.push({
-                ownerId: ball.id, targetSide: enemy.side,
-                x: ball.x + Math.cos(angle) * (ball.r + 15),
-                y: ball.y + Math.sin(angle) * (ball.r + 15),
-                vx: Math.cos(angle) * balance.bomb.throwSpeed + ball.vx * 0.3,
-                vy: Math.sin(angle) * balance.bomb.throwSpeed + ball.vy * 0.3,
-                r: 10, fuseUntil: simTime + balance.bomb.fuseTime,
-              });
-              ball.nextBombAt = simTime + balance.bomb.cooldown;
             }
             if (ball.type === "laser") {
               const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
@@ -1076,9 +1089,11 @@ export default function App() {
             // Wrecker Ball Physics in Tournament
             if (ball.type === "wrecker") {
               const wreckerCD = balance.wrecker.cooldown !== undefined ? balance.wrecker.cooldown : 1200;
-              let sizeScale = 1 + Math.min(10, ball.rageStacks || 0) * 0.012;
+              const sizePerRage = balance.wrecker.sizePerRage || 0.018;
+              const maxRageSizeScale = balance.wrecker.maxRageSizeScale || 1.2;
+              let sizeScale = Math.min(maxRageSizeScale, 1 + Math.min(12, ball.rageStacks || 0) * sizePerRage);
               if (ball.wreckerEnlargedUntil > 0 && simTime < ball.wreckerEnlargedUntil) {
-                ball.r = ball.originalRadius * 1.15;
+                ball.r = ball.originalRadius * (balance.wrecker.megaSizeScale || 1.3);
               } else {
                 ball.r = ball.originalRadius * sizeScale;
               }
@@ -1118,14 +1133,14 @@ export default function App() {
                     enemy.paralyzedUntil = simTime + 1200;
                   }
 
-                  const faceAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  ball.vx = Math.cos(faceAngle) * 70;
-                  ball.vy = Math.sin(faceAngle) * 70;
+                  const reboundAngle = Math.atan2(ball.y - enemy.y, ball.x - enemy.x);
+                  ball.vx = Math.cos(reboundAngle) * 150;
+                  ball.vy = Math.sin(reboundAngle) * 150;
                 }
               } else if (ball.wreckerState === "cooldown") {
                 const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                ball.vx = Math.cos(angle) * 70;
-                ball.vy = Math.sin(angle) * 70;
+                ball.vx = Math.cos(angle) * 110;
+                ball.vy = Math.sin(angle) * 110;
                 if (simTime >= ball.wreckerStateUntil) {
                   ball.wreckerState = "idle";
                   ball.rageStacks = 0;
@@ -1457,7 +1472,7 @@ export default function App() {
             if (bullet.x < 18 || bullet.x > ARENA_SIZE - 18 || bullet.y < 18 || bullet.y > ARENA_SIZE - 18 || bullet.life <= 0) return false;
             
             const shieldBall = bullet.targetSide === "left" ? leftBall : rightBall;
-            if (shieldBall.type === "shield") {
+            if (shieldBall.type === "shield" && !bullet.piercesDefense) {
               if (shieldBall.shieldState === "held") {
                 const d = Math.hypot(bullet.x - shieldBall.x, bullet.y - shieldBall.y);
                 if (d < shieldBall.r + 15 && d > shieldBall.r - 10) {
@@ -1534,33 +1549,6 @@ export default function App() {
             return true;
           });
 
-          localBombs = localBombs.filter((bomb) => {
-            bomb.x += bomb.vx * dt; bomb.y += bomb.vy * dt;
-            const p = 18;
-            if (bomb.x - bomb.r < p) { bomb.x = p + bomb.r; bomb.vx = Math.abs(bomb.vx) * 0.8; }
-            if (bomb.x + bomb.r > ARENA_SIZE - p) { bomb.x = ARENA_SIZE - p - bomb.r; bomb.vx = -Math.abs(bomb.vx) * 0.8; }
-            if (bomb.y - bomb.r < p) { bomb.y = p + bomb.r; bomb.vy = Math.abs(bomb.vy) * 0.8; }
-            if (bomb.y + bomb.r > ARENA_SIZE - p) { bomb.y = ARENA_SIZE - p - bomb.r; bomb.vy = -Math.abs(bomb.vy) * 0.8; }
-            
-            const target = bomb.targetSide === "left" ? leftBall : rightBall;
-            const dist = Math.hypot(bomb.x - target.x, bomb.y - target.y);
-            if (simTime >= bomb.fuseUntil || dist < target.r + bomb.r) {
-              balls.forEach(ball => {
-                const db = Math.hypot(ball.x - bomb.x, ball.y - bomb.y);
-                if (db < balance.bomb.radius + ball.r) {
-                  if (isChessCrownActive(ball)) return;
-                  const falloff = 1 - (db / (balance.bomb.radius + ball.r));
-                  ball.health = Math.max(0, ball.health - Math.max(MIN_DAMAGE, Math.round(balance.bomb.damage * falloff)));
-                  const angle = Math.atan2(ball.y - bomb.y, ball.x - bomb.x);
-                  const force = balance.bomb.knockback * 25 * falloff;
-                  ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
-                }
-              });
-              return false;
-            }
-            return true;
-          });
-
           localCacti = localCacti.filter((cactus) => {
             cactus.life -= dt * 1000;
             if (cactus.life <= 0 || cactus.charges <= 0) return false;
@@ -1598,52 +1586,9 @@ export default function App() {
             return true;
           });
 
-          localWallSpikes = localWallSpikes.filter((spike) => {
-            balls.forEach((ball) => {
-              if (ball.side === spike.ownerSide) return;
-
-              let hit = false;
-              const pad = 18;
-              const spikeHeight = 15;
-              const spikeWidth = 16;
-
-              if (spike.side === "left") {
-                if (ball.x - ball.r < pad + spikeHeight && ball.x + ball.r > pad) {
-                  if (Math.abs(ball.y - spike.y) < ball.r + spikeWidth / 2) {
-                    hit = true;
-                  }
-                }
-              } else if (spike.side === "right") {
-                const xLimit = ARENA_SIZE - pad - spikeHeight;
-                if (ball.x + ball.r > xLimit && ball.x - ball.r < ARENA_SIZE - pad) {
-                  if (Math.abs(ball.y - spike.y) < ball.r + spikeWidth / 2) {
-                    hit = true;
-                  }
-                }
-              } else if (spike.side === "top") {
-                if (ball.y - ball.r < pad + spikeHeight && ball.y + ball.r > pad) {
-                  if (Math.abs(ball.x - spike.x) < ball.r + spikeWidth / 2) {
-                    hit = true;
-                  }
-                }
-              } else if (spike.side === "bottom") {
-                const yLimit = ARENA_SIZE - pad - spikeHeight;
-                if (ball.y + ball.r > yLimit && ball.y - ball.r < ARENA_SIZE - pad) {
-                  if (Math.abs(ball.x - spike.x) < ball.r + spikeWidth / 2) {
-                    hit = true;
-                  }
-                }
-              }
-
-              if (hit) {
-                localApplyDamage(ball, balance.wallSpike.spikeDamage, `${ball.id}-wallspike-${spike.createdTime}`, 500);
-              }
-            });
-
-            return true;
-          });
-
           localStrings = localStrings.filter((str) => {
+            str.life -= dt * 1000;
+            if (str.life <= 0) return false;
             balls.forEach((ball) => {
               if (ball.side === str.ownerSide) return;
 
@@ -1752,7 +1697,7 @@ export default function App() {
 
     const resizeCanvas = () => {
       const scale = window.devicePixelRatio || 1, container = canvas.parentElement;
-      const maxDisplaySize = viewMode === "desktop" ? 650 : ARENA_SIZE;
+      const maxDisplaySize = 650;
       const displaySize = Math.min(container.clientWidth, maxDisplaySize);
       canvas.width = displaySize * scale; canvas.height = displaySize * scale;
       canvas.style.width = `${displaySize}px`; canvas.style.height = `${displaySize}px`;
@@ -1774,6 +1719,15 @@ export default function App() {
       game.damageCooldowns[cooldownKey] = currentTime + cooldown;
       if (defender.type === "wrecker") {
         defender.rageStacks = (defender.rageStacks || 0) + 1;
+        if (!defender.nextGrumbleAt || currentTime >= defender.nextGrumbleAt) {
+          defender.nextGrumbleAt = currentTime + 650;
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: defender.x, y: defender.y - defender.r - 22, vy: -45,
+            text: WRECKER_GRUMBLES[Math.floor(Math.random() * WRECKER_GRUMBLES.length)],
+            color: "#86efac", life: 0.75, maxLife: 0.75
+          });
+        }
       }
 
       game.floatingTexts = game.floatingTexts || [];
@@ -1941,6 +1895,25 @@ export default function App() {
         if (ball.type === "wrecker") {
           ball.consecutiveWallBounces = (ball.consecutiveWallBounces || 0) + 1;
           ball.rageStacks = (ball.rageStacks || 0) + 1;
+          if (!ball.nextGrumbleAt || game.simTime >= ball.nextGrumbleAt) {
+            ball.nextGrumbleAt = game.simTime + 650;
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 22, vy: -45,
+              text: WRECKER_GRUMBLES[Math.floor(Math.random() * WRECKER_GRUMBLES.length)],
+              color: "#86efac", life: 0.75, maxLife: 0.75
+            });
+          }
+          const bal = game.balance.wrecker || BALANCE.wrecker;
+          const boost = bal.bounceBoost || 1.14;
+          const maxBounceSpeed = bal.maxBounceSpeed || 340;
+          const speed = Math.hypot(ball.vx, ball.vy);
+          if (speed > 0) {
+            const nextSpeed = Math.min(maxBounceSpeed, Math.max(235, speed * boost));
+            ball.vx = (ball.vx / speed) * nextSpeed;
+            ball.vy = (ball.vy / speed) * nextSpeed;
+          }
+          spawnSparks(ball.x, ball.y, "#22c55e", Math.min(16, 5 + (ball.rageStacks || 0)));
         }
         if (ball.armThrowWallUntil && game.simTime <= ball.armThrowWallUntil) {
           applyDamage(ball, ARM_THROW_WALL_DAMAGE, `${ball.armThrowWallSourceId || ball.id}-arm-throw-wall`, game.simTime, 500);
@@ -1950,20 +1923,7 @@ export default function App() {
           game.screenShake = Math.max(game.screenShake, 14);
         }
         if (gameStarted && game.simTime >= 3000) {
-          if (ball.type === "wallSpike") {
-            if (!game.wallSpikes) game.wallSpikes = [];
-            const newSpike = {
-              x: bx,
-              y: by,
-              side: sideHit,
-              ownerSide: ball.side,
-              createdTime: game.simTime,
-              life: game.balance.wallSpike.spikeLifetime,
-              charges: 1
-            };
-            game.wallSpikes.push(newSpike);
-            playSound("spikePlant");
-          } else if (ball.type === "stringWeb") {
+          if (ball.type === "stringWeb") {
             if (!game.strings) game.strings = [];
             if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
               const newString = {
@@ -1973,9 +1933,15 @@ export default function App() {
                 y2: by,
                 ownerSide: ball.side,
                 createdTime: game.simTime,
-                life: Infinity
+                life: game.balance.stringWeb.stringLifetime
               };
               game.strings.push(newString);
+              const maxStrings = game.balance.stringWeb.maxStrings || 10;
+              const ownerStrings = game.strings.filter((str) => str.ownerSide === ball.side);
+              if (ownerStrings.length > maxStrings) {
+                const oldest = ownerStrings.sort((a, b) => a.createdTime - b.createdTime)[0];
+                game.strings = game.strings.filter((str) => str !== oldest);
+              }
               playSound("stringTwang");
             }
             ball.lastBounceX = bx;
@@ -2031,9 +1997,11 @@ export default function App() {
       const bal = game.balance.wrecker || BALANCE.wrecker;
 
       // Dynamically set physical hitbox size based on rage stacks and mega enlargement
-      let sizeScale = 1 + Math.min(10, ball.rageStacks || 0) * 0.012;
+      const sizePerRage = bal.sizePerRage || 0.018;
+      const maxRageSizeScale = bal.maxRageSizeScale || 1.2;
+      let sizeScale = Math.min(maxRageSizeScale, 1 + Math.min(12, ball.rageStacks || 0) * sizePerRage);
       if (ball.wreckerEnlargedUntil > 0 && currentTime < ball.wreckerEnlargedUntil) {
-        ball.r = ball.originalRadius * 1.15;
+        ball.r = ball.originalRadius * (bal.megaSizeScale || 1.3);
       } else {
         ball.r = ball.originalRadius * sizeScale;
       }
@@ -2043,7 +2011,7 @@ export default function App() {
         if (currentTime >= ball.wreckerCooldownUntil) {
           ball.wreckerState = "normal";
           const speed = Math.hypot(ball.vx, ball.vy);
-          const recoverSpeed = 220;
+          const recoverSpeed = 245;
           if (speed > 0) {
             ball.vx = (ball.vx / speed) * recoverSpeed;
             ball.vy = (ball.vy / speed) * recoverSpeed;
@@ -2053,10 +2021,10 @@ export default function App() {
             ball.vy = Math.sin(angle) * recoverSpeed;
           }
         } else {
-          // Slow crawl velocity (70 px/s) towards target
+          // Slow recovery velocity towards target
           const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-          ball.vx = Math.cos(angle) * 70;
-          ball.vy = Math.sin(angle) * 70;
+          ball.vx = Math.cos(angle) * 110;
+          ball.vy = Math.sin(angle) * 110;
         }
         return;
       }
@@ -2088,10 +2056,10 @@ export default function App() {
           ball.wreckerState = "cooldown";
           ball.wreckerCooldownUntil = currentTime + bal.cooldown;
           
-          // Landing crawl velocity towards target
-          const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-          ball.vx = Math.cos(angle) * 70;
-          ball.vy = Math.sin(angle) * 70;
+          // Landing rebound so Wrecker keeps its heavy bounce after impact.
+          const angle = Math.atan2(ball.y - target.y, ball.x - target.x);
+          ball.vx = Math.cos(angle) * 170;
+          ball.vy = Math.sin(angle) * 170;
 
           // Shockwave effects
           const damage = ball.isMegaLeap ? bal.megaLeapDamage : bal.leapDamage;
@@ -2279,9 +2247,24 @@ export default function App() {
         while (diff < -Math.PI) diff += Math.PI * 2;
         const sweep = Math.sin(currentTime * 0.006) * 0.55;
         armBall.armAngle = (armBall.armAngle || 0) + diff * 0.11 + bal.arm.swingSpeed * 0.45 + sweep * 0.025;
+        const targetDist = Math.hypot(target.x - armBall.x, target.y - armBall.y);
+
+        if (targetDist < armBall.r + target.r + bal.arm.punchRange && currentTime >= (armBall.armNextPunchAt || 0)) {
+          armBall.armNextPunchAt = currentTime + bal.arm.punchCooldown;
+          armBall.armPunchUntil = currentTime + 220;
+          applyDamage(target, bal.arm.punchDamage, `${armBall.id}-arm-punch`, currentTime, 350);
+          target.vx += Math.cos(targetAngle) * bal.arm.punchKnockback;
+          target.vy += Math.sin(targetAngle) * bal.arm.punchKnockback;
+          spawnSparks(target.x, target.y, "#e5e7eb", 10);
+          playSound("hammerHit");
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: armBall.x, y: armBall.y - armBall.r - 18, vy: -45,
+            text: "PUNCH", color: "#e5e7eb", life: 0.7, maxLife: 0.7
+          });
+        }
         
         // Trigger Leap Lunge
-        const targetDist = Math.hypot(target.x - armBall.x, target.y - armBall.y);
         if (targetDist > 220 && currentTime >= (armBall.nextSecondaryAt || 0)) {
           armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
           armBall.vx += Math.cos(targetAngle) * 450;
@@ -2536,19 +2519,102 @@ export default function App() {
       }
     };
 
-    const updateGun = (gun, target, currentTime) => {
+    const updateGun = (gun, target, currentTime, stepDt) => {
       gun.angle = Math.atan2(target.y - gun.y, target.x - gun.x);
+      const gunBal = game.balance.gun;
+      
+      if (!gun.dog && !gun.dogDied && currentTime >= (gun.dogRespawnAt || 0)) {
+        const dogAngle = Math.atan2(target.y - gun.y, target.x - gun.x) + (gun.side === "left" ? -0.8 : 0.8);
+        gun.dog = {
+          x: clamp(gun.x - Math.cos(gun.angle) * 22 + Math.cos(dogAngle) * 16, 30, game.width - 30),
+          y: clamp(gun.y - Math.sin(gun.angle) * 22 + Math.sin(dogAngle) * 16, 30, game.height - 30),
+          vx: Math.cos(dogAngle) * gunBal.dogSpeed,
+          vy: Math.sin(dogAngle) * gunBal.dogSpeed,
+          r: 12,
+          health: gunBal.dogHealth,
+          nextBiteAt: 0,
+        };
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: gun.x, y: gun.y - gun.r - 22, vy: -50,
+          text: "DOG!", color: "#fbbf24", life: 0.8, maxLife: 0.8
+        });
+      }
+
+      if (gun.dog) {
+        const dog = gun.dog;
+        if (dog.dead) {
+          dog.vx *= 0.88;
+          dog.vy *= 0.88;
+          dog.x = clamp(dog.x + dog.vx * stepDt, 18 + dog.r, game.width - 18 - dog.r);
+          dog.y = clamp(dog.y + dog.vy * stepDt, 18 + dog.r, game.height - 18 - dog.r);
+        } else {
+        const dTarget = Math.hypot(target.x - dog.x, target.y - dog.y);
+        const chaseAngle = Math.atan2(target.y - dog.y, target.x - dog.x);
+        dog.vx += Math.cos(chaseAngle) * gunBal.dogSpeed * 2.8 * stepDt;
+        dog.vy += Math.sin(chaseAngle) * gunBal.dogSpeed * 2.8 * stepDt;
+        const dogSpeed = Math.hypot(dog.vx, dog.vy);
+        const maxDogSpeed = gunBal.dogSpeed * 1.35;
+        if (dogSpeed > maxDogSpeed) {
+          dog.vx = (dog.vx / dogSpeed) * maxDogSpeed;
+          dog.vy = (dog.vy / dogSpeed) * maxDogSpeed;
+        }
+        dog.x += dog.vx * stepDt;
+        dog.y += dog.vy * stepDt;
+        const pad = 18;
+        if (dog.x - dog.r < pad) { dog.x = pad + dog.r; dog.vx = Math.abs(dog.vx); spawnDust(dog.x, dog.y, 3); }
+        if (dog.x + dog.r > game.width - pad) { dog.x = game.width - pad - dog.r; dog.vx = -Math.abs(dog.vx); spawnDust(dog.x, dog.y, 3); }
+        if (dog.y - dog.r < pad) { dog.y = pad + dog.r; dog.vy = Math.abs(dog.vy); spawnDust(dog.x, dog.y, 3); }
+        if (dog.y + dog.r > game.height - pad) { dog.y = game.height - pad - dog.r; dog.vy = -Math.abs(dog.vy); spawnDust(dog.x, dog.y, 3); }
+
+        if (dTarget < target.r + dog.r && currentTime >= dog.nextBiteAt) {
+          applyDamage(target, gunBal.dogDamage, `${gun.id}-dog-bite`, currentTime, 500);
+          dog.nextBiteAt = currentTime + 650;
+          dog.health -= Math.max(2, Math.round(gunBal.dogDamage * 0.7));
+          target.vx += Math.cos(chaseAngle) * 120;
+          target.vy += Math.sin(chaseAngle) * 120;
+          spawnSparks(dog.x, dog.y, "#fbbf24", 8);
+        }
+
+        if (Math.hypot(target.x - dog.x, target.y - dog.y) < target.r + dog.r + 4 && Math.hypot(target.vx, target.vy) > 180) {
+          dog.health -= 0.22;
+        }
+
+        if (dog.health <= 0) {
+          spawnDust(dog.x, dog.y, 10);
+          spawnSparks(dog.x, dog.y, "#fbbf24", 10);
+          dog.health = 0;
+          dog.dead = true;
+          dog.vx *= 0.35;
+          dog.vy *= 0.35;
+          gun.dogDied = true;
+          gun.dogRespawnAt = Infinity;
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: gun.x, y: gun.y - gun.r - 22, vy: -50,
+            text: "DOG DOWN", color: "#f87171", life: 0.8, maxLife: 0.8
+          });
+        }
+        }
+      }
       
       // Tactical Reload Dash
       if (gun.ammo <= 0 || gun.reloadUntil > currentTime) {
         const dist = Math.hypot(target.x - gun.x, target.y - gun.y);
         if (dist < 160 && currentTime >= (gun.nextSecondaryAt || 0)) {
-          gun.nextSecondaryAt = currentTime + game.balance.gun.secCooldown;
+          gun.nextSecondaryAt = currentTime + gunBal.secCooldown;
           const awayAngle = Math.atan2(gun.y - target.y, gun.x - target.x);
-          gun.vx += Math.cos(awayAngle) * game.balance.gun.secDashForce;
-          gun.vy += Math.sin(awayAngle) * game.balance.gun.secDashForce;
+          gun.vx += Math.cos(awayAngle) * gunBal.secDashForce;
+          gun.vy += Math.sin(awayAngle) * gunBal.secDashForce;
           gun.ammo = Math.min(gun.maxAmmo, (gun.ammo || 0) + 2);
           gun.reloadUntil = 0; // Interrupt reload
+          if (gun.dogDied) {
+            gun.permanentRapidFire = true;
+          } else {
+            gun.rapidFireUntil = currentTime + gunBal.rapidFireDuration;
+          }
+          gun.rapidPierceShotsRemaining = gunBal.rapidPierceShots || 2;
+          gun.nextRapidFireAt = currentTime;
           playSound("gunReload");
           
           for (let i = 0; i < 8; i++) {
@@ -2564,55 +2630,40 @@ export default function App() {
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: gun.x, y: gun.y - gun.r - 20, vy: -50,
-            text: "DASH +2 AMMO", color: "#67e8f9", life: 0.8, maxLife: 0.8
+            text: gun.permanentRapidFire ? "PERMA RAPID + PIERCE" : "DASH RAPID + PIERCE", color: "#67e8f9", life: 0.8, maxLife: 0.8
           });
         }
       }
 
       if (gun.reloadUntil > currentTime) return;
       if (gun.ammo <= 0) {
-        gun.reloadUntil = currentTime + game.balance.gun.reloadTime;
+        gun.reloadUntil = currentTime + gunBal.reloadTime;
         gun.ammo = gun.maxAmmo;
         playSound("gunReload");
         return;
       }
+      const shotCooldown = gun.permanentRapidFire || currentTime < (gun.rapidFireUntil || 0) ? gunBal.rapidFireCooldown : gunBal.shotCooldown;
       if (gun.nextShotAt > currentTime) return;
+      const isRapidShot = gun.permanentRapidFire || currentTime < (gun.rapidFireUntil || 0);
+      const piercesDefense = isRapidShot && (gun.rapidPierceShotsRemaining || 0) > 0;
+      if (piercesDefense) gun.rapidPierceShotsRemaining -= 1;
 
       const mX = gun.x + Math.cos(gun.angle) * (gun.r + 26);
       const mY = gun.y + Math.sin(gun.angle) * (gun.r + 26);
       game.bullets.push({
         ownerId: gun.id, targetSide: target.side, x: mX, y: mY,
-        vx: Math.cos(gun.angle) * game.balance.gun.bulletSpeed,
-        vy: Math.sin(gun.angle) * game.balance.gun.bulletSpeed,
-        r: 5, damage: game.balance.gun.bulletDamage, life: game.balance.gun.bulletLife,
+        vx: Math.cos(gun.angle) * gunBal.bulletSpeed,
+        vy: Math.sin(gun.angle) * gunBal.bulletSpeed,
+        r: 5, damage: gunBal.bulletDamage, life: gunBal.bulletLife, piercesDefense,
       });
 
       if (gun.side === "left") game.stats.left.totalShots++;
       else game.stats.right.totalShots++;
 
       gun.ammo--;
-      gun.nextShotAt = currentTime + game.balance.gun.shotCooldown;
+      gun.nextShotAt = currentTime + shotCooldown;
       gun.flashUntil = currentTime + 90;
       playSound("gunShot");
-    };
-
-    const updateBomb = (bombBall, target, currentTime) => {
-      if (bombBall.nextBombAt > currentTime) return;
-      const angle = Math.atan2(target.y - bombBall.y, target.x - bombBall.x);
-      game.bombs.push({
-        ownerId: bombBall.id, targetSide: target.side,
-        x: bombBall.x + Math.cos(angle) * (bombBall.r + 15),
-        y: bombBall.y + Math.sin(angle) * (bombBall.r + 15),
-        vx: Math.cos(angle) * game.balance.bomb.throwSpeed + bombBall.vx * 0.3,
-        vy: Math.sin(angle) * game.balance.bomb.throwSpeed + bombBall.vy * 0.3,
-        r: 10, fuseUntil: currentTime + game.balance.bomb.fuseTime
-      });
-
-      if (bombBall.side === "left") game.stats.left.totalShots++;
-      else game.stats.right.totalShots++;
-
-      bombBall.nextBombAt = currentTime + game.balance.bomb.cooldown;
-      playSound("shieldThrow");
     };
 
     const updateLaser = (laserBall, target, currentTime) => {
@@ -2710,6 +2761,31 @@ export default function App() {
 
         if (currentTime >= laserBall.laserStateUntil) {
           laserBall.laserState = "idle";
+          laserBall.laserShotCount = (laserBall.laserShotCount || 0) + 1;
+          if (laserBall.laserShotCount % (bal.laser.pulseEvery || 5) === 0) {
+            const pulseAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+            const pulseX = laserBall.x + Math.cos(pulseAngle) * (laserBall.r + 12);
+            const pulseY = laserBall.y + Math.sin(pulseAngle) * (laserBall.r + 12);
+            game.bullets.push({
+              ownerId: laserBall.id,
+              targetSide: target.side,
+              x: pulseX,
+              y: pulseY,
+              vx: Math.cos(pulseAngle) * bal.laser.pulseSpeed,
+              vy: Math.sin(pulseAngle) * bal.laser.pulseSpeed,
+              r: 11,
+              damage: bal.laser.pulseDamage,
+              life: 2.2,
+              kind: "laserPulse",
+              stunDuration: bal.laser.pulseStunDuration,
+            });
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
+              text: "LASER PULSE", color: "#facc15", life: 0.8, maxLife: 0.8
+            });
+            spawnSparks(pulseX, pulseY, "#facc15", 12);
+          }
           laserBall.nextShotAt = currentTime + bal.laser.cooldown;
           laserBall.laserReflect = null;
         }
@@ -3428,7 +3504,7 @@ export default function App() {
         if (bullet.x < 18 || bullet.x > game.width - 18 || bullet.y < 18 || bullet.y > game.height - 18 || bullet.life <= 0) return false;
 
         const side = bullet.targetSide, shieldBall = balls.find(b => b.side === side);
-        if (shieldBall && shieldBall.type === "shield") {
+        if (shieldBall && shieldBall.type === "shield" && !bullet.piercesDefense) {
           if (shieldBall.shieldState === "held") {
             const d = Math.hypot(bullet.x - shieldBall.x, bullet.y - shieldBall.y);
             if (d < shieldBall.r + 15 && d > shieldBall.r - 10) {
@@ -3475,77 +3551,26 @@ export default function App() {
         if (target && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
           if (isChessCrownActive(target)) return false;
           target.health = clamp(target.health - bullet.damage, 0, 100);
+          if (bullet.stunDuration) {
+            target.paralyzedUntil = Math.max(target.paralyzedUntil || 0, game.simTime + bullet.stunDuration);
+          }
 
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: target.x + (Math.random() - 0.5) * 20, y: target.y - target.r - 5, vy: -60,
             text: `-${bullet.damage}`, color: "#f87171", life: 0.8, maxLife: 0.8
           });
+          if (bullet.stunDuration) {
+            game.floatingTexts.push({
+              x: target.x, y: target.y - target.r - 22, vy: -55,
+              text: "STUN", color: "#facc15", life: 0.8, maxLife: 0.8
+            });
+          }
           
           if (bullet.ownerId.startsWith("left")) { game.stats.left.damageDealt += bullet.damage; game.stats.left.hitsLanded++; }
           else { game.stats.right.damageDealt += bullet.damage; game.stats.right.hitsLanded++; }
 
-          spawnSparks(bullet.x, bullet.y, "#facc15", 8);
-          return false;
-        }
-        return true;
-      });
-    };
-
-    const updateBombs = (dt, balls) => {
-      game.bombs = game.bombs.filter((bomb) => {
-        bomb.x += bomb.vx * dt; bomb.y += bomb.vy * dt;
-        
-        const pad = 18; let bounced = false;
-        if (bomb.x - bomb.r < pad) { bomb.x = pad + bomb.r; bomb.vx = Math.abs(bomb.vx) * 0.8; bounced = true; }
-        if (bomb.x + bomb.r > game.width - pad) { bomb.x = game.width - pad - bomb.r; bomb.vx = -Math.abs(bomb.vx) * 0.8; bounced = true; }
-        if (bomb.y - bomb.r < pad) { bomb.y = pad + bomb.r; bomb.vy = Math.abs(bomb.vy) * 0.8; bounced = true; }
-        if (bomb.y + bomb.r > game.height - pad) { bomb.y = game.height - pad - bomb.r; bomb.vy = -Math.abs(bomb.vy) * 0.8; bounced = true; }
-        if (bounced) spawnDust(bomb.x, bomb.y, 3);
-
-        // Periodic ticking sound
-        if (!bomb.lastTickTime || game.simTime - bomb.lastTickTime >= 300) {
-          bomb.lastTickTime = game.simTime;
-          playSound("bombFuse", 0.5, 0);
-        }
-
-        const target = balls.find((b) => b.side === bomb.targetSide);
-        const dist = Math.hypot(bomb.x - target.x, bomb.y - target.y);
-        
-        if (game.simTime >= bomb.fuseUntil || dist < target.r + bomb.r) {
-          game.explosions.push({
-            ownerId: bomb.ownerId, x: bomb.x, y: bomb.y, r: 0,
-            maxRadius: game.balance.bomb.radius, duration: 400, life: 400
-          });
-          game.screenShake = Math.max(game.screenShake, 14);
-          spawnExplosionParticles(bomb.x, bomb.y);
-          playSound("explosion");
-
-          balls.forEach(ball => {
-            const db = Math.hypot(ball.x - bomb.x, ball.y - bomb.y);
-            if (db < game.balance.bomb.radius + ball.r) {
-              const falloff = 1 - (db / (game.balance.bomb.radius + ball.r));
-              const dmg = Math.max(MIN_DAMAGE, Math.round(game.balance.bomb.damage * falloff));
-              if (isChessCrownActive(ball)) return;
-              ball.health = clamp(ball.health - dmg, 0, 100);
-
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({
-                x: ball.x + (Math.random() - 0.5) * 20, y: ball.y - ball.r - 5, vy: -60,
-                text: `-${dmg}`, color: "#f87171", life: 0.8, maxLife: 0.8
-              });
-
-              const angle = Math.atan2(ball.y - bomb.y, ball.x - bomb.x);
-              const force = game.balance.bomb.knockback * 20 * falloff;
-              ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
-
-              if (bomb.ownerId.startsWith("left")) {
-                if (ball.side === "right") { game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++; }
-              } else {
-                if (ball.side === "left") { game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++; }
-              }
-            }
-          });
+          spawnSparks(bullet.x, bullet.y, bullet.kind === "laserPulse" ? "#facc15" : "#facc15", bullet.kind === "laserPulse" ? 16 : 8);
           return false;
         }
         return true;
@@ -3634,25 +3659,6 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawSpikeBall = (ball) => {
-      const config = BALL_TYPES.spike;
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      const spikes = 12, outer = ball.r + game.balance.spike.spikeReach, inner = ball.r;
-      ctx.beginPath();
-      for (let i = 0; i < spikes * 2; i++) {
-        const a = (i / (spikes * 2)) * Math.PI * 2, rad = i % 2 === 0 ? outer : inner;
-        const px = Math.cos(a) * rad, py = Math.sin(a) * rad;
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.strokeStyle = config.stroke; ctx.lineWidth = 3; ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, ball.r - 8, 0, Math.PI * 2);
-      ctx.fillStyle = "#be123c"; ctx.fill();
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
-
     const drawVampireBall = (ball, currentTime, target) => {
       const config = BALL_TYPES.vampire;
       const isLatched = ball.latchUntil > currentTime && target;
@@ -3688,28 +3694,23 @@ export default function App() {
       ctx.translate(ball.x, ball.y);
       ctx.rotate(ball.angle);
       
-      // Dual futuristic railgun barrels
-      // Top Barrel
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(ball.r - 2, -7, 30, 5);
-      ctx.fillStyle = "#06b6d4"; // Cyan glow rail
-      ctx.fillRect(ball.r + 8, -6, 18, 3);
-
-      // Bottom Barrel
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(ball.r - 2, 2, 30, 5);
-      ctx.fillStyle = "#06b6d4"; // Cyan glow rail
-      ctx.fillRect(ball.r + 8, 3, 18, 3);
+      // Sleek pistol silhouette
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(ball.r - 3, -4, 30, 8);
+      ctx.fillStyle = "#475569";
+      ctx.fillRect(ball.r + 4, -2, 22, 4);
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(ball.r + 3, 4, 8, 12);
       
       // Gun base connector
       ctx.fillStyle = "#1e293b";
-      ctx.fillRect(ball.r - 6, -9, 8, 18);
-      ctx.strokeStyle = "#0891b2";
+      ctx.fillRect(ball.r - 7, -7, 7, 14);
+      ctx.strokeStyle = "#cbd5e1";
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(ball.r - 6, -9, 8, 18);
+      ctx.strokeRect(ball.r - 7, -7, 7, 14);
 
-      // Laser guide line (faint cyan)
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+      // Clean aim line
+      ctx.strokeStyle = "rgba(203, 213, 225, 0.28)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 6]);
       ctx.beginPath();
@@ -3722,7 +3723,7 @@ export default function App() {
       if (ball.flashUntil > currentTime) {
         const flashGrad = ctx.createRadialGradient(ball.r + 28, 0, 2, ball.r + 40, 0, 15);
         flashGrad.addColorStop(0, "#ffffff");
-        flashGrad.addColorStop(0.3, "#22d3ee");
+        flashGrad.addColorStop(0.3, "#facc15");
         flashGrad.addColorStop(1, "rgba(6, 182, 212, 0)");
         ctx.fillStyle = flashGrad;
         ctx.beginPath();
@@ -3731,57 +3732,125 @@ export default function App() {
       }
       ctx.restore();
 
-      // Ball shell - Radial Gradient for carbon/metallic feel
+      // Ball shell: black suit
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
       const metalGrad = ctx.createRadialGradient(
         ball.x - ball.r * 0.2, ball.y - ball.r * 0.2, 2,
         ball.x, ball.y, ball.r
       );
-      metalGrad.addColorStop(0, "#475569");
-      metalGrad.addColorStop(0.5, "#1e293b");
-      metalGrad.addColorStop(1, "#0f172a");
+      metalGrad.addColorStop(0, "#1f2937");
+      metalGrad.addColorStop(0.55, "#020617");
+      metalGrad.addColorStop(1, "#000000");
       ctx.fillStyle = metalGrad;
       ctx.fill();
 
-      // Cyber outer border
+      // Suit border
       ctx.lineWidth = 3.5;
-      ctx.strokeStyle = "#06b6d4";
+      ctx.strokeStyle = "#cbd5e1";
       ctx.stroke();
 
-      // Outer targeting scope ticks
+      // Suit lapels, shirt, and tie
       ctx.save();
       ctx.translate(ball.x, ball.y);
       ctx.rotate(ball.angle);
-      
-      // Thin cyan reticle circle
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.85)";
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.25, -ball.r * 0.58);
+      ctx.lineTo(ball.r * 0.18, 0);
+      ctx.lineTo(-ball.r * 0.25, ball.r * 0.58);
+      ctx.lineTo(-ball.r * 0.5, ball.r * 0.36);
+      ctx.lineTo(-ball.r * 0.18, 0);
+      ctx.lineTo(-ball.r * 0.5, -ball.r * 0.36);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.78, -ball.r * 0.55);
+      ctx.lineTo(-ball.r * 0.18, 0);
+      ctx.lineTo(-ball.r * 0.78, ball.r * 0.55);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.45, -ball.r * 0.5);
+      ctx.lineTo(ball.r * 0.12, 0);
+      ctx.lineTo(ball.r * 0.45, ball.r * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#020617";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.02, -ball.r * 0.28);
+      ctx.lineTo(ball.r * 0.16, 0);
+      ctx.lineTo(-ball.r * 0.02, ball.r * 0.36);
+      ctx.lineTo(-ball.r * 0.18, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.arc(0, 0, ball.r * 0.65, 0, Math.PI * 2);
+      ctx.moveTo(-ball.r * 0.18, -ball.r * 0.45);
+      ctx.lineTo(-ball.r * 0.02, -ball.r * 0.28);
+      ctx.moveTo(-ball.r * 0.18, ball.r * 0.45);
+      ctx.lineTo(-ball.r * 0.02, ball.r * 0.36);
       ctx.stroke();
-
-      // Crosshairs
-      ctx.strokeStyle = "#06b6d4";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      // Top tick
-      ctx.moveTo(0, -ball.r * 0.65); ctx.lineTo(0, -ball.r * 0.45);
-      // Bottom tick
-      ctx.moveTo(0, ball.r * 0.65); ctx.lineTo(0, ball.r * 0.45);
-      // Left tick
-      ctx.moveTo(-ball.r * 0.65, 0); ctx.lineTo(-ball.r * 0.45, 0);
-      // Right tick
-      ctx.moveTo(ball.r * 0.65, 0); ctx.lineTo(ball.r * 0.45, 0);
-      ctx.stroke();
-
-      // Center glowing dot
-      ctx.fillStyle = "#22d3ee";
-      ctx.beginPath();
-      ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
-      ctx.fill();
 
       ctx.restore();
+
+      if (ball.dog) {
+        const dog = ball.dog;
+        const dogAngle = Math.atan2(dog.vy, dog.vx);
+        ctx.save();
+        ctx.translate(dog.x, dog.y);
+        ctx.rotate(dogAngle);
+        ctx.globalAlpha = dog.dead ? 0.78 : 1;
+        ctx.shadowColor = dog.dead ? "rgba(15, 23, 42, 0.6)" : "#d97706";
+        ctx.shadowBlur = dog.dead ? 2 : 6;
+        ctx.fillStyle = dog.dead ? "#44403c" : "#f5f5f4";
+        ctx.strokeStyle = dog.dead ? "#a8a29e" : "#7c2d12";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, dog.r + 3, dog.r, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = dog.dead ? "#78716c" : "#7c2d12";
+        ctx.beginPath(); ctx.moveTo(2, -dog.r + 1); ctx.lineTo(10, -dog.r - 7); ctx.lineTo(10, -dog.r + 4); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(2, dog.r - 1); ctx.lineTo(10, dog.r + 7); ctx.lineTo(10, dog.r - 4); ctx.closePath(); ctx.fill();
+        if (!dog.dead) {
+          ctx.fillStyle = "#a16207";
+          ctx.beginPath();
+          ctx.ellipse(-3, 0, dog.r * 0.55, dog.r * 0.9, 0, -Math.PI / 2, Math.PI / 2);
+          ctx.fill();
+          ctx.fillStyle = "#020617";
+          ctx.beginPath();
+          ctx.ellipse(-dog.r * 0.38, dog.r * 0.3, dog.r * 0.28, dog.r * 0.22, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#020617";
+          ctx.beginPath();
+          ctx.arc(dog.r + 6, 0, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (dog.dead) {
+          ctx.strokeStyle = "#f8fafc";
+          ctx.lineWidth = 2;
+          [[dog.r + 3, -4], [dog.r + 3, 4]].forEach(([ex, ey]) => {
+            ctx.beginPath(); ctx.moveTo(ex - 3, ey - 3); ctx.lineTo(ex + 3, ey + 3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(ex + 3, ey - 3); ctx.lineTo(ex - 3, ey + 3); ctx.stroke();
+          });
+        } else {
+          ctx.fillStyle = "#f8fafc";
+          ctx.beginPath(); ctx.arc(dog.r + 3, -4, 2.2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(dog.r + 3, 4, 2.2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.fillStyle = dog.dead ? "#f87171" : "#fbbf24";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(dog.dead ? "X X" : Math.ceil(dog.health), dog.x, dog.y + dog.r + 13);
+        ctx.restore();
+      }
       drawHealthInsideBall(ball);
     };
 
@@ -3879,20 +3948,6 @@ export default function App() {
         ctx.restore();
       }
 
-      drawHealthInsideBall(ball);
-    };
-
-    const drawBombBall = (ball) => {
-      const config = BALL_TYPES.bomb;
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-      ctx.fillStyle = "#64748b"; ctx.fillRect(ball.r - 8, -6, 12, 12);
-      ctx.strokeStyle = "#d97706"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(ball.r + 6, 0, 8, Math.PI, Math.PI * 1.8); ctx.stroke();
-      ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(ball.r + 10, -5, 4 + Math.random() * 2, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
       drawHealthInsideBall(ball);
     };
 
@@ -4360,8 +4415,10 @@ export default function App() {
       
       const armAngle = ball.armAngle || 0;
       const enemy = game.balls.find(b => b.id !== ball.id);
-      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : ball.x + Math.cos(armAngle) * L;
-      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : ball.y + Math.sin(armAngle) * L;
+      const punching = ball.armPunchUntil && game.simTime < ball.armPunchUntil;
+      const reach = punching ? L + 28 : L;
+      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : ball.x + Math.cos(armAngle) * reach;
+      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : ball.y + Math.sin(armAngle) * reach;
 
       // Draw the arm line / segments
       ctx.save();
@@ -4423,7 +4480,9 @@ export default function App() {
       ctx.rotate(armAngle);
       
       let fingerAngle = 0.5;
-      if (ball.armState === "grabbing" || ball.armState === "elbow_dropping") {
+      if (punching) {
+        fingerAngle = 0.02;
+      } else if (ball.armState === "grabbing" || ball.armState === "elbow_dropping") {
         fingerAngle = 0.12 + Math.sin(game.simTime * 0.05) * 0.05;
       } else {
         fingerAngle = 0.4 + Math.sin(game.simTime * 0.015) * 0.15;
@@ -4444,9 +4503,9 @@ export default function App() {
       ctx.quadraticCurveTo(Math.cos(-fingerAngle) * 15, Math.sin(-fingerAngle) * 15, Math.cos(-fingerAngle) * 20 - Math.sin(-fingerAngle) * -5, Math.sin(-fingerAngle) * 20 + Math.cos(-fingerAngle) * -5);
       ctx.stroke();
 
-      ctx.fillStyle = "#cbd5e1";
+      ctx.fillStyle = punching ? "#f8fafc" : "#cbd5e1";
       ctx.beginPath();
-      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.arc(0, 0, punching ? 9 : 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -4696,14 +4755,12 @@ export default function App() {
 
     const drawBall = (ball, currentTime) => {
       if (ball.type === "knife") drawKnifeBall(ball);
-      else if (ball.type === "spike") drawSpikeBall(ball);
       else if (ball.type === "wrecker") drawWreckerBall(ball);
       else if (ball.type === "gun") drawGunBall(ball, currentTime);
       else if (ball.type === "vampire") {
         const target = game.balls.find((o) => o.id === ball.latchedTo) || game.balls.find((o) => o.side !== ball.side);
         drawVampireBall(ball, currentTime, target);
       }
-      else if (ball.type === "bomb") drawBombBall(ball);
       else if (ball.type === "laser") {
         const target = game.balls.find((o) => o.side !== ball.side);
         drawLaserBall(ball, target);
@@ -4713,7 +4770,6 @@ export default function App() {
       else if (ball.type === "bomber") drawBomberBall(ball);
       else if (ball.type === "spore") drawSporeBall(ball);
       else if (ball.type === "hammer") drawHammerBall(ball);
-      else if (ball.type === "wallSpike") drawWallSpikeBall(ball);
       else if (ball.type === "stringWeb") drawStringWebBall(ball);
       else if (ball.type === "arm") drawArmBall(ball);
       else if (ball.type === "chess") drawChessBall(ball);
@@ -4749,23 +4805,26 @@ export default function App() {
 
     const drawBullets = () => {
       game.bullets.forEach((bullet) => {
-        ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
-        ctx.fillStyle = "#facc15"; ctx.fill();
-      });
-    };
-
-    const drawBombs = () => {
-      game.bombs.forEach((bomb) => {
-        ctx.save(); ctx.shadowColor = "#f59e0b"; ctx.shadowBlur = 8;
-        ctx.fillStyle = "#1e293b"; ctx.strokeStyle = "#475569"; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(bomb.x, bomb.y, bomb.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.strokeStyle = "#d97706"; ctx.lineWidth = 2; ctx.beginPath();
-        ctx.moveTo(bomb.x, bomb.y - bomb.r + 2);
-        ctx.quadraticCurveTo(bomb.x + 8, bomb.y - bomb.r - 8, bomb.x + 12, bomb.y - bomb.r - 4); ctx.stroke();
-        ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(bomb.x + 12, bomb.y - bomb.r - 4, 3 + Math.random() * 2, 0, Math.PI * 2); ctx.fill();
-        const pulse = Math.abs(Math.sin(game.simTime * 0.015));
-        ctx.strokeStyle = `rgba(239, 68, 68, ${pulse})`; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(bomb.x, bomb.y, bomb.r + 4, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        ctx.save();
+        if (bullet.kind === "laserPulse") {
+          ctx.shadowColor = "#facc15";
+          ctx.shadowBlur = 16;
+          const pulse = 0.75 + Math.sin(game.simTime * 0.018) * 0.25;
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r + 5 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(250, 204, 21, 0.2)"; ctx.fill();
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+          ctx.fillStyle = "#facc15"; ctx.fill();
+          ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2.5; ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+          ctx.fillStyle = bullet.piercesDefense ? "#67e8f9" : "#facc15"; ctx.fill();
+          if (bullet.piercesDefense) {
+            ctx.strokeStyle = "#f8fafc";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
       });
     };
 
@@ -4909,63 +4968,11 @@ export default function App() {
       });
     };
 
-    const updateWallSpikes = (dt) => {
-      if (!game.wallSpikes) return;
-      game.wallSpikes = game.wallSpikes.filter((spike) => {
-        game.balls.forEach((ball) => {
-          if (ball.side === spike.ownerSide) return;
-
-          let hit = false;
-          const pad = 18;
-          const spikeHeight = 15;
-          const spikeWidth = 16;
-
-          if (spike.side === "left") {
-            if (ball.x - ball.r < pad + spikeHeight && ball.x + ball.r > pad) {
-              if (Math.abs(ball.y - spike.y) < ball.r + spikeWidth / 2) {
-                hit = true;
-              }
-            }
-          } else if (spike.side === "right") {
-            const xLimit = game.width - pad - spikeHeight;
-            if (ball.x + ball.r > xLimit && ball.x - ball.r < game.width - pad) {
-              if (Math.abs(ball.y - spike.y) < ball.r + spikeWidth / 2) {
-                hit = true;
-              }
-            }
-          } else if (spike.side === "top") {
-            if (ball.y - ball.r < pad + spikeHeight && ball.y + ball.r > pad) {
-              if (Math.abs(ball.x - spike.x) < ball.r + spikeWidth / 2) {
-                hit = true;
-              }
-            }
-          } else if (spike.side === "bottom") {
-            const yLimit = game.height - pad - spikeHeight;
-            if (ball.y + ball.r > yLimit && ball.y - ball.r < game.height - pad) {
-              if (Math.abs(ball.x - spike.x) < ball.r + spikeWidth / 2) {
-                hit = true;
-              }
-            }
-          }
-
-          if (hit) {
-            applyDamage(ball, game.balance.wallSpike.spikeDamage, `${ball.id}-wallspike-${spike.createdTime}`, game.simTime, 500);
-            let sx = ball.x, sy = ball.y;
-            if (spike.side === "left") sx = pad + 8;
-            else if (spike.side === "right") sx = game.width - pad - 8;
-            else if (spike.side === "top") sy = pad + 8;
-            else if (spike.side === "bottom") sy = game.height - pad - 8;
-            spawnSparks(sx, sy, "#ea580c", 10);
-          }
-        });
-
-        return true;
-      });
-    };
-
-    const updateStrings = () => {
+    const updateStrings = (dt) => {
       if (!game.strings) return;
       game.strings = game.strings.filter((str) => {
+        str.life -= dt * 1000;
+        if (str.life <= 0) return false;
         game.balls.forEach((ball) => {
           if (ball.side === str.ownerSide) return;
 
@@ -5179,44 +5186,6 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawWallSpikes = () => {
-      if (!game.wallSpikes) return;
-      game.wallSpikes.forEach((spike) => {
-        ctx.save();
-        ctx.translate(spike.x, spike.y);
-
-        ctx.globalAlpha = 1.0;
-
-        ctx.fillStyle = spike.ownerSide === "left" ? "#f59e0b" : "#ea580c";
-        ctx.strokeStyle = "#ffedd5";
-        ctx.lineWidth = 1.5;
-
-        ctx.beginPath();
-        if (spike.side === "left") {
-          ctx.moveTo(0, -8);
-          ctx.lineTo(15, 0);
-          ctx.lineTo(0, 8);
-        } else if (spike.side === "right") {
-          ctx.moveTo(0, -8);
-          ctx.lineTo(-15, 0);
-          ctx.lineTo(0, 8);
-        } else if (spike.side === "top") {
-          ctx.moveTo(-8, 0);
-          ctx.lineTo(0, 15);
-          ctx.lineTo(8, 0);
-        } else if (spike.side === "bottom") {
-          ctx.moveTo(-8, 0);
-          ctx.lineTo(0, -15);
-          ctx.lineTo(8, 0);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.restore();
-      });
-    };
-
     const drawStrings = () => {
       if (!game.strings) return;
       game.strings.forEach((str) => {
@@ -5293,53 +5262,6 @@ export default function App() {
       });
     };
 
-    const drawWallSpikeBall = (ball) => {
-      const config = BALL_TYPES.wallSpike;
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-
-      ctx.fillStyle = "#ffedd5";
-      ctx.strokeStyle = "#ea580c";
-      ctx.lineWidth = 1;
-      const spikeCount = 6;
-      for (let i = 0; i < spikeCount; i++) {
-        const a = (i / spikeCount) * Math.PI * 2 + (game.simTime * 0.002);
-        ctx.save();
-        ctx.rotate(a);
-        ctx.beginPath();
-        ctx.moveTo(ball.r - 2, -4);
-        ctx.lineTo(ball.r + 5, 0);
-        ctx.lineTo(ball.r - 2, 4);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = "round";
-      
-      ctx.beginPath();
-      ctx.moveTo(-6, -10);
-      ctx.lineTo(-6, 10);
-      ctx.stroke();
-      
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.moveTo(-6, -4);
-      ctx.lineTo(8, 0);
-      ctx.lineTo(-6, 4);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
-
     const drawStringWebBall = (ball) => {
       const config = BALL_TYPES.stringWeb;
       ctx.save(); ctx.translate(ball.x, ball.y);
@@ -5381,7 +5303,7 @@ export default function App() {
       ctx.fillStyle = "rgba(15, 23, 42, 0.85)"; ctx.fillRect(0, 0, game.width, game.height);
       ctx.fillStyle = "#f8fafc"; ctx.font = "bold 36px sans-serif";
       ctx.textAlign = "center"; ctx.fillText(`${winner} wins!`, game.width / 2, game.height / 2);
-      ctx.font = "16px sans-serif"; ctx.fillText("Reset fight or choose new balls", game.width / 2, game.height / 2 + 36);
+      ctx.font = "16px sans-serif"; ctx.fillText("Match complete", game.width / 2, game.height / 2 + 36);
       ctx.textAlign = "start";
     };
 
@@ -5422,10 +5344,13 @@ export default function App() {
             if (ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) {
               // bypass base speed limits
             } else {
-              const baseSpeed = 220, currentSpeed = Math.hypot(ball.vx, ball.vy);
-              if (currentSpeed > baseSpeed) {
-                const damp = Math.pow(0.95, stepDt * 60);
-                const newSpeed = baseSpeed + (currentSpeed - baseSpeed) * damp;
+              const isWrecker = ball.type === "wrecker";
+              const baseSpeed = isWrecker ? 245 : 220;
+              const maxSpeed = isWrecker ? ((game.balance.wrecker || BALANCE.wrecker).maxBounceSpeed || 340) : baseSpeed;
+              const currentSpeed = Math.hypot(ball.vx, ball.vy);
+              if (currentSpeed > maxSpeed) {
+                const damp = Math.pow(isWrecker ? 0.9 : 0.95, stepDt * 60);
+                const newSpeed = maxSpeed + (currentSpeed - maxSpeed) * damp;
                 ball.vx = (ball.vx / currentSpeed) * newSpeed; ball.vy = (ball.vy / currentSpeed) * newSpeed;
               } else if (currentSpeed < baseSpeed * 0.7 && currentSpeed > 10) {
                 const accel = Math.pow(0.98, stepDt * 60);
@@ -5439,8 +5364,6 @@ export default function App() {
           if (collided) {
             playSound("ballCollision", 1, 80);
             if (game.simTime >= 3000) {
-            if (left.type === "spike") applyDamage(right, game.balance.spike.collisionDamage, `${left.id}-spike-hit`, game.simTime, game.balance.spike.cooldown);
-            if (right.type === "spike") applyDamage(left, game.balance.spike.collisionDamage, `${right.id}-spike-hit`, game.simTime, game.balance.spike.cooldown);
             if (left.type === "spore" && left.hydraGlowStacks > 0) {
               const glowDamage = left.hydraGlowStacks * game.balance.spore.cactusDamage;
               applyDamage(right, glowDamage, `${left.id}-hydra-glow-hit`, game.simTime, 250);
@@ -5536,16 +5459,11 @@ export default function App() {
                     }
                   }
                 }
-                if (ball.type === "spike" && distance(ball, target) < ball.r + target.r + game.balance.spike.spikeReach) {
-                  applyDamage(target, game.balance.spike.touchDamage, `${ball.id}-spike-touch`, game.simTime, game.balance.spike.cooldown);
-                  spawnSparks(target.x + (Math.random() - 0.5) * target.r, target.y + (Math.random() - 0.5) * target.r, "#fca5a5", 2);
-                }
                 const isParalyzed = ball.paralyzedUntil && game.simTime < ball.paralyzedUntil;
                 if (!isParalyzed) {
-                  if (ball.type === "gun") updateGun(ball, target, game.simTime);
+                  if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
-                  if (ball.type === "bomb") updateBomb(ball, target, game.simTime);
                   if (ball.type === "laser") updateLaser(ball, target, game.simTime);
                   
                   // New Weapon Ticks
@@ -5562,14 +5480,12 @@ export default function App() {
           });
 
           updateBullets(stepDt, game.balls);
-          updateBombs(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
           updateMines(stepDt, game.balls);
           updateExplosions(stepDt);
           updateParticles(stepDt);
           updateFloatingTexts(stepDt);
           updateCacti(stepDt);
-          updateWallSpikes(stepDt);
           updateStrings(stepDt);
           updateVenomPools(stepDt);
         }
@@ -5591,7 +5507,6 @@ export default function App() {
         updateParticles(dt);
         updateFloatingTexts(dt);
         updateCacti(dt);
-        updateWallSpikes(dt);
         updateStrings(dt);
       }
 
@@ -5611,8 +5526,8 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawWallSpikes(); drawStrings(); drawVenomPools();
-      drawMines(); drawBullets(); drawBombs(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
+      drawStrings(); drawVenomPools();
+      drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
 
@@ -5650,7 +5565,7 @@ export default function App() {
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener("resize", resizeCanvas);
     };
-  }, [gameStarted, simulationSpeed, viewMode]);
+  }, [gameStarted, simulationSpeed]);
 
   const renderSlider = (label, type, key, min, max, step = 1, unit = "") => {
     const isDamageSetting = key.toLowerCase().includes("damage") || key === "drainPerTick";
@@ -5692,22 +5607,22 @@ export default function App() {
               {renderSlider("Sec: Throw Damage", "knife", "secDamage", 1, 20)}
             </>
           )}
-          {type === "spike" && (
-            <>
-              {renderSlider("Collision Damage", "spike", "collisionDamage", 1, 20)}
-              {renderSlider("Touch Damage", "spike", "touchDamage", 1, 15)}
-              {renderSlider("Hit Cooldown", "spike", "cooldown", 100, 1500, 10, "ms")}
-              {renderSlider("Spike Reach", "spike", "spikeReach", 5, 30, 1, "px")}
-            </>
-          )}
           {type === "gun" && (
             <>
-              {renderSlider("Bullet Damage", "gun", "bulletDamage", 2, 30)}
+              {renderSlider("Bullet Damage", "gun", "bulletDamage", 1, 30)}
               {renderSlider("Shot Cooldown", "gun", "shotCooldown", 100, 1500, 10, "ms")}
               {renderSlider("Reload Time", "gun", "reloadTime", 500, 4000, 50, "ms")}
               {renderSlider("Bullet Speed", "gun", "bulletSpeed", 100, 800, 10, "px/s")}
+              {renderSlider("Bullet Life", "gun", "bulletLife", 0.4, 4, 0.05, "s")}
               {renderSlider("Sec: Dash Cooldown", "gun", "secCooldown", 1000, 8000, 100, "ms")}
               {renderSlider("Sec: Dash Force", "gun", "secDashForce", 100, 800, 20, "px/s")}
+              {renderSlider("Dog Damage", "gun", "dogDamage", 1, 20)}
+              {renderSlider("Dog Health", "gun", "dogHealth", 5, 100)}
+              {renderSlider("Dog Speed", "gun", "dogSpeed", 80, 420, 10, "px/s")}
+              {renderSlider("Dog Respawn", "gun", "dogCooldown", 2000, 20000, 500, "ms")}
+              {renderSlider("Rapid Fire Duration", "gun", "rapidFireDuration", 300, 4000, 100, "ms")}
+              {renderSlider("Rapid Fire Cooldown", "gun", "rapidFireCooldown", 50, 500, 10, "ms")}
+              {renderSlider("Rapid Pierce Shots", "gun", "rapidPierceShots", 0, 6, 1)}
             </>
           )}
           {type === "vampire" && (
@@ -5717,15 +5632,7 @@ export default function App() {
               {renderSlider("Drain Cooldown", "vampire", "tickCooldown", 50, 800, 10, "ms")}
               {renderSlider("Latch Duration", "vampire", "latchDuration", 200, 3000, 50, "ms")}
               {renderSlider("Latch Cooldown", "vampire", "latchCooldown", 1000, 6000, 100, "ms")}
-            </>
-          )}
-          {type === "bomb" && (
-            <>
-              {renderSlider("Explosion Damage", "bomb", "damage", 5, 40)}
-              {renderSlider("Fuse Duration", "bomb", "fuseTime", 400, 2500, 50, "ms")}
-              {renderSlider("Explosion Radius", "bomb", "radius", 30, 180, 5, "px")}
-              {renderSlider("Throw Cooldown", "bomb", "cooldown", 500, 4000, 50, "ms")}
-              {renderSlider("Knockback Force", "bomb", "knockback", 5, 40, 1)}
+              {renderSlider("Latch Distance", "vampire", "latchDistance", 0, 60, 1, "px")}
             </>
           )}
           {type === "laser" && (
@@ -5736,6 +5643,10 @@ export default function App() {
               {renderSlider("Fire Duration", "laser", "fireDuration", 300, 2000, 50, "ms")}
               {renderSlider("Beam Width", "laser", "beamWidth", 6, 40, 2, "px")}
               {renderSlider("Cooldown", "laser", "cooldown", 1000, 5000, 100, "ms")}
+              {renderSlider("Pulse Every N Lasers", "laser", "pulseEvery", 2, 8, 1)}
+              {renderSlider("Pulse Damage", "laser", "pulseDamage", 1, 40)}
+              {renderSlider("Pulse Speed", "laser", "pulseSpeed", 200, 1000, 20, "px/s")}
+              {renderSlider("Pulse Stun Duration", "laser", "pulseStunDuration", 200, 2500, 50, "ms")}
 
             </>
           )}
@@ -5747,6 +5658,7 @@ export default function App() {
               {renderSlider("Throw Cooldown", "shield", "cooldown", 500, 4000, 50, "ms")}
               {renderSlider("Shield Speed", "shield", "shieldSpeed", 200, 1000, 20, "px/s")}
               {renderSlider("Return Speed", "shield", "returnSpeed", 200, 1200, 20, "px/s")}
+              {renderSlider("Throw Duration", "shield", "duration", 300, 3000, 50, "ms")}
               {renderSlider("Sec: Bash Cooldown (Held)", "shield", "secCooldownHeld", 1000, 8000, 100, "ms")}
               {renderSlider("Sec: Recall Cooldown (Thrown)", "shield", "secCooldownThrown", 1000, 8000, 100, "ms")}
               {renderSlider("Sec: Bash Damage", "shield", "secBashDamage", 1, 20)}
@@ -5754,7 +5666,7 @@ export default function App() {
           )}
           {type === "spider" && (
             <>
-              {renderSlider("Fang Damage", "spider", "fangDamage", 3, 20)}
+              {renderSlider("Fang Damage", "spider", "fangDamage", 1, 20)}
               {renderSlider("Web Speed", "spider", "webSpeed", 200, 1000, 20, "px/s")}
               {renderSlider("Pull Speed", "spider", "pullSpeed", 200, 1000, 20, "px/s")}
               {renderSlider("Bounce Speed", "spider", "bounceSpeed", 100, 600, 10, "px/s")}
@@ -5767,10 +5679,11 @@ export default function App() {
           )}
           {type === "bomber" && (
             <>
-              {renderSlider("Mine Damage", "bomber", "mineDamage", 5, 40)}
+              {renderSlider("Mine Damage", "bomber", "mineDamage", 1, 40)}
               {renderSlider("Explosion Radius", "bomber", "mineRadius", 30, 150, 5, "px")}
               {renderSlider("Trigger Range", "bomber", "mineTriggerDist", 5, 40, 1, "px")}
               {renderSlider("Lay Cooldown", "bomber", "cooldown", 500, 4000, 50, "ms")}
+              {renderSlider("Max Mines", "bomber", "maxMines", 1, 8, 1)}
               {renderSlider("Knockback Force", "bomber", "knockback", 5, 40, 1)}
               {renderSlider("Sec: Homing Cooldown", "bomber", "secCooldown", 1000, 12000, 100, "ms")}
             </>
@@ -5778,7 +5691,7 @@ export default function App() {
 
           {type === "spore" && (
             <>
-              {renderSlider("Hydra Damage", "spore", "cactusDamage", 2, 30)}
+              {renderSlider("Hydra Damage", "spore", "cactusDamage", 1, 30)}
               {renderSlider("Growth Duration", "spore", "growthDuration", 300, 2500, 50, "ms")}
               {renderSlider("Speed Boost Force", "spore", "speedBoost", 1.1, 2.0, 0.05)}
               {renderSlider("Hydra Lifetime", "spore", "cactusLife", 3000, 12000, 500, "ms")}
@@ -5788,34 +5701,33 @@ export default function App() {
           {type === "hammer" && (
             <>
               {renderSlider("Spin Damage", "hammer", "spinDamage", 1, 20)}
-              {renderSlider("Launch Damage", "hammer", "launchDamage", 5, 50)}
+              {renderSlider("Launch Damage", "hammer", "launchDamage", 1, 50)}
               {renderSlider("Spin Speed", "hammer", "spinSpeed", 0.05, 0.35, 0.01)}
               {renderSlider("Charge Duration", "hammer", "chargeDuration", 300, 2500, 50, "ms")}
               {renderSlider("Launch Speed", "hammer", "launchSpeed", 300, 1500, 20, "px/s")}
               {renderSlider("Launch Duration", "hammer", "launchDuration", 300, 2000, 50, "ms")}
             </>
           )}
-          {type === "wallSpike" && (
-            <>
-              {renderSlider("Spike Damage", "wallSpike", "spikeDamage", 2, 35)}
-              {renderSlider("Spike Lifetime", "wallSpike", "spikeLifetime", 2000, 15000, 500, "ms")}
-              {renderSlider("Max Spikes", "wallSpike", "maxSpikes", 2, 16)}
-            </>
-          )}
           {type === "stringWeb" && (
             <>
-              {renderSlider("String Damage", "stringWeb", "stringDamage", 2, 35)}
+              {renderSlider("String Damage", "stringWeb", "stringDamage", 1, 35)}
+              {renderSlider("String Lifetime", "stringWeb", "stringLifetime", 1000, 20000, 500, "ms")}
+              {renderSlider("Max Strings", "stringWeb", "maxStrings", 1, 20, 1)}
             </>
           )}
           {type === "arm" && (
             <>
-              {renderSlider("Slam Damage", "arm", "slamDamage", 2, 50)}
+              {renderSlider("Slam Damage", "arm", "slamDamage", 1, 50)}
               {renderSlider("Grab Range", "arm", "grabRange", 40, 200, 5, "px")}
               {renderSlider("Grab Duration", "arm", "grabDuration", 500, 3000, 100, "ms")}
               {renderSlider("Swing Speed", "arm", "swingSpeed", 0.02, 0.2, 0.01)}
               {renderSlider("Cooldown", "arm", "cooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Punch Damage", "arm", "punchDamage", 1, 30)}
+              {renderSlider("Punch Range", "arm", "punchRange", 20, 160, 5, "px")}
+              {renderSlider("Punch Cooldown", "arm", "punchCooldown", 200, 3000, 50, "ms")}
+              {renderSlider("Punch Knockback", "arm", "punchKnockback", 50, 800, 20)}
               {renderSlider("Sec: Elbow Drop Cooldown", "arm", "secCooldown", 1000, 8000, 100, "ms")}
-              {renderSlider("Sec: Elbow Drop Damage", "arm", "secSlamDamage", 2, 30)}
+              {renderSlider("Sec: Elbow Drop Damage", "arm", "secSlamDamage", 1, 30)}
             </>
           )}
           {type === "chess" && (
@@ -5823,19 +5735,30 @@ export default function App() {
               {renderSlider("Cooldown", "chess", "cooldown", 1000, 12000, 100, "ms")}
               {renderSlider("Center Travel Speed", "chess", "centerSpeed", 100, 800, 10, "px/s")}
               {renderSlider("Crown Duration", "chess", "crownDuration", 500, 6000, 100, "ms")}
-              {renderSlider("Crown Damage", "chess", "damage", 2, 40)}
+              {renderSlider("Crown Damage", "chess", "damage", 1, 40)}
               {renderSlider("Damage Tick Rate", "chess", "tickCooldown", 100, 1500, 50, "ms")}
             </>
           )}
           {type === "wrecker" && (
             <>
               {renderSlider("Brawl Cooldown", "wrecker", "cooldown", 400, 3000, 50, "ms")}
-              {renderSlider("Leap Damage", "wrecker", "leapDamage", 5, 60)}
-              {renderSlider("Mega Leap Damage", "wrecker", "megaLeapDamage", 10, 80)}
+              {renderSlider("Leap Damage", "wrecker", "leapDamage", 1, 60)}
+              {renderSlider("Mega Leap Damage", "wrecker", "megaLeapDamage", 1, 80)}
               {renderSlider("Shockwave Radius", "wrecker", "shockwaveRadius", 30, 180, 5, "px")}
               {renderSlider("Mega Shockwave Radius", "wrecker", "megaShockwaveRadius", 50, 250, 5, "px")}
               {renderSlider("Knockback Force", "wrecker", "knockbackForce", 100, 1200, 20)}
+              {renderSlider("Rage Required", "wrecker", "rageRequired", 1, 12, 1)}
+              {renderSlider("Mega Rage Required", "wrecker", "megaRageRequired", 2, 18, 1)}
+              {renderSlider("Push Cooldown", "wrecker", "pushCooldown", 400, 5000, 50, "ms")}
+              {renderSlider("Push Range", "wrecker", "pushRange", 10, 120, 1, "px")}
+              {renderSlider("Push Force", "wrecker", "pushForce", 100, 1200, 20)}
+              {renderSlider("Push Damage", "wrecker", "pushDamage", 1, 30)}
               {renderSlider("Leap Cooldown", "wrecker", "leapCooldown", 1000, 15000, 100, "ms")}
+              {renderSlider("Bounce Boost", "wrecker", "bounceBoost", 1, 1.5, 0.01, "x")}
+              {renderSlider("Max Bounce Speed", "wrecker", "maxBounceSpeed", 220, 520, 10, "px/s")}
+              {renderSlider("Size Per Rage", "wrecker", "sizePerRage", 0.005, 0.05, 0.001, "x")}
+              {renderSlider("Max Rage Size", "wrecker", "maxRageSizeScale", 1, 1.5, 0.01, "x")}
+              {renderSlider("Mega Size", "wrecker", "megaSizeScale", 1.05, 1.8, 0.01, "x")}
             </>
           )}
         </div>
@@ -5844,71 +5767,16 @@ export default function App() {
   };
   const renderAppContent = () => {
     return (
-      <div className={`space-y-6 ${viewMode === "mobile" ? "space-y-4" : ""}`}>
+      <div className="space-y-6">
         {/* Header */}
-        <div className={`flex flex-col gap-4 border-b border-slate-900 pb-5 ${viewMode === "desktop" ? "md:flex-row md:items-center md:justify-between" : ""}`}>
+        <div className="border-b border-slate-900 pb-5">
           <div>
-            <h1 className={`font-extrabold tracking-tight bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent ${viewMode === "desktop" ? "text-3xl md:text-4xl" : "text-2xl text-center"}`}>
+            <h1 className="font-extrabold tracking-tight bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent text-3xl md:text-4xl">
               Ball Weapon Simulator
             </h1>
-            <p className={`mt-1.5 text-xs text-slate-400 ${viewMode === "desktop" ? "text-sm" : "text-center"}`}>
+            <p className="mt-1.5 text-xs text-sm text-slate-400">
               Customize balances, run simulations, or trigger automated tournament models in memory.
             </p>
-          </div>
-          <div className={`flex flex-wrap gap-2.5 items-center ${viewMode === "mobile" ? "justify-center" : ""}`}>
-            {/* View Mode Toggle Switch */}
-            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 shadow-inner">
-              <button
-                type="button"
-                onClick={() => setViewMode("desktop")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === "desktop"
-                    ? "bg-sky-600 text-white shadow-md shadow-sky-500/25"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Desktop
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("mobile")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === "mobile"
-                    ? "bg-sky-600 text-white shadow-md shadow-sky-500/25"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Mobile
-              </button>
-            </div>
-
-            <Button onClick={resetFight} className="rounded-xl px-4 py-1.5 bg-sky-600 hover:bg-sky-500 font-bold text-xs" disabled={!gameStarted}>
-              Reset Fight
-            </Button>
-            <Button onClick={resetToSelection} variant="secondary" className="rounded-xl px-4 py-1.5 bg-slate-800 text-slate-200 hover:bg-slate-700 font-bold text-xs">
-              Choose Balls
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                const nextMuted = toggleMute();
-                setMutedState(nextMuted);
-              }}
-              variant="outline"
-              className="rounded-xl px-3.5 py-1.5 border-slate-800 bg-slate-900/40 text-slate-300 hover:text-slate-100 hover:bg-slate-850 text-xs font-bold flex items-center gap-1.5"
-            >
-              {mutedState ? (
-                <>
-                  <svg className="w-3.5 h-3.5 text-rose-400" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-                  Muted
-                </>
-              ) : (
-                <>
-                  <svg className="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                  Sound On
-                </>
-              )}
-            </Button>
           </div>
         </div>
 
@@ -5933,10 +5801,10 @@ export default function App() {
         </div>
 
         {/* Main Grid */}
-        <div className={`grid gap-6 ${viewMode === "desktop" ? "lg:grid-cols-12" : "grid-cols-1"}`}>
+        <div className="grid gap-6 lg:grid-cols-12">
           
           {/* Left Column: Canvas & Live Stats */}
-          <div className={`${viewMode === "desktop" ? "lg:col-span-8" : "col-span-1"} space-y-6`}>
+          <div className="lg:col-span-8 space-y-6">
             <Card className="overflow-hidden rounded-2xl border-slate-900 bg-slate-900/30 backdrop-blur-md shadow-2xl">
               <CardContent className="flex justify-center p-3 md:p-4">
                 <div className="overflow-hidden rounded-xl border border-slate-900 w-full flex justify-center bg-slate-950/60">
@@ -5946,7 +5814,7 @@ export default function App() {
             </Card>
 
             {/* Health Bars & Match Status */}
-            <div className={`grid gap-4 ${viewMode === "desktop" ? "sm:grid-cols-3" : "grid-cols-1"}`}>
+            <div className="grid gap-4 sm:grid-cols-3">
               <Card className="rounded-2xl border-slate-900 bg-slate-900/40 backdrop-blur-sm text-slate-100 p-5 shadow-lg">
                 <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Fighter 1</div>
                 <div className="mt-1 text-xl font-bold truncate" style={{ color: BALL_TYPES[selectedBalls[0]]?.color }}>{gameState.leftName}</div>
@@ -6041,7 +5909,7 @@ export default function App() {
           </div>
 
           {/* Right Column: Selections, Balances, & Tournament */}
-          <div className={`${viewMode === "desktop" ? "lg:col-span-4" : "col-span-1"} space-y-6`}>
+          <div className="lg:col-span-4 space-y-6">
             
             {/* Selection Card */}
             <Card className="rounded-2xl border-slate-900 bg-slate-900/30 backdrop-blur-md text-slate-100 shadow-xl">
@@ -6101,7 +5969,23 @@ export default function App() {
             {/* Active Balance Settings */}
             <Card className="rounded-2xl border-slate-900 bg-slate-900/30 backdrop-blur-md text-slate-100 shadow-xl">
               <CardContent className="p-5 space-y-4 flex flex-col max-h-[500px] overflow-y-auto">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200 border-b border-slate-900 pb-2">Balance Tuning</h3>
+                <div className="sticky top-0 z-10 -mx-5 -mt-5 border-b border-slate-900 bg-slate-900/95 px-5 py-4 backdrop-blur">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">Balance Tuning</h3>
+                    <Button
+                      type="button"
+                      onClick={saveBalanceSettings}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500"
+                    >
+                      Save Adjustments
+                    </Button>
+                  </div>
+                  {balanceSaveStatus && (
+                    <div className={`mt-2 text-[10px] font-bold uppercase tracking-wider ${balanceSaveStatus === "Saved" ? "text-emerald-400" : "text-rose-400"}`}>
+                      {balanceSaveStatus}
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-4">
                   {renderSettingsForBall(selectedBalls[0])}
                   {selectedBalls[0] !== selectedBalls[1] && renderSettingsForBall(selectedBalls[1])}
@@ -6187,37 +6071,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-4 md:p-8">
-      <style>{`
-        .scrollbar-none::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-none {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-      {viewMode === "mobile" ? (
-        /* Mobile Phone Mockup Frame */
-        <div className="relative w-[385px] h-[820px] rounded-[48px] border-[10px] border-slate-800 bg-slate-950 shadow-2xl overflow-hidden flex flex-col ring-2 ring-slate-700/50">
-          {/* Status Bar / Notch */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-2xl z-50 flex items-center justify-center">
-            <div className="w-12 h-1 bg-slate-900 rounded-full mb-1" />
-          </div>
-          {/* Scrollable Screen Content */}
-          <div className="flex-1 overflow-y-auto px-3 py-6 pt-10 scrollbar-none">
-            {renderAppContent()}
-          </div>
-          {/* Home Indicator */}
-          <div className="h-6 w-full flex items-center justify-center bg-slate-950 border-t border-slate-900/60 z-40">
-            <div className="w-28 h-1 bg-slate-800 rounded-full" />
-          </div>
-        </div>
-      ) : (
-        /* Full Desktop Container */
-        <div className="w-full max-w-[1600px] space-y-6">
-          {renderAppContent()}
-        </div>
-      )}
+      <div className="w-full max-w-[1600px] space-y-6">
+        {renderAppContent()}
+      </div>
     </div>
   );
 }
