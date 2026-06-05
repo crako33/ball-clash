@@ -130,6 +130,10 @@ const MIN_DAMAGE = 1;
 const SHIELD_GUARD_HITS = 5;
 const SHIELD_PICKUP_RADIUS = 30;
 const SHIELD_DROP_COOLDOWN = 1000;
+const SHIELD_BASH_READY_THROWS = 3;
+const SHIELD_BASH_CLOSE_RADIUS = 95;
+const SHIELD_BASH_LUNGE_SPEED = 720;
+const SHIELD_BASH_LUNGE_DURATION = 430;
 const HYDRA_MAX_GLOW_STACKS = 3;
 const HYDRA_RAGE_PER_BOUNCE = 1;
 const SPIDER_FINAL_BOUNCE_MULTIPLIER = 1.8;
@@ -177,6 +181,7 @@ const loadSavedBalanceSettings = () => {
 };
 
 const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
+const isWreckerJumpInvulnerable = (ball) => ball?.type === "wrecker" && ball.wreckerState === "leaping";
 
 const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (!ball) return false;
@@ -728,6 +733,7 @@ export default function App() {
 
             const localApplyDamage = (defender, amount, cooldownKey, cd = 360) => {
               if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
+              if (isWreckerJumpInvulnerable(defender)) return;
               if (damageCooldowns[cooldownKey] > simTime) return;
               let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
               defender.health = Math.max(0, defender.health - finalAmount);
@@ -903,6 +909,7 @@ export default function App() {
                 ball.y = enemy.y + Math.sin(angle) * (ball.r + enemy.r - 8);
                 if (ball.nextDrainAt <= simTime) {
                   if (isChessCrownActive(enemy)) return;
+                  if (isWreckerJumpInvulnerable(enemy)) return;
                   enemy.health = Math.max(0, enemy.health - Math.max(MIN_DAMAGE, balance.vampire.drainPerTick));
                   ball.health = Math.min(100, ball.health + balance.vampire.healPerTick);
                   ball.nextDrainAt = simTime + balance.vampire.tickCooldown;
@@ -932,6 +939,7 @@ export default function App() {
                 const d = linePointDist(enemy.x, enemy.y, mX, mY, eX, eY);
                 if (d < enemy.r + balance.laser.beamWidth / 2 && simTime >= ball.laserNextTickAt) {
                   if (isChessCrownActive(enemy)) return;
+                  if (isWreckerJumpInvulnerable(enemy)) return;
                   enemy.health = Math.max(0, enemy.health - Math.max(MIN_DAMAGE, balance.laser.damagePerTick));
                   ball.laserNextTickAt = simTime + balance.laser.tickCooldown;
                 }
@@ -958,16 +966,26 @@ export default function App() {
                 ball.shieldAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                 
                 const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (dist < 85 && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
+                if ((ball.shieldBashThrows || 0) >= SHIELD_BASH_READY_THROWS && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.nextSecondaryAt = simTime + balance.shield.secCooldownHeld;
-                  ball.shieldBashUntil = simTime + 380;
                   const bashAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  ball.vx = Math.cos(bashAngle) * 650;
-                  ball.vy = Math.sin(bashAngle) * 650;
+                  ball.shieldBashThrows = 0;
+                  if (dist <= SHIELD_BASH_CLOSE_RADIUS) {
+                    localApplyDamage(enemy, balance.shield.secBashDamage, `${ball.id}-shield-bash-ready`, 250);
+                    if (!hasStringBounceGuard(enemy)) {
+                      enemy.vx += Math.cos(bashAngle) * balance.shield.knockback * 22;
+                      enemy.vy += Math.sin(bashAngle) * balance.shield.knockback * 22;
+                    }
+                  } else {
+                    ball.shieldBashUntil = simTime + SHIELD_BASH_LUNGE_DURATION;
+                    ball.vx = Math.cos(bashAngle) * SHIELD_BASH_LUNGE_SPEED;
+                    ball.vy = Math.sin(bashAngle) * SHIELD_BASH_LUNGE_SPEED;
+                  }
                 } else if (ball.nextThrowAt <= simTime) {
                   ball.shieldState = "thrown";
                   ball.shieldGuardHits = 0;
                   ball.shieldBonusDamage = 0;
+                  ball.shieldBashThrows = Math.min(SHIELD_BASH_READY_THROWS, (ball.shieldBashThrows || 0) + 1);
                   ball.shieldX = ball.x + Math.cos(ball.shieldAngle) * (ball.r + 5);
                   ball.shieldY = ball.y + Math.sin(ball.shieldAngle) * (ball.r + 5);
                   const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
@@ -1613,6 +1631,7 @@ export default function App() {
             const target = bullet.targetSide === "left" ? leftBall : rightBall;
             if (bullet.targetSide && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
               if (isChessCrownActive(target)) return false;
+              if (isWreckerJumpInvulnerable(target)) return false;
               target.health = Math.max(0, target.health - bullet.damage);
               return false;
             }
@@ -1628,6 +1647,7 @@ export default function App() {
                   const db = Math.hypot(ball.x - mine.x, ball.y - mine.y);
                   if (db < balance.bomber.mineRadius + ball.r) {
                     if (isChessCrownActive(ball)) return;
+                    if (isWreckerJumpInvulnerable(ball)) return;
                     const falloff = 1 - (db / (balance.bomber.mineRadius + ball.r));
                     ball.health = Math.max(0, ball.health - Math.max(MIN_DAMAGE, Math.round(balance.bomber.mineDamage * falloff)));
                     const angle = Math.atan2(ball.y - mine.y, ball.x - mine.x);
@@ -1835,6 +1855,7 @@ export default function App() {
 
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
       if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
+      if (isWreckerJumpInvulnerable(defender)) return;
       if (game.damageCooldowns[cooldownKey] > currentTime) return;
       
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
@@ -2322,6 +2343,10 @@ export default function App() {
       vampire.vx = target.vx; vampire.vy = target.vy;
 
       if (vampire.nextDrainAt <= currentTime) {
+        if (isWreckerJumpInvulnerable(target)) {
+          vampire.nextDrainAt = currentTime + game.balance.vampire.tickCooldown;
+          return;
+        }
         const drainAmount = Math.max(MIN_DAMAGE, game.balance.vampire.drainPerTick);
         target.health = clamp(target.health - drainAmount, 0, 100);
         vampire.health = clamp(vampire.health + game.balance.vampire.healPerTick, 0, 100);
@@ -2889,6 +2914,10 @@ export default function App() {
         if (d < target.r + bal.laser.beamWidth / 2 && currentTime >= laserBall.laserNextTickAt) {
           const beamDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
           if (isChessCrownActive(target)) return;
+          if (isWreckerJumpInvulnerable(target)) {
+            laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
+            return;
+          }
           target.health = clamp(target.health - beamDamage, 0, 100);
 
           game.floatingTexts = game.floatingTexts || [];
@@ -3184,18 +3213,29 @@ export default function App() {
         
         // Trigger Shield Bash
         const dist = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
-        if (dist < 85 && currentTime >= (shieldBall.nextSecondaryAt || 0) && canStartSkillConnection(shieldBall, target, game.balls, currentTime)) {
+        if ((shieldBall.shieldBashThrows || 0) >= SHIELD_BASH_READY_THROWS && currentTime >= (shieldBall.nextSecondaryAt || 0) && canStartSkillConnection(shieldBall, target, game.balls, currentTime)) {
           shieldBall.nextSecondaryAt = currentTime + bal.shield.secCooldownHeld;
-          shieldBall.shieldBashUntil = currentTime + 380;
           const bashAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
-          shieldBall.vx = Math.cos(bashAngle) * 650;
-          shieldBall.vy = Math.sin(bashAngle) * 650;
+          shieldBall.shieldBashThrows = 0;
+          if (dist <= SHIELD_BASH_CLOSE_RADIUS) {
+            applyDamage(target, bal.shield.secBashDamage, `${shieldBall.id}-shield-bash-ready`, currentTime, 250);
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(bashAngle) * bal.shield.knockback * 22;
+              target.vy += Math.sin(bashAngle) * bal.shield.knockback * 22;
+            }
+            spawnSparks(target.x, target.y, "#60a5fa", 14);
+            game.screenShake = Math.max(game.screenShake, 12);
+          } else {
+            shieldBall.shieldBashUntil = currentTime + SHIELD_BASH_LUNGE_DURATION;
+            shieldBall.vx = Math.cos(bashAngle) * SHIELD_BASH_LUNGE_SPEED;
+            shieldBall.vy = Math.sin(bashAngle) * SHIELD_BASH_LUNGE_SPEED;
+          }
           playSound("wallBounce");
           
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: shieldBall.x, y: shieldBall.y - shieldBall.r - 20, vy: -50,
-            text: "SHIELD BASH", color: "#3b82f6", life: 0.8, maxLife: 0.8
+            text: dist <= SHIELD_BASH_CLOSE_RADIUS ? "BASH RECOIL" : "SHIELD BASH", color: "#3b82f6", life: 0.8, maxLife: 0.8
           });
           
           for (let i = 0; i < 6; i++) {
@@ -3214,6 +3254,7 @@ export default function App() {
           shieldBall.shieldState = "thrown";
           shieldBall.shieldGuardHits = 0;
           shieldBall.shieldBonusDamage = 0;
+          shieldBall.shieldBashThrows = Math.min(SHIELD_BASH_READY_THROWS, (shieldBall.shieldBashThrows || 0) + 1);
           shieldBall.shieldX = shieldBall.x + Math.cos(shieldBall.shieldAngle) * (shieldBall.r + 5);
           shieldBall.shieldY = shieldBall.y + Math.sin(shieldBall.shieldAngle) * (shieldBall.r + 5);
           
@@ -3580,6 +3621,7 @@ export default function App() {
                   }
                 }
 
+                if (isWreckerJumpInvulnerable(ball)) return;
                 ball.health = clamp(ball.health - dmg, 0, 100);
 
                 game.floatingTexts = game.floatingTexts || [];
@@ -3699,6 +3741,7 @@ export default function App() {
         const target = bullet.targetSide ? balls.find((ball) => ball.side === bullet.targetSide) : null;
         if (target && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
           if (isChessCrownActive(target)) return false;
+          if (isWreckerJumpInvulnerable(target)) return false;
           target.health = clamp(target.health - bullet.damage, 0, 100);
           if (bullet.stunDuration) {
             target.paralyzedUntil = Math.max(target.paralyzedUntil || 0, game.simTime + bullet.stunDuration);
@@ -4194,6 +4237,25 @@ export default function App() {
 
       // If the shield is held, draw the protective shield arc
       if (ball.shieldState === "held") {
+        if ((ball.shieldBashThrows || 0) >= SHIELD_BASH_READY_THROWS) {
+          const pulse = 0.5 + Math.sin(game.simTime * 0.014) * 0.5;
+          ctx.save();
+          ctx.globalAlpha = 0.65 + pulse * 0.25;
+          ctx.strokeStyle = "#facc15";
+          ctx.lineWidth = 3 + pulse * 2;
+          ctx.shadowColor = "#facc15";
+          ctx.shadowBlur = 18 + pulse * 10;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.r + 15 + pulse * 5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = "#facc15";
+          ctx.font = "bold 10px ui-sans-serif, system-ui";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("BASH", ball.x, ball.y - ball.r - 18);
+          ctx.restore();
+        }
+
         ctx.save();
         ctx.shadowColor = "#60a5fa";
         ctx.shadowBlur = 10;
