@@ -144,12 +144,12 @@ const BALANCE = {
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
   laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16, pulseEvery: 5, pulseDamage: 15, pulseSpeed: 520, pulseStunDuration: 900 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secCooldownThrown: 4000, secBashDamage: 4 },
-  spider: { fangDamage: 2, webSpeed: 600, pullSpeed: 620, bounceSpeed: 260, pullDuration: 900, cooldown: 3000, secCooldown: 5000, secPoolRadius: 35, secDamage: 3 },
+  spider: { fangDamage: 2, webSpeed: 580, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
   stringWeb: { stringDamage: 3, stringLifetime: 9000, maxStrings: 14, stringSlowDuration: 1400, stringSlowMultiplier: 0.32, stringHitPadding: 10, stringPullForce: 260, trampolineCooldown: 1100, trampolineBoost: 1.45, trampolineMinSpeed: 310 },
-  arm: { slamDamage: 2, grabRange: 100, grabDuration: 1200, swingSpeed: 0.07, cooldown: 6000, punchDamage: 5, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 5000, secSlamDamage: 6 },
+  arm: { slamDamage: 1, grabRange: 60, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
   wrecker: { cooldown: 1000, leapDamage: 22, megaLeapDamage: 34, shockwaveRadius: 105, megaShockwaveRadius: 160, knockbackForce: 760, rageRequired: 4, megaRageRequired: 9, pushCooldown: 1450, pushRange: 46, pushForce: 650, pushDamage: 6, leapCooldown: 5600, bounceBoost: 1.18, maxBounceSpeed: 340, sizePerRage: 0.022, maxRageSizeScale: 1.24, megaSizeScale: 1.35 },
 };
@@ -178,6 +178,26 @@ const loadSavedBalanceSettings = () => {
 
 const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
 
+const isBallConnected = (ball, balls = [], currentTime = 0) => {
+  if (!ball) return false;
+  if (ball.type === "vampire" && ball.latchedTo && ball.latchUntil > currentTime) return true;
+  if (ball.type === "spider" && (ball.webState === "pulling" || ball.webState === "webBouncing") && ball.webTargetId) return true;
+  if (ball.type === "arm" && (ball.armState === "grabbing" || ball.armState === "elbow_dropping") && ball.armStateUntil > currentTime) return true;
+  if (ball.type === "hammer" && ball.hammerState === "charging") return true;
+
+  return balls.some((other) => {
+    if (!other || other.id === ball.id) return false;
+    if (other.type === "vampire" && other.latchedTo === ball.id && other.latchUntil > currentTime) return true;
+    if (other.type === "spider" && other.webTargetId === ball.id && (other.webState === "pulling" || other.webState === "webBouncing")) return true;
+    if (other.type === "arm" && other.armGrabTargetId === ball.id && (other.armState === "grabbing" || other.armState === "elbow_dropping") && other.armStateUntil > currentTime) return true;
+    return false;
+  });
+};
+
+const canStartSkillConnection = (actor, target, balls, currentTime) => (
+  !isBallConnected(actor, balls, currentTime) && !isBallConnected(target, balls, currentTime)
+);
+
 const linePointDist = (px, py, x1, y1, x2, y2) => {
   const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
   const dot = A * C + B * D, lenSq = C * C + D * D;
@@ -188,6 +208,34 @@ const linePointDist = (px, py, x1, y1, x2, y2) => {
   else if (param > 1) { xx = x2; yy = y2; }
   else { xx = x1 + param * C; yy = y1 + param * D; }
   return Math.hypot(px - xx, py - yy);
+};
+
+const getStringBounceVelocity = (ball, str, hitX, hitY, speed, seed = 0) => {
+  const dx = str.x2 - str.x1;
+  const dy = str.y2 - str.y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const tx = dx / len;
+  const ty = dy / len;
+  const nx = -ty;
+  const ny = tx;
+  const side = Math.sign((ball.x - hitX) * nx + (ball.y - hitY) * ny) || Math.sign(ball.vx * nx + ball.vy * ny) || 1;
+  const travel = Math.sign(ball.vx * tx + ball.vy * ty) || (Math.sin(seed * 0.017) > 0 ? 1 : -1);
+  const wobble = Math.sin(seed * 0.031 + ball.id.length) * 0.16;
+  let outX = nx * side * 0.78 + tx * travel * (0.42 + wobble);
+  let outY = ny * side * 0.78 + ty * travel * (0.42 + wobble);
+  let outLen = Math.hypot(outX, outY) || 1;
+  outX /= outLen;
+  outY /= outLen;
+
+  if (Math.abs(outX * tx + outY * ty) > 0.82) {
+    outX = nx * side * 0.88 + tx * travel * 0.28;
+    outY = ny * side * 0.88 + ty * travel * 0.28;
+    outLen = Math.hypot(outX, outY) || 1;
+    outX /= outLen;
+    outY /= outLen;
+  }
+
+  return { vx: outX * speed, vy: outY * speed };
 };
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -500,6 +548,37 @@ export default function App() {
     }
   };
 
+  const downloadBalanceSheet = () => {
+    const next = mergeBalanceSettings(BALANCE, balanceSettings);
+    setBalanceSettings(next);
+    gameRef.current.balance = next;
+
+    const csvEscape = (value) => {
+      const text = String(value ?? "");
+      return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const rows = [["ball", "setting", "current_value", "code_default", "changed"]];
+    Object.entries(next).forEach(([type, settings]) => {
+      Object.entries(settings).forEach(([key, value]) => {
+        const defaultValue = BALANCE[type]?.[key] ?? "";
+        rows.push([type, key, value, defaultValue, value !== defaultValue ? "yes" : "no"]);
+      });
+    });
+
+    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ball-fighters-balance-${stamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setBalanceSaveStatus("Downloaded sheet");
+  };
+
   const runTournament = (roundsCount) => {
     setSimulatingTournament(true);
     setTimeout(() => {
@@ -526,7 +605,7 @@ export default function App() {
             
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
-            const isArmGrabbed = balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > simTime && b.id !== ball.id);
+            const isArmGrabbed = balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && (b.armState === "grabbing" || b.armState === "elbow_dropping") && b.armStateUntil > simTime);
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
             const insideWeb = localVenomPools.some((pool) => {
               if (ball.side === pool.ownerSide) return false;
@@ -812,7 +891,7 @@ export default function App() {
                 if (dist >= latchLimit) {
                   ball.hasStuck = false;
                 }
-                if (dist < latchLimit && !ball.hasStuck) {
+                if (dist < latchLimit && !ball.hasStuck && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.latchedTo = enemy.id;
                   ball.latchUntil = simTime + balance.vampire.latchDuration;
                   ball.hasStuck = true;
@@ -879,7 +958,7 @@ export default function App() {
                 ball.shieldAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                 
                 const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (dist < 85 && simTime >= (ball.nextSecondaryAt || 0)) {
+                if (dist < 85 && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.nextSecondaryAt = simTime + balance.shield.secCooldownHeld;
                   ball.shieldBashUntil = simTime + 250;
                   const bashAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
@@ -977,7 +1056,7 @@ export default function App() {
                 });
               }
 
-              if (ball.webState === "idle" && ball.nextShotAt <= simTime) {
+              if (ball.webState === "idle" && ball.nextShotAt <= simTime && canStartSkillConnection(ball, enemy, balls, simTime)) {
                 ball.webState = "shooting";
                 ball.webX = ball.x; ball.webY = ball.y;
                 const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
@@ -991,12 +1070,17 @@ export default function App() {
                 if (ball.webX < pad || ball.webX > ARENA_SIZE - pad || ball.webY < pad || ball.webY > ARENA_SIZE - pad) {
                   ball.webState = "idle";
                 } else if (Math.hypot(ball.webX - enemy.x, ball.webY - enemy.y) < enemy.r + 6) {
-                  ball.webState = "pulling";
-                  ball.webTargetId = enemy.id;
-                  ball.webBouncesLeft = 3;
-                  ball.webLastTargetX = enemy.x;
-                  ball.webLastTargetY = enemy.y;
-                  ball.webStateUntil = simTime + balance.spider.pullDuration;
+                  if (canStartSkillConnection(ball, enemy, balls, simTime)) {
+                    ball.webState = "pulling";
+                    ball.webTargetId = enemy.id;
+                    ball.webBouncesLeft = 3;
+                    ball.webLastTargetX = enemy.x;
+                    ball.webLastTargetY = enemy.y;
+                    ball.webStateUntil = simTime + balance.spider.pullDuration;
+                  } else {
+                    ball.webState = "idle";
+                    ball.webTargetId = null;
+                  }
                 }
               } else if (ball.webState === "pulling") {
                 if (simTime >= ball.webStateUntil) {
@@ -1162,7 +1246,7 @@ export default function App() {
                 const distToEnemy = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
                 const canLeap = simTime >= (ball.wreckerNextLeapAllowedUntil || 0) && distToEnemy < 220;
                 
-                if (canLeap) {
+                if (canLeap && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.wreckerState = "leaping";
                   ball.wreckerLeapUntil = simTime + 600;
                   if ((ball.consecutiveWallBounces || 0) >= 10) {
@@ -1194,6 +1278,7 @@ export default function App() {
                 enemy.vx = 0; enemy.vy = 0;
                 if (simTime >= ball.armStateUntil) {
                   ball.armState = "idle";
+                  ball.armGrabTargetId = null;
                   localApplyDamage(enemy, balance.arm.secSlamDamage, `${ball.id}-elbow-slam`, 500);
                   const launchAngle = Math.random() * Math.PI * 2;
                   const launchForce = 650;
@@ -1206,7 +1291,7 @@ export default function App() {
                 // Leap Lunge Trigger
                 const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
                 const targetDist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (targetDist > 220 && simTime >= (ball.nextSecondaryAt || 0)) {
+                if (targetDist > 220 && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
                   ball.vx += Math.cos(targetAngle) * 450;
                   ball.vy += Math.sin(targetAngle) * 450;
@@ -1216,9 +1301,10 @@ export default function App() {
                   const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
                   const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
                   const dist = Math.hypot(handX - enemy.x, handY - enemy.y);
-                  if (dist < enemy.r + 22) {
+                  if (dist < enemy.r + 22 && canStartSkillConnection(ball, enemy, balls, simTime)) {
                     ball.armState = "grabbing";
                     ball.armStateUntil = simTime + balance.arm.grabDuration;
+                    ball.armGrabTargetId = enemy.id;
                     ball.armGrabDamageHits = 0;
                     
                     const pad = 18;
@@ -1276,12 +1362,13 @@ export default function App() {
                   const isNearCorner = corners.some(c => Math.hypot(enemy.x - c.x, enemy.y - c.y) < 32);
                   const damageKey = `${ball.id}-arm-corner`;
                   if (isNearCorner && (ball.armGrabDamageHits || 0) < 2 && (!damageCooldowns[damageKey] || damageCooldowns[damageKey] <= simTime)) {
-                    localApplyDamage(enemy, balance.arm.slamDamage, damageKey, 500);
+                    localApplyDamage(enemy, Math.min(6, balance.arm.slamDamage), damageKey, 500);
                     ball.armGrabDamageHits = (ball.armGrabDamageHits || 0) + 1;
                   }
                   
                   if (simTime >= ball.armStateUntil) {
                     ball.armState = "idle";
+                    ball.armGrabTargetId = null;
                     const swingDirSign = Math.cos(elapsed * 0.012) >= 0 ? 1 : -1;
                     const launchAngle = ball.armAngle + (Math.PI / 2) * swingDirSign;
                     const launchForce = 520;
@@ -1443,7 +1530,7 @@ export default function App() {
                 if (d < enemy.r + 14) {
                   localApplyDamage(enemy, balance.hammer.spinDamage, `${ball.id}-hammer-spin-hit`, balance.hammer.cooldown);
                 }
-                if (ball.hammerAngle >= 10 * Math.PI) {
+                if (ball.hammerAngle >= 10 * Math.PI && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.hammerState = "charging";
                   ball.hammerStateUntil = simTime + balance.hammer.chargeDuration;
                   ball.vx = 0; ball.vy = 0;
@@ -1615,14 +1702,11 @@ export default function App() {
                 const dot = A * C + B * D, lenSq = C * C + D * D;
                 const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
                 const xx = str.x1 + param * C, yy = str.y1 + param * D;
-                let bounceAngle = Math.atan2(ball.y - yy, ball.x - xx);
-                if (!Number.isFinite(bounceAngle) || Math.hypot(ball.x - xx, ball.y - yy) < 1) {
-                  bounceAngle = Math.atan2(ball.vy, ball.vx) || Math.atan2(D, C) + Math.PI / 2;
-                }
                 const speed = Math.hypot(ball.vx, ball.vy);
                 const nextSpeed = Math.max(stringBal.trampolineMinSpeed || 300, speed * (stringBal.trampolineBoost || 1.4));
-                ball.vx = Math.cos(bounceAngle) * nextSpeed;
-                ball.vy = Math.sin(bounceAngle) * nextSpeed;
+                const bounce = getStringBounceVelocity(ball, str, xx, yy, nextSpeed, simTime + str.createdTime);
+                ball.vx = bounce.vx;
+                ball.vy = bounce.vy;
                 ball.nextStringTrampolineAt = simTime + (stringBal.trampolineCooldown || 1100);
                 ball.stringBounceWallBouncesLeft = 2;
                 return;
@@ -2156,7 +2240,7 @@ export default function App() {
 
       if (ball.wreckerState === "normal") {
         const leapCooldown = bal.leapCooldown !== undefined ? bal.leapCooldown : 5000;
-        if ((ball.rageStacks || 0) >= bal.rageRequired && currentTime >= (ball.wreckerNextLeapAllowedUntil || 0)) {
+        if ((ball.rageStacks || 0) >= bal.rageRequired && currentTime >= (ball.wreckerNextLeapAllowedUntil || 0) && canStartSkillConnection(ball, target, game.balls, currentTime)) {
           ball.wreckerState = "leaping";
           ball.wreckerLeapStart = currentTime;
           ball.wreckerLeapUntil = currentTime + 600;
@@ -2188,7 +2272,7 @@ export default function App() {
 
           if (currentTime >= (ball.wreckerPushCooldownUntil || 0)) {
             const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-            if (dist < target.r + ball.r + pushRange) {
+            if (dist < target.r + ball.r + pushRange && canStartSkillConnection(ball, target, game.balls, currentTime)) {
               ball.wreckerPushCooldownUntil = currentTime + pushCooldown;
               applyDamage(target, pushDamage, `${ball.id}-ground-push`, currentTime, 0);
 
@@ -2227,7 +2311,7 @@ export default function App() {
           vampire.hasStuck = false;
         }
 
-        if (dist < latchLimit && !vampire.hasStuck) {
+        if (dist < latchLimit && !vampire.hasStuck && canStartSkillConnection(vampire, target, game.balls, currentTime)) {
           vampire.latchedTo = target.id;
           vampire.latchUntil = currentTime + game.balance.vampire.latchDuration;
           vampire.hasStuck = true;
@@ -2285,6 +2369,7 @@ export default function App() {
         
         if (currentTime >= armBall.armStateUntil) {
           armBall.armState = "idle";
+          armBall.armGrabTargetId = null;
           applyDamage(target, bal.arm.secSlamDamage, `${armBall.id}-elbow-slam`, currentTime, 500);
           const launchAngle = Math.random() * Math.PI * 2;
           const launchForce = 650;
@@ -2311,7 +2396,9 @@ export default function App() {
 
         if (targetDist < armBall.r + target.r + bal.arm.punchRange && currentTime >= (armBall.armNextPunchAt || 0)) {
           armBall.armNextPunchAt = currentTime + bal.arm.punchCooldown;
-          armBall.armPunchUntil = currentTime + 220;
+          armBall.armPunchStartAt = currentTime;
+          armBall.armPunchUntil = currentTime + 360;
+          armBall.armPunchAngle = targetAngle;
           applyDamage(target, bal.arm.punchDamage, `${armBall.id}-arm-punch`, currentTime, 350);
           if (!hasStringBounceGuard(target)) {
             target.vx += Math.cos(targetAngle) * bal.arm.punchKnockback;
@@ -2327,7 +2414,7 @@ export default function App() {
         }
         
         // Trigger Leap Lunge
-        if (targetDist > 220 && currentTime >= (armBall.nextSecondaryAt || 0)) {
+        if (targetDist > 220 && currentTime >= (armBall.nextSecondaryAt || 0) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
           armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
           armBall.vx += Math.cos(targetAngle) * 450;
           armBall.vy += Math.sin(targetAngle) * 450;
@@ -2354,9 +2441,10 @@ export default function App() {
           const handX = armBall.x + Math.cos(armBall.armAngle) * grabRange;
           const handY = armBall.y + Math.sin(armBall.armAngle) * grabRange;
           const dist = Math.hypot(handX - target.x, handY - target.y);
-          if (dist < target.r + 26 || targetDist < grabRange + target.r * 0.8) {
+          if ((dist < target.r + 26 || targetDist < grabRange + target.r * 0.8) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
             armBall.armState = "grabbing";
             armBall.armStateUntil = currentTime + bal.arm.grabDuration;
+            armBall.armGrabTargetId = target.id;
             armBall.armGrabDamageHits = 0;
             armBall.armBaseAngle = targetAngle;
             armBall.armDirection = target.y < armBall.y ? 1 : -1;
@@ -2420,7 +2508,7 @@ export default function App() {
         const isNearCorner = corners.some(c => Math.hypot(target.x - c.x, target.y - c.y) < 34);
         const damageKey = `${armBall.id}-arm-wall-ragdoll`;
         if ((isNearWall || isNearCorner) && (armBall.armGrabDamageHits || 0) < 2 && (!game.damageCooldowns[damageKey] || game.damageCooldowns[damageKey] <= currentTime)) {
-          applyDamage(target, ARM_RAGDOLL_WALL_DAMAGE, damageKey, currentTime, 500);
+          applyDamage(target, Math.min(6, ARM_RAGDOLL_WALL_DAMAGE), damageKey, currentTime, 500);
           armBall.armGrabDamageHits = (armBall.armGrabDamageHits || 0) + 1;
           spawnSparks(target.x, target.y, "#e5e7eb", 12);
           game.screenShake = Math.max(game.screenShake, 14);
@@ -2428,6 +2516,7 @@ export default function App() {
         
         if (currentTime >= armBall.armStateUntil) {
           armBall.armState = "idle";
+          armBall.armGrabTargetId = null;
           const launchAngle = armBall.armAngle + (Math.PI / 2) * armBall.armDirection;
           const launchForce = 650;
           target.vx = Math.cos(launchAngle) * launchForce;
@@ -2946,7 +3035,7 @@ export default function App() {
       }
 
       if (spiderBall.webState === "idle") {
-        if (spiderBall.nextShotAt <= currentTime) {
+        if (spiderBall.nextShotAt <= currentTime && canStartSkillConnection(spiderBall, target, game.balls, currentTime)) {
           spiderBall.webState = "shooting";
           spiderBall.webX = spiderBall.x;
           spiderBall.webY = spiderBall.y;
@@ -3097,7 +3186,7 @@ export default function App() {
         
         // Trigger Shield Bash
         const dist = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
-        if (dist < 85 && currentTime >= (shieldBall.nextSecondaryAt || 0)) {
+        if (dist < 85 && currentTime >= (shieldBall.nextSecondaryAt || 0) && canStartSkillConnection(shieldBall, target, game.balls, currentTime)) {
           shieldBall.nextSecondaryAt = currentTime + bal.shield.secCooldownHeld;
           shieldBall.shieldBashUntil = currentTime + 250;
           const bashAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
@@ -3289,7 +3378,7 @@ export default function App() {
         }
 
         // 5 rotations = 10 * Math.PI radians
-        if (hammerBall.hammerAngle >= 10 * Math.PI) {
+        if (hammerBall.hammerAngle >= 10 * Math.PI && canStartSkillConnection(hammerBall, target, game.balls, currentTime)) {
           hammerBall.hammerState = "charging";
           hammerBall.hammerStateUntil = currentTime + bal.hammer.chargeDuration;
           hammerBall.vx = 0;
@@ -3432,6 +3521,12 @@ export default function App() {
         }
         const target = balls.find(o => o.side !== ball.side);
         if (Math.hypot(ball.webX - target.x, ball.webY - target.y) < target.r + 6) {
+          if (!canStartSkillConnection(ball, target, balls, game.simTime)) {
+            ball.webState = "idle";
+            ball.webTargetId = null;
+            spawnSparks(ball.webX, ball.webY, "#94a3b8", 5);
+            return;
+          }
           ball.webState = "pulling";
           ball.webTargetId = target.id;
           ball.webBouncesLeft = 3;
@@ -4490,9 +4585,15 @@ export default function App() {
       const armAngle = ball.armAngle || 0;
       const enemy = game.balls.find(b => b.id !== ball.id);
       const punching = ball.armPunchUntil && game.simTime < ball.armPunchUntil;
-      const reach = punching ? L + 28 : L;
-      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : ball.x + Math.cos(armAngle) * reach;
-      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : ball.y + Math.sin(armAngle) * reach;
+      const punchDuration = Math.max(1, (ball.armPunchUntil || 0) - (ball.armPunchStartAt || 0));
+      const punchProgress = punching ? clamp((game.simTime - (ball.armPunchStartAt || game.simTime)) / punchDuration, 0, 1) : 0;
+      const punchExtend = punching
+        ? Math.sin(Math.min(1, punchProgress * 1.35) * Math.PI) * 42 - Math.sin(punchProgress * Math.PI) * 9
+        : 0;
+      const drawArmAngle = punching ? (ball.armPunchAngle ?? armAngle) : armAngle;
+      const reach = L + punchExtend;
+      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : ball.x + Math.cos(drawArmAngle) * reach;
+      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : ball.y + Math.sin(drawArmAngle) * reach;
 
       // Draw the arm line / segments
       ctx.save();
@@ -4503,9 +4604,10 @@ export default function App() {
       
       const midX = (ball.x + handX) / 2;
       const midY = (ball.y + yOffset + handY) / 2;
-      const perpAngle = armAngle + Math.PI / 2;
-      const jointX = midX + Math.cos(perpAngle) * bendOffset;
-      const jointY = midY + Math.sin(perpAngle) * bendOffset;
+      const perpAngle = drawArmAngle + Math.PI / 2;
+      const punchSnap = punching ? Math.sin(punchProgress * Math.PI) : 0;
+      const jointX = midX + Math.cos(perpAngle) * bendOffset - Math.cos(drawArmAngle) * punchSnap * 12;
+      const jointY = midY + Math.sin(perpAngle) * bendOffset - Math.sin(drawArmAngle) * punchSnap * 12;
 
       ctx.strokeStyle = "#64748b";
       ctx.lineWidth = 10;
@@ -4551,7 +4653,7 @@ export default function App() {
 
       ctx.save();
       ctx.translate(handX, handY);
-      ctx.rotate(armAngle);
+      ctx.rotate(drawArmAngle);
       
       let fingerAngle = 0.5;
       if (punching) {
@@ -4579,9 +4681,21 @@ export default function App() {
 
       ctx.fillStyle = punching ? "#f8fafc" : "#cbd5e1";
       ctx.beginPath();
-      ctx.arc(0, 0, punching ? 9 : 5, 0, Math.PI * 2);
+      ctx.arc(0, 0, punching ? 10 + punchSnap * 3 : 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+
+      if (punching) {
+        ctx.strokeStyle = "rgba(248, 250, 252, 0.7)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16 + punchSnap * 10, -0.8, 0.8);
+        ctx.stroke();
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc(5, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.restore();
       ctx.restore();
@@ -5070,14 +5184,11 @@ export default function App() {
             const dot = A * C + B * D, lenSq = C * C + D * D;
             const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
             const xx = str.x1 + param * C, yy = str.y1 + param * D;
-            let bounceAngle = Math.atan2(ball.y - yy, ball.x - xx);
-            if (!Number.isFinite(bounceAngle) || Math.hypot(ball.x - xx, ball.y - yy) < 1) {
-              bounceAngle = Math.atan2(ball.vy, ball.vx) || Math.atan2(D, C) + Math.PI / 2;
-            }
             const speed = Math.hypot(ball.vx, ball.vy);
             const nextSpeed = Math.max(stringBal.trampolineMinSpeed || 300, speed * (stringBal.trampolineBoost || 1.4));
-            ball.vx = Math.cos(bounceAngle) * nextSpeed;
-            ball.vy = Math.sin(bounceAngle) * nextSpeed;
+            const bounce = getStringBounceVelocity(ball, str, xx, yy, nextSpeed, game.simTime + str.createdTime);
+            ball.vx = bounce.vx;
+            ball.vy = bounce.vy;
             ball.nextStringTrampolineAt = game.simTime + (stringBal.trampolineCooldown || 1100);
             ball.stringBounceWallBouncesLeft = 2;
             ball.webHitFlashUntil = game.simTime + 160;
@@ -5472,7 +5583,7 @@ export default function App() {
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
-            const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armState === "grabbing" && b.armStateUntil > game.simTime && b.id !== ball.id);
+            const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && (b.armState === "grabbing" || b.armState === "elbow_dropping") && b.armStateUntil > game.simTime);
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
             const insideWeb = game.venomPools.some((pool) => {
               if (ball.side === pool.ownerSide) return false;
@@ -5722,7 +5833,7 @@ export default function App() {
   const renderSlider = (label, type, key, min, max, step = 1, unit = "") => {
     const isDamageSetting = key.toLowerCase().includes("damage") || key === "drainPerTick";
     const effectiveMin = isDamageSetting ? Math.max(min, MIN_DAMAGE) : min;
-    const val = Math.max(effectiveMin, balanceSettings[type][key]);
+    const val = Math.min(max, Math.max(effectiveMin, balanceSettings[type][key]));
     const displayVal = key === "arcWidth" ? Math.round(val * 180 / Math.PI) + "°" : val;
     return (
       <div className="space-y-1.5 py-1 text-slate-300">
@@ -5876,7 +5987,7 @@ export default function App() {
           )}
           {type === "arm" && (
             <>
-              {renderSlider("Slam Damage", "arm", "slamDamage", 1, 50)}
+              {renderSlider("Grab Damage", "arm", "slamDamage", 1, 6)}
               {renderSlider("Grab Range", "arm", "grabRange", 40, 200, 5, "px")}
               {renderSlider("Grab Duration", "arm", "grabDuration", 500, 3000, 100, "ms")}
               {renderSlider("Swing Speed", "arm", "swingSpeed", 0.02, 0.2, 0.01)}
@@ -6131,16 +6242,25 @@ export default function App() {
                 <div className="sticky top-0 z-10 -mx-5 -mt-5 border-b border-slate-900 bg-slate-900/95 px-5 py-4 backdrop-blur">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">Balance Tuning</h3>
-                    <Button
-                      type="button"
-                      onClick={saveBalanceSettings}
-                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500"
-                    >
-                      Save Adjustments
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        type="button"
+                        onClick={downloadBalanceSheet}
+                        className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-sky-500"
+                      >
+                        Download Sheet
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={saveBalanceSettings}
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500"
+                      >
+                        Save Adjustments
+                      </Button>
+                    </div>
                   </div>
                   {balanceSaveStatus && (
-                    <div className={`mt-2 text-[10px] font-bold uppercase tracking-wider ${balanceSaveStatus === "Saved" ? "text-emerald-400" : "text-rose-400"}`}>
+                    <div className={`mt-2 text-[10px] font-bold uppercase tracking-wider ${balanceSaveStatus === "Saved" || balanceSaveStatus === "Downloaded sheet" ? "text-emerald-400" : "text-rose-400"}`}>
                       {balanceSaveStatus}
                     </div>
                   )}
