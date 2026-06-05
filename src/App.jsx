@@ -1002,6 +1002,7 @@ export default function App() {
                   ball.shieldState = "held";
                   ball.shieldGuardHits = 0;
                   ball.shieldBonusDamage = 0;
+                  ball.shieldLaserPierceHits = 0;
                   ball.nextThrowAt = simTime + balance.shield.cooldown;
                 }
               } else {
@@ -1042,6 +1043,7 @@ export default function App() {
                     ball.shieldState = "held";
                     ball.shieldGuardHits = 0;
                     ball.shieldBonusDamage = 0;
+                    ball.shieldLaserPierceHits = 0;
                     ball.nextThrowAt = simTime + balance.shield.cooldown;
                   }
                 }
@@ -2023,6 +2025,7 @@ export default function App() {
       shieldBall.shieldNextHitAt = 0;
       shieldBall.shieldSpinAngle = 0;
       shieldBall.shieldBonusDamage = 0;
+      shieldBall.shieldLaserPierceHits = 0;
       shieldBall.nextThrowAt = currentTime + game.balance.shield.cooldown;
       spawnSparks(shieldBall.shieldX, shieldBall.shieldY, "#facc15", 10);
       spawnDust(shieldBall.shieldX, shieldBall.shieldY, 6);
@@ -2935,28 +2938,42 @@ export default function App() {
         if (shieldBlock) {
           const reflectedAngle = 2 * shieldBlock.angle - Math.PI - laserBall.laserTargetAngle;
           laserBall.laserReflect = { x: shieldBlock.x, y: shieldBlock.y, angle: reflectedAngle };
-          const piercesShield = (laserBall.laserShieldBlockCount || 0) >= 4;
+          const piercesShield = ((target.shieldLaserPierceHits || 0) + 1) >= 4;
 
           if (currentTime >= laserBall.laserNextTickAt) {
             laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
             laserBall.laserShieldBlockCount = (laserBall.laserShieldBlockCount || 0) + 1;
+            target.shieldLaserPierceHits = (target.shieldLaserPierceHits || 0) + 1;
             if (target.side === "left") game.stats.left.blocked++;
             else game.stats.right.blocked++;
             spawnShieldSparks(shieldBlock.x, shieldBlock.y, shieldBlock.angle);
             registerShieldGuardHit(target, shieldBlock.angle, currentTime);
             spawnSparks(laserBall.x, laserBall.y, "#ffffff", 5);
             const recoil = Math.atan2(laserBall.y - shieldBlock.y, laserBall.x - shieldBlock.x);
-            laserBall.vx += Math.cos(recoil) * 45;
-            laserBall.vy += Math.sin(recoil) * 45;
+            laserBall.vx += Math.cos(recoil) * 130;
+            laserBall.vy += Math.sin(recoil) * 130;
+            target.vx += Math.cos(recoil + Math.PI) * 55;
+            target.vy += Math.sin(recoil + Math.PI) * 55;
             if (piercesShield) {
               const pierceDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
               applyDamage(target, pierceDamage, `${laserBall.id}-laser-pierce`, currentTime, bal.laser.tickCooldown);
+              target.shieldLaserPierceHits = 0;
               game.floatingTexts = game.floatingTexts || [];
               game.floatingTexts.push({
                 x: target.x, y: target.y - target.r - 22, vy: -55,
                 text: "PIERCE", color: "#facc15", life: 0.65, maxLife: 0.65
               });
+            } else {
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: shieldBlock.x, y: shieldBlock.y - 18, vy: -45,
+                text: `${4 - (target.shieldLaserPierceHits || 0)} TO PIERCE`, color: "#93c5fd", life: 0.55, maxLife: 0.55
+              });
             }
+            laserBall.laserState = "idle";
+            laserBall.laserReflect = null;
+            laserBall.laserShieldBlockCount = 0;
+            laserBall.nextShotAt = currentTime + Math.max(450, bal.laser.cooldown * 0.55);
           }
           return;
         } else {
@@ -3308,6 +3325,7 @@ export default function App() {
           shieldBall.shieldState = "held";
           shieldBall.shieldGuardHits = 0;
           shieldBall.shieldBonusDamage = 0;
+          shieldBall.shieldLaserPierceHits = 0;
           shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
           spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 8);
           playSound("shieldCatch");
@@ -3391,6 +3409,7 @@ export default function App() {
             shieldBall.shieldState = "held";
             shieldBall.shieldGuardHits = 0;
             shieldBall.shieldBonusDamage = 0;
+            shieldBall.shieldLaserPierceHits = 0;
             shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
             spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 6);
             playSound("shieldCatch");
