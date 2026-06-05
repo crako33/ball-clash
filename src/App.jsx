@@ -121,24 +121,6 @@ const BALL_TYPES = {
     radius: 36,
     description: "Hulk-like brawler. Leaps to smash, rage boosts size. Secondary: Ground Push.",
   },
-  nunchuck: {
-    id: "nunchuck",
-    name: "Nunchucker Ball",
-    shortName: "NUNCH",
-    color: "#fb923c",
-    stroke: "#7c2d12",
-    radius: 30,
-    description: "Twin nunchaku orbit fighter. Builds combo stacks into a flurry.",
-  },
-  whip: {
-    id: "whip",
-    name: "Whip Ball",
-    shortName: "WHIP",
-    color: "#a855f7",
-    stroke: "#f5d0fe",
-    radius: 30,
-    description: "Chain whip fighter. Lashes, yanks, and spins a whip barrier.",
-  },
   dragon: {
     id: "dragon",
     name: "Dragon Ball",
@@ -147,6 +129,24 @@ const BALL_TYPES = {
     stroke: "#f97316",
     radius: 33,
     description: "Fire-breathing monster ball. Heat builds into bouncing fireballs.",
+  },
+  psychicer: {
+    id: "psychicer",
+    name: "Psychicer Ball",
+    shortName: "PSY",
+    color: "#8b5cf6",
+    stroke: "#f0abfc",
+    radius: 31,
+    description: "Drops psychic circles. Enemies caught inside take damage on their next bounces.",
+  },
+  chaos: {
+    id: "chaos",
+    name: "Chaos Ball",
+    shortName: "CHAO",
+    color: "#111827",
+    stroke: "#f97316",
+    radius: 31,
+    description: "Drops chaos circles that fling enemies toward the farthest wall.",
   },
 };
 
@@ -183,9 +183,9 @@ const BALANCE = {
   arm: { slamDamage: 1, grabRange: 60, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
   wrecker: { cooldown: 1000, leapDamage: 22, megaLeapDamage: 34, shockwaveRadius: 105, megaShockwaveRadius: 160, knockbackForce: 760, rageRequired: 4, megaRageRequired: 9, pushCooldown: 1450, pushRange: 46, pushForce: 650, pushDamage: 6, leapCooldown: 5600, bounceBoost: 1.18, maxBounceSpeed: 340, sizePerRage: 0.022, maxRageSizeScale: 1.24, megaSizeScale: 1.35 },
-  nunchuck: { damage: 3, range: 66, spinSpeed: 0.075, hitCooldown: 340, comboRequired: 3, flurryDamage: 5, flurryDuration: 950, flurryCooldown: 3200, knockback: 330 },
-  whip: { damage: 3, range: 118, lashCooldown: 850, yankForce: 340, barrierDamage: 2, barrierDuration: 1150, barrierCooldown: 4200, barrierRadius: 52 },
   dragon: { flameDamage: 2, flameRange: 118, flameAngle: 0.82, tickCooldown: 260, heatPerWallBounce: 1, heatRequired: 3, fireballDamage: 8, fireballSpeed: 520, fireballBounces: 3, burnDuration: 1600, cooldown: 1400 },
+  psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
+  chaos: { circleRadius: 48, launchSpeed: 620, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -411,6 +411,12 @@ export default function App() {
       hasStuck: false,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
+      nextPsychicAt: 0,
+      nextChaosAt: 0,
+      chaosFlashUntil: 0,
+      chaosControlledUntil: 0,
+      chaosControlHoldUntil: 0,
+      chaosSlamDone: false,
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
@@ -461,6 +467,8 @@ export default function App() {
     wallSpikes: [],
     strings: [],
     cacti: [],
+    psychicCircles: [],
+    chaosCircles: [],
     venomPools: [],
     screenShake: 0,
     simulationSpeed: 1.5,
@@ -494,6 +502,8 @@ export default function App() {
     gameRef.current.wallSpikes = [];
     gameRef.current.strings = [];
     gameRef.current.cacti = [];
+    gameRef.current.psychicCircles = [];
+    gameRef.current.chaosCircles = [];
     gameRef.current.venomPools = [];
     gameRef.current.portals = [];
     gameRef.current.portalProjectiles = [];
@@ -518,6 +528,8 @@ export default function App() {
       wallSpikes: [],
       strings: [],
       cacti: [],
+      psychicCircles: [],
+      chaosCircles: [],
       venomPools: [],
       screenShake: 0,
       simulationSpeed,
@@ -561,6 +573,8 @@ export default function App() {
     gameRef.current.wallSpikes = [];
     gameRef.current.strings = [];
     gameRef.current.cacti = [];
+    gameRef.current.psychicCircles = [];
+    gameRef.current.chaosCircles = [];
     gameRef.current.venomPools = [];
   };
 
@@ -2311,6 +2325,31 @@ export default function App() {
           spawnSparks(ball.x, ball.y, "#ef4444", 14);
           game.screenShake = Math.max(game.screenShake, 14);
         }
+        if (ball.chaosControlledUntil && game.simTime <= ball.chaosControlledUntil + 250 && !ball.chaosSlamDone) {
+          const axisMatched = (ball.chaosControlAxis === "vertical" && (sideHit === "top" || sideHit === "bottom")) ||
+            (ball.chaosControlAxis === "horizontal" && (sideHit === "left" || sideHit === "right"));
+          if (axisMatched) {
+            const chaosBal = game.balance.chaos || BALANCE.chaos;
+            applyDamage(ball, chaosBal.slamDamage || 6, `${ball.chaosControllerId || "chaos"}-chaos-wall-slam`, game.simTime, 350);
+            const ownerStats = ball.chaosControllerSide === "left" ? game.stats.left : game.stats.right;
+            if (ownerStats) {
+              ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(chaosBal.slamDamage || 6));
+              ownerStats.hitsLanded++;
+            }
+            ball.chaosSlamDone = true;
+            ball.chaosControlledUntil = 0;
+            ball.chaosControlHoldUntil = 0;
+            const radiusBounce = chaosBal.radiusBounce || 140;
+            const tangent = sideHit === "top" || sideHit === "bottom" ? (Math.random() > 0.5 ? 1 : -1) : 0;
+            const verticalTangent = sideHit === "left" || sideHit === "right" ? (Math.random() > 0.5 ? 1 : -1) : 0;
+            if (tangent) ball.vx += tangent * radiusBounce;
+            if (verticalTangent) ball.vy += verticalTangent * radiusBounce;
+            ball.chaosDraggedUntil = game.simTime + 220;
+            game.screenShake = Math.max(game.screenShake, 13);
+            spawnSparks(ball.x, ball.y, "#fdba74", 18);
+            spawnDust(ball.x, ball.y, 10);
+          }
+        }
         if (gameStarted && game.simTime >= 3000) {
           if (ball.type === "stringWeb") {
             if (!game.strings) game.strings = [];
@@ -3796,162 +3835,29 @@ export default function App() {
       }
     };
 
-    const updateNunchuck = (ball, target, currentTime) => {
-      const bal = game.balance.nunchuck;
-      const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-      ball.nunchuckBaseAngle = targetAngle;
-      ball.nunchuckAngle = (ball.nunchuckAngle || 0) + bal.spinSpeed;
-      const flurrying = ball.nunchuckFlurryUntil && currentTime < ball.nunchuckFlurryUntil;
-      const rollDuration = flurrying ? 230 : 420;
-      const swingDuration = flurrying ? 220 : 340;
-      if (!ball.nunchuckMotionState) {
-        ball.nunchuckMotionState = "roll";
-        ball.nunchuckMotionStartedAt = currentTime;
-        ball.nunchuckSide = 1;
-        ball.nunchuckRollsBeforeWhip = 2;
-        ball.nunchuckRollCount = 0;
-      }
-      const stateElapsed = currentTime - (ball.nunchuckMotionStartedAt || currentTime);
-      if (ball.nunchuckMotionState === "roll" && stateElapsed >= rollDuration) {
-        ball.nunchuckMotionStartedAt = currentTime;
-        ball.nunchuckRollCount = (ball.nunchuckRollCount || 0) + 1;
-        const rollsNeeded = ball.nunchuckRollsBeforeWhip || 1;
-        if (ball.nunchuckRollCount >= rollsNeeded) {
-          ball.nunchuckMotionState = "swing";
-          ball.nunchuckRollCount = 0;
-          ball.nunchuckHasHitThisSwing = false;
-        }
-      } else if (ball.nunchuckMotionState === "swing" && stateElapsed >= swingDuration) {
-        ball.nunchuckMotionState = "roll";
-        ball.nunchuckMotionStartedAt = currentTime;
-        ball.nunchuckSide = -(ball.nunchuckSide || 1);
-        ball.nunchuckHasHitThisSwing = false;
-        ball.nunchuckRollsBeforeWhip = 1;
-      }
-
-      const motionElapsed = currentTime - (ball.nunchuckMotionStartedAt || currentTime);
-      const motionDuration = ball.nunchuckMotionState === "swing" ? swingDuration : rollDuration;
-      const progress = clamp(motionElapsed / Math.max(1, motionDuration), 0, 1);
-      const side = ball.nunchuckSide || 1;
-      const reach = bal.range + (flurrying ? 16 : 0);
-      ball.nunchuckSegments = [];
-
-      const makeSegment = (segmentSide, segmentProgress, alpha = 1) => {
-        const eased = 0.5 - Math.cos(segmentProgress * Math.PI) * 0.5;
-        const rollSpin = (ball.nunchuckAngle || 0) * (flurrying ? 2.7 : 2.1);
-        const shoulderAngle = ball.nunchuckMotionState === "roll"
-          ? targetAngle + segmentSide * 1.55 + rollSpin
-          : targetAngle + segmentSide * (1.25 - eased * 2.5);
-        const chainAngle = ball.nunchuckMotionState === "roll"
-          ? shoulderAngle + segmentSide * (0.9 + Math.sin(rollSpin) * 0.35)
-          : targetAngle + segmentSide * (1.65 - eased * 3.25);
-        const innerLen = ball.r + 18;
-        const chainLen = (ball.nunchuckMotionState === "roll" ? reach * 0.26 : reach * 0.36);
-        const outerLen = (ball.nunchuckMotionState === "roll" ? reach * 0.36 : reach * 0.72);
-        const pivotX = ball.x + Math.cos(shoulderAngle) * (ball.r + 5);
-        const pivotY = ball.y + Math.sin(shoulderAngle) * (ball.r + 5);
-        const jointX = pivotX + Math.cos(chainAngle) * chainLen;
-        const jointY = pivotY + Math.sin(chainAngle) * chainLen;
-        const tipX = jointX + Math.cos(chainAngle + segmentSide * 0.18) * outerLen;
-        const tipY = jointY + Math.sin(chainAngle + segmentSide * 0.18) * outerLen;
-        const handleX = ball.x + Math.cos(shoulderAngle) * innerLen;
-        const handleY = ball.y + Math.sin(shoulderAngle) * innerLen;
-        return { pivotX, pivotY, handleX, handleY, jointX, jointY, tipX, tipY, chainAngle, side: segmentSide, alpha };
-      };
-
-      if (ball.nunchuckMotionState === "roll") {
-        ball.nunchuckSegments.push(makeSegment(side, progress, 1));
-        if (flurrying) ball.nunchuckSegments.push(makeSegment(-side, (progress + 0.45) % 1, 0.45));
-      } else {
-        ball.nunchuckSegments.push(makeSegment(side, progress, 1));
-        ball.nunchuckSegments.push(makeSegment(-side, 0.18, 0.28));
-      }
-
-      ball.nunchuckSegments.forEach((seg, i) => {
-        const activeSwing = ball.nunchuckMotionState === "swing" && seg.side === side && seg.alpha > 0.8;
-        if (activeSwing && !ball.nunchuckHasHitThisSwing && linePointDist(target.x, target.y, seg.jointX, seg.jointY, seg.tipX, seg.tipY) < target.r + 9 && currentTime >= (ball.nunchuckNextHitAt || 0)) {
-          const damage = flurrying ? bal.flurryDamage : bal.damage;
-          applyDamage(target, damage, `${ball.id}-nunchuck-${i}`, currentTime, bal.hitCooldown);
-          ball.nunchuckNextHitAt = currentTime + bal.hitCooldown;
-          ball.nunchuckHasHitThisSwing = true;
-          ball.nunchuckCombo = Math.min(bal.comboRequired, (ball.nunchuckCombo || 0) + 1);
-          if (!hasStringBounceGuard(target)) {
-            const push = Math.atan2(target.y - ball.y, target.x - ball.x);
-            target.vx += Math.cos(push) * bal.knockback;
-            target.vy += Math.sin(push) * bal.knockback;
-          }
-          spawnSparks(seg.tipX, seg.tipY, flurrying ? "#fde68a" : "#fb923c", flurrying ? 12 : 7);
-          if (ball.side === "left") { game.stats.left.damageDealt += damage; game.stats.left.hitsLanded++; }
-          else { game.stats.right.damageDealt += damage; game.stats.right.hitsLanded++; }
-        }
-      });
-
-      if ((ball.nunchuckCombo || 0) >= bal.comboRequired && currentTime >= (ball.nextSecondaryAt || 0)) {
-        ball.nunchuckCombo = 0;
-        ball.nunchuckFlurryUntil = currentTime + bal.flurryDuration;
-        ball.nextSecondaryAt = currentTime + bal.flurryCooldown;
-        ball.nunchuckRollsBeforeWhip = 1;
-        game.screenShake = Math.max(game.screenShake, 5);
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -50, text: "FLURRY", color: "#fbbf24", life: 0.8, maxLife: 0.8 });
-      }
-    };
-
-    const updateWhip = (ball, target, currentTime) => {
-      const bal = game.balance.whip;
-      const toTarget = Math.atan2(target.y - ball.y, target.x - ball.x);
-      ball.whipAngle = toTarget;
-      const barrierActive = ball.whipBarrierUntil && currentTime < ball.whipBarrierUntil;
-
-      if (barrierActive) {
-        ball.whipSpinAngle = (ball.whipSpinAngle || 0) + 0.22;
-        const d = Math.hypot(target.x - ball.x, target.y - ball.y);
-        if (d < target.r + bal.barrierRadius && currentTime >= (ball.whipNextBarrierHitAt || 0)) {
-          applyDamage(target, bal.barrierDamage, `${ball.id}-whip-barrier`, currentTime, 320);
-          ball.whipNextBarrierHitAt = currentTime + 320;
-          const push = Math.atan2(target.y - ball.y, target.x - ball.x);
-          if (!hasStringBounceGuard(target)) {
-            target.vx += Math.cos(push) * 240;
-            target.vy += Math.sin(push) * 240;
-          }
-          spawnSparks(target.x, target.y, "#e879f9", 8);
-        }
-        return;
-      }
-
-      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-      if (dist <= bal.range && currentTime >= (ball.whipNextLashAt || 0)) {
-        ball.whipLashUntil = currentTime + 220;
-        ball.whipNextLashAt = currentTime + bal.lashCooldown;
-        ball.whipTipX = ball.x + Math.cos(toTarget) * (ball.r + bal.range);
-        ball.whipTipY = ball.y + Math.sin(toTarget) * (ball.r + bal.range);
-        applyDamage(target, bal.damage, `${ball.id}-whip-lash`, currentTime, bal.lashCooldown);
-        if (!hasStringBounceGuard(target)) {
-          target.vx -= Math.cos(toTarget) * bal.yankForce;
-          target.vy -= Math.sin(toTarget) * bal.yankForce;
-          ball.vx += Math.cos(toTarget) * 90;
-          ball.vy += Math.sin(toTarget) * 90;
-        }
-        spawnSparks(target.x, target.y, "#d946ef", 9);
-        if (ball.side === "left") { game.stats.left.damageDealt += bal.damage; game.stats.left.hitsLanded++; }
-        else { game.stats.right.damageDealt += bal.damage; game.stats.right.hitsLanded++; }
-      }
-
-      if (dist < ball.r + target.r + 18 && currentTime >= (ball.nextSecondaryAt || 0)) {
-        ball.whipBarrierUntil = currentTime + bal.barrierDuration;
-        ball.nextSecondaryAt = currentTime + bal.barrierCooldown;
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -50, text: "WHIP RING", color: "#f0abfc", life: 0.8, maxLife: 0.8 });
-      }
-    };
-
     const updateDragon = (ball, target, currentTime) => {
       const bal = game.balance.dragon;
-      const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-      ball.dragonAngle = angle;
+      const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      const currentAim = ball.dragonAngle ?? targetAngle;
+      const aimDiff = Math.atan2(Math.sin(targetAngle - currentAim), Math.cos(targetAngle - currentAim));
+      const aimTurn = Math.abs(aimDiff) > 1.1 ? 0.16 : 0.095;
+      ball.dragonAngle = currentAim + aimDiff * aimTurn;
+      const angle = ball.dragonAngle;
       const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-      let diff = Math.atan2(Math.sin(angle - Math.atan2(target.y - ball.y, target.x - ball.x)), Math.cos(angle - Math.atan2(target.y - ball.y, target.x - ball.x)));
-      diff = Math.abs(diff);
+      const diff = Math.abs(Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle)));
+      const breathing = dist <= bal.flameRange * 1.18 && diff <= bal.flameAngle * 1.45;
+
+      if (breathing) {
+        ball.dragonFlameActiveUntil = currentTime + 180;
+        if (currentTime >= (ball.dragonNextEmberAt || 0)) {
+          const mouthX = ball.x + Math.cos(angle) * (ball.r + 16);
+          const mouthY = ball.y + Math.sin(angle) * (ball.r + 16);
+          const emberDistance = Math.min(dist, bal.flameRange) * (0.25 + Math.random() * 0.55);
+          const emberAngle = angle + (Math.random() - 0.5) * bal.flameAngle * 0.75;
+          spawnSparks(mouthX + Math.cos(emberAngle) * emberDistance, mouthY + Math.sin(emberAngle) * emberDistance, Math.random() > 0.45 ? "#facc15" : "#fb923c", 3);
+          ball.dragonNextEmberAt = currentTime + 90;
+        }
+      }
 
       if (dist <= bal.flameRange && diff <= bal.flameAngle && currentTime >= (ball.dragonNextTickAt || 0)) {
         applyDamage(target, bal.flameDamage, `${ball.id}-dragon-flame`, currentTime, bal.tickCooldown);
@@ -3984,6 +3890,87 @@ export default function App() {
         game.screenShake = Math.max(game.screenShake, 6);
         spawnSparks(sx, sy, "#f97316", 12);
       }
+    };
+
+    const updatePsychicer = (ball, target, currentTime) => {
+      const bal = game.balance.psychicer || BALANCE.psychicer;
+      if (currentTime < (ball.nextPsychicAt || 0)) return;
+
+      if (!game.psychicCircles) game.psychicCircles = [];
+      if (game.psychicCircles.some((circle) => circle.ownerId === ball.id)) return;
+      for (let i = 0; i < 1; i++) {
+        const pad = 18 + bal.circleRadius;
+        const x = pad + Math.random() * Math.max(1, game.width - pad * 2);
+        const y = pad + Math.random() * Math.max(1, game.height - pad * 2);
+        game.psychicCircles.push({
+          ownerId: ball.id,
+          ownerSide: ball.side,
+          x,
+          y,
+          r: bal.circleRadius,
+          createdTime: currentTime,
+          life: bal.circleLife,
+          hitsByBall: {},
+          damageByBall: {},
+          lastBounceByBall: {},
+        });
+        spawnSparks(x, y, "#c084fc", 8);
+      }
+
+      ball.nextPsychicAt = Infinity;
+      ball.psychicFlashUntil = currentTime + 550;
+      game.screenShake = Math.max(game.screenShake, 4);
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({
+        x: ball.x, y: ball.y - ball.r - 20, vy: -45,
+        text: "PSYCHIC FIELD", color: "#f0abfc", life: 0.8, maxLife: 0.8
+      });
+      if (ball.side === "left") game.stats.left.totalShots++;
+      else game.stats.right.totalShots++;
+      playSound("sporeShoot", 0.75, 220);
+    };
+
+    const updateChaos = (ball, target, currentTime) => {
+      const bal = game.balance.chaos || BALANCE.chaos;
+      if (currentTime < (ball.nextChaosAt || 0)) return;
+
+      if (!game.chaosCircles) game.chaosCircles = [];
+      game.chaosCircles = game.chaosCircles.filter((circle) => circle.ownerId !== ball.id);
+      const pad = 18 + bal.circleRadius;
+      const makeCircle = (axis, armSide, color, index) => {
+        const x = pad + Math.random() * Math.max(1, game.width - pad * 2);
+        const y = pad + Math.random() * Math.max(1, game.height - pad * 2);
+        const circle = {
+          id: `${ball.id}-chaos-${axis}-${currentTime}-${index}`,
+          ownerId: ball.id,
+          ownerSide: ball.side,
+          axis,
+          armSide,
+          color,
+          x,
+          y,
+          r: bal.circleRadius,
+          createdTime: currentTime,
+          life: bal.circleLife,
+          triggeredAtByBall: {},
+        };
+        game.chaosCircles.push(circle);
+        spawnSparks(x, y, color, 8);
+      };
+
+      makeCircle("vertical", "left", "#38bdf8", 0);
+      makeCircle("horizontal", "right", "#fb923c", 1);
+      ball.nextChaosAt = currentTime + bal.cooldown;
+      ball.chaosFlashUntil = currentTime + 600;
+      game.screenShake = Math.max(game.screenShake, 5);
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({
+        x: ball.x, y: ball.y - ball.r - 20, vy: -45,
+        text: "CHAOS FIELD", color: "#fdba74", life: 0.8, maxLife: 0.8
+      });
+      if (ball.side === "left") game.stats.left.totalShots++;
+      else game.stats.right.totalShots++;
+      playSound("sporeShoot", 0.85, 80);
     };
 
     const updateSpore = (sporeBall, target, currentTime) => {
@@ -5568,154 +5555,6 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawNunchuckBall = (ball) => {
-      const config = BALL_TYPES.nunchuck;
-      const bal = game.balance.nunchuck;
-      const flurrying = ball.nunchuckFlurryUntil && game.simTime < ball.nunchuckFlurryUntil;
-      const target = game.balls.find(o => o.side !== ball.side);
-      const fallbackAngle = ball.nunchuckBaseAngle || (target ? Math.atan2(target.y - ball.y, target.x - ball.x) : ball.angle || 0);
-      const segments = ball.nunchuckSegments?.length
-        ? ball.nunchuckSegments
-        : [
-            {
-              pivotX: ball.x + Math.cos(fallbackAngle + 0.8) * (ball.r + 5),
-              pivotY: ball.y + Math.sin(fallbackAngle + 0.8) * (ball.r + 5),
-              handleX: ball.x + Math.cos(fallbackAngle + 0.8) * (ball.r + 18),
-              handleY: ball.y + Math.sin(fallbackAngle + 0.8) * (ball.r + 18),
-              jointX: ball.x + Math.cos(fallbackAngle + 0.25) * (ball.r + bal.range * 0.62),
-              jointY: ball.y + Math.sin(fallbackAngle + 0.25) * (ball.r + bal.range * 0.62),
-              tipX: ball.x + Math.cos(fallbackAngle) * (ball.r + bal.range),
-              tipY: ball.y + Math.sin(fallbackAngle) * (ball.r + bal.range),
-              chainAngle: fallbackAngle,
-              side: 1,
-            },
-          ];
-
-      ctx.save();
-      ctx.lineCap = "round";
-      segments.forEach((seg, index) => {
-        const fade = (seg.alpha ?? 1) * (flurrying ? 0.9 - index * 0.1 : 1);
-        ctx.globalAlpha = Math.max(0.35, fade);
-
-        if (flurrying || ball.nunchuckMotionState === "swing") {
-          ctx.strokeStyle = "rgba(253, 230, 138, 0.38)";
-          ctx.lineWidth = ball.nunchuckMotionState === "swing" ? 12 : 10;
-          ctx.beginPath();
-          ctx.moveTo(seg.jointX, seg.jointY);
-          ctx.lineTo(seg.tipX, seg.tipY);
-          ctx.stroke();
-        }
-
-        ctx.strokeStyle = "#78350f";
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(seg.pivotX, seg.pivotY);
-        ctx.lineTo(seg.handleX, seg.handleY);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#fbbf24";
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([3, 4]);
-        ctx.beginPath();
-        ctx.moveTo(seg.handleX, seg.handleY);
-        ctx.lineTo(seg.jointX, seg.jointY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.strokeStyle = flurrying ? "#fef3c7" : "#92400e";
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(seg.jointX, seg.jointY);
-        ctx.lineTo(seg.tipX, seg.tipY);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#7c2d12";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(seg.jointX, seg.jointY);
-        ctx.lineTo(seg.tipX, seg.tipY);
-        ctx.stroke();
-
-        ctx.fillStyle = flurrying ? "#fde68a" : "#fb923c";
-        ctx.beginPath(); ctx.arc(seg.tipX, seg.tipY, 4.5, 0, Math.PI * 2); ctx.fill();
-      });
-      ctx.restore();
-
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-      ctx.save();
-      ctx.rotate(fallbackAngle);
-      ctx.strokeStyle = "#7c2d12";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.5, -ball.r * 0.38);
-      ctx.lineTo(ball.r * 0.55, -ball.r * 0.1);
-      ctx.moveTo(-ball.r * 0.5, ball.r * 0.38);
-      ctx.lineTo(ball.r * 0.55, ball.r * 0.1);
-      ctx.stroke();
-      ctx.restore();
-      ctx.fillStyle = "#7c2d12";
-      ctx.fillRect(-16, -5, 32, 10);
-      ctx.fillStyle = "#fed7aa";
-      ctx.fillRect(-5, -18, 10, 36);
-      if ((ball.nunchuckCombo || 0) > 0) {
-        ctx.fillStyle = "#fff7ed";
-        ctx.font = "bold 8px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(`COMBO ${ball.nunchuckCombo}`, 0, ball.r + 16);
-      }
-      ctx.fillStyle = "#431407";
-      ctx.font = "bold 7px sans-serif";
-      ctx.textAlign = "center";
-      const sideLabel = (ball.nunchuckSide || 1) > 0 ? "R" : "L";
-      const rollNeed = ball.nunchuckRollsBeforeWhip || 1;
-      const rollCount = ball.nunchuckRollCount || 0;
-      const motionLabel = ball.nunchuckMotionState === "swing" ? "WHIP" : `ROLL ${Math.min(rollNeed, rollCount + 1)}/${rollNeed}`;
-      ctx.fillText(`${motionLabel} ${sideLabel}`, 0, -ball.r - 7);
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
-
-    const drawWhipBall = (ball) => {
-      const config = BALL_TYPES.whip;
-      const bal = game.balance.whip;
-      const barrierActive = ball.whipBarrierUntil && game.simTime < ball.whipBarrierUntil;
-      const lashActive = ball.whipLashUntil && game.simTime < ball.whipLashUntil;
-      ctx.save();
-      ctx.strokeStyle = barrierActive ? "#f0abfc" : "#d946ef";
-      ctx.lineWidth = barrierActive ? 5 : 4;
-      ctx.lineCap = "round";
-      if (barrierActive) {
-        ctx.shadowColor = "#d946ef"; ctx.shadowBlur = 10;
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, bal.barrierRadius, 0, Math.PI * 2); ctx.stroke();
-        for (let i = 0; i < 3; i++) {
-          const a = (ball.whipSpinAngle || 0) + i * Math.PI * 2 / 3;
-          ctx.beginPath(); ctx.moveTo(ball.x, ball.y);
-          ctx.lineTo(ball.x + Math.cos(a) * bal.barrierRadius, ball.y + Math.sin(a) * bal.barrierRadius);
-          ctx.stroke();
-        }
-      } else {
-        const a = ball.whipAngle || ball.angle || 0;
-        const tipX = lashActive ? (ball.whipTipX || ball.x + Math.cos(a) * bal.range) : ball.x + Math.cos(a) * (ball.r + 38);
-        const tipY = lashActive ? (ball.whipTipY || ball.y + Math.sin(a) * bal.range) : ball.y + Math.sin(a) * (ball.r + 38);
-        const midX = (ball.x + tipX) / 2 + Math.cos(a + Math.PI / 2) * 18;
-        const midY = (ball.y + tipY) / 2 + Math.sin(a + Math.PI / 2) * 18;
-        ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.quadraticCurveTo(midX, midY, tipX, tipY); ctx.stroke();
-      }
-      ctx.restore();
-
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-      ctx.strokeStyle = "#f5d0fe"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.58, -0.7, Math.PI * 1.25); ctx.stroke();
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
-
     const drawDragonBall = (ball) => {
       const config = BALL_TYPES.dragon;
       const angle = ball.dragonAngle || ball.angle || 0;
@@ -5748,16 +5587,242 @@ export default function App() {
       const target = game.balls.find(o => o.side !== ball.side);
       if (target) {
         const bal = game.balance.dragon;
+        const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+        const active = game.simTime < (ball.dragonFlameActiveUntil || 0) || dist <= bal.flameRange * 0.9;
+        if (active) {
+          const mouthX = ball.x + Math.cos(angle) * (ball.r + 12);
+          const mouthY = ball.y + Math.sin(angle) * (ball.r + 12);
+          const time = game.simTime || 0;
+          const flameCount = 7;
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          for (let i = 0; i < flameCount; i++) {
+            const t = (i + 0.5) / flameCount;
+            const side = t - 0.5;
+            const flicker = Math.sin(time * 0.018 + i * 1.73) * 0.5 + Math.sin(time * 0.031 + i) * 0.5;
+            const tongueAngle = angle + side * bal.flameAngle * 0.86 + flicker * 0.08;
+            const length = bal.flameRange * (0.5 + (1 - Math.abs(side)) * 0.33 + flicker * 0.05);
+            const width = 10 + (1 - Math.abs(side) * 1.5) * 18 + Math.sin(time * 0.024 + i * 2.1) * 4;
+            const endX = mouthX + Math.cos(tongueAngle) * length;
+            const endY = mouthY + Math.sin(tongueAngle) * length;
+            const midX = mouthX + Math.cos(tongueAngle + flicker * 0.12) * length * 0.52;
+            const midY = mouthY + Math.sin(tongueAngle + flicker * 0.12) * length * 0.52;
+            const nx = -Math.sin(tongueAngle);
+            const ny = Math.cos(tongueAngle);
+            const grad = ctx.createLinearGradient(mouthX, mouthY, endX, endY);
+            grad.addColorStop(0, "rgba(255, 255, 255, 0.82)");
+            grad.addColorStop(0.18, "rgba(254, 240, 138, 0.72)");
+            grad.addColorStop(0.55, "rgba(249, 115, 22, 0.48)");
+            grad.addColorStop(1, "rgba(220, 38, 38, 0)");
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(mouthX, mouthY);
+            ctx.quadraticCurveTo(midX + nx * width, midY + ny * width, endX, endY);
+            ctx.quadraticCurveTo(midX - nx * width * 0.75, midY - ny * width * 0.75, mouthX, mouthY);
+            ctx.fill();
+          }
+
+          ctx.shadowColor = "#facc15";
+          ctx.shadowBlur = 18;
+          ctx.strokeStyle = "rgba(254, 240, 138, 0.72)";
+          ctx.lineWidth = 5 + Math.sin(time * 0.03) * 1.4;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(mouthX, mouthY);
+          ctx.quadraticCurveTo(
+            mouthX + Math.cos(angle + Math.sin(time * 0.025) * 0.1) * bal.flameRange * 0.24,
+            mouthY + Math.sin(angle + Math.sin(time * 0.025) * 0.1) * bal.flameRange * 0.24,
+            mouthX + Math.cos(angle) * bal.flameRange * 0.5,
+            mouthY + Math.sin(angle) * bal.flameRange * 0.5
+          );
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.globalAlpha = 0.12;
+          ctx.strokeStyle = "#fb923c";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 9]);
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, bal.flameRange, angle - bal.flameAngle / 2, angle + bal.flameAngle / 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      if (ball.burnUntil && game.simTime < ball.burnUntil) {
         ctx.save();
-        ctx.globalAlpha = 0.18;
-        ctx.fillStyle = "#fb923c";
-        ctx.beginPath();
-        ctx.moveTo(ball.x, ball.y);
-        ctx.arc(ball.x, ball.y, bal.flameRange, angle - bal.flameAngle / 2, angle + bal.flameAngle / 2);
-        ctx.closePath();
-        ctx.fill();
+        ctx.globalAlpha = 0.45 + Math.sin(game.simTime * 0.025) * 0.15;
+        ctx.strokeStyle = "#fb923c";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r + 7, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
+      drawHealthInsideBall(ball);
+    };
+
+    const drawPsychicerBall = (ball) => {
+      const config = BALL_TYPES.psychicer;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.007) * 0.5;
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      if (ball.psychicFlashUntil && game.simTime < ball.psychicFlashUntil) {
+        ctx.globalAlpha = 0.28;
+        ctx.strokeStyle = "#f0abfc";
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(0, 0, ball.r + 10 + pulse * 8, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.shadowColor = "#a78bfa";
+      ctx.shadowBlur = 12 + pulse * 8;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.35, 4, 0, 0, ball.r);
+      grad.addColorStop(0, "#f5d0fe");
+      grad.addColorStop(0.45, config.color);
+      grad.addColorStop(1, "#4c1d95");
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#fdf4ff";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.55, -0.15 + pulse * 0.3, Math.PI * 1.35 + pulse * 0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.28, Math.PI * 0.8 - pulse * 0.25, Math.PI * 2.1 - pulse * 0.25);
+      ctx.stroke();
+
+      ctx.fillStyle = "#fdf4ff";
+      ctx.beginPath(); ctx.arc(-8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#7c3aed";
+      ctx.beginPath(); ctx.arc(-8 + pulse * 1.2, -5, 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8 + pulse * 1.2, -5, 1.8, 0, Math.PI * 2); ctx.fill();
+
+      const cd = Number.isFinite(ball.nextPsychicAt) ? Math.max(0, (ball.nextPsychicAt || 0) - game.simTime) : 0;
+      if (cd > 0) {
+        ctx.fillStyle = "#fdf4ff";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.ceil(cd / 1000)}s`, 0, ball.r + 14);
+      }
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawChaosBall = (ball) => {
+      const config = BALL_TYPES.chaos;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.01) * 0.5;
+      const ownerCircles = (game.chaosCircles || []).filter((circle) => circle.ownerId === ball.id);
+      const verticalCircle = ownerCircles.find((circle) => circle.armSide === "left");
+      const horizontalCircle = ownerCircles.find((circle) => circle.armSide === "right");
+      const controlledTarget = game.balls.find((other) => other.chaosControllerId === ball.id && other.chaosControlledUntil > game.simTime && !other.chaosSlamDone);
+
+      const drawArmToCircle = (circle, side) => {
+        const baseAngle = side === "left" ? Math.PI * 0.78 : Math.PI * 0.22;
+        const sx = ball.x + Math.cos(baseAngle) * (ball.r - 2);
+        const sy = ball.y + Math.sin(baseAngle) * (ball.r - 2);
+        const targetControlledByArm = controlledTarget && ((side === "left" && controlledTarget.chaosControlAxis === "vertical") || (side === "right" && controlledTarget.chaosControlAxis === "horizontal"));
+        const hasCircle = !!circle || !!targetControlledByArm;
+        const tx = targetControlledByArm ? controlledTarget.x : hasCircle ? circle.x : ball.x + (side === "left" ? -42 : 42);
+        const ty = targetControlledByArm ? controlledTarget.y : hasCircle ? circle.y : ball.y + Math.sin(game.simTime * 0.006 + (side === "left" ? 0 : 2)) * 14;
+        const dist = Math.hypot(tx - sx, ty - sy);
+        const aimAngle = Math.atan2(ty - sy, tx - sx);
+        const wave = Math.sin(game.simTime * 0.022 + (side === "left" ? 0 : Math.PI)) * 0.45;
+        const angle = aimAngle + (targetControlledByArm ? wave * 0.35 : wave * 0.18);
+        const reach = targetControlledByArm ? 42 + pulse * 7 : hasCircle ? Math.min(dist, 58 + pulse * 8) : 34;
+        const ex = sx + Math.cos(angle) * reach;
+        const ey = sy + Math.sin(angle) * reach;
+        const bend = (side === "left" ? -1 : 1) * (12 + Math.sin(game.simTime * 0.014) * 5);
+        const midX = (sx + ex) / 2 + Math.cos(angle + Math.PI / 2) * bend;
+        const midY = (sy + ey) / 2 + Math.sin(angle + Math.PI / 2) * bend;
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.strokeStyle = side === "left" ? "#38bdf8" : "#fb923c";
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.shadowBlur = hasCircle ? 10 : 4;
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(midX, midY, ex, ey);
+        ctx.stroke();
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(midX, midY, ex, ey);
+        ctx.stroke();
+        ctx.fillStyle = side === "left" ? "#bae6fd" : "#fed7aa";
+        ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI * 2); ctx.fill();
+        if (targetControlledByArm) {
+          ctx.strokeStyle = side === "left" ? "rgba(186, 230, 253, 0.75)" : "rgba(254, 215, 170, 0.75)";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 8]);
+          ctx.lineDashOffset = -game.simTime * 0.08;
+          for (let i = 0; i < 3; i++) {
+            const spread = (i - 1) * 0.22 + Math.sin(game.simTime * 0.018 + i) * 0.05;
+            const rayAngle = aimAngle + spread;
+            const rayLength = 30 + i * 10 + pulse * 8;
+            ctx.beginPath();
+            ctx.moveTo(ex + Math.cos(rayAngle) * 8, ey + Math.sin(rayAngle) * 8);
+            ctx.lineTo(ex + Math.cos(rayAngle) * rayLength, ey + Math.sin(rayAngle) * rayLength);
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+        }
+        ctx.restore();
+      };
+
+      drawArmToCircle(verticalCircle, "left");
+      drawArmToCircle(horizontalCircle, "right");
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      if (ball.chaosFlashUntil && game.simTime < ball.chaosFlashUntil) {
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = "#fdba74";
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(0, 0, ball.r + 10 + pulse * 10, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.shadowColor = "#fb923c";
+      ctx.shadowBlur = 10 + pulse * 8;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
+      grad.addColorStop(0, "#475569");
+      grad.addColorStop(0.5, config.color);
+      grad.addColorStop(1, "#020617");
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#fdba74";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.62, game.simTime * 0.006, game.simTime * 0.006 + Math.PI * 1.35); ctx.stroke();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.38, -game.simTime * 0.007, -game.simTime * 0.007 + Math.PI * 1.45); ctx.stroke();
+
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath(); ctx.arc(-8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fb923c";
+      ctx.beginPath(); ctx.arc(-8 + Math.sin(game.simTime * 0.01) * 1.5, -5, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath(); ctx.arc(8 - Math.sin(game.simTime * 0.01) * 1.5, -5, 2, 0, Math.PI * 2); ctx.fill();
+
+      const cd = Math.max(0, (ball.nextChaosAt || 0) - game.simTime);
+      if (cd > 0) {
+        ctx.fillStyle = "#fed7aa";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.ceil(cd / 1000)}s`, 0, ball.r + 14);
+      }
+      ctx.restore();
       drawHealthInsideBall(ball);
     };
 
@@ -5781,9 +5846,30 @@ export default function App() {
       else if (ball.type === "stringWeb") drawStringWebBall(ball);
       else if (ball.type === "arm") drawArmBall(ball);
       else if (ball.type === "chess") drawChessBall(ball);
-      else if (ball.type === "nunchuck") drawNunchuckBall(ball);
-      else if (ball.type === "whip") drawWhipBall(ball);
       else if (ball.type === "dragon") drawDragonBall(ball);
+      else if (ball.type === "psychicer") drawPsychicerBall(ball);
+      else if (ball.type === "chaos") drawChaosBall(ball);
+
+      if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
+        const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, progress * 0.72);
+        ctx.strokeStyle = ball.chaosControlAxis === "vertical" ? "#38bdf8" : "#fdba74";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.lineDashOffset = -game.simTime * 0.06;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.lineTo(ball.chaosDragX || ball.x, ball.chaosDragY || ball.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 7 + (1 - progress) * 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       if (ball.webHitFlashUntil && game.simTime < ball.webHitFlashUntil) {
         const progress = (ball.webHitFlashUntil - game.simTime) / 180;
@@ -5844,10 +5930,39 @@ export default function App() {
           ctx.shadowColor = "#f97316";
           ctx.shadowBlur = 18;
           const pulse = 0.8 + Math.sin(game.simTime * 0.02) * 0.2;
+          const speedAngle = Math.atan2(bullet.vy, bullet.vx);
+          const tailLength = 26 + pulse * 10;
+          const tailWidth = bullet.r * (1.4 + pulse * 0.2);
+          const tailGrad = ctx.createLinearGradient(
+            bullet.x - Math.cos(speedAngle) * tailLength,
+            bullet.y - Math.sin(speedAngle) * tailLength,
+            bullet.x,
+            bullet.y
+          );
+          tailGrad.addColorStop(0, "rgba(220, 38, 38, 0)");
+          tailGrad.addColorStop(0.45, "rgba(249, 115, 22, 0.35)");
+          tailGrad.addColorStop(1, "rgba(254, 240, 138, 0.75)");
+          ctx.fillStyle = tailGrad;
+          ctx.beginPath();
+          ctx.moveTo(bullet.x + Math.cos(speedAngle) * bullet.r, bullet.y + Math.sin(speedAngle) * bullet.r);
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength - Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength + Math.cos(speedAngle) * tailWidth
+          );
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength + Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength - Math.cos(speedAngle) * tailWidth
+          );
+          ctx.closePath();
+          ctx.fill();
           ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r + 7 * pulse, 0, Math.PI * 2);
           ctx.fillStyle = "rgba(249, 115, 22, 0.24)"; ctx.fill();
           ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
-          ctx.fillStyle = "#f97316"; ctx.fill();
+          const coreGrad = ctx.createRadialGradient(bullet.x - bullet.r * 0.35, bullet.y - bullet.r * 0.35, 1, bullet.x, bullet.y, bullet.r);
+          coreGrad.addColorStop(0, "#fff7ed");
+          coreGrad.addColorStop(0.35, "#facc15");
+          coreGrad.addColorStop(1, "#f97316");
+          ctx.fillStyle = coreGrad; ctx.fill();
           ctx.strokeStyle = "#fef3c7"; ctx.lineWidth = 2.5; ctx.stroke();
         } else {
           ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
@@ -6071,6 +6186,210 @@ export default function App() {
         });
 
         return true;
+      });
+    };
+
+    const updatePsychicCircles = (dt) => {
+      if (!game.psychicCircles) return;
+      const bal = game.balance.psychicer || BALANCE.psychicer;
+      const removePsychicCircle = (circle) => {
+        const circleId = `${circle.ownerId}-${circle.createdTime}`;
+        game.balls.forEach((ball) => {
+          if (ball.psychicTrapCircleId === circleId) {
+            ball.psychicTrapCircleId = null;
+            ball.psychicTrappedUntil = 0;
+          }
+          if (ball.id === circle.ownerId) {
+            const ownerBal = game.balance.psychicer || BALANCE.psychicer;
+            ball.nextPsychicAt = game.simTime + (ownerBal.cooldown || 5600);
+          }
+        });
+      };
+      game.psychicCircles = game.psychicCircles.filter((circle) => {
+        circle.life -= dt * 1000;
+        if (circle.life <= 0) {
+          removePsychicCircle(circle);
+          return false;
+        }
+
+        game.balls.forEach((ball) => {
+          if (ball.side === circle.ownerSide) return;
+          const d = Math.hypot(ball.x - circle.x, ball.y - circle.y);
+          const captureRadius = circle.r + ball.r * 0.55;
+          const isCapturedHere = ball.psychicTrapCircleId === `${circle.ownerId}-${circle.createdTime}`;
+          const inside = d <= captureRadius || isCapturedHere;
+          if (!inside) {
+            return;
+          }
+
+          if (!circle.hitsByBall) circle.hitsByBall = {};
+          if (!circle.damageByBall) circle.damageByBall = {};
+
+          const hitCount = circle.hitsByBall[ball.id] || 0;
+          const damageDone = circle.damageByBall[ball.id] || 0;
+          const maxHits = Math.min(5, bal.maxBounceHits || 5);
+          if (!isCapturedHere && hitCount < maxHits && damageDone < 5) {
+            ball.psychicTrapCircleId = `${circle.ownerId}-${circle.createdTime}`;
+            ball.psychicTrappedUntil = Math.max(ball.psychicTrappedUntil || 0, game.simTime + 900);
+            ball.vx *= 0.62;
+            ball.vy *= 0.62;
+            ball.psychicFieldUntil = game.simTime + 220;
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -48,
+              text: "PSY TRAP", color: "#f0abfc", life: 0.65, maxLife: 0.65
+            });
+          }
+
+          if (hitCount >= maxHits || damageDone >= 5) {
+            if (isCapturedHere) {
+              ball.psychicTrapCircleId = null;
+              ball.psychicTrappedUntil = 0;
+            }
+            return;
+          }
+
+          const dx = ball.x - circle.x;
+          const dy = ball.y - circle.y;
+          const dist = Math.max(0.001, Math.hypot(dx, dy));
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const trapRadius = Math.max(ball.r + 8, circle.r - ball.r * 0.45);
+          const pull = 18 * dt;
+          ball.vx += ((circle.x - ball.x) / Math.max(1, circle.r)) * pull;
+          ball.vy += ((circle.y - ball.y) / Math.max(1, circle.r)) * pull;
+          ball.psychicTrappedUntil = Math.max(ball.psychicTrappedUntil || 0, game.simTime + 180);
+          ball.psychicFieldUntil = game.simTime + 180;
+
+          if (dist >= trapRadius) {
+            ball.x = circle.x + nx * trapRadius;
+            ball.y = circle.y + ny * trapRadius;
+            const velocityOut = ball.vx * nx + ball.vy * ny;
+            const tx = -ny;
+            const ty = nx;
+            const tangent = ball.vx * tx + ball.vy * ty;
+            const nextInward = Math.max(190, Math.abs(velocityOut) * 0.92);
+            const swirl = (hitCount % 2 === 0 ? 1 : -1) * 95;
+            ball.vx = -nx * nextInward + tx * (tangent * 0.55 + swirl);
+            ball.vy = -ny * nextInward + ty * (tangent * 0.55 + swirl);
+
+            const remainingDamageCap = Math.max(0, 5 - damageDone);
+            const damage = Math.min(bal.circleDamage || 1, remainingDamageCap);
+            if (damage > 0) {
+              applyDamage(ball, damage, `${circle.ownerId}-psychic-${circle.createdTime}-${ball.id}-${hitCount}`, game.simTime, 0);
+              const ownerStats = circle.ownerSide === "left" ? game.stats.left : game.stats.right;
+              ownerStats.damageDealt += damage;
+              ownerStats.hitsLanded++;
+              ball.psychicFieldUntil = game.simTime + 260;
+              game.screenShake = Math.max(game.screenShake, 5);
+              spawnSparks(ball.x, ball.y, "#d8b4fe", 12);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: ball.x, y: ball.y - ball.r - 18, vy: -50,
+                text: `PSY -${damage}`, color: "#f0abfc", life: 0.65, maxLife: 0.65
+              });
+            }
+            circle.hitsByBall[ball.id] = hitCount + 1;
+            circle.damageByBall[ball.id] = damageDone + damage;
+            circle.flashUntil = game.simTime + 220;
+            if (circle.hitsByBall[ball.id] >= maxHits || circle.damageByBall[ball.id] >= 5) {
+              ball.psychicTrapCircleId = null;
+              ball.psychicTrappedUntil = 0;
+              circle.consumed = true;
+            }
+          }
+        });
+
+        if (circle.consumed) {
+          removePsychicCircle(circle);
+          return false;
+        }
+        return true;
+      });
+    };
+
+    const updateChaosCircles = (dt) => {
+      const bal = game.balance.chaos || BALANCE.chaos;
+      game.balls.forEach((ball) => {
+        if (!ball.chaosControlledUntil || game.simTime >= ball.chaosControlledUntil || ball.chaosSlamDone) return;
+        const speed = bal.launchSpeed || 620;
+        if (game.simTime < (ball.chaosControlHoldUntil || 0)) {
+          ball.vx *= 0.08;
+          ball.vy *= 0.08;
+          ball.chaosDraggedUntil = game.simTime + 180;
+          return;
+        }
+
+        const dx = (ball.chaosDragX || ball.x) - ball.x;
+        const dy = (ball.chaosDragY || ball.y) - ball.y;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const wobble = Math.sin(game.simTime * 0.025 + (ball.id.length || 1)) * (bal.radiusBounce || 140);
+        const tx = -ny;
+        const ty = nx;
+        ball.vx = nx * speed + tx * wobble;
+        ball.vy = ny * speed + ty * wobble;
+        ball.chaosDraggedUntil = game.simTime + 200;
+      });
+
+      if (!game.chaosCircles) return;
+      game.chaosCircles = game.chaosCircles.filter((circle) => {
+        circle.life -= dt * 1000;
+        if (circle.life <= 0) return false;
+
+        game.balls.forEach((ball) => {
+          if (ball.side === circle.ownerSide) return;
+          if (circle.consumed) return;
+          const d = Math.hypot(ball.x - circle.x, ball.y - circle.y);
+          if (d > circle.r + ball.r * 0.25) return;
+          if (ball.chaosControlledUntil && game.simTime < ball.chaosControlledUntil) return;
+          if (!circle.triggeredAtByBall) circle.triggeredAtByBall = {};
+          if (game.simTime < (circle.triggeredAtByBall[ball.id] || 0)) return;
+
+          const pad = 18 + ball.r;
+          if (circle.axis === "vertical") {
+            const topDistance = ball.y - pad;
+            const bottomDistance = game.height - pad - ball.y;
+            const dir = bottomDistance >= topDistance ? 1 : -1;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.chaosDragX = ball.x;
+            ball.chaosDragY = dir > 0 ? game.height - pad : pad;
+          } else {
+            const leftDistance = ball.x - pad;
+            const rightDistance = game.width - pad - ball.x;
+            const dir = rightDistance >= leftDistance ? 1 : -1;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.chaosDragX = dir > 0 ? game.width - pad : pad;
+            ball.chaosDragY = ball.y;
+          }
+
+          circle.triggeredAtByBall[ball.id] = game.simTime + (bal.triggerCooldown || 1000);
+          circle.flashUntil = game.simTime + 300;
+          ball.chaosControlAxis = circle.axis;
+          ball.chaosControllerId = circle.ownerId;
+          ball.chaosControllerSide = circle.ownerSide;
+          ball.chaosSlamDone = false;
+          ball.chaosControlHoldUntil = game.simTime + (bal.controlHold || 220);
+          ball.chaosControlledUntil = game.simTime + (bal.controlHold || 220) + (bal.controlDuration || 1200);
+          ball.chaosDraggedUntil = game.simTime + 360;
+          ball.webHitFlashUntil = game.simTime + 160;
+          ball.spinAngle = (ball.spinAngle || 0) + 0.85;
+          circle.consumed = true;
+          game.screenShake = Math.max(game.screenShake, 8);
+          spawnSparks(ball.x, ball.y, circle.color || "#fdba74", 14);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 18, vy: -55,
+            text: "CHAOS GRAB",
+            color: circle.color || "#fdba74", life: 0.7, maxLife: 0.7
+          });
+          playSound("shieldBlock", 0.75, circle.axis === "vertical" ? 180 : -160);
+        });
+
+        return !circle.consumed;
       });
     };
 
@@ -6354,6 +6673,102 @@ export default function App() {
       });
     };
 
+    const drawPsychicCircles = () => {
+      if (!game.psychicCircles) return;
+      game.psychicCircles.forEach((circle) => {
+        const lifeAlpha = clamp(circle.life / 7000, 0, 1);
+        const pulse = 0.5 + Math.sin(game.simTime * 0.006 + circle.createdTime * 0.01) * 0.5;
+        ctx.save();
+        ctx.translate(circle.x, circle.y);
+        ctx.globalAlpha = Math.min(0.95, 0.35 + lifeAlpha * 0.45);
+        const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, circle.r);
+        grad.addColorStop(0, "rgba(240, 171, 252, 0.2)");
+        grad.addColorStop(0.62, "rgba(139, 92, 246, 0.14)");
+        grad.addColorStop(1, "rgba(76, 29, 149, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(0, 0, circle.r, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = `rgba(216, 180, 254, ${0.45 + pulse * 0.35})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 8]);
+        ctx.lineDashOffset = -game.simTime * 0.035;
+        ctx.beginPath(); ctx.arc(0, 0, circle.r, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = "rgba(240, 171, 252, 0.35)";
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+          const a = game.simTime * 0.0025 + i * Math.PI * 2 / 3;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, circle.r * 0.72, circle.r * 0.22, a, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        const used = Object.values(circle.hitsByBall || {}).reduce((sum, value) => Math.max(sum, value), 0);
+        ctx.fillStyle = "#fdf4ff";
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(15, 23, 42, 0.75)";
+        ctx.shadowBlur = 4;
+        ctx.fillText(`${Math.max(0, 5 - used)} BOUNCES`, 0, 4);
+        ctx.restore();
+      });
+    };
+
+    const drawChaosCircles = () => {
+      if (!game.chaosCircles) return;
+      game.chaosCircles.forEach((circle) => {
+        const bal = game.balance.chaos || BALANCE.chaos;
+        const baseLife = bal.circleLife || BALANCE.chaos.circleLife;
+        const lifeAlpha = clamp(circle.life / baseLife, 0, 1);
+        const pulse = 0.5 + Math.sin(game.simTime * 0.011 + circle.createdTime * 0.01) * 0.5;
+        const flash = game.simTime < (circle.flashUntil || 0);
+        ctx.save();
+        ctx.translate(circle.x, circle.y);
+        ctx.globalAlpha = Math.min(1, 0.38 + lifeAlpha * 0.5 + (flash ? 0.22 : 0));
+        const grad = ctx.createRadialGradient(0, 0, 3, 0, 0, circle.r);
+        grad.addColorStop(0, circle.axis === "vertical" ? "rgba(56, 189, 248, 0.24)" : "rgba(251, 146, 60, 0.24)");
+        grad.addColorStop(0.65, "rgba(15, 23, 42, 0.1)");
+        grad.addColorStop(1, "rgba(15, 23, 42, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(0, 0, circle.r, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = circle.color || "#fdba74";
+        ctx.lineWidth = flash ? 5 : 3;
+        ctx.setLineDash([8, 7]);
+        ctx.lineDashOffset = circle.axis === "vertical" ? -game.simTime * 0.045 : game.simTime * 0.045;
+        ctx.beginPath(); ctx.arc(0, 0, circle.r + pulse * 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = circle.color || "#fdba74";
+        ctx.strokeStyle = "#020617";
+        ctx.lineWidth = 2;
+        const arrowSize = 10 + pulse * 2;
+        const drawArrow = (x, y, angle) => {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.moveTo(arrowSize, 0);
+          ctx.lineTo(-arrowSize * 0.55, -arrowSize * 0.65);
+          ctx.lineTo(-arrowSize * 0.25, 0);
+          ctx.lineTo(-arrowSize * 0.55, arrowSize * 0.65);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        };
+        if (circle.axis === "vertical") {
+          drawArrow(0, -circle.r * 0.45, -Math.PI / 2);
+          drawArrow(0, circle.r * 0.45, Math.PI / 2);
+        } else {
+          drawArrow(-circle.r * 0.45, 0, Math.PI);
+          drawArrow(circle.r * 0.45, 0, 0);
+        }
+        ctx.restore();
+      });
+    };
+
     const drawStringWebBall = (ball) => {
       const config = BALL_TYPES.stringWeb;
       ctx.save(); ctx.translate(ball.x, ball.y);
@@ -6576,9 +6991,9 @@ export default function App() {
                   if (ball.type === "hammer") updateHammer(ball, target, game.simTime);
                   if (ball.type === "arm") updateArm(ball, target, game.simTime, stepDt);
                   if (ball.type === "chess") updateChess(ball, target, game.simTime, stepDt);
-                  if (ball.type === "nunchuck") updateNunchuck(ball, target, game.simTime);
-                  if (ball.type === "whip") updateWhip(ball, target, game.simTime);
                   if (ball.type === "dragon") updateDragon(ball, target, game.simTime);
+                  if (ball.type === "psychicer") updatePsychicer(ball, target, game.simTime);
+                  if (ball.type === "chaos") updateChaos(ball, target, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
@@ -6594,6 +7009,8 @@ export default function App() {
           updateCacti(stepDt);
           updateStrings(stepDt);
           updateVenomPools(stepDt);
+          updatePsychicCircles(stepDt);
+          updateChaosCircles(stepDt);
         }
       } else if (!gameStarted) {
         game.balls.forEach((ball) => {
@@ -6614,6 +7031,8 @@ export default function App() {
         updateFloatingTexts(dt);
         updateCacti(dt);
         updateStrings(dt);
+        updatePsychicCircles(dt);
+        updateChaosCircles(dt);
       }
 
       drawArena();
@@ -6632,7 +7051,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawStrings(); drawVenomPools();
+      drawStrings(); drawVenomPools(); drawPsychicCircles(); drawChaosCircles();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
@@ -6849,31 +7268,6 @@ export default function App() {
               {renderSlider("Damage Tick Rate", "chess", "tickCooldown", 100, 1500, 50, "ms")}
             </>
           )}
-          {type === "nunchuck" && (
-            <>
-              {renderSlider("Hit Damage", "nunchuck", "damage", 1, 20)}
-              {renderSlider("Range", "nunchuck", "range", 25, 90, 1, "px")}
-              {renderSlider("Swing Speed", "nunchuck", "spinSpeed", 0.04, 0.35, 0.01)}
-              {renderSlider("Hit Cooldown", "nunchuck", "hitCooldown", 100, 1000, 10, "ms")}
-              {renderSlider("Combo Required", "nunchuck", "comboRequired", 2, 6, 1)}
-              {renderSlider("Flurry Damage", "nunchuck", "flurryDamage", 1, 30)}
-              {renderSlider("Flurry Duration", "nunchuck", "flurryDuration", 300, 2500, 50, "ms")}
-              {renderSlider("Flurry Cooldown", "nunchuck", "flurryCooldown", 1000, 8000, 100, "ms")}
-              {renderSlider("Knockback", "nunchuck", "knockback", 50, 800, 10)}
-            </>
-          )}
-          {type === "whip" && (
-            <>
-              {renderSlider("Lash Damage", "whip", "damage", 1, 25)}
-              {renderSlider("Lash Range", "whip", "range", 60, 180, 2, "px")}
-              {renderSlider("Lash Cooldown", "whip", "lashCooldown", 200, 2500, 50, "ms")}
-              {renderSlider("Yank Force", "whip", "yankForce", 50, 800, 10)}
-              {renderSlider("Barrier Damage", "whip", "barrierDamage", 1, 20)}
-              {renderSlider("Barrier Duration", "whip", "barrierDuration", 300, 3000, 50, "ms")}
-              {renderSlider("Barrier Cooldown", "whip", "barrierCooldown", 1000, 9000, 100, "ms")}
-              {renderSlider("Barrier Radius", "whip", "barrierRadius", 30, 100, 1, "px")}
-            </>
-          )}
           {type === "dragon" && (
             <>
               {renderSlider("Flame Damage", "dragon", "flameDamage", 1, 20)}
@@ -6887,6 +7281,28 @@ export default function App() {
               {renderSlider("Fireball Bounces", "dragon", "fireballBounces", 0, 8, 1)}
               {renderSlider("Burn Duration", "dragon", "burnDuration", 300, 4000, 50, "ms")}
               {renderSlider("Fireball Cooldown", "dragon", "cooldown", 500, 5000, 50, "ms")}
+            </>
+          )}
+          {type === "psychicer" && (
+            <>
+              {renderSlider("Circle Damage", "psychicer", "circleDamage", 1, 5)}
+              {renderSlider("Circle Radius", "psychicer", "circleRadius", 45, 150, 5, "px")}
+              {renderSlider("Max Bounce Hits", "psychicer", "maxBounceHits", 1, 5, 1)}
+              {renderSlider("Drop Cooldown", "psychicer", "cooldown", 1000, 12000, 100, "ms")}
+              {renderSlider("Circle Lifetime", "psychicer", "circleLife", 1000, 15000, 500, "ms")}
+            </>
+          )}
+          {type === "chaos" && (
+            <>
+              {renderSlider("Circle Radius", "chaos", "circleRadius", 25, 110, 5, "px")}
+              {renderSlider("Launch Speed", "chaos", "launchSpeed", 250, 1100, 20, "px/s")}
+              {renderSlider("Wall Slam Damage", "chaos", "slamDamage", 1, 20)}
+              {renderSlider("Control Hold", "chaos", "controlHold", 0, 800, 50, "ms")}
+              {renderSlider("Control Duration", "chaos", "controlDuration", 300, 2500, 50, "ms")}
+              {renderSlider("Radius Bounce", "chaos", "radiusBounce", 0, 400, 20)}
+              {renderSlider("Drop Cooldown", "chaos", "cooldown", 1000, 12000, 100, "ms")}
+              {renderSlider("Circle Lifetime", "chaos", "circleLife", 1000, 15000, 500, "ms")}
+              {renderSlider("Trigger Cooldown", "chaos", "triggerCooldown", 200, 3000, 100, "ms")}
             </>
           )}
           {type === "wrecker" && (
