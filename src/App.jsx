@@ -20,7 +20,7 @@ const BALL_TYPES = {
     color: "#0f172a",
     stroke: "#f1f5f9",
     radius: 30,
-    description: "Skull brawler. Fires 6 shots, then reloads. Secondary: Dash.",
+    description: "Suit brawler with a beagle dog. Permanent rapid fire unlocks when the dog dies.",
   },
   vampire: {
     id: "vampire",
@@ -144,7 +144,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 
 const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
-  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireDuration: 1400, rapidFireCooldown: 140, rapidPierceShots: 2 },
+  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 14, pulseSpeed: 620, pulseStunDuration: 750 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
@@ -278,11 +278,17 @@ export default function App() {
   const { playSound } = useSoundEngine();
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
+  const recordingCanvasRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordingFrameRef = useRef(null);
+  const recordedChunksRef = useRef([]);
   const [selectedBalls, setSelectedBalls] = useState(["knife", "laser"]);
   const [gameStarted, setGameStarted] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1.5);
   const [balanceSettings, setBalanceSettings] = useState(loadSavedBalanceSettings);
   const [balanceSaveStatus, setBalanceSaveStatus] = useState("");
+  const [recordingStatus, setRecordingStatus] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   
   const [gameState, setGameState] = useState({
@@ -584,6 +590,203 @@ export default function App() {
     setBalanceSaveStatus("Downloaded sheet");
   };
 
+  const drawRoundedRect = (ctx, x, y, w, h, r) => {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  };
+
+  const drawRecordingHudCard = (ctx, ball, x, y, w, align = "left") => {
+    const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
+    const hp = clamp(Math.ceil(ball?.health ?? 0), 0, 100);
+    const barW = w - 44;
+    const barH = 18;
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.18)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = "rgba(248, 250, 252, 0.96)";
+    drawRoundedRect(ctx, x, y, w, 108, 22);
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(15, 23, 42, 0.16)";
+    ctx.stroke();
+
+    ctx.textAlign = align;
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#020617";
+    ctx.font = "800 34px Arial, sans-serif";
+    const nameX = align === "left" ? x + 22 : x + w - 22;
+    ctx.fillText(ball?.name || config.name, nameX, y + 42);
+
+    ctx.font = "800 24px Arial, sans-serif";
+    ctx.fillStyle = "#334155";
+    ctx.fillText(`${hp} HP`, nameX, y + 76);
+
+    const barX = x + 22;
+    const barY = y + 82;
+    ctx.fillStyle = "#dbe4ef";
+    drawRoundedRect(ctx, barX, barY, barW, barH, 9);
+    ctx.fill();
+    ctx.fillStyle = config.color;
+    drawRoundedRect(ctx, barX, barY, barW * (hp / 100), barH, 9);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const drawRecordingFrame = () => {
+    const sourceCanvas = canvasRef.current;
+    const recordCanvas = recordingCanvasRef.current;
+    if (!sourceCanvas || !recordCanvas) return;
+
+    const ctx = recordCanvas.getContext("2d");
+    const left = gameRef.current.balls?.find((ball) => ball.side === "left");
+    const right = gameRef.current.balls?.find((ball) => ball.side === "right");
+    const width = 1080;
+    const height = 1920;
+    const arenaSize = 980;
+    const arenaX = (width - arenaSize) / 2;
+    const arenaY = 520;
+    const hudY = arenaY - 154;
+    const cardW = 490;
+
+    ctx.clearRect(0, 0, width, height);
+    const bg = ctx.createLinearGradient(0, 0, 0, height);
+    bg.addColorStop(0, "#f8fafc");
+    bg.addColorStop(0.48, "#e2e8f0");
+    bg.addColorStop(1, "#cbd5e1");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left");
+    drawRecordingHudCard(ctx, right, arenaX + arenaSize - cardW, hudY, cardW, "right");
+
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.32)";
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 16;
+    ctx.fillStyle = "#020617";
+    drawRoundedRect(ctx, arenaX - 8, arenaY - 8, arenaSize + 16, arenaSize + 16, 26);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.drawImage(sourceCanvas, arenaX, arenaY, arenaSize, arenaSize);
+
+    ctx.save();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "#020617";
+    drawRoundedRect(ctx, arenaX, arenaY, arenaSize, arenaSize, 18);
+    ctx.stroke();
+    ctx.restore();
+
+    const winner = left?.health <= 0 && right?.health > 0
+      ? right.name
+      : right?.health <= 0 && left?.health > 0
+        ? left.name
+        : null;
+    if (winner) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#020617";
+      ctx.font = "900 58px Arial, sans-serif";
+      ctx.fillText(`${winner} Wins!`, width / 2, arenaY + arenaSize + 96);
+      ctx.restore();
+    }
+  };
+
+  const stopFightRecording = () => {
+    if (recordingFrameRef.current) {
+      cancelAnimationFrame(recordingFrameRef.current);
+      recordingFrameRef.current = null;
+    }
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+  };
+
+  const startFightRecording = () => {
+    const sourceCanvas = canvasRef.current;
+    if (!sourceCanvas || typeof MediaRecorder === "undefined") {
+      setRecordingStatus("Recording unsupported");
+      return;
+    }
+
+    const recordCanvas = document.createElement("canvas");
+    recordCanvas.width = 1080;
+    recordCanvas.height = 1920;
+    recordingCanvasRef.current = recordCanvas;
+    recordedChunksRef.current = [];
+    drawRecordingFrame();
+
+    const stream = recordCanvas.captureStream(30);
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+        ? "video/webm;codecs=vp8"
+        : "video/webm";
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8500000 });
+
+    recorder.ondataavailable = (event) => {
+      if (event.data?.size) recordedChunksRef.current.push(event.data);
+    };
+    recorder.onstop = () => {
+      if (recordingFrameRef.current) {
+        cancelAnimationFrame(recordingFrameRef.current);
+        recordingFrameRef.current = null;
+      }
+      const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ball-fighters-recording-${stamp}.webm`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setIsRecording(false);
+      setRecordingStatus("Downloaded 1080x1920 recording");
+      mediaRecorderRef.current = null;
+      recordingCanvasRef.current = null;
+      recordedChunksRef.current = [];
+    };
+
+    const renderRecording = () => {
+      drawRecordingFrame();
+      recordingFrameRef.current = requestAnimationFrame(renderRecording);
+    };
+
+    mediaRecorderRef.current = recorder;
+    recorder.start(250);
+    setIsRecording(true);
+    setRecordingStatus("Recording 1080x1920");
+    renderRecording();
+  };
+
+  const toggleFightRecording = () => {
+    if (isRecording) stopFightRecording();
+    else startFightRecording();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recordingFrameRef.current) cancelAnimationFrame(recordingFrameRef.current);
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+    };
+  }, []);
+
   const runTournament = (roundsCount) => {
     setSimulatingTournament(true);
     setTimeout(() => {
@@ -852,8 +1055,6 @@ export default function App() {
                     ball.vy += Math.sin(awayAngle) * balance.gun.secDashForce;
                     ball.ammo = Math.min(ball.maxAmmo, (ball.ammo || 0) + 2);
                     ball.reloadUntil = 0;
-                    ball.rapidFireUntil = simTime + balance.gun.rapidFireDuration;
-                    ball.rapidPierceShotsRemaining = balance.gun.rapidPierceShots || 2;
                   }
                 }
                 
@@ -862,7 +1063,7 @@ export default function App() {
                     ball.reloadUntil = simTime + balance.gun.reloadTime;
                     ball.ammo = ball.maxAmmo;
                   } else if (ball.nextShotAt <= simTime) {
-                    const isRapidShot = ball.rapidFireUntil && simTime < ball.rapidFireUntil;
+                    const isRapidShot = ball.permanentRapidFire;
                     const piercesDefense = isRapidShot && (ball.rapidPierceShotsRemaining || 0) > 0;
                     if (piercesDefense) ball.rapidPierceShotsRemaining -= 1;
                     localBullets.push({
@@ -1588,7 +1789,7 @@ export default function App() {
             if (bullet.x < 18 || bullet.x > ARENA_SIZE - 18 || bullet.y < 18 || bullet.y > ARENA_SIZE - 18 || bullet.life <= 0) return false;
             
             const shieldBall = bullet.targetSide === "left" ? leftBall : rightBall;
-            if (shieldBall.type === "shield" && !bullet.piercesDefense) {
+            if (shieldBall.type === "shield" && !bullet.piercesDefense && !bullet.cannotReflect) {
               if (shieldBall.shieldState === "held") {
                 const d = Math.hypot(bullet.x - shieldBall.x, bullet.y - shieldBall.y);
                 if (d < shieldBall.r + 15 && d > shieldBall.r - 10) {
@@ -2710,6 +2911,7 @@ export default function App() {
           r: 12,
           health: gunBal.dogHealth,
           nextBiteAt: 0,
+          nextHurtAt: 0,
         };
         game.floatingTexts = game.floatingTexts || [];
         game.floatingTexts.push({
@@ -2747,7 +2949,6 @@ export default function App() {
         if (dTarget < target.r + dog.r && currentTime >= dog.nextBiteAt) {
           applyDamage(target, gunBal.dogDamage, `${gun.id}-dog-bite`, currentTime, 500);
           dog.nextBiteAt = currentTime + 650;
-          dog.health -= Math.max(2, Math.round(gunBal.dogDamage * 0.7));
           if (!hasStringBounceGuard(target)) {
             target.vx += Math.cos(chaseAngle) * 120;
             target.vy += Math.sin(chaseAngle) * 120;
@@ -2755,8 +2956,22 @@ export default function App() {
           spawnSparks(dog.x, dog.y, "#fbbf24", 8);
         }
 
-        if (Math.hypot(target.x - dog.x, target.y - dog.y) < target.r + dog.r + 4 && Math.hypot(target.vx, target.vy) > 180) {
-          dog.health -= 0.22;
+        if (dTarget < target.r + dog.r + 4 && currentTime >= (dog.nextHurtAt || 0)) {
+          const impactSpeed = Math.hypot(target.vx - dog.vx, target.vy - dog.vy);
+          if (impactSpeed > 155) {
+            const impactDamage = clamp(Math.round(impactSpeed / 85), 2, 8);
+            dog.health -= impactDamage;
+            dog.nextHurtAt = currentTime + 420;
+            const hitAngle = Math.atan2(dog.y - target.y, dog.x - target.x);
+            dog.vx += Math.cos(hitAngle) * 180;
+            dog.vy += Math.sin(hitAngle) * 180;
+            spawnSparks(dog.x, dog.y, "#f97316", 7);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: dog.x, y: dog.y - dog.r - 12, vy: -42,
+              text: `DOG -${impactDamage}`, color: "#fb923c", life: 0.5, maxLife: 0.5
+            });
+          }
         }
 
         if (dog.health <= 0) {
@@ -2767,11 +2982,15 @@ export default function App() {
           dog.vx *= 0.35;
           dog.vy *= 0.35;
           gun.dogDied = true;
+          gun.permanentRapidFire = true;
+          gun.rapidPierceShotsRemaining = gunBal.rapidPierceShots || 2;
           gun.dogRespawnAt = Infinity;
           game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({
-            x: gun.x, y: gun.y - gun.r - 22, vy: -50,
-            text: "DOG DOWN", color: "#f87171", life: 0.8, maxLife: 0.8
+          ["My DOOG!!", "You Killed My DOOG"].forEach((text, index) => {
+            game.floatingTexts.push({
+              x: gun.x, y: gun.y - gun.r - 22 - index * 18, vy: -50,
+              text, color: index ? "#f87171" : "#fbbf24", life: 1, maxLife: 1
+            });
           });
         }
         }
@@ -2787,12 +3006,6 @@ export default function App() {
           gun.vy += Math.sin(awayAngle) * gunBal.secDashForce;
           gun.ammo = Math.min(gun.maxAmmo, (gun.ammo || 0) + 2);
           gun.reloadUntil = 0; // Interrupt reload
-          if (gun.dogDied) {
-            gun.permanentRapidFire = true;
-          } else {
-            gun.rapidFireUntil = currentTime + gunBal.rapidFireDuration;
-          }
-          gun.rapidPierceShotsRemaining = gunBal.rapidPierceShots || 2;
           gun.nextRapidFireAt = currentTime;
           playSound("gunReload");
           
@@ -2809,7 +3022,7 @@ export default function App() {
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: gun.x, y: gun.y - gun.r - 20, vy: -50,
-            text: gun.permanentRapidFire ? "PERMA RAPID + PIERCE" : "DASH RAPID + PIERCE", color: "#67e8f9", life: 0.8, maxLife: 0.8
+            text: gun.permanentRapidFire ? "You Killed My DOOG" : "TACTICAL DASH", color: gun.permanentRapidFire ? "#f87171" : "#67e8f9", life: 0.8, maxLife: 0.8
           });
         }
       }
@@ -2821,9 +3034,9 @@ export default function App() {
         playSound("gunReload");
         return;
       }
-      const shotCooldown = gun.permanentRapidFire || currentTime < (gun.rapidFireUntil || 0) ? gunBal.rapidFireCooldown : gunBal.shotCooldown;
+      const shotCooldown = gun.permanentRapidFire ? gunBal.rapidFireCooldown : gunBal.shotCooldown;
       if (gun.nextShotAt > currentTime) return;
-      const isRapidShot = gun.permanentRapidFire || currentTime < (gun.rapidFireUntil || 0);
+      const isRapidShot = gun.permanentRapidFire;
       const piercesDefense = isRapidShot && (gun.rapidPierceShotsRemaining || 0) > 0;
       if (piercesDefense) gun.rapidPierceShotsRemaining -= 1;
 
@@ -2869,6 +3082,7 @@ export default function App() {
             stunDuration: bal.laser.pulseStunDuration,
             bouncesLeft: 4,
             piercesDefense: true,
+            cannotReflect: true,
           });
           laserBall.laserShotCount = 0;
           laserBall.nextShotAt = currentTime + bal.laser.cooldown;
@@ -2970,10 +3184,13 @@ export default function App() {
                 text: `${4 - (target.shieldLaserPierceHits || 0)} TO PIERCE`, color: "#93c5fd", life: 0.55, maxLife: 0.55
               });
             }
+          }
+          if (currentTime >= laserBall.laserStateUntil) {
             laserBall.laserState = "idle";
+            laserBall.laserShotCount = (laserBall.laserShotCount || 0) + 1;
+            laserBall.nextShotAt = currentTime + bal.laser.cooldown;
             laserBall.laserReflect = null;
             laserBall.laserShieldBlockCount = 0;
-            laserBall.nextShotAt = currentTime + Math.max(450, bal.laser.cooldown * 0.55);
           }
           return;
         } else {
@@ -3760,7 +3977,7 @@ export default function App() {
         }
 
         const side = bullet.targetSide, shieldBall = balls.find(b => b.side === side);
-        if (shieldBall && shieldBall.type === "shield" && !bullet.piercesDefense) {
+        if (shieldBall && shieldBall.type === "shield" && !bullet.piercesDefense && !bullet.cannotReflect) {
           if (shieldBall.shieldState === "held") {
             const d = Math.hypot(bullet.x - shieldBall.x, bullet.y - shieldBall.y);
             if (d < shieldBall.r + 15 && d > shieldBall.r - 10) {
@@ -3886,31 +4103,70 @@ export default function App() {
     const drawKnifeBall = (ball) => {
       const config = BALL_TYPES.knife;
       ctx.save(); ctx.translate(ball.x, ball.y);
+      ctx.fillStyle = "#86efac";
+      ctx.strokeStyle = "#15803d";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r + 5, -9);
+      ctx.lineTo(-ball.r - 26, -18);
+      ctx.lineTo(-ball.r - 10, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ball.r - 5, -9);
+      ctx.lineTo(ball.r + 26, -18);
+      ctx.lineTo(ball.r + 10, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = config.color; ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+      ctx.fillStyle = "#166534";
+      ctx.beginPath(); ctx.arc(-9, -5, 3.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(9, -5, 3.2, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
 
       const bladeState = ball.knifeBladeState || "rotating";
       if (bladeState === "rotating") {
         ctx.save(); ctx.translate(ball.x, ball.y);
         ctx.rotate(ball.spinAngle);
-        ctx.fillStyle = "#e5e7eb"; ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(ball.r - 4, -7);
-        ctx.lineTo(ball.r + game.balance.knife.bladeLength, 0);
-        ctx.lineTo(ball.r - 4, 7); ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#0f172a"; ctx.fillRect(ball.r - 8, -4, 14, 8);
+        const hiltX = ball.r - 8;
+        const tipX = ball.r + game.balance.knife.bladeLength;
+        const saberGrad = ctx.createLinearGradient(hiltX, 0, tipX, 0);
+        saberGrad.addColorStop(0, "#bbf7d0");
+        saberGrad.addColorStop(0.5, "#22c55e");
+        saberGrad.addColorStop(1, "#ecfdf5");
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = saberGrad;
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(ball.r + 4, 0); ctx.lineTo(tipX, 0); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#ecfdf5";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(ball.r + 8, 0); ctx.lineTo(tipX - 4, 0); ctx.stroke();
+        ctx.fillStyle = "#374151"; ctx.fillRect(hiltX, -5, 16, 10);
+        ctx.fillStyle = "#d1d5db"; ctx.fillRect(hiltX + 2, -3, 4, 6);
         ctx.restore();
       } else {
         ctx.save(); ctx.translate(ball.knifeBladeX, ball.knifeBladeY);
         ctx.rotate(ball.knifeBladeAngle);
-        ctx.fillStyle = "#e5e7eb"; ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.moveTo(-12, -7);
-        ctx.lineTo(game.balance.knife.bladeLength - 12, 0);
-        ctx.lineTo(-12, 7); ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#0f172a"; ctx.fillRect(-16, -4, 14, 8);
+        const tipX = game.balance.knife.bladeLength - 12;
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 14;
+        ctx.strokeStyle = "#22c55e";
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(tipX, 0); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#f0fdf4";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(tipX - 4, 0); ctx.stroke();
+        ctx.fillStyle = "#374151"; ctx.fillRect(-16, -5, 18, 10);
+        ctx.fillStyle = "#d1d5db"; ctx.fillRect(-13, -3, 5, 6);
         ctx.restore();
       }
       drawHealthInsideBall(ball);
@@ -4061,43 +4317,55 @@ export default function App() {
         ctx.translate(dog.x, dog.y);
         ctx.rotate(dogAngle);
         ctx.globalAlpha = dog.dead ? 0.78 : 1;
-        ctx.shadowColor = dog.dead ? "rgba(15, 23, 42, 0.6)" : "#d97706";
-        ctx.shadowBlur = dog.dead ? 2 : 6;
-        ctx.fillStyle = dog.dead ? "#44403c" : "#f5f5f4";
-        ctx.strokeStyle = dog.dead ? "#a8a29e" : "#7c2d12";
+        ctx.shadowColor = dog.dead ? "rgba(15, 23, 42, 0.6)" : "#f59e0b";
+        ctx.shadowBlur = dog.dead ? 2 : 8;
+        ctx.fillStyle = dog.dead ? "#57534e" : "#f8fafc";
+        ctx.strokeStyle = dog.dead ? "#a8a29e" : "#92400e";
         ctx.lineWidth = 2;
+
+        // Round beagle-face dog ball.
+        ctx.fillStyle = dog.dead ? "#57534e" : "#92400e";
         ctx.beginPath();
-        ctx.ellipse(0, 0, dog.r + 3, dog.r, 0, 0, Math.PI * 2);
+        ctx.ellipse(-dog.r * 0.3, -dog.r * 0.7, dog.r * 0.34, dog.r * 0.55, -0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-dog.r * 0.3, dog.r * 0.7, dog.r * 0.34, dog.r * 0.55, 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, dog.r + 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = dog.dead ? "#78716c" : "#7c2d12";
-        ctx.beginPath(); ctx.moveTo(2, -dog.r + 1); ctx.lineTo(10, -dog.r - 7); ctx.lineTo(10, -dog.r + 4); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(2, dog.r - 1); ctx.lineTo(10, dog.r + 7); ctx.lineTo(10, dog.r - 4); ctx.closePath(); ctx.fill();
-        if (!dog.dead) {
-          ctx.fillStyle = "#a16207";
-          ctx.beginPath();
-          ctx.ellipse(-3, 0, dog.r * 0.55, dog.r * 0.9, 0, -Math.PI / 2, Math.PI / 2);
-          ctx.fill();
-          ctx.fillStyle = "#020617";
-          ctx.beginPath();
-          ctx.ellipse(-dog.r * 0.38, dog.r * 0.3, dog.r * 0.28, dog.r * 0.22, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "#020617";
-          ctx.beginPath();
-          ctx.arc(dog.r + 6, 0, 2.4, 0, Math.PI * 2);
-          ctx.fill();
-        }
+
+        ctx.fillStyle = dog.dead ? "#78716c" : "#b45309";
+        ctx.beginPath();
+        ctx.ellipse(-dog.r * 0.2, 0, dog.r * 0.58, dog.r * 0.85, 0, Math.PI / 2, Math.PI * 1.5);
+        ctx.fill();
+
+        ctx.fillStyle = dog.dead ? "#d6d3d1" : "#fde68a";
+        ctx.beginPath();
+        ctx.ellipse(dog.r * 0.3, 0, dog.r * 0.56, dog.r * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#020617";
+        ctx.beginPath();
+        ctx.arc(dog.r * 0.78, 0, 3, 0, Math.PI * 2);
+        ctx.fill();
+
         if (dog.dead) {
           ctx.strokeStyle = "#f8fafc";
           ctx.lineWidth = 2;
-          [[dog.r + 3, -4], [dog.r + 3, 4]].forEach(([ex, ey]) => {
+          [[dog.r * 0.24, -dog.r * 0.36], [dog.r * 0.24, dog.r * 0.36]].forEach(([ex, ey]) => {
             ctx.beginPath(); ctx.moveTo(ex - 3, ey - 3); ctx.lineTo(ex + 3, ey + 3); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(ex + 3, ey - 3); ctx.lineTo(ex - 3, ey + 3); ctx.stroke();
           });
         } else {
           ctx.fillStyle = "#f8fafc";
-          ctx.beginPath(); ctx.arc(dog.r + 3, -4, 2.2, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.arc(dog.r + 3, 4, 2.2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(dog.r * 0.3, -dog.r * 0.36, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(dog.r * 0.3, dog.r * 0.36, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#020617";
+          ctx.beginPath(); ctx.arc(dog.r * 0.38, -dog.r * 0.36, 1.5, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(dog.r * 0.38, dog.r * 0.36, 1.5, 0, Math.PI * 2); ctx.fill();
         }
         ctx.restore();
 
@@ -4309,25 +4577,21 @@ export default function App() {
       ctx.save();
       ctx.translate(ball.x, ball.y);
       
-      // Outer ring (red)
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = "#ef4444";
       ctx.fill();
       
-      // Middle ring (white)
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.7, 0, Math.PI * 2);
       ctx.fillStyle = "#ffffff";
       ctx.fill();
       
-      // Inner circle (blue)
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.45, 0, Math.PI * 2);
       ctx.fillStyle = "#1e3a8a";
       ctx.fill();
       
-      // Outer outline (blue)
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.strokeStyle = "#1e3a8a";
@@ -4440,24 +4704,20 @@ export default function App() {
 
         const shieldR = 24;
 
-        // Outer ring (red)
         ctx.beginPath();
         ctx.arc(0, 0, shieldR, 0, Math.PI * 2);
         ctx.fillStyle = "#ef4444";
         ctx.fill();
 
-        // Outer outline (white)
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Middle ring (white)
         ctx.beginPath();
         ctx.arc(0, 0, shieldR * 0.75, 0, Math.PI * 2);
         ctx.fillStyle = "#ffffff";
         ctx.fill();
 
-        // Inner circle (blue)
         ctx.beginPath();
         ctx.arc(0, 0, shieldR * 0.5, 0, Math.PI * 2);
         ctx.fillStyle = "#1d4ed8";
@@ -5998,7 +6258,7 @@ export default function App() {
     if (!config) return null;
     return (
       <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-        <div className="flex items-center gap-2 font-bold text-sm" style={{ color: config.color }}>
+        <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-2 py-1 font-bold text-sm text-slate-950">
           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.color }} />
           {config.name} Tuning
         </div>
@@ -6026,7 +6286,6 @@ export default function App() {
               {renderSlider("Dog Health", "gun", "dogHealth", 5, 100)}
               {renderSlider("Dog Speed", "gun", "dogSpeed", 80, 420, 10, "px/s")}
               {renderSlider("Dog Respawn", "gun", "dogCooldown", 2000, 20000, 500, "ms")}
-              {renderSlider("Rapid Fire Duration", "gun", "rapidFireDuration", 300, 4000, 100, "ms")}
               {renderSlider("Rapid Fire Cooldown", "gun", "rapidFireCooldown", 50, 500, 10, "ms")}
               {renderSlider("Rapid Pierce Shots", "gun", "rapidPierceShots", 0, 6, 1)}
             </>
@@ -6228,7 +6487,7 @@ export default function App() {
             <div className="grid gap-4 sm:grid-cols-3">
               <Card className="rounded-2xl border-slate-900 bg-slate-900/40 backdrop-blur-sm text-slate-100 p-5 shadow-lg">
                 <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Fighter 1</div>
-                <div className="mt-1 text-xl font-bold truncate" style={{ color: BALL_TYPES[selectedBalls[0]]?.color }}>{gameState.leftName}</div>
+                <div className="mt-1 rounded-lg bg-slate-100 px-2 py-1 text-xl font-bold text-slate-950 truncate">{gameState.leftName}</div>
                 <div className="mt-2.5 flex items-center justify-between text-sm">
                   <span className="text-slate-400">HP:</span>
                   <span className="text-base font-bold text-slate-200">{gameState.leftHealth}</span>
@@ -6240,7 +6499,7 @@ export default function App() {
 
               <Card className="rounded-2xl border-slate-900 bg-slate-900/40 backdrop-blur-sm text-slate-100 p-5 shadow-lg">
                 <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Fighter 2</div>
-                <div className="mt-1 text-xl font-bold truncate" style={{ color: BALL_TYPES[selectedBalls[1]]?.color }}>{gameState.rightName}</div>
+                <div className="mt-1 rounded-lg bg-slate-100 px-2 py-1 text-xl font-bold text-slate-950 truncate">{gameState.rightName}</div>
                 <div className="mt-2.5 flex items-center justify-between text-sm">
                   <span className="text-slate-400">HP:</span>
                   <span className="text-base font-bold text-slate-200">{gameState.rightHealth}</span>
@@ -6277,8 +6536,8 @@ export default function App() {
                     <thead>
                       <tr className="border-b border-slate-900 text-slate-400 uppercase tracking-widest text-[10px] pb-2">
                         <th className="pb-2.5 font-bold">Metric</th>
-                        <th className="pb-2.5 font-bold" style={{ color: BALL_TYPES[selectedBalls[0]]?.color }}>{gameState.leftName}</th>
-                        <th className="pb-2.5 font-bold" style={{ color: BALL_TYPES[selectedBalls[1]]?.color }}>{gameState.rightName}</th>
+                        <th className="pb-2.5 font-bold text-slate-950"><span className="rounded bg-slate-100 px-2 py-1">{gameState.leftName}</span></th>
+                        <th className="pb-2.5 font-bold text-slate-950"><span className="rounded bg-slate-100 px-2 py-1">{gameState.rightName}</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-900/50">
@@ -6335,7 +6594,7 @@ export default function App() {
                       <div key={slot} className="space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-900">
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Slot {slot + 1} ({slot === 0 ? "Left" : "Right"})</span>
-                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border" style={{ backgroundColor: `${selectedBall?.color}15`, color: selectedBall?.color, borderColor: `${selectedBall?.color}40` }}>
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border text-slate-950" style={{ backgroundColor: "#f8fafc", borderColor: `${selectedBall?.color}70` }}>
                             {selectedBall?.name}
                           </span>
                         </div>
@@ -6371,9 +6630,27 @@ export default function App() {
                   })}
                 </div>
                 
-                <Button onClick={startFight} className="w-full rounded-xl py-5 text-sm font-bold bg-sky-600 hover:bg-sky-500 shadow-lg shadow-sky-500/25">
-                  Launch Simulator
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button onClick={startFight} className="rounded-xl py-5 text-sm font-bold bg-sky-600 hover:bg-sky-500 shadow-lg shadow-sky-500/25">
+                    Launch Simulator
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={toggleFightRecording}
+                    className={`rounded-xl py-5 text-sm font-bold shadow-lg ${
+                      isRecording
+                        ? "bg-rose-600 hover:bg-rose-500 shadow-rose-500/20"
+                        : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20"
+                    }`}
+                  >
+                    {isRecording ? "Stop Recording" : "Record 9:16"}
+                  </Button>
+                </div>
+                {recordingStatus && (
+                  <div className={`text-center text-[10px] font-bold uppercase tracking-wider ${isRecording ? "text-rose-400" : "text-emerald-400"}`}>
+                    {recordingStatus}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -6450,8 +6727,8 @@ export default function App() {
                   <div className="space-y-3.5 pt-3.5 border-t border-slate-900">
                     <div>
                       <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5">
-                        <span style={{ color: BALL_TYPES[selectedBalls[0]]?.color }}>{BALL_TYPES[selectedBalls[0]]?.name} ({tournamentResults.leftWinRate}%)</span>
-                        <span style={{ color: BALL_TYPES[selectedBalls[1]]?.color }}>({tournamentResults.rightWinRate}%) {BALL_TYPES[selectedBalls[1]]?.name}</span>
+                        <span className="rounded bg-slate-100 px-2 py-1 text-slate-950">{BALL_TYPES[selectedBalls[0]]?.name} ({tournamentResults.leftWinRate}%)</span>
+                        <span className="rounded bg-slate-100 px-2 py-1 text-slate-950">({tournamentResults.rightWinRate}%) {BALL_TYPES[selectedBalls[1]]?.name}</span>
                       </div>
                       <div className="w-full bg-slate-950 h-2.5 rounded-full flex overflow-hidden border border-slate-900">
                         <div className="h-full transition-all duration-500" style={{ width: `${tournamentResults.leftWinRate}%`, backgroundColor: BALL_TYPES[selectedBalls[0]]?.color }} />
