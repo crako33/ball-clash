@@ -168,6 +168,12 @@ const ARM_RAGDOLL_WALL_DAMAGE = 7;
 const ARM_THROW_WALL_DAMAGE = 10;
 const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
+const MAX_HEALTH = 150;
+const MAX_PARTICLES = 180;
+const MAX_FLOATING_TEXTS = 48;
+const MAX_TRAIL_POINTS = 8;
+const MAX_EXPLOSIONS = 12;
+const DEATH_SLOW_MO_DURATION = 1400;
 
 const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
@@ -217,14 +223,14 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (!ball) return false;
   if (ball.type === "vampire" && ball.latchedTo && ball.latchUntil > currentTime) return true;
   if (ball.type === "spider" && (ball.webState === "pulling" || ball.webState === "webBouncing") && ball.webTargetId) return true;
-  if (ball.type === "arm" && (ball.armState === "grabbing" || ball.armState === "elbow_dropping") && ball.armStateUntil > currentTime) return true;
+  if (ball.type === "arm" && ball.armState === "elbow_dropping" && ball.armStateUntil > currentTime) return true;
   if (ball.type === "hammer" && ball.hammerState === "charging") return true;
 
   return balls.some((other) => {
     if (!other || other.id === ball.id) return false;
     if (other.type === "vampire" && other.latchedTo === ball.id && other.latchUntil > currentTime) return true;
     if (other.type === "spider" && other.webTargetId === ball.id && (other.webState === "pulling" || other.webState === "webBouncing")) return true;
-    if (other.type === "arm" && other.armGrabTargetId === ball.id && (other.armState === "grabbing" || other.armState === "elbow_dropping") && other.armStateUntil > currentTime) return true;
+    if (other.type === "arm" && other.armGrabTargetId === ball.id && other.armState === "elbow_dropping" && other.armStateUntil > currentTime) return true;
     return false;
   });
 };
@@ -322,8 +328,8 @@ export default function App() {
   const [elapsedTime, setElapsedTime] = useState(0);
   
   const [gameState, setGameState] = useState({
-    leftHealth: 100,
-    rightHealth: 100,
+    leftHealth: MAX_HEALTH,
+    rightHealth: MAX_HEALTH,
     leftName: "Knifer Ball",
     rightName: "Laser Ball",
     winner: null,
@@ -363,7 +369,7 @@ export default function App() {
       r,
       originalRadius: r,
       mass: type === "wrecker" ? 1.8 : type === "shield" ? 1.5 : 1,
-      health: 100,
+      health: MAX_HEALTH,
       wreckerState: "normal",
       wreckerLeapStart: 0,
       wreckerLeapUntil: 0,
@@ -471,6 +477,8 @@ export default function App() {
     chaosCircles: [],
     venomPools: [],
     screenShake: 0,
+    deathEffectStarted: false,
+    deathSlowMoUntil: 0,
     simulationSpeed: 1.5,
     balance: balanceSettings,
     balls: [makeBall("knife", "left", 20), makeBall("laser", "right", 20)],
@@ -505,6 +513,8 @@ export default function App() {
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
     gameRef.current.venomPools = [];
+    gameRef.current.deathEffectStarted = false;
+    gameRef.current.deathSlowMoUntil = 0;
     gameRef.current.portals = [];
     gameRef.current.portalProjectiles = [];
   };
@@ -532,6 +542,8 @@ export default function App() {
       chaosCircles: [],
       venomPools: [],
       screenShake: 0,
+      deathEffectStarted: false,
+      deathSlowMoUntil: 0,
       simulationSpeed,
       balls,
       balance: { ...BALANCE, ...balanceSettings },
@@ -546,8 +558,8 @@ export default function App() {
       right: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 }
     });
     setGameState({
-      leftHealth: 100,
-      rightHealth: 100,
+      leftHealth: MAX_HEALTH,
+      rightHealth: MAX_HEALTH,
       leftName: balls[0].name,
       rightName: balls[1].name,
       winner: null,
@@ -576,6 +588,8 @@ export default function App() {
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
     gameRef.current.venomPools = [];
+    gameRef.current.deathEffectStarted = false;
+    gameRef.current.deathSlowMoUntil = 0;
   };
 
   const resetFight = () => {
@@ -651,7 +665,7 @@ export default function App() {
 
   const drawRecordingHudCard = (ctx, ball, x, y, w, align = "left") => {
     const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
-    const hp = clamp(Math.ceil(ball?.health ?? 0), 0, 100);
+    const hp = clamp(Math.ceil(ball?.health ?? 0), 0, MAX_HEALTH);
     const barW = w - 44;
     const barH = 18;
     ctx.save();
@@ -683,7 +697,7 @@ export default function App() {
     drawRoundedRect(ctx, barX, barY, barW, barH, 9);
     ctx.fill();
     ctx.fillStyle = config.color;
-    drawRoundedRect(ctx, barX, barY, barW * (hp / 100), barH, 9);
+    drawRoundedRect(ctx, barX, barY, barW * (hp / MAX_HEALTH), barH, 9);
     ctx.fill();
     ctx.restore();
   };
@@ -857,7 +871,7 @@ export default function App() {
             
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
-            const isArmGrabbed = balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && (b.armState === "grabbing" || b.armState === "elbow_dropping") && b.armStateUntil > simTime);
+            const isArmGrabbed = balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > simTime);
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
             const insideWeb = localVenomPools.some((pool) => {
               if (ball.side === pool.ownerSide) return false;
@@ -1156,7 +1170,7 @@ export default function App() {
                   if (isChessCrownActive(enemy)) return;
                   if (isWreckerJumpInvulnerable(enemy)) return;
                   enemy.health = Math.max(0, enemy.health - Math.max(MIN_DAMAGE, balance.vampire.drainPerTick));
-                  ball.health = Math.min(100, ball.health + balance.vampire.healPerTick);
+                  ball.health = Math.min(MAX_HEALTH, ball.health + balance.vampire.healPerTick);
                   ball.nextDrainAt = simTime + balance.vampire.tickCooldown;
                 }
               }
@@ -1524,7 +1538,6 @@ export default function App() {
 
             // Arm Ball Physics in Tournament
             if (ball.type === "arm") {
-              const grabRange = balance.arm.grabRange;
               if (ball.armState === "elbow_dropping") {
                 ball.x += (enemy.x - ball.x) * 0.18;
                 ball.y += (enemy.y - ball.y) * 0.18;
@@ -1535,105 +1548,32 @@ export default function App() {
                   ball.armState = "idle";
                   ball.armGrabTargetId = null;
                   localApplyDamage(enemy, balance.arm.secSlamDamage, `${ball.id}-elbow-slam`, 500);
-                  const launchAngle = Math.random() * Math.PI * 2;
-                  const launchForce = 650;
+                  const launchAngle = ball.armDropAngle ?? Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                  const launchForce = 850;
                   enemy.vx = Math.cos(launchAngle) * launchForce;
                   enemy.vy = Math.sin(launchAngle) * launchForce;
-                  const recoilAngle = Math.atan2(ball.y - enemy.y, ball.x - enemy.x) || launchAngle + Math.PI;
-                  const recoilForce = 420;
-                  ball.vx = Math.cos(recoilAngle) * recoilForce;
-                  ball.vy = Math.sin(recoilAngle) * recoilForce;
+                  const recoilForce = 780;
+                  ball.vx = -Math.cos(launchAngle) * recoilForce;
+                  ball.vy = -Math.sin(launchAngle) * recoilForce;
                 }
               } else if (ball.armState === "idle") {
-                ball.armAngle = (ball.armAngle || 0) + balance.arm.swingSpeed;
-                
-                // Leap Lunge Trigger
                 const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                ball.armAngle = (ball.armAngle || 0) + balance.arm.swingSpeed;
                 const targetDist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (targetDist > 220 && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
-                  ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
-                  ball.vx += Math.cos(targetAngle) * 450;
-                  ball.vy += Math.sin(targetAngle) * 450;
+
+                if (targetDist < ball.r + enemy.r + balance.arm.punchRange && simTime >= (ball.armNextPunchAt || 0)) {
+                  ball.armNextPunchAt = simTime + balance.arm.punchCooldown;
+                  localApplyDamage(enemy, balance.arm.punchDamage, `${ball.id}-arm-punch`, 350);
+                  enemy.vx += Math.cos(targetAngle) * balance.arm.punchKnockback;
+                  enemy.vy += Math.sin(targetAngle) * balance.arm.punchKnockback;
                 }
-                
-                if (ball.nextShotAt <= simTime) {
-                  const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
-                  const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
-                  const dist = Math.hypot(handX - enemy.x, handY - enemy.y);
-                  if (dist < enemy.r + 22 && canStartSkillConnection(ball, enemy, balls, simTime)) {
-                    ball.armState = "grabbing";
-                    ball.armStateUntil = simTime + balance.arm.grabDuration;
-                    ball.armGrabTargetId = enemy.id;
-                    ball.armGrabDamageHits = 0;
-                    
-                    const pad = 18;
-                    const distLeft = ball.x - pad;
-                    const distRight = ARENA_SIZE - pad - ball.x;
-                    const distTop = ball.y - pad;
-                    const distBottom = ARENA_SIZE - pad - ball.y;
-                    
-                    let wallAngle = 0;
-                    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
-                    if (minDist === distLeft) {
-                      wallAngle = Math.PI;
-                    } else if (minDist === distRight) {
-                      wallAngle = 0;
-                    } else if (minDist === distTop) {
-                      wallAngle = -Math.PI / 2;
-                    } else {
-                      wallAngle = Math.PI / 2;
-                    }
-                    ball.armBaseAngle = wallAngle;
-                    
-                    ball.armDirection = 1;
-                    ball.nextShotAt = simTime + balance.arm.cooldown;
-                  }
-                }
-              } else if (ball.armState === "grabbing") {
-                const elapsed = simTime - (ball.armStateUntil - balance.arm.grabDuration);
-                
-                // Elbow Drop Trigger
-                if (elapsed >= 500 && simTime >= (ball.nextSecondaryAt || 0)) {
+
+                if (targetDist <= 250 && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
                   ball.armState = "elbow_dropping";
-                  ball.armStateUntil = simTime + 400;
-                } else {
-                  const swayAngle = Math.sin(elapsed * 0.012) * 1.3;
-                  ball.armAngle = ball.armBaseAngle + swayAngle;
-                  
-                  const handX = ball.x + Math.cos(ball.armAngle) * grabRange;
-                  const handY = ball.y + Math.sin(ball.armAngle) * grabRange;
-                  
-                  const pad = 18;
-                  const targetX = clamp(handX, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
-                  const targetY = clamp(handY, pad + enemy.r, ARENA_SIZE - pad - enemy.r);
-                  
-                  enemy.x = targetX;
-                  enemy.y = targetY;
-                  enemy.vx = 0; enemy.vy = 0;
-                  
-                  const corners = [
-                    { x: pad + enemy.r, y: pad + enemy.r },
-                    { x: ARENA_SIZE - pad - enemy.r, y: pad + enemy.r },
-                    { x: pad + enemy.r, y: ARENA_SIZE - pad - enemy.r },
-                    { x: ARENA_SIZE - pad - enemy.r, y: ARENA_SIZE - pad - enemy.r }
-                  ];
-                  const isNearCorner = corners.some(c => Math.hypot(enemy.x - c.x, enemy.y - c.y) < 32);
-                  const damageKey = `${ball.id}-arm-corner`;
-                  if (isNearCorner && (ball.armGrabDamageHits || 0) < 2 && (!damageCooldowns[damageKey] || damageCooldowns[damageKey] <= simTime)) {
-                    localApplyDamage(enemy, Math.min(6, balance.arm.slamDamage), damageKey, 500);
-                    ball.armGrabDamageHits = (ball.armGrabDamageHits || 0) + 1;
-                  }
-                  
-                  if (simTime >= ball.armStateUntil) {
-                    ball.armState = "idle";
-                    ball.armGrabTargetId = null;
-                    const swingDirSign = Math.cos(elapsed * 0.012) >= 0 ? 1 : -1;
-                    const launchAngle = ball.armAngle + (Math.PI / 2) * swingDirSign;
-                    const launchForce = 520;
-                    enemy.vx = Math.cos(launchAngle) * launchForce;
-                    enemy.vy = Math.sin(launchAngle) * launchForce;
-                  }
+                  ball.armStateUntil = simTime + 520;
+                  ball.armGrabTargetId = enemy.id;
+                  ball.armDropAngle = targetAngle;
                 }
               }
             }
@@ -2107,7 +2047,7 @@ export default function App() {
       
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
 
-      defender.health = clamp(defender.health - finalAmount, 0, 100);
+      defender.health = clamp(defender.health - finalAmount, 0, MAX_HEALTH);
       game.damageCooldowns[cooldownKey] = currentTime + cooldown;
       if (defender.type === "wrecker") {
         defender.rageStacks = (defender.rageStacks || 0) + 1;
@@ -2164,7 +2104,16 @@ export default function App() {
       }
     };
 
+    const getParticleBudget = (requested) => {
+      if (!game.particles) game.particles = [];
+      const room = Math.max(0, MAX_PARTICLES - game.particles.length);
+      if (room <= 0) return 0;
+      return Math.min(requested, room);
+    };
+    const canSpawnParticle = () => (game.particles?.length || 0) < MAX_PARTICLES;
+
     const spawnSparks = (x, y, color, count = 8) => {
+      count = getParticleBudget(count);
       for (let i = 0; i < count; i++) {
         const a = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 120;
         game.particles.push({
@@ -2175,6 +2124,7 @@ export default function App() {
     };
 
     const spawnDust = (x, y, count = 4) => {
+      count = getParticleBudget(count);
       for (let i = 0; i < count; i++) {
         const a = Math.random() * Math.PI * 2, spd = 20 + Math.random() * 40;
         game.particles.push({
@@ -2185,7 +2135,8 @@ export default function App() {
     };
 
     const spawnShieldSparks = (x, y, shieldAngle) => {
-      for (let i = 0; i < 8; i++) {
+      const count = getParticleBudget(8);
+      for (let i = 0; i < count; i++) {
         const a = shieldAngle + Math.PI + (Math.random() - 0.5) * 1.2, spd = 80 + Math.random() * 150;
         game.particles.push({
           x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
@@ -2196,7 +2147,8 @@ export default function App() {
 
     const spawnExplosionParticles = (x, y) => {
       const colors = ["#f97316", "#ef4444", "#eab308", "#64748b"];
-      for (let i = 0; i < 25; i++) {
+      const count = getParticleBudget(25);
+      for (let i = 0; i < count; i++) {
         const a = Math.random() * Math.PI * 2, spd = 50 + Math.random() * 150;
         game.particles.push({
           x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
@@ -2206,8 +2158,48 @@ export default function App() {
       }
     };
 
+    const spawnDeathShatter = (defeated, currentTime) => {
+      const config = BALL_TYPES[defeated.type] || BALL_TYPES.knife;
+      const colors = [config.color, config.stroke, "#f8fafc", "#94a3b8"];
+      const count = getParticleBudget(52);
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const spd = 80 + Math.random() * 320;
+        const distance = Math.random() * defeated.r * 0.7;
+        game.particles.push({
+          x: defeated.x + Math.cos(a) * distance,
+          y: defeated.y + Math.sin(a) * distance,
+          vx: Math.cos(a) * spd,
+          vy: Math.sin(a) * spd,
+          color: colors[i % colors.length],
+          radius: 2.5 + Math.random() * 4.5,
+          life: 0.9 + Math.random() * 0.55,
+          maxLife: 1.45,
+          isShard: true,
+          angle: Math.random() * Math.PI,
+          spin: (Math.random() - 0.5) * 9,
+        });
+      }
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({
+        x: defeated.x,
+        y: defeated.y - defeated.r - 18,
+        vy: -38,
+        text: "SHATTER",
+        color: config.stroke,
+        life: 1.1,
+        maxLife: 1.1
+      });
+      game.deathEffectStarted = true;
+      game.deathSlowMoUntil = currentTime + DEATH_SLOW_MO_DURATION;
+      game.screenShake = Math.max(game.screenShake, 22);
+      defeated.shattered = true;
+      defeated.trail = [];
+      playSound("explosion", 0.9, -120);
+    };
+
     const spawnVampireCrosses = (vampire, target) => {
-      if (Math.random() < 0.2) {
+      if (game.particles.length < MAX_PARTICLES && Math.random() < 0.2) {
         const dx = target.x - vampire.x, dy = target.y - vampire.y, d = Math.hypot(dx, dy);
         const a = Math.atan2(dy, dx), speed = 120;
         game.particles.push({
@@ -2508,7 +2500,8 @@ export default function App() {
 
           // Shockwave rings/particles
           const color = ball.isMegaLeap ? "#fbbf24" : "#a855f7";
-          for (let i = 0; i < 16; i++) {
+          const shockwaveParticles = getParticleBudget(16);
+          for (let i = 0; i < shockwaveParticles; i++) {
             const angle = (i / 16) * Math.PI * 2;
             game.particles.push({
               x: ball.x, y: ball.y,
@@ -2621,8 +2614,8 @@ export default function App() {
           return;
         }
         const drainAmount = Math.max(MIN_DAMAGE, game.balance.vampire.drainPerTick);
-        target.health = clamp(target.health - drainAmount, 0, 100);
-        vampire.health = clamp(vampire.health + game.balance.vampire.healPerTick, 0, 100);
+        target.health = clamp(target.health - drainAmount, 0, MAX_HEALTH);
+        vampire.health = clamp(vampire.health + game.balance.vampire.healPerTick, 0, MAX_HEALTH);
         
         if (vampire.side === "left") {
           game.stats.left.damageDealt += drainAmount;
@@ -2650,7 +2643,6 @@ export default function App() {
     const updateArm = (armBall, target, currentTime, stepDt) => {
       if (isChessCrownActive(target)) return;
       const bal = game.balance;
-      const grabRange = bal.arm.grabRange;
 
       if (armBall.armState === "elbow_dropping") {
         armBall.x += (target.x - armBall.x) * 0.18;
@@ -2663,14 +2655,13 @@ export default function App() {
           armBall.armState = "idle";
           armBall.armGrabTargetId = null;
           applyDamage(target, bal.arm.secSlamDamage, `${armBall.id}-elbow-slam`, currentTime, 500);
-          const launchAngle = Math.random() * Math.PI * 2;
-          const launchForce = 650;
+          const launchAngle = armBall.armDropAngle ?? Math.atan2(target.y - armBall.y, target.x - armBall.x);
+          const launchForce = 880;
           target.vx = Math.cos(launchAngle) * launchForce;
           target.vy = Math.sin(launchAngle) * launchForce;
-          const recoilAngle = Math.atan2(armBall.y - target.y, armBall.x - target.x) || launchAngle + Math.PI;
-          const recoilForce = 460;
-          armBall.vx = Math.cos(recoilAngle) * recoilForce;
-          armBall.vy = Math.sin(recoilAngle) * recoilForce;
+          const recoilForce = 820;
+          armBall.vx = -Math.cos(launchAngle) * recoilForce;
+          armBall.vy = -Math.sin(launchAngle) * recoilForce;
           target.armThrowWallUntil = currentTime + 1600;
           target.armThrowWallSourceId = armBall.id;
           playSound("armSlam");
@@ -2709,61 +2700,12 @@ export default function App() {
           });
         }
         
-        // Trigger Leap Lunge
-        if (targetDist > 220 && currentTime >= (armBall.nextSecondaryAt || 0) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
-          armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
-          armBall.vx += Math.cos(targetAngle) * 450;
-          armBall.vy += Math.sin(targetAngle) * 450;
-          playSound("hammerLaunch");
-          
-          game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({
-            x: armBall.x, y: armBall.y - armBall.r - 20, vy: -50,
-            text: "LEAP LUNGE", color: "#cbd5e1", life: 0.8, maxLife: 0.8
-          });
-          
-          for (let i = 0; i < 8; i++) {
-            const sa = targetAngle + Math.PI + (Math.random() - 0.5) * 0.5;
-            const spd = 60 + Math.random() * 80;
-            game.particles.push({
-              x: armBall.x, y: armBall.y,
-              vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd,
-              color: "#cbd5e1", radius: 2, life: 0.3, maxLife: 0.3
-            });
-          }
-        }
-
-        if (armBall.nextShotAt <= currentTime) {
-          const handX = armBall.x + Math.cos(armBall.armAngle) * grabRange;
-          const handY = armBall.y + Math.sin(armBall.armAngle) * grabRange;
-          const dist = Math.hypot(handX - target.x, handY - target.y);
-          if ((dist < target.r + 26 || targetDist < grabRange + target.r * 0.8) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
-            armBall.armState = "grabbing";
-            armBall.armStateUntil = currentTime + bal.arm.grabDuration;
-            armBall.armGrabTargetId = target.id;
-            armBall.armGrabDamageHits = 0;
-            armBall.armBaseAngle = targetAngle;
-            armBall.armDirection = target.y < armBall.y ? 1 : -1;
-            armBall.armGrabRadius = Math.max(armBall.r + target.r + 8, Math.min(grabRange, targetDist));
-            armBall.armLastHandX = target.x;
-            armBall.armLastHandY = target.y;
-            
-            if (armBall.side === "left") game.stats.left.totalShots++;
-            else game.stats.right.totalShots++;
-            
-            armBall.nextShotAt = currentTime + bal.arm.cooldown;
-            playSound("armGrab");
-          }
-        }
-      } else if (armBall.armState === "grabbing") {
-        const elapsed = currentTime - (armBall.armStateUntil - bal.arm.grabDuration);
-        const progress = clamp(elapsed / bal.arm.grabDuration, 0, 1);
-        
-        // Trigger Elbow Drop mid-grab
-        if (elapsed >= 500 && currentTime >= (armBall.nextSecondaryAt || 0)) {
+        if (targetDist <= 250 && currentTime >= (armBall.nextSecondaryAt || 0) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
           armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
           armBall.armState = "elbow_dropping";
-          armBall.armStateUntil = currentTime + 400;
+          armBall.armStateUntil = currentTime + 520;
+          armBall.armGrabTargetId = target.id;
+          armBall.armDropAngle = targetAngle;
           playSound("armGrab");
           
           game.floatingTexts = game.floatingTexts || [];
@@ -2771,56 +2713,9 @@ export default function App() {
             x: armBall.x, y: armBall.y - armBall.r - 20, vy: -50,
             text: "ELBOW DROP", color: "#f87171", life: 0.8, maxLife: 0.8
           });
-          return;
-        }
-
-        const whip = Math.sin(progress * Math.PI * 2.4) * 0.8;
-        armBall.armAngle = armBall.armBaseAngle + armBall.armDirection * (progress * Math.PI * 1.35 + whip);
-        
-        const reach = (armBall.armGrabRadius || grabRange) * (0.85 + Math.sin(progress * Math.PI) * 0.25);
-        const handX = armBall.x + Math.cos(armBall.armAngle) * reach;
-        const handY = armBall.y + Math.sin(armBall.armAngle) * reach;
-        
-        const pad = 18;
-        const targetX = clamp(handX, pad + target.r, game.width - pad - target.r);
-        const targetY = clamp(handY, pad + target.r, game.height - pad - target.r);
-        const pull = Math.min(1, stepDt * 12);
-        const prevX = target.x;
-        const prevY = target.y;
-        target.x += (targetX - target.x) * pull;
-        target.y += (targetY - target.y) * pull;
-        target.vx = (target.x - prevX) / Math.max(stepDt, 0.001);
-        target.vy = (target.y - prevY) / Math.max(stepDt, 0.001);
-        target.spinAngle = (target.spinAngle || 0) + armBall.armDirection * 0.35;
-        
-        const corners = [
-          { x: pad + target.r, y: pad + target.r },
-          { x: game.width - pad - target.r, y: pad + target.r },
-          { x: pad + target.r, y: game.height - pad - target.r },
-          { x: game.width - pad - target.r, y: game.height - pad - target.r }
-        ];
-        
-        const isNearWall = target.x <= pad + target.r + 4 || target.x >= game.width - pad - target.r - 4 || target.y <= pad + target.r + 4 || target.y >= game.height - pad - target.r - 4;
-        const isNearCorner = corners.some(c => Math.hypot(target.x - c.x, target.y - c.y) < 34);
-        const damageKey = `${armBall.id}-arm-wall-ragdoll`;
-        if ((isNearWall || isNearCorner) && (armBall.armGrabDamageHits || 0) < 2 && (!game.damageCooldowns[damageKey] || game.damageCooldowns[damageKey] <= currentTime)) {
-          applyDamage(target, Math.min(6, ARM_RAGDOLL_WALL_DAMAGE), damageKey, currentTime, 500);
-          armBall.armGrabDamageHits = (armBall.armGrabDamageHits || 0) + 1;
-          spawnSparks(target.x, target.y, "#e5e7eb", 12);
-          game.screenShake = Math.max(game.screenShake, 14);
-        }
-        
-        if (currentTime >= armBall.armStateUntil) {
-          armBall.armState = "idle";
-          armBall.armGrabTargetId = null;
-          const launchAngle = armBall.armAngle + (Math.PI / 2) * armBall.armDirection;
-          const launchForce = 650;
-          target.vx = Math.cos(launchAngle) * launchForce;
-          target.vy = Math.sin(launchAngle) * launchForce;
-          target.armThrowWallUntil = currentTime + 1600;
-          target.armThrowWallSourceId = armBall.id;
-          spawnDust(target.x, target.y, 10);
-          spawnSparks(target.x, target.y, "#facc15", 10);
+            
+          if (armBall.side === "left") game.stats.left.totalShots++;
+          else game.stats.right.totalShots++;
         }
       }
     };
@@ -3055,7 +2950,7 @@ export default function App() {
           gun.rapidPierceShotsRemaining = gunBal.rapidPierceShots || 2;
           gun.dogRespawnAt = Infinity;
           game.floatingTexts = game.floatingTexts || [];
-          ["My DOOG!!", "You Killed My DOOG"].forEach((text, index) => {
+          ["My DOOG!!", "You Hurt My DOOG"].forEach((text, index) => {
             game.floatingTexts.push({
               x: gun.x, y: gun.y - gun.r - 22 - index * 18, vy: -50,
               text, color: index ? "#f87171" : "#fbbf24", life: 1, maxLife: 1
@@ -3078,7 +2973,8 @@ export default function App() {
           gun.nextRapidFireAt = currentTime;
           playSound("gunReload");
           
-          for (let i = 0; i < 8; i++) {
+          const dashParticles = getParticleBudget(8);
+          for (let i = 0; i < dashParticles; i++) {
             const a = awayAngle + (Math.random() - 0.5) * 0.5;
             const spd = 60 + Math.random() * 80;
             game.particles.push({
@@ -3091,7 +2987,7 @@ export default function App() {
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: gun.x, y: gun.y - gun.r - 20, vy: -50,
-            text: gun.permanentRapidFire ? "You Killed My DOOG" : "TACTICAL DASH", color: gun.permanentRapidFire ? "#f87171" : "#67e8f9", life: 0.8, maxLife: 0.8
+            text: gun.permanentRapidFire ? "You Hurt My DOOG" : "TACTICAL DASH", color: gun.permanentRapidFire ? "#f87171" : "#67e8f9", life: 0.8, maxLife: 0.8
           });
         }
       }
@@ -3177,7 +3073,7 @@ export default function App() {
         const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
         laserBall.laserTargetAngle = targetAngle;
 
-        if (Math.random() < 0.3) {
+        if (canSpawnParticle() && Math.random() < 0.3) {
           const a = Math.random() * Math.PI * 2, dst = laserBall.r + 20 + Math.random() * 20;
           game.particles.push({
             x: laserBall.x + Math.cos(a) * dst, y: laserBall.y + Math.sin(a) * dst,
@@ -3207,7 +3103,7 @@ export default function App() {
         const eX = mX + Math.cos(laserBall.laserTargetAngle) * 1500;
         const eY = mY + Math.sin(laserBall.laserTargetAngle) * 1500;
 
-        if (Math.random() < 0.4) {
+        if (canSpawnParticle() && Math.random() < 0.4) {
           const dst = Math.random() * 400;
           game.particles.push({
             x: mX + Math.cos(laserBall.laserTargetAngle) * dst,
@@ -3275,7 +3171,7 @@ export default function App() {
             laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
             return;
           }
-          target.health = clamp(target.health - beamDamage, 0, 100);
+          target.health = clamp(target.health - beamDamage, 0, MAX_HEALTH);
 
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
@@ -3286,7 +3182,8 @@ export default function App() {
           if (laserBall.side === "left") { game.stats.left.damageDealt += beamDamage; game.stats.left.hitsLanded++; }
           else { game.stats.right.damageDealt += beamDamage; game.stats.right.hitsLanded++; }
 
-          for (let i = 0; i < 3; i++) {
+          const beamHitParticles = getParticleBudget(3);
+          for (let i = 0; i < beamHitParticles; i++) {
             const sa = Math.random() * Math.PI * 2, spd = 40 + Math.random() * 60;
             game.particles.push({
               x: target.x + (Math.random() - 0.5) * target.r, y: target.y + (Math.random() - 0.5) * target.r,
@@ -3572,7 +3469,8 @@ export default function App() {
             text: dist <= SHIELD_BASH_CLOSE_RADIUS ? "BASH RECOIL" : "SHIELD BASH", color: "#3b82f6", life: 0.8, maxLife: 0.8
           });
           
-          for (let i = 0; i < 6; i++) {
+          const bashParticles = getParticleBudget(6);
+          for (let i = 0; i < bashParticles; i++) {
             const sa = bashAngle + (Math.random() - 0.5) * 0.5;
             const spd = 50 + Math.random() * 60;
             game.particles.push({
@@ -3740,6 +3638,16 @@ export default function App() {
           hammerBall.hammerStateUntil = currentTime + bal.hammer.chargeDuration;
           hammerBall.vx = 0;
           hammerBall.vy = 0;
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: hammerBall.x,
+            y: hammerBall.y - hammerBall.r - 20,
+            vy: -45,
+            text: "Hammer Charge",
+            color: "#fbbf24",
+            life: 0.9,
+            maxLife: 0.9
+          });
           playSound("hammerCharge");
         }
       } else if (hammerBall.hammerState === "charging") {
@@ -3748,7 +3656,7 @@ export default function App() {
         hammerBall.hammerAngle = Math.atan2(target.y - hammerBall.y, target.x - hammerBall.x);
 
         // Charging sparks visual
-        if (Math.random() < 0.25) {
+        if (canSpawnParticle() && Math.random() < 0.25) {
           const a = Math.random() * Math.PI * 2, dst = 30 + Math.random() * 30;
           const hx = hammerBall.x + Math.cos(hammerBall.hammerAngle) * (hammerBall.r + 40);
           const hy = hammerBall.y + Math.sin(hammerBall.hammerAngle) * (hammerBall.r + 40);
@@ -3782,7 +3690,7 @@ export default function App() {
         hammerBall.vy = Math.sin(hammerBall.hammerLaunchAngle) * bal.hammer.launchSpeed;
 
         // Spawn rocket flames
-        if (Math.random() < 0.6) {
+        if (canSpawnParticle() && Math.random() < 0.6) {
           const oppositeAngle = hammerBall.hammerLaunchAngle + Math.PI;
           const px = hammerBall.x - Math.cos(hammerBall.hammerLaunchAngle) * hammerBall.r;
           const py = hammerBall.y - Math.sin(hammerBall.hammerLaunchAngle) * hammerBall.r;
@@ -4096,7 +4004,7 @@ export default function App() {
                 }
 
                 if (isWreckerJumpInvulnerable(ball)) return;
-                ball.health = clamp(ball.health - dmg, 0, 100);
+                ball.health = clamp(ball.health - dmg, 0, MAX_HEALTH);
 
                 game.floatingTexts = game.floatingTexts || [];
                 game.floatingTexts.push({
@@ -4138,7 +4046,7 @@ export default function App() {
           if (dist < ball.r + pool.r) {
             applyDamage(ball, bal.spider.secDamage, `${ball.id}-venom-tick-${pool.createdTime}`, game.simTime, 250);
 
-            if (Math.random() < 0.15) {
+            if (canSpawnParticle() && Math.random() < 0.15) {
               game.particles.push({
                 x: ball.x + (Math.random() - 0.5) * ball.r,
                 y: ball.y + (Math.random() - 0.5) * ball.r,
@@ -4149,7 +4057,7 @@ export default function App() {
           }
         });
 
-        if (Math.random() < 0.04) {
+        if (canSpawnParticle() && Math.random() < 0.04) {
           const a = Math.random() * Math.PI * 2;
           const d = Math.random() * pool.r;
           game.particles.push({
@@ -4231,7 +4139,7 @@ export default function App() {
         if (target && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
           if (isChessCrownActive(target)) return false;
           if (isWreckerJumpInvulnerable(target)) return false;
-          target.health = clamp(target.health - bullet.damage, 0, 100);
+          target.health = clamp(target.health - bullet.damage, 0, MAX_HEALTH);
           if (bullet.stunDuration) {
             target.paralyzedUntil = Math.max(target.paralyzedUntil || 0, game.simTime + bullet.stunDuration);
           }
@@ -4268,6 +4176,9 @@ export default function App() {
         exp.r = exp.maxRadius * (1 - (exp.life / exp.duration));
         return exp.life > 0;
       });
+      if (game.explosions.length > MAX_EXPLOSIONS) {
+        game.explosions.splice(0, game.explosions.length - MAX_EXPLOSIONS);
+      }
     };
 
     const updateParticles = (dt) => {
@@ -4276,6 +4187,9 @@ export default function App() {
         p.alpha = Math.max(0, p.life / p.maxLife);
         return p.life > 0;
       });
+      if (game.particles.length > MAX_PARTICLES) {
+        game.particles.splice(0, game.particles.length - MAX_PARTICLES);
+      }
     };
 
     const drawArena = () => {
@@ -5181,6 +5095,16 @@ export default function App() {
       }
 
       ctx.restore();
+      if (ball.hammerState === "charging") {
+        ctx.save();
+        ctx.fillStyle = "#fbbf24";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(15, 23, 42, 0.8)";
+        ctx.shadowBlur = 4;
+        ctx.fillText("Hammer Charge", ball.x, ball.y - ball.r - 16);
+        ctx.restore();
+      }
       drawHealthInsideBall(ball);
     };
 
@@ -5191,8 +5115,8 @@ export default function App() {
       
       let yOffset = 0;
       if (ball.armState === "elbow_dropping") {
-        const elapsed = game.simTime - (ball.armStateUntil - 400);
-        const progress = clamp(elapsed / 400, 0, 1);
+        const elapsed = game.simTime - (ball.armStateUntil - 520);
+        const progress = clamp(elapsed / 520, 0, 1);
         yOffset = -70 * Math.sin(progress * Math.PI);
       }
       
@@ -5212,8 +5136,8 @@ export default function App() {
       // Draw the arm line / segments
       ctx.save();
       
-      const bendAmp = (ball.armState === "grabbing" || ball.armState === "elbow_dropping") ? 14 : 6;
-      const bendFreq = (ball.armState === "grabbing" || ball.armState === "elbow_dropping") ? 0.03 : 0.01;
+      const bendAmp = ball.armState === "elbow_dropping" ? 14 : 6;
+      const bendFreq = ball.armState === "elbow_dropping" ? 0.03 : 0.01;
       const bendOffset = Math.sin(game.simTime * bendFreq) * bendAmp;
       
       const midX = (ball.x + handX) / 2;
@@ -5272,7 +5196,7 @@ export default function App() {
       let fingerAngle = 0.5;
       if (punching) {
         fingerAngle = 0.02;
-      } else if (ball.armState === "grabbing" || ball.armState === "elbow_dropping") {
+      } else if (ball.armState === "elbow_dropping") {
         fingerAngle = 0.12 + Math.sin(game.simTime * 0.05) * 0.05;
       } else {
         fingerAngle = 0.4 + Math.sin(game.simTime * 0.015) * 0.15;
@@ -5827,6 +5751,7 @@ export default function App() {
     };
 
     const drawBall = (ball, currentTime) => {
+      if (ball.shattered) return;
       if (ball.type === "knife") drawKnifeBall(ball);
       else if (ball.type === "wrecker") drawWreckerBall(ball);
       else if (ball.type === "gun") drawGunBall(ball, currentTime);
@@ -6031,17 +5956,28 @@ export default function App() {
     };
 
     const drawParticles = () => {
+      if (!game.particles.length) return;
+      ctx.save();
       game.particles.forEach((p) => {
-        ctx.save(); ctx.globalAlpha = p.alpha;
+        if (p.alpha <= 0.02) return;
+        ctx.globalAlpha = p.alpha;
         if (p.isCross) {
           ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.beginPath();
           ctx.moveTo(p.x - 4, p.y); ctx.lineTo(p.x + 4, p.y);
           ctx.moveTo(p.x, p.y - 4); ctx.lineTo(p.x, p.y + 4); ctx.stroke();
+        } else if (p.isShard) {
+          p.angle = (p.angle || 0) + (p.spin || 0) * 0.016;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle || 0);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.radius, -p.radius * 0.55, p.radius * 2.1, p.radius * 1.1);
+          ctx.restore();
         } else {
           ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.restore();
       });
+      ctx.restore();
     };
 
     const updateFloatingTexts = (dt) => {
@@ -6050,6 +5986,9 @@ export default function App() {
         ft.life -= dt;
         return ft.life > 0;
       });
+      if (game.floatingTexts.length > MAX_FLOATING_TEXTS) {
+        game.floatingTexts.splice(0, game.floatingTexts.length - MAX_FLOATING_TEXTS);
+      }
     };
 
     const drawFloatingTexts = () => {
@@ -6807,10 +6746,18 @@ export default function App() {
 
     const drawWinner = (winner) => {
       if (!winner) return;
-      ctx.fillStyle = "rgba(15, 23, 42, 0.85)"; ctx.fillRect(0, 0, game.width, game.height);
+      const slowMoActive = game.deathSlowMoUntil && performance.now() < game.deathSlowMoUntil;
+      ctx.fillStyle = slowMoActive ? "rgba(15, 23, 42, 0.32)" : "rgba(15, 23, 42, 0.85)";
+      ctx.fillRect(0, 0, game.width, game.height);
       ctx.fillStyle = "#f8fafc"; ctx.font = "bold 36px sans-serif";
-      ctx.textAlign = "center"; ctx.fillText(`${winner} wins!`, game.width / 2, game.height / 2);
-      ctx.font = "16px sans-serif"; ctx.fillText("Match complete", game.width / 2, game.height / 2 + 36);
+      ctx.textAlign = "center";
+      if (slowMoActive) {
+        ctx.font = "bold 26px sans-serif";
+        ctx.fillText(`${winner} wins!`, game.width / 2, game.height / 2 + 22);
+      } else {
+        ctx.fillText(`${winner} wins!`, game.width / 2, game.height / 2);
+        ctx.font = "16px sans-serif"; ctx.fillText("Match complete", game.width / 2, game.height / 2 + 36);
+      }
       ctx.textAlign = "start";
     };
 
@@ -6824,19 +6771,20 @@ export default function App() {
         for (let s = 0; s < steps; s++) {
           game.simTime += stepDt * 1000;
 
+          const activeVenomPools = game.venomPools?.length ? game.venomPools : null;
           game.balls.forEach((ball) => {
             const isPulling = ball.type === "spider" && ball.webState === "pulling";
             const isChargingHammer = ball.type === "hammer" && ball.hammerState === "charging";
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
-            const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && (b.armState === "grabbing" || b.armState === "elbow_dropping") && b.armStateUntil > game.simTime);
+            const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime);
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
-            const insideWeb = game.venomPools.some((pool) => {
+            const insideWeb = activeVenomPools ? activeVenomPools.some((pool) => {
               if (ball.side === pool.ownerSide) return false;
               const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
               return dist < ball.r + pool.r;
-            });
+            }) : false;
             if (insideWeb) slowMult *= 0.5;
             if (ball.stringSlowUntil && game.simTime < ball.stringSlowUntil) slowMult *= ((game.balance.stringWeb || BALANCE.stringWeb).stringSlowMultiplier || 0.45);
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
@@ -6845,9 +6793,11 @@ export default function App() {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
               handleWallBounce(ball);
             }
-            if (!ball.trail) ball.trail = [];
-            ball.trail.push({ x: ball.x, y: ball.y });
-            if (ball.trail.length > 10) ball.trail.shift();
+            if (s === steps - 1) {
+              if (!ball.trail) ball.trail = [];
+              ball.trail.push({ x: ball.x, y: ball.y });
+              if (ball.trail.length > MAX_TRAIL_POINTS) ball.trail.shift();
+            }
 
             if (ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) {
               // bypass base speed limits
@@ -6911,7 +6861,7 @@ export default function App() {
             if (game.simTime >= 3000) {
                 if (ball.burnUntil && game.simTime < ball.burnUntil && game.simTime >= (ball.nextBurnTickAt || 0)) {
                   const burnDamage = Math.max(MIN_DAMAGE, 1);
-                  ball.health = clamp(ball.health - burnDamage, 0, 100);
+                  ball.health = clamp(ball.health - burnDamage, 0, MAX_HEALTH);
                   ball.nextBurnTickAt = game.simTime + 450;
                   spawnSparks(ball.x, ball.y, "#fb923c", 4);
                   game.floatingTexts = game.floatingTexts || [];
@@ -7012,13 +6962,18 @@ export default function App() {
           updatePsychicCircles(stepDt);
           updateChaosCircles(stepDt);
         }
+      } else if (gameStarted) {
+        const slowMoActive = game.deathSlowMoUntil && time < game.deathSlowMoUntil;
+        const effectDt = slowMoActive ? dt * 0.24 : dt;
+        updateParticles(effectDt);
+        updateFloatingTexts(effectDt);
       } else if (!gameStarted) {
         game.balls.forEach((ball) => {
           ball.x += ball.vx * dt; ball.y += ball.vy * dt;
           handleWallBounce(ball);
           if (!ball.trail) ball.trail = [];
           ball.trail.push({ x: ball.x, y: ball.y });
-          if (ball.trail.length > 10) ball.trail.shift();
+          if (ball.trail.length > MAX_TRAIL_POINTS) ball.trail.shift();
 
           if (ball.type === "shield") {
             const target = ball.side === "left" ? right : left;
@@ -7057,6 +7012,10 @@ export default function App() {
       ctx.restore();
 
       const winner = gameStarted ? left.health <= 0 ? right.name : right.health <= 0 ? left.name : null : null;
+      if (winner && !game.deathEffectStarted) {
+        const defeated = left.health <= 0 ? left : right;
+        spawnDeathShatter(defeated, time);
+      }
       if (winner && !game.roundOverSoundPlayed) {
         game.roundOverSoundPlayed = true;
         playSound("roundWin");
@@ -7246,11 +7205,6 @@ export default function App() {
           )}
           {type === "arm" && (
             <>
-              {renderSlider("Grab Damage", "arm", "slamDamage", 1, 6)}
-              {renderSlider("Grab Range", "arm", "grabRange", 40, 200, 5, "px")}
-              {renderSlider("Grab Duration", "arm", "grabDuration", 500, 3000, 100, "ms")}
-              {renderSlider("Swing Speed", "arm", "swingSpeed", 0.02, 0.2, 0.01)}
-              {renderSlider("Cooldown", "arm", "cooldown", 1000, 8000, 100, "ms")}
               {renderSlider("Punch Damage", "arm", "punchDamage", 1, 30)}
               {renderSlider("Punch Range", "arm", "punchRange", 20, 160, 5, "px")}
               {renderSlider("Punch Cooldown", "arm", "punchCooldown", 200, 3000, 50, "ms")}
@@ -7389,7 +7343,7 @@ export default function App() {
                   <span className="text-base font-bold text-slate-200">{gameState.leftHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${gameState.leftHealth}%`, backgroundColor: BALL_TYPES[selectedBalls[0]]?.color }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.leftHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: BALL_TYPES[selectedBalls[0]]?.color }} />
                 </div>
               </Card>
 
@@ -7401,7 +7355,7 @@ export default function App() {
                   <span className="text-base font-bold text-slate-200">{gameState.rightHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${gameState.rightHealth}%`, backgroundColor: BALL_TYPES[selectedBalls[1]]?.color }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.rightHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: BALL_TYPES[selectedBalls[1]]?.color }} />
                 </div>
               </Card>
 
