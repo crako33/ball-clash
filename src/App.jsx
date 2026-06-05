@@ -143,7 +143,7 @@ const BALANCE = {
   gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireDuration: 1400, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
   laser: { damagePerTick: 1, tickCooldown: 100, chargeTime: 1000, fireDuration: 800, cooldown: 2500, beamWidth: 16, pulseEvery: 5, pulseDamage: 15, pulseSpeed: 520, pulseStunDuration: 900 },
-  shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secCooldownThrown: 4000, secBashDamage: 4 },
+  shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
   spider: { fangDamage: 2, webSpeed: 580, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
@@ -960,10 +960,10 @@ export default function App() {
                 const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
                 if (dist < 85 && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.nextSecondaryAt = simTime + balance.shield.secCooldownHeld;
-                  ball.shieldBashUntil = simTime + 250;
+                  ball.shieldBashUntil = simTime + 380;
                   const bashAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  ball.vx = Math.cos(bashAngle) * 480;
-                  ball.vy = Math.sin(bashAngle) * 480;
+                  ball.vx = Math.cos(bashAngle) * 650;
+                  ball.vy = Math.sin(bashAngle) * 650;
                 } else if (ball.nextThrowAt <= simTime) {
                   ball.shieldState = "thrown";
                   ball.shieldGuardHits = 0;
@@ -984,17 +984,9 @@ export default function App() {
                   ball.shieldState = "held";
                   ball.shieldGuardHits = 0;
                   ball.shieldBonusDamage = 0;
-                  ball.shieldFastRecall = false;
                   ball.nextThrowAt = simTime + balance.shield.cooldown;
                 }
               } else {
-                const distToEnemy = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                if (distToEnemy < 100 && simTime >= (ball.nextSecondaryAt || 0)) {
-                  ball.nextSecondaryAt = simTime + balance.shield.secCooldownThrown;
-                  ball.shieldState = "returning";
-                  ball.shieldFastRecall = true;
-                }
-
                 ball.shieldX += ball.shieldVx * dt;
                 ball.shieldY += ball.shieldVy * dt;
 
@@ -1025,15 +1017,13 @@ export default function App() {
 
                 if (ball.shieldState === "returning") {
                   const returnAngle = Math.atan2(ball.y - ball.shieldY, ball.x - ball.shieldX);
-                  const mult = ball.shieldFastRecall ? 1.5 : 1.0;
-                  ball.shieldVx = Math.cos(returnAngle) * balance.shield.returnSpeed * mult;
-                  ball.shieldVy = Math.sin(returnAngle) * balance.shield.returnSpeed * mult;
+                  ball.shieldVx = Math.cos(returnAngle) * balance.shield.returnSpeed;
+                  ball.shieldVy = Math.sin(returnAngle) * balance.shield.returnSpeed;
                   const distToOwner = Math.hypot(ball.x - ball.shieldX, ball.y - ball.shieldY);
                   if (distToOwner < ball.r + 10) {
                     ball.shieldState = "held";
                     ball.shieldGuardHits = 0;
                     ball.shieldBonusDamage = 0;
-                    ball.shieldFastRecall = false;
                     ball.nextThrowAt = simTime + balance.shield.cooldown;
                   }
                 }
@@ -1284,6 +1274,10 @@ export default function App() {
                   const launchForce = 650;
                   enemy.vx = Math.cos(launchAngle) * launchForce;
                   enemy.vy = Math.sin(launchAngle) * launchForce;
+                  const recoilAngle = Math.atan2(ball.y - enemy.y, ball.x - enemy.x) || launchAngle + Math.PI;
+                  const recoilForce = 420;
+                  ball.vx = Math.cos(recoilAngle) * recoilForce;
+                  ball.vy = Math.sin(recoilAngle) * recoilForce;
                 }
               } else if (ball.armState === "idle") {
                 ball.armAngle = (ball.armAngle || 0) + balance.arm.swingSpeed;
@@ -2375,6 +2369,10 @@ export default function App() {
           const launchForce = 650;
           target.vx = Math.cos(launchAngle) * launchForce;
           target.vy = Math.sin(launchAngle) * launchForce;
+          const recoilAngle = Math.atan2(armBall.y - target.y, armBall.x - target.x) || launchAngle + Math.PI;
+          const recoilForce = 460;
+          armBall.vx = Math.cos(recoilAngle) * recoilForce;
+          armBall.vy = Math.sin(recoilAngle) * recoilForce;
           target.armThrowWallUntil = currentTime + 1600;
           target.armThrowWallSourceId = armBall.id;
           playSound("armSlam");
@@ -3188,10 +3186,10 @@ export default function App() {
         const dist = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
         if (dist < 85 && currentTime >= (shieldBall.nextSecondaryAt || 0) && canStartSkillConnection(shieldBall, target, game.balls, currentTime)) {
           shieldBall.nextSecondaryAt = currentTime + bal.shield.secCooldownHeld;
-          shieldBall.shieldBashUntil = currentTime + 250;
+          shieldBall.shieldBashUntil = currentTime + 380;
           const bashAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
-          shieldBall.vx = Math.cos(bashAngle) * 480;
-          shieldBall.vy = Math.sin(bashAngle) * 480;
+          shieldBall.vx = Math.cos(bashAngle) * 650;
+          shieldBall.vy = Math.sin(bashAngle) * 650;
           playSound("wallBounce");
           
           game.floatingTexts = game.floatingTexts || [];
@@ -3238,27 +3236,11 @@ export default function App() {
           shieldBall.shieldState = "held";
           shieldBall.shieldGuardHits = 0;
           shieldBall.shieldBonusDamage = 0;
-          shieldBall.shieldFastRecall = false;
           shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
           spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 8);
           playSound("shieldCatch");
         }
       } else {
-        // Trigger Emergency Fast Recall
-        const distToEnemy = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
-        if (distToEnemy < 100 && currentTime >= (shieldBall.nextSecondaryAt || 0)) {
-          shieldBall.nextSecondaryAt = currentTime + bal.shield.secCooldownThrown;
-          shieldBall.shieldState = "returning";
-          shieldBall.shieldFastRecall = true;
-          playSound("shieldCatch");
-          
-          game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({
-            x: shieldBall.x, y: shieldBall.y - shieldBall.r - 20, vy: -50,
-            text: "FAST RECALL", color: "#60a5fa", life: 0.8, maxLife: 0.8
-          });
-        }
-
         shieldBall.shieldX += shieldBall.shieldVx * stepDt;
         shieldBall.shieldY += shieldBall.shieldVy * stepDt;
         shieldBall.shieldSpinAngle = (shieldBall.shieldSpinAngle || 0) + 0.25;
@@ -3329,16 +3311,14 @@ export default function App() {
 
         if (shieldBall.shieldState === "returning") {
           const returnAngle = Math.atan2(shieldBall.y - shieldBall.shieldY, shieldBall.x - shieldBall.shieldX);
-          const mult = shieldBall.shieldFastRecall ? 1.5 : 1.0;
-          shieldBall.shieldVx = Math.cos(returnAngle) * bal.shield.returnSpeed * mult;
-          shieldBall.shieldVy = Math.sin(returnAngle) * bal.shield.returnSpeed * mult;
+          shieldBall.shieldVx = Math.cos(returnAngle) * bal.shield.returnSpeed;
+          shieldBall.shieldVy = Math.sin(returnAngle) * bal.shield.returnSpeed;
 
           const distToOwner = Math.hypot(shieldBall.x - shieldBall.shieldX, shieldBall.y - shieldBall.shieldY);
           if (distToOwner < shieldBall.r + 10) {
             shieldBall.shieldState = "held";
             shieldBall.shieldGuardHits = 0;
             shieldBall.shieldBonusDamage = 0;
-            shieldBall.shieldFastRecall = false;
             shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
             spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 6);
             playSound("shieldCatch");
@@ -5923,7 +5903,6 @@ export default function App() {
               {renderSlider("Return Speed", "shield", "returnSpeed", 200, 1200, 20, "px/s")}
               {renderSlider("Throw Duration", "shield", "duration", 300, 3000, 50, "ms")}
               {renderSlider("Sec: Bash Cooldown (Held)", "shield", "secCooldownHeld", 1000, 8000, 100, "ms")}
-              {renderSlider("Sec: Recall Cooldown (Thrown)", "shield", "secCooldownThrown", 1000, 8000, 100, "ms")}
               {renderSlider("Sec: Bash Damage", "shield", "secBashDamage", 1, 20)}
             </>
           )}
