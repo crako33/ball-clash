@@ -121,6 +121,33 @@ const BALL_TYPES = {
     radius: 36,
     description: "Hulk-like brawler. Leaps to smash, rage boosts size. Secondary: Ground Push.",
   },
+  nunchuck: {
+    id: "nunchuck",
+    name: "Nunchucker Ball",
+    shortName: "NUNCH",
+    color: "#fb923c",
+    stroke: "#7c2d12",
+    radius: 30,
+    description: "Twin nunchaku orbit fighter. Builds combo stacks into a flurry.",
+  },
+  whip: {
+    id: "whip",
+    name: "Whip Ball",
+    shortName: "WHIP",
+    color: "#a855f7",
+    stroke: "#f5d0fe",
+    radius: 30,
+    description: "Chain whip fighter. Lashes, yanks, and spins a whip barrier.",
+  },
+  dragon: {
+    id: "dragon",
+    name: "Dragon Ball",
+    shortName: "DRGN",
+    color: "#dc2626",
+    stroke: "#f97316",
+    radius: 33,
+    description: "Fire-breathing monster ball. Heat builds into bouncing fireballs.",
+  },
 };
 
 const GRID_SIZE = 7;
@@ -156,6 +183,9 @@ const BALANCE = {
   arm: { slamDamage: 1, grabRange: 60, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
   wrecker: { cooldown: 1000, leapDamage: 22, megaLeapDamage: 34, shockwaveRadius: 105, megaShockwaveRadius: 160, knockbackForce: 760, rageRequired: 4, megaRageRequired: 9, pushCooldown: 1450, pushRange: 46, pushForce: 650, pushDamage: 6, leapCooldown: 5600, bounceBoost: 1.18, maxBounceSpeed: 340, sizePerRage: 0.022, maxRageSizeScale: 1.24, megaSizeScale: 1.35 },
+  nunchuck: { damage: 3, range: 66, spinSpeed: 0.075, hitCooldown: 340, comboRequired: 3, flurryDamage: 5, flurryDuration: 950, flurryCooldown: 3200, knockback: 330 },
+  whip: { damage: 3, range: 118, lashCooldown: 850, yankForce: 340, barrierDamage: 2, barrierDuration: 1150, barrierCooldown: 4200, barrierRadius: 52 },
+  dragon: { flameDamage: 2, flameRange: 118, flameAngle: 0.82, tickCooldown: 260, heatPerWallBounce: 1, heatRequired: 3, fireballDamage: 8, fireballSpeed: 520, fireballBounces: 3, burnDuration: 1600, cooldown: 1400 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -3766,6 +3796,196 @@ export default function App() {
       }
     };
 
+    const updateNunchuck = (ball, target, currentTime) => {
+      const bal = game.balance.nunchuck;
+      const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      ball.nunchuckBaseAngle = targetAngle;
+      ball.nunchuckAngle = (ball.nunchuckAngle || 0) + bal.spinSpeed;
+      const flurrying = ball.nunchuckFlurryUntil && currentTime < ball.nunchuckFlurryUntil;
+      const rollDuration = flurrying ? 230 : 420;
+      const swingDuration = flurrying ? 220 : 340;
+      if (!ball.nunchuckMotionState) {
+        ball.nunchuckMotionState = "roll";
+        ball.nunchuckMotionStartedAt = currentTime;
+        ball.nunchuckSide = 1;
+        ball.nunchuckRollsBeforeWhip = 2;
+        ball.nunchuckRollCount = 0;
+      }
+      const stateElapsed = currentTime - (ball.nunchuckMotionStartedAt || currentTime);
+      if (ball.nunchuckMotionState === "roll" && stateElapsed >= rollDuration) {
+        ball.nunchuckMotionStartedAt = currentTime;
+        ball.nunchuckRollCount = (ball.nunchuckRollCount || 0) + 1;
+        const rollsNeeded = ball.nunchuckRollsBeforeWhip || 1;
+        if (ball.nunchuckRollCount >= rollsNeeded) {
+          ball.nunchuckMotionState = "swing";
+          ball.nunchuckRollCount = 0;
+          ball.nunchuckHasHitThisSwing = false;
+        }
+      } else if (ball.nunchuckMotionState === "swing" && stateElapsed >= swingDuration) {
+        ball.nunchuckMotionState = "roll";
+        ball.nunchuckMotionStartedAt = currentTime;
+        ball.nunchuckSide = -(ball.nunchuckSide || 1);
+        ball.nunchuckHasHitThisSwing = false;
+        ball.nunchuckRollsBeforeWhip = 1;
+      }
+
+      const motionElapsed = currentTime - (ball.nunchuckMotionStartedAt || currentTime);
+      const motionDuration = ball.nunchuckMotionState === "swing" ? swingDuration : rollDuration;
+      const progress = clamp(motionElapsed / Math.max(1, motionDuration), 0, 1);
+      const side = ball.nunchuckSide || 1;
+      const reach = bal.range + (flurrying ? 16 : 0);
+      ball.nunchuckSegments = [];
+
+      const makeSegment = (segmentSide, segmentProgress, alpha = 1) => {
+        const eased = 0.5 - Math.cos(segmentProgress * Math.PI) * 0.5;
+        const rollSpin = (ball.nunchuckAngle || 0) * (flurrying ? 2.7 : 2.1);
+        const shoulderAngle = ball.nunchuckMotionState === "roll"
+          ? targetAngle + segmentSide * 1.55 + rollSpin
+          : targetAngle + segmentSide * (1.25 - eased * 2.5);
+        const chainAngle = ball.nunchuckMotionState === "roll"
+          ? shoulderAngle + segmentSide * (0.9 + Math.sin(rollSpin) * 0.35)
+          : targetAngle + segmentSide * (1.65 - eased * 3.25);
+        const innerLen = ball.r + 18;
+        const chainLen = (ball.nunchuckMotionState === "roll" ? reach * 0.26 : reach * 0.36);
+        const outerLen = (ball.nunchuckMotionState === "roll" ? reach * 0.36 : reach * 0.72);
+        const pivotX = ball.x + Math.cos(shoulderAngle) * (ball.r + 5);
+        const pivotY = ball.y + Math.sin(shoulderAngle) * (ball.r + 5);
+        const jointX = pivotX + Math.cos(chainAngle) * chainLen;
+        const jointY = pivotY + Math.sin(chainAngle) * chainLen;
+        const tipX = jointX + Math.cos(chainAngle + segmentSide * 0.18) * outerLen;
+        const tipY = jointY + Math.sin(chainAngle + segmentSide * 0.18) * outerLen;
+        const handleX = ball.x + Math.cos(shoulderAngle) * innerLen;
+        const handleY = ball.y + Math.sin(shoulderAngle) * innerLen;
+        return { pivotX, pivotY, handleX, handleY, jointX, jointY, tipX, tipY, chainAngle, side: segmentSide, alpha };
+      };
+
+      if (ball.nunchuckMotionState === "roll") {
+        ball.nunchuckSegments.push(makeSegment(side, progress, 1));
+        if (flurrying) ball.nunchuckSegments.push(makeSegment(-side, (progress + 0.45) % 1, 0.45));
+      } else {
+        ball.nunchuckSegments.push(makeSegment(side, progress, 1));
+        ball.nunchuckSegments.push(makeSegment(-side, 0.18, 0.28));
+      }
+
+      ball.nunchuckSegments.forEach((seg, i) => {
+        const activeSwing = ball.nunchuckMotionState === "swing" && seg.side === side && seg.alpha > 0.8;
+        if (activeSwing && !ball.nunchuckHasHitThisSwing && linePointDist(target.x, target.y, seg.jointX, seg.jointY, seg.tipX, seg.tipY) < target.r + 9 && currentTime >= (ball.nunchuckNextHitAt || 0)) {
+          const damage = flurrying ? bal.flurryDamage : bal.damage;
+          applyDamage(target, damage, `${ball.id}-nunchuck-${i}`, currentTime, bal.hitCooldown);
+          ball.nunchuckNextHitAt = currentTime + bal.hitCooldown;
+          ball.nunchuckHasHitThisSwing = true;
+          ball.nunchuckCombo = Math.min(bal.comboRequired, (ball.nunchuckCombo || 0) + 1);
+          if (!hasStringBounceGuard(target)) {
+            const push = Math.atan2(target.y - ball.y, target.x - ball.x);
+            target.vx += Math.cos(push) * bal.knockback;
+            target.vy += Math.sin(push) * bal.knockback;
+          }
+          spawnSparks(seg.tipX, seg.tipY, flurrying ? "#fde68a" : "#fb923c", flurrying ? 12 : 7);
+          if (ball.side === "left") { game.stats.left.damageDealt += damage; game.stats.left.hitsLanded++; }
+          else { game.stats.right.damageDealt += damage; game.stats.right.hitsLanded++; }
+        }
+      });
+
+      if ((ball.nunchuckCombo || 0) >= bal.comboRequired && currentTime >= (ball.nextSecondaryAt || 0)) {
+        ball.nunchuckCombo = 0;
+        ball.nunchuckFlurryUntil = currentTime + bal.flurryDuration;
+        ball.nextSecondaryAt = currentTime + bal.flurryCooldown;
+        ball.nunchuckRollsBeforeWhip = 1;
+        game.screenShake = Math.max(game.screenShake, 5);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -50, text: "FLURRY", color: "#fbbf24", life: 0.8, maxLife: 0.8 });
+      }
+    };
+
+    const updateWhip = (ball, target, currentTime) => {
+      const bal = game.balance.whip;
+      const toTarget = Math.atan2(target.y - ball.y, target.x - ball.x);
+      ball.whipAngle = toTarget;
+      const barrierActive = ball.whipBarrierUntil && currentTime < ball.whipBarrierUntil;
+
+      if (barrierActive) {
+        ball.whipSpinAngle = (ball.whipSpinAngle || 0) + 0.22;
+        const d = Math.hypot(target.x - ball.x, target.y - ball.y);
+        if (d < target.r + bal.barrierRadius && currentTime >= (ball.whipNextBarrierHitAt || 0)) {
+          applyDamage(target, bal.barrierDamage, `${ball.id}-whip-barrier`, currentTime, 320);
+          ball.whipNextBarrierHitAt = currentTime + 320;
+          const push = Math.atan2(target.y - ball.y, target.x - ball.x);
+          if (!hasStringBounceGuard(target)) {
+            target.vx += Math.cos(push) * 240;
+            target.vy += Math.sin(push) * 240;
+          }
+          spawnSparks(target.x, target.y, "#e879f9", 8);
+        }
+        return;
+      }
+
+      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+      if (dist <= bal.range && currentTime >= (ball.whipNextLashAt || 0)) {
+        ball.whipLashUntil = currentTime + 220;
+        ball.whipNextLashAt = currentTime + bal.lashCooldown;
+        ball.whipTipX = ball.x + Math.cos(toTarget) * (ball.r + bal.range);
+        ball.whipTipY = ball.y + Math.sin(toTarget) * (ball.r + bal.range);
+        applyDamage(target, bal.damage, `${ball.id}-whip-lash`, currentTime, bal.lashCooldown);
+        if (!hasStringBounceGuard(target)) {
+          target.vx -= Math.cos(toTarget) * bal.yankForce;
+          target.vy -= Math.sin(toTarget) * bal.yankForce;
+          ball.vx += Math.cos(toTarget) * 90;
+          ball.vy += Math.sin(toTarget) * 90;
+        }
+        spawnSparks(target.x, target.y, "#d946ef", 9);
+        if (ball.side === "left") { game.stats.left.damageDealt += bal.damage; game.stats.left.hitsLanded++; }
+        else { game.stats.right.damageDealt += bal.damage; game.stats.right.hitsLanded++; }
+      }
+
+      if (dist < ball.r + target.r + 18 && currentTime >= (ball.nextSecondaryAt || 0)) {
+        ball.whipBarrierUntil = currentTime + bal.barrierDuration;
+        ball.nextSecondaryAt = currentTime + bal.barrierCooldown;
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -50, text: "WHIP RING", color: "#f0abfc", life: 0.8, maxLife: 0.8 });
+      }
+    };
+
+    const updateDragon = (ball, target, currentTime) => {
+      const bal = game.balance.dragon;
+      const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      ball.dragonAngle = angle;
+      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+      let diff = Math.atan2(Math.sin(angle - Math.atan2(target.y - ball.y, target.x - ball.x)), Math.cos(angle - Math.atan2(target.y - ball.y, target.x - ball.x)));
+      diff = Math.abs(diff);
+
+      if (dist <= bal.flameRange && diff <= bal.flameAngle && currentTime >= (ball.dragonNextTickAt || 0)) {
+        applyDamage(target, bal.flameDamage, `${ball.id}-dragon-flame`, currentTime, bal.tickCooldown);
+        ball.dragonNextTickAt = currentTime + bal.tickCooldown;
+        target.burnUntil = Math.max(target.burnUntil || 0, currentTime + bal.burnDuration);
+        spawnSparks(target.x, target.y, "#fb923c", 7);
+        if (ball.side === "left") { game.stats.left.damageDealt += bal.flameDamage; game.stats.left.hitsLanded++; }
+        else { game.stats.right.damageDealt += bal.flameDamage; game.stats.right.hitsLanded++; }
+      }
+
+      const wallBounces = ball.consecutiveWallBounces || 0;
+      if (ball.dragonLastWallBounces === undefined) ball.dragonLastWallBounces = wallBounces;
+      if (wallBounces > (ball.dragonLastWallBounces || 0)) {
+        ball.dragonHeat = Math.min(bal.heatRequired, (ball.dragonHeat || 0) + bal.heatPerWallBounce);
+        ball.dragonLastWallBounces = wallBounces;
+      }
+
+      if ((ball.dragonHeat || 0) >= bal.heatRequired && currentTime >= (ball.nextShotAt || 0)) {
+        const sx = ball.x + Math.cos(angle) * (ball.r + 12);
+        const sy = ball.y + Math.sin(angle) * (ball.r + 12);
+        game.bullets.push({
+          ownerId: ball.id, targetSide: target.side, kind: "dragonFireball",
+          x: sx, y: sy, vx: Math.cos(angle) * bal.fireballSpeed, vy: Math.sin(angle) * bal.fireballSpeed,
+          r: 11, damage: bal.fireballDamage, life: 3, bouncesLeft: bal.fireballBounces, burnDuration: bal.burnDuration
+        });
+        ball.dragonHeat = 0;
+        ball.nextShotAt = currentTime + bal.cooldown;
+        if (ball.side === "left") game.stats.left.totalShots++;
+        else game.stats.right.totalShots++;
+        game.screenShake = Math.max(game.screenShake, 6);
+        spawnSparks(sx, sy, "#f97316", 12);
+      }
+    };
+
     const updateSpore = (sporeBall, target, currentTime) => {
       const bal = game.balance;
       if (sporeBall.nextSporeAt > currentTime) return;
@@ -3960,7 +4180,7 @@ export default function App() {
       game.bullets = game.bullets.filter((bullet) => {
         bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt; bullet.life -= dt;
         if (bullet.life <= 0) return false;
-        if (bullet.kind === "laserPulse") {
+        if (bullet.kind === "laserPulse" || bullet.kind === "dragonFireball") {
           let bounced = false;
           const pad = 18 + bullet.r;
           if (bullet.x < pad) { bullet.x = pad; bullet.vx = Math.abs(bullet.vx); bounced = true; }
@@ -3968,8 +4188,8 @@ export default function App() {
           if (bullet.y < pad) { bullet.y = pad; bullet.vy = Math.abs(bullet.vy); bounced = true; }
           if (bullet.y > game.height - pad) { bullet.y = game.height - pad; bullet.vy = -Math.abs(bullet.vy); bounced = true; }
           if (bounced) {
-            bullet.bouncesLeft = (bullet.bouncesLeft ?? 4) - 1;
-            spawnSparks(bullet.x, bullet.y, "#facc15", 8);
+            bullet.bouncesLeft = (bullet.bouncesLeft ?? (bullet.kind === "laserPulse" ? 4 : 3)) - 1;
+            spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : "#facc15", 8);
             if (bullet.bouncesLeft < 0) return false;
           }
         } else if (bullet.x < 18 || bullet.x > game.width - 18 || bullet.y < 18 || bullet.y > game.height - 18) {
@@ -4028,6 +4248,10 @@ export default function App() {
           if (bullet.stunDuration) {
             target.paralyzedUntil = Math.max(target.paralyzedUntil || 0, game.simTime + bullet.stunDuration);
           }
+          if (bullet.burnDuration) {
+            target.burnUntil = Math.max(target.burnUntil || 0, game.simTime + bullet.burnDuration);
+            target.nextBurnTickAt = game.simTime;
+          }
 
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
@@ -4044,7 +4268,7 @@ export default function App() {
           if (bullet.ownerId.startsWith("left")) { game.stats.left.damageDealt += bullet.damage; game.stats.left.hitsLanded++; }
           else { game.stats.right.damageDealt += bullet.damage; game.stats.right.hitsLanded++; }
 
-          spawnSparks(bullet.x, bullet.y, bullet.kind === "laserPulse" ? "#facc15" : "#facc15", bullet.kind === "laserPulse" ? 16 : 8);
+          spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : "#facc15", bullet.kind === "laserPulse" ? 16 : 8);
           return false;
         }
         return true;
@@ -5344,6 +5568,199 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawNunchuckBall = (ball) => {
+      const config = BALL_TYPES.nunchuck;
+      const bal = game.balance.nunchuck;
+      const flurrying = ball.nunchuckFlurryUntil && game.simTime < ball.nunchuckFlurryUntil;
+      const target = game.balls.find(o => o.side !== ball.side);
+      const fallbackAngle = ball.nunchuckBaseAngle || (target ? Math.atan2(target.y - ball.y, target.x - ball.x) : ball.angle || 0);
+      const segments = ball.nunchuckSegments?.length
+        ? ball.nunchuckSegments
+        : [
+            {
+              pivotX: ball.x + Math.cos(fallbackAngle + 0.8) * (ball.r + 5),
+              pivotY: ball.y + Math.sin(fallbackAngle + 0.8) * (ball.r + 5),
+              handleX: ball.x + Math.cos(fallbackAngle + 0.8) * (ball.r + 18),
+              handleY: ball.y + Math.sin(fallbackAngle + 0.8) * (ball.r + 18),
+              jointX: ball.x + Math.cos(fallbackAngle + 0.25) * (ball.r + bal.range * 0.62),
+              jointY: ball.y + Math.sin(fallbackAngle + 0.25) * (ball.r + bal.range * 0.62),
+              tipX: ball.x + Math.cos(fallbackAngle) * (ball.r + bal.range),
+              tipY: ball.y + Math.sin(fallbackAngle) * (ball.r + bal.range),
+              chainAngle: fallbackAngle,
+              side: 1,
+            },
+          ];
+
+      ctx.save();
+      ctx.lineCap = "round";
+      segments.forEach((seg, index) => {
+        const fade = (seg.alpha ?? 1) * (flurrying ? 0.9 - index * 0.1 : 1);
+        ctx.globalAlpha = Math.max(0.35, fade);
+
+        if (flurrying || ball.nunchuckMotionState === "swing") {
+          ctx.strokeStyle = "rgba(253, 230, 138, 0.38)";
+          ctx.lineWidth = ball.nunchuckMotionState === "swing" ? 12 : 10;
+          ctx.beginPath();
+          ctx.moveTo(seg.jointX, seg.jointY);
+          ctx.lineTo(seg.tipX, seg.tipY);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "#78350f";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(seg.pivotX, seg.pivotY);
+        ctx.lineTo(seg.handleX, seg.handleY);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(seg.handleX, seg.handleY);
+        ctx.lineTo(seg.jointX, seg.jointY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = flurrying ? "#fef3c7" : "#92400e";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(seg.jointX, seg.jointY);
+        ctx.lineTo(seg.tipX, seg.tipY);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#7c2d12";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(seg.jointX, seg.jointY);
+        ctx.lineTo(seg.tipX, seg.tipY);
+        ctx.stroke();
+
+        ctx.fillStyle = flurrying ? "#fde68a" : "#fb923c";
+        ctx.beginPath(); ctx.arc(seg.tipX, seg.tipY, 4.5, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+
+      ctx.save(); ctx.translate(ball.x, ball.y);
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = config.color; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+      ctx.save();
+      ctx.rotate(fallbackAngle);
+      ctx.strokeStyle = "#7c2d12";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.5, -ball.r * 0.38);
+      ctx.lineTo(ball.r * 0.55, -ball.r * 0.1);
+      ctx.moveTo(-ball.r * 0.5, ball.r * 0.38);
+      ctx.lineTo(ball.r * 0.55, ball.r * 0.1);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#7c2d12";
+      ctx.fillRect(-16, -5, 32, 10);
+      ctx.fillStyle = "#fed7aa";
+      ctx.fillRect(-5, -18, 10, 36);
+      if ((ball.nunchuckCombo || 0) > 0) {
+        ctx.fillStyle = "#fff7ed";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`COMBO ${ball.nunchuckCombo}`, 0, ball.r + 16);
+      }
+      ctx.fillStyle = "#431407";
+      ctx.font = "bold 7px sans-serif";
+      ctx.textAlign = "center";
+      const sideLabel = (ball.nunchuckSide || 1) > 0 ? "R" : "L";
+      const rollNeed = ball.nunchuckRollsBeforeWhip || 1;
+      const rollCount = ball.nunchuckRollCount || 0;
+      const motionLabel = ball.nunchuckMotionState === "swing" ? "WHIP" : `ROLL ${Math.min(rollNeed, rollCount + 1)}/${rollNeed}`;
+      ctx.fillText(`${motionLabel} ${sideLabel}`, 0, -ball.r - 7);
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawWhipBall = (ball) => {
+      const config = BALL_TYPES.whip;
+      const bal = game.balance.whip;
+      const barrierActive = ball.whipBarrierUntil && game.simTime < ball.whipBarrierUntil;
+      const lashActive = ball.whipLashUntil && game.simTime < ball.whipLashUntil;
+      ctx.save();
+      ctx.strokeStyle = barrierActive ? "#f0abfc" : "#d946ef";
+      ctx.lineWidth = barrierActive ? 5 : 4;
+      ctx.lineCap = "round";
+      if (barrierActive) {
+        ctx.shadowColor = "#d946ef"; ctx.shadowBlur = 10;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, bal.barrierRadius, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 3; i++) {
+          const a = (ball.whipSpinAngle || 0) + i * Math.PI * 2 / 3;
+          ctx.beginPath(); ctx.moveTo(ball.x, ball.y);
+          ctx.lineTo(ball.x + Math.cos(a) * bal.barrierRadius, ball.y + Math.sin(a) * bal.barrierRadius);
+          ctx.stroke();
+        }
+      } else {
+        const a = ball.whipAngle || ball.angle || 0;
+        const tipX = lashActive ? (ball.whipTipX || ball.x + Math.cos(a) * bal.range) : ball.x + Math.cos(a) * (ball.r + 38);
+        const tipY = lashActive ? (ball.whipTipY || ball.y + Math.sin(a) * bal.range) : ball.y + Math.sin(a) * (ball.r + 38);
+        const midX = (ball.x + tipX) / 2 + Math.cos(a + Math.PI / 2) * 18;
+        const midY = (ball.y + tipY) / 2 + Math.sin(a + Math.PI / 2) * 18;
+        ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.quadraticCurveTo(midX, midY, tipX, tipY); ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save(); ctx.translate(ball.x, ball.y);
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = config.color; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+      ctx.strokeStyle = "#f5d0fe"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.58, -0.7, Math.PI * 1.25); ctx.stroke();
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawDragonBall = (ball) => {
+      const config = BALL_TYPES.dragon;
+      const angle = ball.dragonAngle || ball.angle || 0;
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(angle);
+      ctx.fillStyle = "#f97316";
+      ctx.strokeStyle = "#7f1d1d";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(-6, -ball.r + 4); ctx.lineTo(4, -ball.r - 18); ctx.lineTo(13, -ball.r + 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-6, ball.r - 4); ctx.lineTo(4, ball.r + 18); ctx.lineTo(13, ball.r - 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.3, 3, 0, 0, ball.r);
+      grad.addColorStop(0, "#fb923c");
+      grad.addColorStop(0.52, config.color);
+      grad.addColorStop(1, "#7f1d1d");
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+      ctx.fillStyle = "#fed7aa";
+      ctx.beginPath(); ctx.moveTo(ball.r - 3, -8); ctx.lineTo(ball.r + 14, 0); ctx.lineTo(ball.r - 3, 8); ctx.closePath(); ctx.fill();
+      const heat = ball.dragonHeat || 0;
+      if (heat > 0) {
+        ctx.fillStyle = "#facc15";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`HEAT ${heat}`, 0, ball.r + 16);
+      }
+      ctx.restore();
+
+      const target = game.balls.find(o => o.side !== ball.side);
+      if (target) {
+        const bal = game.balance.dragon;
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = "#fb923c";
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.arc(ball.x, ball.y, bal.flameRange, angle - bal.flameAngle / 2, angle + bal.flameAngle / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      drawHealthInsideBall(ball);
+    };
+
     const drawBall = (ball, currentTime) => {
       if (ball.type === "knife") drawKnifeBall(ball);
       else if (ball.type === "wrecker") drawWreckerBall(ball);
@@ -5364,6 +5781,9 @@ export default function App() {
       else if (ball.type === "stringWeb") drawStringWebBall(ball);
       else if (ball.type === "arm") drawArmBall(ball);
       else if (ball.type === "chess") drawChessBall(ball);
+      else if (ball.type === "nunchuck") drawNunchuckBall(ball);
+      else if (ball.type === "whip") drawWhipBall(ball);
+      else if (ball.type === "dragon") drawDragonBall(ball);
 
       if (ball.webHitFlashUntil && game.simTime < ball.webHitFlashUntil) {
         const progress = (ball.webHitFlashUntil - game.simTime) / 180;
@@ -5420,6 +5840,15 @@ export default function App() {
           ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
           ctx.fillStyle = "#facc15"; ctx.fill();
           ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2.5; ctx.stroke();
+        } else if (bullet.kind === "dragonFireball") {
+          ctx.shadowColor = "#f97316";
+          ctx.shadowBlur = 18;
+          const pulse = 0.8 + Math.sin(game.simTime * 0.02) * 0.2;
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r + 7 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(249, 115, 22, 0.24)"; ctx.fill();
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+          ctx.fillStyle = "#f97316"; ctx.fill();
+          ctx.strokeStyle = "#fef3c7"; ctx.lineWidth = 2.5; ctx.stroke();
         } else {
           ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
           ctx.fillStyle = bullet.piercesDefense ? "#67e8f9" : "#facc15"; ctx.fill();
@@ -6065,6 +6494,14 @@ export default function App() {
           game.balls.forEach((ball) => {
             const target = ball.side === "left" ? right : left;
             if (game.simTime >= 3000) {
+                if (ball.burnUntil && game.simTime < ball.burnUntil && game.simTime >= (ball.nextBurnTickAt || 0)) {
+                  const burnDamage = Math.max(MIN_DAMAGE, 1);
+                  ball.health = clamp(ball.health - burnDamage, 0, 100);
+                  ball.nextBurnTickAt = game.simTime + 450;
+                  spawnSparks(ball.x, ball.y, "#fb923c", 4);
+                  game.floatingTexts = game.floatingTexts || [];
+                  game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 8, vy: -45, text: `BURN -${burnDamage}`, color: "#fb923c", life: 0.55, maxLife: 0.55 });
+                }
                 if (ball.type === "knife") {
                   const bal = game.balance.knife;
                   if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
@@ -6139,6 +6576,9 @@ export default function App() {
                   if (ball.type === "hammer") updateHammer(ball, target, game.simTime);
                   if (ball.type === "arm") updateArm(ball, target, game.simTime, stepDt);
                   if (ball.type === "chess") updateChess(ball, target, game.simTime, stepDt);
+                  if (ball.type === "nunchuck") updateNunchuck(ball, target, game.simTime);
+                  if (ball.type === "whip") updateWhip(ball, target, game.simTime);
+                  if (ball.type === "dragon") updateDragon(ball, target, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
@@ -6407,6 +6847,46 @@ export default function App() {
               {renderSlider("Crown Duration", "chess", "crownDuration", 500, 6000, 100, "ms")}
               {renderSlider("Crown Damage", "chess", "damage", 1, 40)}
               {renderSlider("Damage Tick Rate", "chess", "tickCooldown", 100, 1500, 50, "ms")}
+            </>
+          )}
+          {type === "nunchuck" && (
+            <>
+              {renderSlider("Hit Damage", "nunchuck", "damage", 1, 20)}
+              {renderSlider("Range", "nunchuck", "range", 25, 90, 1, "px")}
+              {renderSlider("Swing Speed", "nunchuck", "spinSpeed", 0.04, 0.35, 0.01)}
+              {renderSlider("Hit Cooldown", "nunchuck", "hitCooldown", 100, 1000, 10, "ms")}
+              {renderSlider("Combo Required", "nunchuck", "comboRequired", 2, 6, 1)}
+              {renderSlider("Flurry Damage", "nunchuck", "flurryDamage", 1, 30)}
+              {renderSlider("Flurry Duration", "nunchuck", "flurryDuration", 300, 2500, 50, "ms")}
+              {renderSlider("Flurry Cooldown", "nunchuck", "flurryCooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Knockback", "nunchuck", "knockback", 50, 800, 10)}
+            </>
+          )}
+          {type === "whip" && (
+            <>
+              {renderSlider("Lash Damage", "whip", "damage", 1, 25)}
+              {renderSlider("Lash Range", "whip", "range", 60, 180, 2, "px")}
+              {renderSlider("Lash Cooldown", "whip", "lashCooldown", 200, 2500, 50, "ms")}
+              {renderSlider("Yank Force", "whip", "yankForce", 50, 800, 10)}
+              {renderSlider("Barrier Damage", "whip", "barrierDamage", 1, 20)}
+              {renderSlider("Barrier Duration", "whip", "barrierDuration", 300, 3000, 50, "ms")}
+              {renderSlider("Barrier Cooldown", "whip", "barrierCooldown", 1000, 9000, 100, "ms")}
+              {renderSlider("Barrier Radius", "whip", "barrierRadius", 30, 100, 1, "px")}
+            </>
+          )}
+          {type === "dragon" && (
+            <>
+              {renderSlider("Flame Damage", "dragon", "flameDamage", 1, 20)}
+              {renderSlider("Flame Range", "dragon", "flameRange", 60, 220, 2, "px")}
+              {renderSlider("Flame Angle", "dragon", "flameAngle", 0.3, 2.2, 0.05)}
+              {renderSlider("Tick Cooldown", "dragon", "tickCooldown", 100, 1200, 20, "ms")}
+              {renderSlider("Heat Per Wall Bounce", "dragon", "heatPerWallBounce", 1, 5, 1)}
+              {renderSlider("Heat Required", "dragon", "heatRequired", 1, 8, 1)}
+              {renderSlider("Fireball Damage", "dragon", "fireballDamage", 1, 35)}
+              {renderSlider("Fireball Speed", "dragon", "fireballSpeed", 200, 1000, 20, "px/s")}
+              {renderSlider("Fireball Bounces", "dragon", "fireballBounces", 0, 8, 1)}
+              {renderSlider("Burn Duration", "dragon", "burnDuration", 300, 4000, 50, "ms")}
+              {renderSlider("Fireball Cooldown", "dragon", "cooldown", 500, 5000, 50, "ms")}
             </>
           )}
           {type === "wrecker" && (
