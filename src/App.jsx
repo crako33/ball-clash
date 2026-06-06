@@ -47,7 +47,7 @@ const BALL_TYPES = {
     color: "#3b82f6",
     stroke: "#ef4444",
     radius: 32,
-    description: "Throws star-spangled shield. Secondary: Bash & Emergency Recall.",
+    description: "Throws a round shield. Secondary: Bash & Emergency Recall.",
   },
   spider: {
     id: "spider",
@@ -128,7 +128,7 @@ const BALL_TYPES = {
     color: "#dc2626",
     stroke: "#f97316",
     radius: 33,
-    description: "Fire-breathing monster ball. Heat builds into bouncing fireballs.",
+    description: "Burst fire-breather. Short flame windows build into limited bouncing fireballs.",
   },
   psychicer: {
     id: "psychicer",
@@ -147,6 +147,24 @@ const BALL_TYPES = {
     stroke: "#f97316",
     radius: 31,
     description: "Drops chaos circles that fling enemies toward the farthest wall.",
+  },
+  trident: {
+    id: "trident",
+    name: "Trident Ball",
+    shortName: "TRID",
+    color: "#d6a15f",
+    stroke: "#facc15",
+    radius: 31,
+    description: "Throws a trident that pins enemies to walls, sticks on miss, then recalls.",
+  },
+  spirit: {
+    id: "spirit",
+    name: "Spirit Blaster Ball",
+    shortName: "SPRT",
+    color: "#f97316",
+    stroke: "#38bdf8",
+    radius: 31,
+    description: "Charges Ki through wall bounces. Fires a giant energy beam when full.",
   },
 };
 
@@ -179,7 +197,7 @@ const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
   gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
-  laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 14, pulseSpeed: 620, pulseStunDuration: 750 },
+  laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 14, pulseSpeed: 620, pulseStunDuration: 1200 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
   spider: { fangDamage: 2, webSpeed: 580, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
@@ -188,10 +206,12 @@ const BALANCE = {
   stringWeb: { stringDamage: 3, stringLifetime: 9000, maxStrings: 14, stringSlowDuration: 1400, stringSlowMultiplier: 0.32, stringHitPadding: 10, stringPullForce: 260, trampolineCooldown: 1100, trampolineBoost: 1.45, trampolineMinSpeed: 310 },
   arm: { slamDamage: 1, grabRange: 60, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
-  wrecker: { cooldown: 1000, leapDamage: 22, megaLeapDamage: 34, shockwaveRadius: 105, megaShockwaveRadius: 160, knockbackForce: 760, rageRequired: 4, megaRageRequired: 9, pushCooldown: 1450, pushRange: 46, pushForce: 650, pushDamage: 6, leapCooldown: 5600, bounceBoost: 1.18, maxBounceSpeed: 340, sizePerRage: 0.022, maxRageSizeScale: 1.24, megaSizeScale: 1.35 },
-  dragon: { flameDamage: 2, flameRange: 118, flameAngle: 0.82, tickCooldown: 260, heatPerWallBounce: 1, heatRequired: 3, fireballDamage: 8, fireballSpeed: 520, fireballBounces: 3, burnDuration: 1600, cooldown: 1400 },
+  wrecker: { cooldown: 1200, leapDamage: 14, megaLeapDamage: 22, shockwaveRadius: 92, megaShockwaveRadius: 132, knockbackForce: 620, rageRequired: 5, megaRageRequired: 10, pushCooldown: 1650, pushRange: 42, pushForce: 520, pushDamage: 3, leapCooldown: 6400, bounceBoost: 1.14, maxBounceSpeed: 320, sizePerRage: 0.018, maxRageSizeScale: 1.2, megaSizeScale: 1.3 },
+  dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300 },
   psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
   chaos: { circleRadius: 48, launchSpeed: 620, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000 },
+  trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 580, recallSpeed: 720, cooldown: 6800, stuckDuration: 800 },
+  spirit: { chargeRequired: 5, beamDamage: 6, tickCooldown: 180, beamDuration: 900, beamWidth: 42, cooldown: 1800, knockback: 420 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -423,6 +443,10 @@ export default function App() {
       chaosControlledUntil: 0,
       chaosControlHoldUntil: 0,
       chaosSlamDone: false,
+      // Trident Specific
+      tridentState: "held", tridentX: 0, tridentY: 0, tridentVx: 0, tridentVy: 0, tridentAngle: side === "left" ? 0 : Math.PI, tridentTargetId: null, tridentStuckUntil: 0,
+      // Spirit Specific
+      kiCharge: 0, spiritBeamUntil: 0, spiritBeamAngle: side === "left" ? 0 : Math.PI, spiritNextTickAt: 0, spiritCooldownUntil: 0, spiritFlashUntil: 0,
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
@@ -669,31 +693,31 @@ export default function App() {
     const barW = w - 44;
     const barH = 18;
     ctx.save();
-    ctx.shadowColor = "rgba(15, 23, 42, 0.18)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.28)";
     ctx.shadowBlur = 18;
     ctx.shadowOffsetY = 8;
-    ctx.fillStyle = "rgba(248, 250, 252, 0.96)";
+    ctx.fillStyle = "rgba(31, 41, 55, 0.96)";
     drawRoundedRect(ctx, x, y, w, 108, 22);
     ctx.fill();
     ctx.shadowColor = "transparent";
     ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(15, 23, 42, 0.16)";
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.22)";
     ctx.stroke();
 
     ctx.textAlign = align;
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#020617";
+    ctx.fillStyle = "#f8fafc";
     ctx.font = "800 34px Arial, sans-serif";
     const nameX = align === "left" ? x + 22 : x + w - 22;
     ctx.fillText(ball?.name || config.name, nameX, y + 42);
 
     ctx.font = "800 24px Arial, sans-serif";
-    ctx.fillStyle = "#334155";
+    ctx.fillStyle = "#cbd5e1";
     ctx.fillText(`${hp} HP`, nameX, y + 76);
 
     const barX = x + 22;
     const barY = y + 82;
-    ctx.fillStyle = "#dbe4ef";
+    ctx.fillStyle = "#0f172a";
     drawRoundedRect(ctx, barX, barY, barW, barH, 9);
     ctx.fill();
     ctx.fillStyle = config.color;
@@ -720,9 +744,9 @@ export default function App() {
 
     ctx.clearRect(0, 0, width, height);
     const bg = ctx.createLinearGradient(0, 0, 0, height);
-    bg.addColorStop(0, "#f8fafc");
-    bg.addColorStop(0.48, "#e2e8f0");
-    bg.addColorStop(1, "#cbd5e1");
+    bg.addColorStop(0, "#1f2937");
+    bg.addColorStop(0.48, "#111827");
+    bg.addColorStop(1, "#374151");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
@@ -755,7 +779,7 @@ export default function App() {
     if (winner) {
       ctx.save();
       ctx.textAlign = "center";
-      ctx.fillStyle = "#020617";
+      ctx.fillStyle = "#f8fafc";
       ctx.font = "900 58px Arial, sans-serif";
       ctx.fillText(`${winner} Wins!`, width / 2, arenaY + arenaSize + 96);
       ctx.restore();
@@ -1568,7 +1592,8 @@ export default function App() {
                   enemy.vy += Math.sin(targetAngle) * balance.arm.punchKnockback;
                 }
 
-                if (targetDist <= 250 && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
+                const elbowDropRange = Math.max(95, balance.arm.punchRange + ball.r + enemy.r + 18);
+                if (targetDist <= elbowDropRange && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
                   ball.armState = "elbow_dropping";
                   ball.armStateUntil = simTime + 520;
@@ -2310,6 +2335,22 @@ export default function App() {
           }
           spawnSparks(ball.x, ball.y, "#22c55e", Math.min(16, 5 + (ball.rageStacks || 0)));
         }
+        if (ball.type === "spirit") {
+          const spiritBal = game.balance.spirit || BALANCE.spirit;
+          if (game.simTime >= (ball.spiritCooldownUntil || 0) && !(ball.spiritBeamUntil && game.simTime < ball.spiritBeamUntil)) {
+            const before = ball.kiCharge || 0;
+            ball.kiCharge = Math.min(spiritBal.chargeRequired, before + 1);
+            ball.spiritFlashUntil = game.simTime + 260;
+            spawnSparks(ball.x, ball.y, "#38bdf8", 4 + ball.kiCharge);
+            if (before < spiritBal.chargeRequired && ball.kiCharge >= spiritBal.chargeRequired) {
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: ball.x, y: ball.y - ball.r - 22, vy: -45,
+                text: "KI FULL", color: "#38bdf8", life: 0.8, maxLife: 0.8
+              });
+            }
+          }
+        }
         if (ball.armThrowWallUntil && game.simTime <= ball.armThrowWallUntil) {
           applyDamage(ball, ARM_THROW_WALL_DAMAGE, `${ball.armThrowWallSourceId || ball.id}-arm-throw-wall`, game.simTime, 500);
           ball.armThrowWallUntil = 0;
@@ -2700,7 +2741,8 @@ export default function App() {
           });
         }
         
-        if (targetDist <= 250 && currentTime >= (armBall.nextSecondaryAt || 0) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
+        const elbowDropRange = Math.max(95, bal.arm.punchRange + armBall.r + target.r + 18);
+        if (targetDist <= elbowDropRange && currentTime >= (armBall.nextSecondaryAt || 0) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
           armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
           armBall.armState = "elbow_dropping";
           armBall.armStateUntil = currentTime + 520;
@@ -3142,12 +3184,6 @@ export default function App() {
                 x: target.x, y: target.y - target.r - 22, vy: -55,
                 text: "PIERCE", color: "#facc15", life: 0.65, maxLife: 0.65
               });
-            } else {
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({
-                x: shieldBlock.x, y: shieldBlock.y - 18, vy: -45,
-                text: `${4 - (target.shieldLaserPierceHits || 0)} TO PIERCE`, color: "#93c5fd", life: 0.55, maxLife: 0.55
-              });
             }
           }
           if (currentTime >= laserBall.laserStateUntil) {
@@ -3268,28 +3304,37 @@ export default function App() {
 
     const updateSpider = (spiderBall, target, currentTime, stepDt) => {
       const bal = game.balance;
-
-      // Venomous Web Spit Trigger
-      const dist = Math.hypot(target.x - spiderBall.x, target.y - spiderBall.y);
-      if (dist < 240 && currentTime >= (spiderBall.nextSecondaryAt || 0)) {
-        spiderBall.nextSecondaryAt = currentTime + bal.spider.secCooldown;
-        const spitX = clamp(spiderBall.x + (target.x - spiderBall.x) * 0.4 + (Math.random() - 0.5) * 20, 30, game.width - 30);
-        const spitY = clamp(spiderBall.y + (target.y - spiderBall.y) * 0.4 + (Math.random() - 0.5) * 20, 30, game.height - 30);
+      const hasActiveWebTrap = () => (game.venomPools || []).some((pool) => pool.ownerId === spiderBall.id);
+      const dropWebTrap = (x, y) => {
+        if (hasActiveWebTrap()) return false;
+        game.venomPools = game.venomPools || [];
         game.venomPools.push({
-          x: spitX,
-          y: spitY,
+          ownerId: spiderBall.id,
+          x,
+          y,
           r: bal.spider.secPoolRadius,
           ownerSide: spiderBall.side,
           createdTime: currentTime,
           duration: 4000
         });
-        playSound("webShoot");
-        
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: spiderBall.x, y: spiderBall.y - spiderBall.r - 20, vy: -50,
-          text: "WEB", color: "#10b981", life: 0.8, maxLife: 0.8
-        });
+        return true;
+      };
+
+      // Venomous Web Spit Trigger
+      const dist = Math.hypot(target.x - spiderBall.x, target.y - spiderBall.y);
+      if (dist < 240 && currentTime >= (spiderBall.nextSecondaryAt || 0) && !hasActiveWebTrap()) {
+        spiderBall.nextSecondaryAt = currentTime + bal.spider.secCooldown;
+        const spitX = clamp(spiderBall.x + (target.x - spiderBall.x) * 0.4 + (Math.random() - 0.5) * 20, 30, game.width - 30);
+        const spitY = clamp(spiderBall.y + (target.y - spiderBall.y) * 0.4 + (Math.random() - 0.5) * 20, 30, game.height - 30);
+        if (dropWebTrap(spitX, spitY)) {
+          playSound("webShoot");
+
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: spiderBall.x, y: spiderBall.y - spiderBall.r - 20, vy: -50,
+            text: "WEB", color: "#10b981", life: 0.8, maxLife: 0.8
+          });
+        }
       }
 
       if (spiderBall.webState === "idle") {
@@ -3315,14 +3360,7 @@ export default function App() {
           spiderBall.webState = "idle";
           spiderBall.webTargetId = null;
           spiderBall.webBouncesLeft = 0;
-          game.venomPools.push({
-            x: target.x,
-            y: target.y,
-            r: bal.spider.secPoolRadius,
-            ownerSide: spiderBall.side,
-            createdTime: currentTime,
-            duration: 4000
-          });
+          dropWebTrap(target.x, target.y);
           return;
         }
         const targetDx = target.x - (spiderBall.webLastTargetX ?? target.x);
@@ -3373,14 +3411,7 @@ export default function App() {
             spiderBall.webTargetId = null;
             spiderBall.webBouncesLeft = 0;
             spawnSparks(target.x, target.y, "#93c5fd", 6);
-            game.venomPools.push({
-              x: target.x,
-              y: target.y,
-              r: bal.spider.secPoolRadius,
-              ownerSide: spiderBall.side,
-              createdTime: currentTime,
-              duration: 4000
-            });
+            dropWebTrap(target.x, target.y);
           }
         }
       } else if (spiderBall.webState === "webBouncing") {
@@ -3745,54 +3776,84 @@ export default function App() {
 
     const updateDragon = (ball, target, currentTime) => {
       const bal = game.balance.dragon;
+      const flameDamage = Math.min(bal.flameDamage || 1, 2);
+      const flameRange = Math.min(bal.flameRange || 100, 105);
+      const flameAngle = Math.min(bal.flameAngle || 0.55, 0.62);
+      const tickCooldown = Math.max(bal.tickCooldown || 460, 420);
+      const breathDuration = Math.min(bal.breathDuration || 650, 850);
+      const breathCooldown = Math.max(bal.breathCooldown || 1800, 1500);
+      const heatRequired = Math.max(bal.heatRequired || 5, 5);
+      const fireballDamage = Math.min(bal.fireballDamage || 5, 6);
+      const fireballSpeed = Math.min(bal.fireballSpeed || 440, 500);
+      const fireballBounces = Math.min(bal.fireballBounces || 1, 2);
+      const burnDuration = Math.min(bal.burnDuration || 900, 1100);
+      const fireballCooldown = Math.max(bal.cooldown || 2300, 2000);
       const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
       const currentAim = ball.dragonAngle ?? targetAngle;
       const aimDiff = Math.atan2(Math.sin(targetAngle - currentAim), Math.cos(targetAngle - currentAim));
-      const aimTurn = Math.abs(aimDiff) > 1.1 ? 0.16 : 0.095;
+      const aimTurn = Math.abs(aimDiff) > 1.1 ? 0.12 : 0.065;
       ball.dragonAngle = currentAim + aimDiff * aimTurn;
       const angle = ball.dragonAngle;
       const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
       const diff = Math.abs(Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle)));
-      const breathing = dist <= bal.flameRange * 1.18 && diff <= bal.flameAngle * 1.45;
+      const targetInBreathLane = dist <= flameRange * 1.12 && diff <= flameAngle * 1.35;
+
+      if (targetInBreathLane && currentTime >= (ball.dragonNextBreathAt || 0)) {
+        ball.dragonBreathUntil = currentTime + breathDuration;
+        ball.dragonNextBreathAt = currentTime + breathDuration + breathCooldown;
+        ball.dragonFlameActiveUntil = ball.dragonBreathUntil;
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x,
+          y: ball.y - ball.r - 18,
+          vy: -45,
+          text: "BREATH",
+          color: "#fb923c",
+          life: 0.65,
+          maxLife: 0.65
+        });
+      }
+
+      const breathing = currentTime < (ball.dragonBreathUntil || 0);
 
       if (breathing) {
-        ball.dragonFlameActiveUntil = currentTime + 180;
         if (currentTime >= (ball.dragonNextEmberAt || 0)) {
           const mouthX = ball.x + Math.cos(angle) * (ball.r + 16);
           const mouthY = ball.y + Math.sin(angle) * (ball.r + 16);
-          const emberDistance = Math.min(dist, bal.flameRange) * (0.25 + Math.random() * 0.55);
-          const emberAngle = angle + (Math.random() - 0.5) * bal.flameAngle * 0.75;
+          const emberDistance = Math.min(dist, flameRange) * (0.25 + Math.random() * 0.45);
+          const emberAngle = angle + (Math.random() - 0.5) * flameAngle * 0.72;
           spawnSparks(mouthX + Math.cos(emberAngle) * emberDistance, mouthY + Math.sin(emberAngle) * emberDistance, Math.random() > 0.45 ? "#facc15" : "#fb923c", 3);
-          ball.dragonNextEmberAt = currentTime + 90;
+          ball.dragonNextEmberAt = currentTime + 130;
         }
       }
 
-      if (dist <= bal.flameRange && diff <= bal.flameAngle && currentTime >= (ball.dragonNextTickAt || 0)) {
-        applyDamage(target, bal.flameDamage, `${ball.id}-dragon-flame`, currentTime, bal.tickCooldown);
-        ball.dragonNextTickAt = currentTime + bal.tickCooldown;
-        target.burnUntil = Math.max(target.burnUntil || 0, currentTime + bal.burnDuration);
-        spawnSparks(target.x, target.y, "#fb923c", 7);
-        if (ball.side === "left") { game.stats.left.damageDealt += bal.flameDamage; game.stats.left.hitsLanded++; }
-        else { game.stats.right.damageDealt += bal.flameDamage; game.stats.right.hitsLanded++; }
+      if (breathing && dist <= flameRange && diff <= flameAngle && currentTime >= (ball.dragonNextTickAt || 0)) {
+        applyDamage(target, flameDamage, `${ball.id}-dragon-flame`, currentTime, tickCooldown);
+        ball.dragonNextTickAt = currentTime + tickCooldown;
+        target.dragonScorchedUntil = currentTime + 220;
+        spawnSparks(target.x, target.y, "#fb923c", 4);
+        if (ball.side === "left") { game.stats.left.damageDealt += flameDamage; game.stats.left.hitsLanded++; }
+        else { game.stats.right.damageDealt += flameDamage; game.stats.right.hitsLanded++; }
       }
 
       const wallBounces = ball.consecutiveWallBounces || 0;
       if (ball.dragonLastWallBounces === undefined) ball.dragonLastWallBounces = wallBounces;
       if (wallBounces > (ball.dragonLastWallBounces || 0)) {
-        ball.dragonHeat = Math.min(bal.heatRequired, (ball.dragonHeat || 0) + bal.heatPerWallBounce);
+        ball.dragonHeat = Math.min(heatRequired, (ball.dragonHeat || 0) + Math.min(bal.heatPerWallBounce || 1, 1));
         ball.dragonLastWallBounces = wallBounces;
       }
 
-      if ((ball.dragonHeat || 0) >= bal.heatRequired && currentTime >= (ball.nextShotAt || 0)) {
+      if ((ball.dragonHeat || 0) >= heatRequired && currentTime >= (ball.nextShotAt || 0)) {
         const sx = ball.x + Math.cos(angle) * (ball.r + 12);
         const sy = ball.y + Math.sin(angle) * (ball.r + 12);
+        const shotAngle = angle + (Math.random() - 0.5) * 0.22;
         game.bullets.push({
           ownerId: ball.id, targetSide: target.side, kind: "dragonFireball",
-          x: sx, y: sy, vx: Math.cos(angle) * bal.fireballSpeed, vy: Math.sin(angle) * bal.fireballSpeed,
-          r: 11, damage: bal.fireballDamage, life: 3, bouncesLeft: bal.fireballBounces, burnDuration: bal.burnDuration
+          x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
+          r: 9, damage: fireballDamage, life: 2.4, bouncesLeft: fireballBounces, burnDuration
         });
         ball.dragonHeat = 0;
-        ball.nextShotAt = currentTime + bal.cooldown;
+        ball.nextShotAt = currentTime + fireballCooldown;
         if (ball.side === "left") game.stats.left.totalShots++;
         else game.stats.right.totalShots++;
         game.screenShake = Math.max(game.screenShake, 6);
@@ -3879,6 +3940,247 @@ export default function App() {
       if (ball.side === "left") game.stats.left.totalShots++;
       else game.stats.right.totalShots++;
       playSound("sporeShoot", 0.85, 80);
+    };
+
+    const drawTridentText = (ball, text, color) => {
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({
+        x: ball.x,
+        y: ball.y - ball.r - 22,
+        vy: -48,
+        text,
+        color,
+        life: 0.8,
+        maxLife: 0.8
+      });
+    };
+
+    const startTridentRecall = (ball, currentTime) => {
+      if (ball.tridentState === "held") return;
+      const pinned = game.balls.find((other) => other.id === ball.tridentTargetId);
+      if (pinned) {
+        const pullAngle = Math.atan2(ball.y - ball.tridentY, ball.x - ball.tridentX);
+        const pullSpeed = 620;
+        pinned.tridentPinnedUntil = 0;
+        pinned.tridentPinOwnerId = null;
+        pinned.vx = Math.cos(pullAngle) * pullSpeed;
+        pinned.vy = Math.sin(pullAngle) * pullSpeed;
+        pinned.knockbackActiveUntil = currentTime + 450;
+        spawnSparks(pinned.x, pinned.y, "#facc15", 10);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: pinned.x,
+          y: pinned.y - pinned.r - 18,
+          vy: -48,
+          text: "PULLED",
+          color: "#facc15",
+          life: 0.65,
+          maxLife: 0.65
+        });
+      }
+      ball.tridentState = "recalling";
+      ball.tridentTargetId = null;
+      ball.tridentStuckUntil = 0;
+    };
+
+    const updateTrident = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.trident || BALANCE.trident;
+      const aimAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      const mountSide = ball.side === "left" ? 1 : -1;
+      const mountAngle = aimAngle + mountSide * Math.PI / 2;
+      const heldPose = {
+        x: ball.x + Math.cos(mountAngle) * (ball.r + 19),
+        y: ball.y + Math.sin(mountAngle) * (ball.r + 19),
+        angle: aimAngle
+      };
+
+      if (!ball.tridentState || ball.tridentState === "held") {
+        ball.tridentState = "held";
+        ball.tridentAngle = heldPose.angle;
+        ball.tridentX = heldPose.x;
+        ball.tridentY = heldPose.y;
+        if (currentTime >= (ball.nextShotAt || 0) && Math.hypot(target.x - ball.x, target.y - ball.y) < 380) {
+          ball.tridentState = "thrown";
+          ball.tridentX = heldPose.x;
+          ball.tridentY = heldPose.y;
+          ball.tridentVx = Math.cos(aimAngle) * bal.throwSpeed;
+          ball.tridentVy = Math.sin(aimAngle) * bal.throwSpeed;
+          ball.tridentAngle = aimAngle;
+          ball.tridentTargetId = null;
+          ball.tridentStuckUntil = 0;
+          ball.nextShotAt = currentTime + bal.cooldown;
+          drawTridentText(ball, "TRIDENT", "#facc15");
+          if (ball.side === "left") game.stats.left.totalShots++;
+          else game.stats.right.totalShots++;
+          playSound("shieldThrow", 0.8, 120);
+        }
+        return;
+      }
+
+      if (ball.tridentState === "thrown") {
+        ball.tridentX += ball.tridentVx * stepDt;
+        ball.tridentY += ball.tridentVy * stepDt;
+        ball.tridentAngle = Math.atan2(ball.tridentVy, ball.tridentVx);
+
+        const hooked = game.balls.find((other) => other.id === ball.tridentTargetId);
+        if (!hooked && Math.hypot(ball.tridentX - target.x, ball.tridentY - target.y) < target.r + 12) {
+          ball.tridentTargetId = target.id;
+          target.tridentPinnedUntil = currentTime + bal.stuckDuration + 600;
+          target.tridentPinOwnerId = ball.id;
+          target.vx = ball.tridentVx;
+          target.vy = ball.tridentVy;
+          applyDamage(target, bal.throwDamage, `${ball.id}-trident-hit`, currentTime, 350);
+          if (ball.side === "left") {
+            game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.throwDamage);
+            game.stats.left.hitsLanded++;
+          } else {
+            game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.throwDamage);
+            game.stats.right.hitsLanded++;
+          }
+          target.webHitFlashUntil = currentTime + 180;
+          spawnSparks(ball.tridentX, ball.tridentY, "#facc15", 9);
+          playSound("webHit", 0.8, 180);
+        }
+
+        const pinned = game.balls.find((other) => other.id === ball.tridentTargetId);
+        if (pinned) {
+          pinned.x = clamp(ball.tridentX - Math.cos(ball.tridentAngle) * (pinned.r + 12), pinned.r + 18, game.width - pinned.r - 18);
+          pinned.y = clamp(ball.tridentY - Math.sin(ball.tridentAngle) * (pinned.r + 12), pinned.r + 18, game.height - pinned.r - 18);
+          pinned.vx = ball.tridentVx;
+          pinned.vy = ball.tridentVy;
+        }
+
+        const wallPad = 18;
+        const hitWall = ball.tridentX < wallPad || ball.tridentX > game.width - wallPad || ball.tridentY < wallPad || ball.tridentY > game.height - wallPad;
+        if (hitWall) {
+          ball.tridentX = clamp(ball.tridentX, wallPad, game.width - wallPad);
+          ball.tridentY = clamp(ball.tridentY, wallPad, game.height - wallPad);
+          ball.tridentState = "stuck";
+          ball.tridentStuckUntil = currentTime + bal.stuckDuration;
+          ball.tridentVx = 0;
+          ball.tridentVy = 0;
+
+          if (pinned) {
+            pinned.x = clamp(ball.tridentX - Math.cos(ball.tridentAngle) * (pinned.r + 10), pinned.r + 18, game.width - pinned.r - 18);
+            pinned.y = clamp(ball.tridentY - Math.sin(ball.tridentAngle) * (pinned.r + 10), pinned.r + 18, game.height - pinned.r - 18);
+            pinned.vx = 0;
+            pinned.vy = 0;
+            pinned.tridentPinnedUntil = ball.tridentStuckUntil;
+            applyDamage(pinned, bal.wallDamage, `${ball.id}-trident-wall`, currentTime, 450);
+            if (ball.side === "left") {
+              game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.wallDamage);
+              game.stats.left.hitsLanded++;
+            } else {
+              game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.wallDamage);
+              game.stats.right.hitsLanded++;
+            }
+            game.screenShake = Math.max(game.screenShake, 8);
+            drawTridentText(ball, "PINNED", "#65a30d");
+          } else {
+            drawTridentText(ball, "STUCK", "#facc15");
+          }
+          spawnSparks(ball.tridentX, ball.tridentY, "#facc15", 12);
+        }
+        return;
+      }
+
+      if (ball.tridentState === "stuck") {
+        const pinned = game.balls.find((other) => other.id === ball.tridentTargetId);
+        if (pinned && currentTime < ball.tridentStuckUntil) {
+          pinned.x = clamp(ball.tridentX - Math.cos(ball.tridentAngle) * (pinned.r + 10), pinned.r + 18, game.width - pinned.r - 18);
+          pinned.y = clamp(ball.tridentY - Math.sin(ball.tridentAngle) * (pinned.r + 10), pinned.r + 18, game.height - pinned.r - 18);
+          pinned.vx = 0;
+          pinned.vy = 0;
+        }
+        if (currentTime >= ball.tridentStuckUntil) startTridentRecall(ball, currentTime);
+        return;
+      }
+
+      if (ball.tridentState === "recalling") {
+        const dx = ball.x - ball.tridentX;
+        const dy = ball.y - ball.tridentY;
+        const dist = Math.hypot(dx, dy);
+        if (dist < ball.r + 14) {
+          ball.tridentState = "held";
+          ball.tridentTargetId = null;
+          return;
+        }
+        const angle = Math.atan2(dy, dx);
+        ball.tridentAngle = angle;
+        ball.tridentX += Math.cos(angle) * bal.recallSpeed * stepDt;
+        ball.tridentY += Math.sin(angle) * bal.recallSpeed * stepDt;
+      }
+    };
+
+    const updateSpirit = (ball, target, currentTime) => {
+      const bal = game.balance.spirit || BALANCE.spirit;
+
+      if (ball.spiritBeamUntil && currentTime < ball.spiritBeamUntil) {
+        const sx = ball.x + Math.cos(ball.spiritBeamAngle) * ball.r;
+        const sy = ball.y + Math.sin(ball.spiritBeamAngle) * ball.r;
+        const ex = sx + Math.cos(ball.spiritBeamAngle) * 1500;
+        const ey = sy + Math.sin(ball.spiritBeamAngle) * 1500;
+        if (currentTime >= (ball.spiritNextTickAt || 0)) {
+          ball.spiritNextTickAt = currentTime + bal.tickCooldown;
+          const hitDist = linePointDist(target.x, target.y, sx, sy, ex, ey);
+          const ahead = (target.x - sx) * Math.cos(ball.spiritBeamAngle) + (target.y - sy) * Math.sin(ball.spiritBeamAngle);
+          if (ahead > 0 && hitDist < target.r + bal.beamWidth / 2) {
+            applyDamage(target, bal.beamDamage, `${ball.id}-spirit-beam`, currentTime, bal.tickCooldown - 5);
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(ball.spiritBeamAngle) * bal.knockback;
+              target.vy += Math.sin(ball.spiritBeamAngle) * bal.knockback;
+            }
+            if (ball.side === "left") {
+              game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.beamDamage);
+              game.stats.left.hitsLanded++;
+            } else {
+              game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.beamDamage);
+              game.stats.right.hitsLanded++;
+            }
+            target.webHitFlashUntil = currentTime + 160;
+            spawnSparks(target.x, target.y, "#fde047", 8);
+          }
+        }
+        if (canSpawnParticle() && Math.random() < 0.45) {
+          const dist = 20 + Math.random() * 320;
+          const side = (Math.random() - 0.5) * bal.beamWidth;
+          const px = sx + Math.cos(ball.spiritBeamAngle) * dist + Math.cos(ball.spiritBeamAngle + Math.PI / 2) * side;
+          const py = sy + Math.sin(ball.spiritBeamAngle) * dist + Math.sin(ball.spiritBeamAngle + Math.PI / 2) * side;
+          game.particles.push({
+            x: px, y: py,
+            vx: Math.cos(ball.spiritBeamAngle) * 45,
+            vy: Math.sin(ball.spiritBeamAngle) * 45,
+            color: Math.random() < 0.6 ? "#38bdf8" : "#fde047",
+            radius: 1.6,
+            life: 0.18,
+            maxLife: 0.18
+          });
+        }
+        return;
+      }
+
+      if (ball.spiritBeamUntil && currentTime >= ball.spiritBeamUntil) {
+        ball.spiritBeamUntil = 0;
+        ball.spiritCooldownUntil = currentTime + bal.cooldown;
+      }
+
+      if ((ball.kiCharge || 0) >= bal.chargeRequired && currentTime >= (ball.spiritCooldownUntil || 0)) {
+        ball.kiCharge = 0;
+        ball.spiritBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        ball.spiritBeamUntil = currentTime + bal.beamDuration;
+        ball.spiritNextTickAt = currentTime;
+        ball.spiritFlashUntil = currentTime + bal.beamDuration;
+        game.screenShake = Math.max(game.screenShake, 9);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 24, vy: -48,
+          text: "SPIRIT BEAM", color: "#fde047", life: 0.9, maxLife: 0.9
+        });
+        if (ball.side === "left") game.stats.left.totalShots++;
+        else game.stats.right.totalShots++;
+        spawnSparks(ball.x, ball.y, "#38bdf8", 18);
+        playSound("laserFire", 0.9, 220);
+      }
     };
 
     const updateSpore = (sporeBall, target, currentTime) => {
@@ -4156,7 +4458,7 @@ export default function App() {
           if (bullet.stunDuration) {
             game.floatingTexts.push({
               x: target.x, y: target.y - target.r - 22, vy: -55,
-              text: "STUN", color: "#facc15", life: 0.8, maxLife: 0.8
+              text: "ELECTRIFIED", color: "#38bdf8", life: 0.8, maxLife: 0.8
             });
           }
           
@@ -4228,29 +4530,9 @@ export default function App() {
     const drawKnifeBall = (ball) => {
       const config = BALL_TYPES.knife;
       ctx.save(); ctx.translate(ball.x, ball.y);
-      ctx.fillStyle = "#86efac";
-      ctx.strokeStyle = "#15803d";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-ball.r + 5, -9);
-      ctx.lineTo(-ball.r - 26, -18);
-      ctx.lineTo(-ball.r - 10, 4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(ball.r - 5, -9);
-      ctx.lineTo(ball.r + 26, -18);
-      ctx.lineTo(ball.r + 10, 4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = config.color; ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-      ctx.fillStyle = "#166534";
-      ctx.beginPath(); ctx.arc(-9, -5, 3.2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(9, -5, 3.2, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
 
       const bladeState = ball.knifeBladeState || "rotating";
@@ -4848,8 +5130,10 @@ export default function App() {
         ctx.fillStyle = "#1d4ed8";
         ctx.fill();
 
-        // White star in center
-        drawStar(ctx, 0, 0, 5, shieldR * 0.4, shieldR * 0.16);
+        ctx.beginPath();
+        ctx.arc(0, 0, shieldR * 0.24, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
 
         ctx.restore();
       }
@@ -5511,21 +5795,23 @@ export default function App() {
       const target = game.balls.find(o => o.side !== ball.side);
       if (target) {
         const bal = game.balance.dragon;
+        const flameRange = Math.min(bal.flameRange || 100, 105);
+        const flameAngle = Math.min(bal.flameAngle || 0.55, 0.62);
         const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-        const active = game.simTime < (ball.dragonFlameActiveUntil || 0) || dist <= bal.flameRange * 0.9;
+        const active = game.simTime < (ball.dragonFlameActiveUntil || 0);
         if (active) {
           const mouthX = ball.x + Math.cos(angle) * (ball.r + 12);
           const mouthY = ball.y + Math.sin(angle) * (ball.r + 12);
           const time = game.simTime || 0;
-          const flameCount = 7;
+          const flameCount = 5;
           ctx.save();
           ctx.globalCompositeOperation = "lighter";
           for (let i = 0; i < flameCount; i++) {
             const t = (i + 0.5) / flameCount;
             const side = t - 0.5;
             const flicker = Math.sin(time * 0.018 + i * 1.73) * 0.5 + Math.sin(time * 0.031 + i) * 0.5;
-            const tongueAngle = angle + side * bal.flameAngle * 0.86 + flicker * 0.08;
-            const length = bal.flameRange * (0.5 + (1 - Math.abs(side)) * 0.33 + flicker * 0.05);
+            const tongueAngle = angle + side * flameAngle * 0.82 + flicker * 0.07;
+            const length = flameRange * (0.45 + (1 - Math.abs(side)) * 0.3 + flicker * 0.04);
             const width = 10 + (1 - Math.abs(side) * 1.5) * 18 + Math.sin(time * 0.024 + i * 2.1) * 4;
             const endX = mouthX + Math.cos(tongueAngle) * length;
             const endY = mouthY + Math.sin(tongueAngle) * length;
@@ -5554,10 +5840,10 @@ export default function App() {
           ctx.beginPath();
           ctx.moveTo(mouthX, mouthY);
           ctx.quadraticCurveTo(
-            mouthX + Math.cos(angle + Math.sin(time * 0.025) * 0.1) * bal.flameRange * 0.24,
-            mouthY + Math.sin(angle + Math.sin(time * 0.025) * 0.1) * bal.flameRange * 0.24,
-            mouthX + Math.cos(angle) * bal.flameRange * 0.5,
-            mouthY + Math.sin(angle) * bal.flameRange * 0.5
+            mouthX + Math.cos(angle + Math.sin(time * 0.025) * 0.1) * flameRange * 0.22,
+            mouthY + Math.sin(angle + Math.sin(time * 0.025) * 0.1) * flameRange * 0.22,
+            mouthX + Math.cos(angle) * flameRange * 0.45,
+            mouthY + Math.sin(angle) * flameRange * 0.45
           );
           ctx.stroke();
           ctx.restore();
@@ -5568,7 +5854,7 @@ export default function App() {
           ctx.lineWidth = 2;
           ctx.setLineDash([6, 9]);
           ctx.beginPath();
-          ctx.arc(ball.x, ball.y, bal.flameRange, angle - bal.flameAngle / 2, angle + bal.flameAngle / 2);
+          ctx.arc(ball.x, ball.y, flameRange, angle - flameAngle / 2, angle + flameAngle / 2);
           ctx.stroke();
           ctx.restore();
         }
@@ -5750,6 +6036,251 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawTridentWeapon = (x, y, angle, scale = 1, alpha = 1) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.globalAlpha = alpha;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = "#facc15";
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = "#facc15";
+      ctx.lineWidth = 4 * scale;
+      ctx.beginPath();
+      ctx.moveTo(-42 * scale, 0);
+      ctx.lineTo(34 * scale, 0);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#854d0e";
+      ctx.lineWidth = 1.6 * scale;
+      ctx.beginPath();
+      ctx.moveTo(-38 * scale, 0);
+      ctx.lineTo(22 * scale, 0);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#fde68a";
+      ctx.lineWidth = 3 * scale;
+      [-1, 0, 1].forEach((slot) => {
+        ctx.beginPath();
+        ctx.moveTo(24 * scale, slot * 8 * scale);
+        ctx.lineTo(48 * scale, slot * 10 * scale);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = "#65a30d";
+      ctx.lineWidth = 2 * scale;
+      ctx.beginPath();
+      ctx.moveTo(24 * scale, -10 * scale);
+      ctx.quadraticCurveTo(16 * scale, 0, 24 * scale, 10 * scale);
+      ctx.stroke();
+
+      ctx.fillStyle = "#65a30d";
+      ctx.beginPath();
+      ctx.arc(-10 * scale, 0, 3.4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const drawTridentBall = (ball) => {
+      const config = BALL_TYPES.trident;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.009) * 0.5;
+      const held = ball.tridentState === "held" || !ball.tridentState;
+      const target = game.balls.find((other) => other.side !== ball.side);
+      const aimAngle = target ? Math.atan2(target.y - ball.y, target.x - ball.x) : (ball.tridentAngle ?? 0);
+      const mountSide = ball.side === "left" ? 1 : -1;
+      const mountAngle = aimAngle + mountSide * Math.PI / 2;
+      const angle = held ? aimAngle : (ball.tridentAngle ?? aimAngle);
+      const tx = held ? ball.x + Math.cos(mountAngle) * (ball.r + 19) : ball.tridentX;
+      const ty = held ? ball.y + Math.sin(mountAngle) * (ball.r + 19) : ball.tridentY;
+
+      drawTridentWeapon(tx, ty, angle, held ? 0.82 : 0.9, ball.tridentState === "recalling" ? 0.82 : 1);
+
+      if (ball.tridentState === "stuck") {
+        ctx.save();
+        ctx.globalAlpha = 0.38 + pulse * 0.22;
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(tx, ty, 18 + pulse * 7, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      if (ball.tridentState === "thrown" || ball.tridentState === "recalling") {
+        ctx.globalAlpha = 0.25;
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + 8 + pulse * 7, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.shadowColor = "#facc15";
+      ctx.shadowBlur = 12 + pulse * 6;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
+      grad.addColorStop(0, "#fef3c7");
+      grad.addColorStop(0.45, config.color);
+      grad.addColorStop(1, "#92400e");
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = config.stroke;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(250, 204, 21, 0.85)";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.62, Math.PI * 0.2 + pulse * 0.2, Math.PI * 1.4 + pulse * 0.2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.36, -Math.PI * 0.25 - pulse * 0.25, Math.PI * 0.9 - pulse * 0.25);
+      ctx.stroke();
+
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath(); ctx.arc(-8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#365314";
+      ctx.beginPath(); ctx.arc(-8 + Math.cos(angle) * 1.2, -5 + Math.sin(angle) * 1.2, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8 + Math.cos(angle) * 1.2, -5 + Math.sin(angle) * 1.2, 2, 0, Math.PI * 2); ctx.fill();
+
+      const cd = Math.max(0, (ball.nextShotAt || 0) - game.simTime);
+      if (cd > 0) {
+        ctx.fillStyle = "#fef3c7";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.ceil(cd / 1000)}s`, 0, ball.r + 14);
+      }
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawSpiritBall = (ball) => {
+      const config = BALL_TYPES.spirit;
+      const bal = game.balance.spirit || BALANCE.spirit;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.012) * 0.5;
+      const chargeRatio = clamp((ball.kiCharge || 0) / Math.max(1, bal.chargeRequired), 0, 1);
+      const beamActive = ball.spiritBeamUntil && game.simTime < ball.spiritBeamUntil;
+
+      if (beamActive) {
+        const sx = ball.x + Math.cos(ball.spiritBeamAngle) * ball.r;
+        const sy = ball.y + Math.sin(ball.spiritBeamAngle) * ball.r;
+        const ex = sx + Math.cos(ball.spiritBeamAngle) * 1500;
+        const ey = sy + Math.sin(ball.spiritBeamAngle) * 1500;
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.shadowColor = "#38bdf8";
+        ctx.shadowBlur = 28;
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.32)";
+        ctx.lineWidth = bal.beamWidth + 18 + pulse * 8;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.strokeStyle = "rgba(253, 224, 71, 0.55)";
+        ctx.lineWidth = bal.beamWidth + 5;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.strokeStyle = "#f8fafc";
+        ctx.lineWidth = Math.max(8, bal.beamWidth * 0.35);
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.shadowColor = beamActive ? "#fde047" : "#38bdf8";
+      ctx.shadowBlur = 8 + chargeRatio * 18 + (beamActive ? 12 : 0);
+
+      // Monkey tail accessory behind the body.
+      ctx.save();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#7c2d12";
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.72, ball.r * 0.18);
+      ctx.quadraticCurveTo(-ball.r * 1.35, ball.r * 0.25, -ball.r * 1.18, -ball.r * 0.48);
+      ctx.quadraticCurveTo(-ball.r * 0.95, -ball.r * 1.08, -ball.r * 0.45, -ball.r * 0.84);
+      ctx.stroke();
+      ctx.strokeStyle = "#c2410c";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.72, ball.r * 0.18);
+      ctx.quadraticCurveTo(-ball.r * 1.35, ball.r * 0.25, -ball.r * 1.18, -ball.r * 0.48);
+      ctx.quadraticCurveTo(-ball.r * 0.95, -ball.r * 1.08, -ball.r * 0.45, -ball.r * 0.84);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r + chargeRatio * 5, 0, Math.PI * 2);
+      const auraGrad = ctx.createRadialGradient(0, 0, ball.r * 0.2, 0, 0, ball.r + 18);
+      auraGrad.addColorStop(0, "rgba(253, 224, 71, 0.22)");
+      auraGrad.addColorStop(0.45, "rgba(56, 189, 248, 0.18)");
+      auraGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+      ctx.fillStyle = auraGrad;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
+      bodyGrad.addColorStop(0, "#fed7aa");
+      bodyGrad.addColorStop(0.45, config.color);
+      bodyGrad.addColorStop(1, "#9a3412");
+      ctx.fillStyle = bodyGrad;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = config.stroke;
+      ctx.stroke();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r - 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = "#facc15";
+      ctx.fillRect(-ball.r, -ball.r, ball.r * 2, ball.r * 0.18);
+      ctx.fillStyle = "#2563eb";
+      ctx.fillRect(-ball.r, ball.r * 0.28, ball.r * 2, ball.r * 0.32);
+      ctx.fillStyle = "#1d4ed8";
+      ctx.fillRect(-ball.r, -ball.r * 0.16, ball.r * 0.42, ball.r * 0.28);
+      ctx.fillRect(ball.r * 0.58, -ball.r * 0.16, ball.r * 0.42, ball.r * 0.28);
+      ctx.fillStyle = "#fde047";
+      ctx.fillRect(-ball.r * 0.45, ball.r * 0.28, ball.r * 0.9, 4);
+      ctx.restore();
+
+      ctx.fillStyle = "#111827";
+      for (let i = 0; i < 5; i++) {
+        const x = (i - 2) * ball.r * 0.17;
+        const h = ball.r * (0.42 + (i % 2) * 0.14);
+        ctx.beginPath();
+        ctx.moveTo(x, -ball.r * 0.94);
+        ctx.lineTo(x - ball.r * 0.16, -ball.r * 0.46);
+        ctx.lineTo(x + ball.r * 0.18, -ball.r * 0.5);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      const pipCount = Math.max(1, bal.chargeRequired);
+      for (let i = 0; i < pipCount; i++) {
+        const a = -Math.PI / 2 + (i / pipCount) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * (ball.r + 8), Math.sin(a) * (ball.r + 8), 2.6, 0, Math.PI * 2);
+        ctx.fillStyle = i < (ball.kiCharge || 0) ? "#fde047" : "rgba(226, 232, 240, 0.35)";
+        ctx.fill();
+      }
+
+      if (chargeRatio >= 1 && !beamActive) {
+        ctx.fillStyle = "#fde047";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("FULL", 0, ball.r + 17);
+      }
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawBall = (ball, currentTime) => {
       if (ball.shattered) return;
       if (ball.type === "knife") drawKnifeBall(ball);
@@ -5774,6 +6305,8 @@ export default function App() {
       else if (ball.type === "dragon") drawDragonBall(ball);
       else if (ball.type === "psychicer") drawPsychicerBall(ball);
       else if (ball.type === "chaos") drawChaosBall(ball);
+      else if (ball.type === "trident") drawTridentBall(ball);
+      else if (ball.type === "spirit") drawSpiritBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -5811,18 +6344,32 @@ export default function App() {
       }
 
       if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) {
+        const progress = clamp((ball.paralyzedUntil - game.simTime) / 1200, 0, 1);
         ctx.save();
-        ctx.fillStyle = "#38bdf8";
-        const starY = ball.y - ball.r - 12;
-        const timeAngle = game.simTime * 0.008;
-        const starsCount = 3;
-        for (let i = 0; i < starsCount; i++) {
-          const angle = timeAngle + (i / starsCount) * Math.PI * 2;
-          const sx = ball.x + Math.cos(angle) * 16;
-          const sy = starY + Math.sin(angle) * 5;
-          drawStar(ctx, sx, sy, 5, 5, 2);
-          ctx.fill();
+        ctx.globalAlpha = 0.55 + progress * 0.3;
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#67e8f9";
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 9 + Math.sin(game.simTime * 0.02) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let i = 0; i < 5; i++) {
+          const angle = game.simTime * 0.012 + i * Math.PI * 0.4;
+          const inner = ball.r + 3;
+          const outer = ball.r + 16 + (i % 2) * 4;
+          const mid = (inner + outer) / 2;
+          ctx.beginPath();
+          ctx.moveTo(ball.x + Math.cos(angle) * inner, ball.y + Math.sin(angle) * inner);
+          ctx.lineTo(ball.x + Math.cos(angle + 0.13) * mid, ball.y + Math.sin(angle + 0.13) * mid);
+          ctx.lineTo(ball.x + Math.cos(angle - 0.08) * outer, ball.y + Math.sin(angle - 0.08) * outer);
+          ctx.stroke();
         }
+        ctx.fillStyle = "#67e8f9";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 8;
+        ctx.fillText("ELECTRIFIED", ball.x, ball.y - ball.r - 14);
         ctx.restore();
       }
     };
@@ -6779,6 +7326,7 @@ export default function App() {
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
             const isArmGrabbed = game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime);
+            const isTridentPinned = ball.tridentPinnedUntil && game.simTime < ball.tridentPinnedUntil;
             let slowMult = (isLatchedTarget || isLatchedSelf) ? 0.4 : 1.0;
             const insideWeb = activeVenomPools ? activeVenomPools.some((pool) => {
               if (ball.side === pool.ownerSide) return false;
@@ -6789,7 +7337,7 @@ export default function App() {
             if (ball.stringSlowUntil && game.simTime < ball.stringSlowUntil) slowMult *= ((game.balance.stringWeb || BALANCE.stringWeb).stringSlowMultiplier || 0.45);
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
 
-            if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
+            if (!isTridentPinned && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
               handleWallBounce(ball);
             }
@@ -6944,6 +7492,8 @@ export default function App() {
                   if (ball.type === "dragon") updateDragon(ball, target, game.simTime);
                   if (ball.type === "psychicer") updatePsychicer(ball, target, game.simTime);
                   if (ball.type === "chaos") updateChaos(ball, target, game.simTime);
+                  if (ball.type === "trident") updateTrident(ball, target, game.simTime, stepDt);
+                  if (ball.type === "spirit") updateSpirit(ball, target, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
@@ -6980,6 +7530,10 @@ export default function App() {
             ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
           }
           if (ball.type === "knife") ball.spinAngle += 0.02;
+          if (ball.type === "spirit") {
+            const target = ball.side === "left" ? right : left;
+            ball.spiritBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          }
         });
         resolveBallCollision(left, right);
         updateParticles(dt);
@@ -7225,16 +7779,18 @@ export default function App() {
           {type === "dragon" && (
             <>
               {renderSlider("Flame Damage", "dragon", "flameDamage", 1, 20)}
-              {renderSlider("Flame Range", "dragon", "flameRange", 60, 220, 2, "px")}
-              {renderSlider("Flame Angle", "dragon", "flameAngle", 0.3, 2.2, 0.05)}
-              {renderSlider("Tick Cooldown", "dragon", "tickCooldown", 100, 1200, 20, "ms")}
+              {renderSlider("Flame Range", "dragon", "flameRange", 60, 130, 2, "px")}
+              {renderSlider("Flame Angle", "dragon", "flameAngle", 0.25, 1.1, 0.05)}
+              {renderSlider("Tick Cooldown", "dragon", "tickCooldown", 300, 1200, 20, "ms")}
+              {renderSlider("Breath Duration", "dragon", "breathDuration", 250, 1200, 50, "ms")}
+              {renderSlider("Breath Recovery", "dragon", "breathCooldown", 800, 3500, 100, "ms")}
               {renderSlider("Heat Per Wall Bounce", "dragon", "heatPerWallBounce", 1, 5, 1)}
-              {renderSlider("Heat Required", "dragon", "heatRequired", 1, 8, 1)}
-              {renderSlider("Fireball Damage", "dragon", "fireballDamage", 1, 35)}
-              {renderSlider("Fireball Speed", "dragon", "fireballSpeed", 200, 1000, 20, "px/s")}
-              {renderSlider("Fireball Bounces", "dragon", "fireballBounces", 0, 8, 1)}
-              {renderSlider("Burn Duration", "dragon", "burnDuration", 300, 4000, 50, "ms")}
-              {renderSlider("Fireball Cooldown", "dragon", "cooldown", 500, 5000, 50, "ms")}
+              {renderSlider("Heat Required", "dragon", "heatRequired", 3, 9, 1)}
+              {renderSlider("Fireball Damage", "dragon", "fireballDamage", 1, 15)}
+              {renderSlider("Fireball Speed", "dragon", "fireballSpeed", 200, 700, 20, "px/s")}
+              {renderSlider("Fireball Bounces", "dragon", "fireballBounces", 0, 4, 1)}
+              {renderSlider("Burn Duration", "dragon", "burnDuration", 300, 1800, 50, "ms")}
+              {renderSlider("Fireball Cooldown", "dragon", "cooldown", 1200, 5000, 50, "ms")}
             </>
           )}
           {type === "psychicer" && (
@@ -7257,6 +7813,27 @@ export default function App() {
               {renderSlider("Drop Cooldown", "chaos", "cooldown", 1000, 12000, 100, "ms")}
               {renderSlider("Circle Lifetime", "chaos", "circleLife", 1000, 15000, 500, "ms")}
               {renderSlider("Trigger Cooldown", "chaos", "triggerCooldown", 200, 3000, 100, "ms")}
+            </>
+          )}
+          {type === "trident" && (
+            <>
+              {renderSlider("Throw Damage", "trident", "throwDamage", 1, 25)}
+              {renderSlider("Wall Pin Damage", "trident", "wallDamage", 1, 30)}
+              {renderSlider("Throw Speed", "trident", "throwSpeed", 250, 1100, 20, "px/s")}
+              {renderSlider("Recall Speed", "trident", "recallSpeed", 250, 1300, 20, "px/s")}
+              {renderSlider("Throw Cooldown", "trident", "cooldown", 1500, 14000, 100, "ms")}
+              {renderSlider("Wall Stick Duration", "trident", "stuckDuration", 200, 2500, 50, "ms")}
+            </>
+          )}
+          {type === "spirit" && (
+            <>
+              {renderSlider("Charge Required", "spirit", "chargeRequired", 2, 10, 1)}
+              {renderSlider("Beam Damage", "spirit", "beamDamage", 1, 20)}
+              {renderSlider("Tick Cooldown", "spirit", "tickCooldown", 80, 600, 10, "ms")}
+              {renderSlider("Beam Duration", "spirit", "beamDuration", 300, 2500, 50, "ms")}
+              {renderSlider("Beam Width", "spirit", "beamWidth", 16, 90, 2, "px")}
+              {renderSlider("Recovery Cooldown", "spirit", "cooldown", 500, 6000, 100, "ms")}
+              {renderSlider("Beam Knockback", "spirit", "knockback", 100, 900, 20)}
             </>
           )}
           {type === "wrecker" && (
