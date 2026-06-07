@@ -166,6 +166,33 @@ const BALL_TYPES = {
     radius: 31,
     description: "Charges Ki through wall bounces. Fires a giant energy beam when full.",
   },
+  shadow: {
+    id: "shadow",
+    name: "Shadow Summoner Ball",
+    shortName: "SHDW",
+    color: "#111827",
+    stroke: "#a78bfa",
+    radius: 31,
+    description: "Slashes nearby enemies and summons tiny shadow minions that swarm opponents.",
+  },
+  chainsaw: {
+    id: "chainsaw",
+    name: "Chainsawer Ball",
+    shortName: "SAW",
+    color: "#f97316",
+    stroke: "#1f2937",
+    radius: 31,
+    description: "Chainsaws emerge from the sides and deal damage while rolling.",
+  },
+  mirror: {
+    id: "mirror",
+    name: "Mirrorer Ball",
+    shortName: "MIRR",
+    color: "#67e8f9",
+    stroke: "#f8fafc",
+    radius: 31,
+    description: "Creates a mirrored clone across the arena center. Clone damages, main body bounces.",
+  },
 };
 
 const GRID_SIZE = 7;
@@ -210,8 +237,11 @@ const BALANCE = {
   dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300 },
   psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
   chaos: { circleRadius: 48, launchSpeed: 620, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000 },
-  trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 580, recallSpeed: 720, cooldown: 6800, stuckDuration: 800 },
+  trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 760, recallSpeed: 720, cooldown: 6800, stuckDuration: 800, diveDamage: 6, diveCooldown: 8400, diveTrackDuration: 1150, divePauseDuration: 520, diveSpeed: 720, diveBurstRadius: 44, diveSlowDuration: 1600, diveSlowMultiplier: 0.35 },
   spirit: { chargeRequired: 5, beamDamage: 6, tickCooldown: 180, beamDuration: 900, beamWidth: 42, cooldown: 1800, knockback: 420 },
+  shadow: { slashDamage: 3, slashRange: 58, slashCooldown: 1050, summonCooldown: 2200, maxMinions: 4, minionDamage: 1, minionSpeed: 190, minionLife: 10000, minionHitCooldown: 850, commandDuration: 900, markDuration: 1400 },
+  chainsaw: { spinDamage: 3, hitCooldown: 260, sawReach: 34, spinDuration: 1600, cooldown: 2600, knockback: 220 },
+  mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -445,8 +475,15 @@ export default function App() {
       chaosSlamDone: false,
       // Trident Specific
       tridentState: "held", tridentX: 0, tridentY: 0, tridentVx: 0, tridentVy: 0, tridentAngle: side === "left" ? 0 : Math.PI, tridentTargetId: null, tridentStuckUntil: 0,
+      tridentDiveState: "idle", tridentDiveX: 0, tridentDiveY: 0, tridentDiveUntil: 0, tridentDiveStartAt: 0, tridentNextDiveAt: 0, tridentDiveAngle: side === "left" ? 0 : Math.PI, tridentDiveHitDone: false,
       // Spirit Specific
       kiCharge: 0, spiritBeamUntil: 0, spiritBeamAngle: side === "left" ? 0 : Math.PI, spiritNextTickAt: 0, spiritCooldownUntil: 0, spiritFlashUntil: 0,
+      // Shadow Specific
+      shadowMinions: [], shadowNextSummonAt: 0, shadowNextSlashAt: 0, shadowSlashUntil: 0, shadowSlashAngle: side === "left" ? 0 : Math.PI, shadowCommandUntil: 0,
+      // Chainsaw Specific
+      chainsawSpinUntil: 0, chainsawNextSpinAt: 0, chainsawNextHitAt: 0, chainsawAngle: 0,
+      // Mirror Specific
+      mirrorNextHitAt: 0, mirrorFlashUntil: 0, mirrorNextSwitchAt: type === "mirror" ? (balanceSettings.mirror?.switchCooldown ?? BALANCE.mirror.switchCooldown) : 0, mirrorSwitchFlashUntil: 0,
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
@@ -3985,21 +4022,158 @@ export default function App() {
 
     const updateTrident = (ball, target, currentTime, stepDt) => {
       const bal = game.balance.trident || BALANCE.trident;
-      const aimAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      const directAimAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
       const mountSide = ball.side === "left" ? 1 : -1;
-      const mountAngle = aimAngle + mountSide * Math.PI / 2;
+      const mountAngle = directAimAngle + mountSide * Math.PI / 2;
       const heldPose = {
         x: ball.x + Math.cos(mountAngle) * (ball.r + 19),
         y: ball.y + Math.sin(mountAngle) * (ball.r + 19),
-        angle: aimAngle
+        angle: directAimAngle
       };
+      const getTridentAimPoint = (originX, originY, projectileSpeed, maxLeadTime = 0.55) => {
+        const dx = target.x - originX;
+        const dy = target.y - originY;
+        const vx = target.vx || 0;
+        const vy = target.vy || 0;
+        const speedSq = Math.max(1, projectileSpeed * projectileSpeed);
+        const a = vx * vx + vy * vy - speedSq;
+        const b = 2 * (dx * vx + dy * vy);
+        const c = dx * dx + dy * dy;
+        let leadTime = 0;
+        const disc = b * b - 4 * a * c;
+        if (disc >= 0 && Math.abs(a) > 0.001) {
+          const sqrtDisc = Math.sqrt(disc);
+          const t1 = (-b - sqrtDisc) / (2 * a);
+          const t2 = (-b + sqrtDisc) / (2 * a);
+          leadTime = [t1, t2].filter((t) => t > 0).sort((aTime, bTime) => aTime - bTime)[0] || 0;
+        } else if (Math.abs(b) > 0.001) {
+          leadTime = Math.max(0, -c / b);
+        }
+        leadTime = clamp(leadTime, 0.08, maxLeadTime);
+        return {
+          x: clamp(target.x + vx * leadTime, target.r + 24, game.width - target.r - 24),
+          y: clamp(target.y + vy * leadTime, target.r + 24, game.height - target.r - 24)
+        };
+      };
+      const throwAimPoint = getTridentAimPoint(heldPose.x, heldPose.y, bal.throwSpeed, 0.5);
+      const aimAngle = Math.atan2(throwAimPoint.y - heldPose.y, throwAimPoint.x - heldPose.x);
+      heldPose.angle = aimAngle;
+      const diveState = ball.tridentDiveState || "idle";
+      const targetDistance = Math.hypot(target.x - ball.x, target.y - ball.y);
+      const throwReady = currentTime >= (ball.nextShotAt || 0) && targetDistance < 430;
+      const startDive = diveState === "idle" && (ball.tridentState === "held" || !ball.tridentState) && !throwReady && currentTime >= (ball.tridentNextDiveAt || 0) && targetDistance < 440;
+      if (startDive) {
+        ball.tridentDiveState = "tracking";
+        ball.tridentDiveX = heldPose.x;
+        ball.tridentDiveY = heldPose.y;
+        ball.tridentDiveAngle = aimAngle;
+        ball.tridentDiveStartAt = currentTime;
+        ball.tridentDiveUntil = currentTime + bal.diveTrackDuration;
+        ball.tridentDiveHitDone = false;
+        ball.tridentNextDiveAt = currentTime + bal.diveCooldown;
+        drawTridentText(ball, "DIVE", "#38bdf8");
+        playSound("webShoot", 0.55, 80);
+      }
+
+      if (ball.tridentDiveState && ball.tridentDiveState !== "idle") {
+        ball.tridentState = "held";
+        ball.tridentAngle = heldPose.angle;
+        ball.tridentX = heldPose.x;
+        ball.tridentY = heldPose.y;
+
+        if (ball.tridentDiveState === "tracking") {
+          const followX = clamp(target.x, target.r + 24, game.width - target.r - 24);
+          const followY = clamp(target.y, target.r + 24, game.height - target.r - 24);
+          const dx = followX - ball.tridentDiveX;
+          const dy = followY - ball.tridentDiveY;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 1) {
+            const chaseProgress = clamp((currentTime - (ball.tridentDiveStartAt || currentTime)) / Math.max(1, bal.diveTrackDuration), 0, 1);
+            const catchUp = dist > target.r * 1.7 ? 1.35 : 1;
+            const step = Math.min(dist, bal.diveSpeed * (0.86 + chaseProgress * 0.3) * catchUp * stepDt);
+            const wiggle = dist > target.r * 1.2 ? 0 : Math.sin(currentTime * 0.018) * 3;
+            const desiredAngle = Math.atan2(dy, dx);
+            let angleDiff = desiredAngle - (ball.tridentDiveAngle || desiredAngle);
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            ball.tridentDiveAngle = (ball.tridentDiveAngle || desiredAngle) + angleDiff * 0.32;
+            ball.tridentDiveX += (dx / dist) * step + Math.cos(ball.tridentDiveAngle + Math.PI / 2) * wiggle * stepDt;
+            ball.tridentDiveY += (dy / dist) * step + Math.sin(ball.tridentDiveAngle + Math.PI / 2) * wiggle * stepDt;
+          }
+          if (currentTime >= ball.tridentDiveUntil) {
+            ball.tridentDiveState = "pause";
+            ball.tridentDiveUntil = currentTime + bal.divePauseDuration;
+            ball.tridentDiveAngle = Math.atan2(target.y - ball.tridentDiveY, target.x - ball.tridentDiveX);
+            drawTridentText(ball, "BITE", "#38bdf8");
+          }
+          return;
+        }
+
+        if (ball.tridentDiveState === "pause") {
+          if (currentTime >= ball.tridentDiveUntil) {
+            ball.tridentDiveState = "burst";
+            ball.tridentDiveUntil = currentTime + 420;
+            const dx = target.x - ball.tridentDiveX;
+            const dy = target.y - ball.tridentDiveY;
+            const dist = Math.hypot(dx, dy);
+            const biteHitRadius = Math.min(bal.diveBurstRadius || 44, 52);
+            if (dist < target.r + biteHitRadius && !ball.tridentDiveHitDone) {
+              ball.tridentDiveHitDone = true;
+              const hitAngle = dist > 1 ? Math.atan2(dy, dx) : aimAngle;
+              applyDamage(target, bal.diveDamage, `${ball.id}-trident-dive`, currentTime, 650);
+              if (ball.side === "left") {
+                game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.diveDamage);
+                game.stats.left.hitsLanded++;
+              } else {
+                game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.diveDamage);
+                game.stats.right.hitsLanded++;
+              }
+              const slowMultiplier = bal.diveSlowMultiplier ?? 0.35;
+              target.vx *= slowMultiplier;
+              target.vy *= slowMultiplier;
+              target.stringSlowUntil = currentTime + (bal.diveSlowDuration || 1600);
+              target.webHitFlashUntil = currentTime + 220;
+              ball.tridentDiveAngle = hitAngle;
+              ball.tridentDiveX = target.x - Math.cos(hitAngle) * target.r * 0.3;
+              ball.tridentDiveY = target.y - Math.sin(hitAngle) * target.r * 0.3;
+              game.screenShake = Math.max(game.screenShake, 12);
+              spawnSparks(target.x, target.y, "#38bdf8", 12);
+              spawnSparks(target.x, target.y, "#f8fafc", 8);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: target.x,
+                y: target.y - target.r - 22,
+                vy: -54,
+                text: "SHARK SLOW",
+                color: "#38bdf8",
+                life: 0.8,
+                maxLife: 0.8
+              });
+              playSound("explosion", 0.65, 130);
+            } else {
+              spawnSparks(ball.tridentDiveX, ball.tridentDiveY, "#38bdf8", 8);
+              drawTridentText(ball, "SPLASH", "#38bdf8");
+              playSound("wallHit", 0.45, 180);
+            }
+          }
+          return;
+        }
+
+        if (ball.tridentDiveState === "burst") {
+          if (currentTime >= ball.tridentDiveUntil) {
+            ball.tridentDiveState = "idle";
+            ball.tridentDiveHitDone = false;
+          }
+          return;
+        }
+      }
 
       if (!ball.tridentState || ball.tridentState === "held") {
         ball.tridentState = "held";
         ball.tridentAngle = heldPose.angle;
         ball.tridentX = heldPose.x;
         ball.tridentY = heldPose.y;
-        if (currentTime >= (ball.nextShotAt || 0) && Math.hypot(target.x - ball.x, target.y - ball.y) < 380) {
+        if (throwReady) {
           ball.tridentState = "thrown";
           ball.tridentX = heldPose.x;
           ball.tridentY = heldPose.y;
@@ -4023,7 +4197,7 @@ export default function App() {
         ball.tridentAngle = Math.atan2(ball.tridentVy, ball.tridentVx);
 
         const hooked = game.balls.find((other) => other.id === ball.tridentTargetId);
-        if (!hooked && Math.hypot(ball.tridentX - target.x, ball.tridentY - target.y) < target.r + 12) {
+        if (!hooked && Math.hypot(ball.tridentX - target.x, ball.tridentY - target.y) < target.r + 18) {
           ball.tridentTargetId = target.id;
           target.tridentPinnedUntil = currentTime + bal.stuckDuration + 600;
           target.tridentPinOwnerId = ball.id;
@@ -4180,6 +4354,221 @@ export default function App() {
         else game.stats.right.totalShots++;
         spawnSparks(ball.x, ball.y, "#38bdf8", 18);
         playSound("laserFire", 0.9, 220);
+      }
+    };
+
+    const updateShadow = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.shadow || BALANCE.shadow;
+      ball.shadowMinions = (ball.shadowMinions || []).filter((minion) => currentTime < minion.createdTime + bal.minionLife);
+
+      const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      const targetDist = Math.hypot(target.x - ball.x, target.y - ball.y);
+      if (targetDist <= ball.r + target.r + bal.slashRange && currentTime >= (ball.shadowNextSlashAt || 0)) {
+        ball.shadowNextSlashAt = currentTime + bal.slashCooldown;
+        ball.shadowSlashUntil = currentTime + 220;
+        ball.shadowSlashAngle = targetAngle;
+        ball.shadowCommandUntil = currentTime + bal.commandDuration;
+        target.shadowMarkedUntil = currentTime + bal.markDuration;
+        target.shadowMarkedBy = ball.id;
+        applyDamage(target, bal.slashDamage, `${ball.id}-shadow-slash`, currentTime, bal.slashCooldown - 10);
+        if (!hasStringBounceGuard(target)) {
+          target.vx += Math.cos(targetAngle) * 210;
+          target.vy += Math.sin(targetAngle) * 210;
+        }
+        if (ball.side === "left") {
+          game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.slashDamage);
+          game.stats.left.hitsLanded++;
+        } else {
+          game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.slashDamage);
+          game.stats.right.hitsLanded++;
+        }
+        target.webHitFlashUntil = currentTime + 160;
+        spawnSparks(target.x, target.y, "#c4b5fd", 9);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: target.x, y: target.y - target.r - 20, vy: -45,
+          text: "MARKED", color: "#c4b5fd", life: 0.65, maxLife: 0.65
+        });
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 20, vy: -45,
+          text: "COMMAND", color: "#a78bfa", life: 0.65, maxLife: 0.65
+        });
+        playSound("hammerHit", 0.65, -180);
+      }
+
+      if (currentTime >= (ball.shadowNextSummonAt || 0) && ball.shadowMinions.length < bal.maxMinions) {
+        const angle = Math.random() * Math.PI * 2;
+        const spawnDist = ball.r + 12;
+        const minion = {
+          id: `${ball.id}-shadow-${currentTime}-${ball.shadowMinions.length}`,
+          x: ball.x + Math.cos(angle) * spawnDist,
+          y: ball.y + Math.sin(angle) * spawnDist,
+          vx: Math.cos(angle) * bal.minionSpeed,
+          vy: Math.sin(angle) * bal.minionSpeed,
+          r: 8,
+          createdTime: currentTime,
+          nextHitAt: 0,
+          pulseOffset: Math.random() * Math.PI * 2
+        };
+        ball.shadowMinions.push(minion);
+        ball.shadowNextSummonAt = currentTime + bal.summonCooldown;
+        spawnSparks(minion.x, minion.y, "#6d28d9", 8);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 20, vy: -45,
+          text: "ARISE", color: "#c4b5fd", life: 0.7, maxLife: 0.7
+        });
+        if (ball.side === "left") game.stats.left.totalShots++;
+        else game.stats.right.totalShots++;
+      }
+
+      ball.shadowMinions.forEach((minion) => {
+        const commandActive = currentTime < (ball.shadowCommandUntil || 0);
+        const dx = target.x - minion.x;
+        const dy = target.y - minion.y;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const speedMult = commandActive ? 1.55 : 1;
+        let desiredVx = (dx / dist) * bal.minionSpeed * speedMult;
+        let desiredVy = (dy / dist) * bal.minionSpeed * speedMult;
+        ball.shadowMinions.forEach((other) => {
+          if (other === minion) return;
+          const sepDx = minion.x - other.x;
+          const sepDy = minion.y - other.y;
+          const sepDist = Math.max(1, Math.hypot(sepDx, sepDy));
+          if (sepDist < minion.r * 3.2) {
+            const push = (minion.r * 3.2 - sepDist) * 4.5;
+            desiredVx += (sepDx / sepDist) * push;
+            desiredVy += (sepDy / sepDist) * push;
+          }
+        });
+        minion.vx += (desiredVx - minion.vx) * (commandActive ? 0.16 : 0.07);
+        minion.vy += (desiredVy - minion.vy) * (commandActive ? 0.16 : 0.07);
+        minion.x += minion.vx * stepDt;
+        minion.y += minion.vy * stepDt;
+
+        const pad = 18 + minion.r;
+        if (minion.x < pad) { minion.x = pad; minion.vx = Math.abs(minion.vx); }
+        if (minion.x > game.width - pad) { minion.x = game.width - pad; minion.vx = -Math.abs(minion.vx); }
+        if (minion.y < pad) { minion.y = pad; minion.vy = Math.abs(minion.vy); }
+        if (minion.y > game.height - pad) { minion.y = game.height - pad; minion.vy = -Math.abs(minion.vy); }
+
+        if (Math.hypot(minion.x - target.x, minion.y - target.y) < minion.r + target.r && currentTime >= (minion.nextHitAt || 0)) {
+          minion.nextHitAt = currentTime + bal.minionHitCooldown;
+          const markedBonus = target.shadowMarkedBy === ball.id && currentTime < (target.shadowMarkedUntil || 0) ? 1 : 0;
+          const minionDamage = bal.minionDamage + markedBonus;
+          applyDamage(target, minionDamage, `${minion.id}-hit`, currentTime, bal.minionHitCooldown - 10);
+          const hitAngle = Math.atan2(target.y - minion.y, target.x - minion.x);
+          if (!hasStringBounceGuard(target)) {
+            target.vx += Math.cos(hitAngle) * 130;
+            target.vy += Math.sin(hitAngle) * 130;
+          }
+          if (ball.side === "left") {
+            game.stats.left.damageDealt += Math.max(MIN_DAMAGE, minionDamage);
+            game.stats.left.hitsLanded++;
+          } else {
+            game.stats.right.damageDealt += Math.max(MIN_DAMAGE, minionDamage);
+            game.stats.right.hitsLanded++;
+          }
+          minion.vx = -Math.cos(hitAngle) * bal.minionSpeed;
+          minion.vy = -Math.sin(hitAngle) * bal.minionSpeed;
+          spawnSparks(minion.x, minion.y, "#8b5cf6", 6);
+        }
+      });
+    };
+
+    const updateChainsaw = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.chainsaw || BALANCE.chainsaw;
+      const speed = Math.hypot(ball.vx, ball.vy);
+      ball.chainsawAngle = (ball.chainsawAngle || 0) + stepDt * (10 + speed * 0.035);
+
+      if (currentTime >= (ball.chainsawNextSpinAt || 0)) {
+        ball.chainsawSpinUntil = currentTime + bal.spinDuration;
+        ball.chainsawNextSpinAt = currentTime + bal.cooldown;
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 20, vy: -45,
+          text: "CHAINSAW SPIN", color: "#f97316", life: 0.75, maxLife: 0.75
+        });
+        if (ball.side === "left") game.stats.left.totalShots++;
+        else game.stats.right.totalShots++;
+        playSound("hammerHit", 0.55, -240);
+      }
+
+      if (!(ball.chainsawSpinUntil && currentTime < ball.chainsawSpinUntil)) return;
+
+      const sawRange = ball.r + bal.sawReach;
+      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+      if (dist < target.r + sawRange && currentTime >= (ball.chainsawNextHitAt || 0)) {
+        ball.chainsawNextHitAt = currentTime + bal.hitCooldown;
+        applyDamage(target, bal.spinDamage, `${ball.id}-chainsaw-spin`, currentTime, bal.hitCooldown - 10);
+        const hitAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        if (!hasStringBounceGuard(target)) {
+          target.vx += Math.cos(hitAngle) * bal.knockback;
+          target.vy += Math.sin(hitAngle) * bal.knockback;
+        }
+        if (ball.side === "left") {
+          game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.spinDamage);
+          game.stats.left.hitsLanded++;
+        } else {
+          game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.spinDamage);
+          game.stats.right.hitsLanded++;
+        }
+        target.webHitFlashUntil = currentTime + 150;
+        spawnSparks(target.x, target.y, "#f97316", 10);
+      }
+    };
+
+    const getMirrorClone = (ball) => ({
+      x: game.width - ball.x,
+      y: game.height - ball.y,
+      r: ball.r * ((game.balance.mirror || BALANCE.mirror).cloneRadiusScale || 0.82)
+    });
+
+    const updateMirror = (ball, target, currentTime) => {
+      const bal = game.balance.mirror || BALANCE.mirror;
+      const clone = getMirrorClone(ball);
+      const distToTarget = Math.hypot(target.x - ball.x, target.y - ball.y);
+      if (ball.mirrorNextSwitchAt == null) ball.mirrorNextSwitchAt = currentTime + bal.switchCooldown;
+      if (currentTime >= ball.mirrorNextSwitchAt && distToTarget > 120) {
+        const oldX = ball.x;
+        const oldY = ball.y;
+        ball.x = clone.x;
+        ball.y = clone.y;
+        ball.vx = -ball.vx;
+        ball.vy = -ball.vy;
+        ball.mirrorNextSwitchAt = currentTime + bal.switchCooldown;
+        ball.mirrorSwitchFlashUntil = currentTime + 420;
+        ball.mirrorFlashUntil = currentTime + 420;
+        spawnSparks(oldX, oldY, "#67e8f9", 12);
+        spawnSparks(ball.x, ball.y, "#f8fafc", 14);
+        game.screenShake = Math.max(game.screenShake, 5);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 20, vy: -45,
+          text: "SWITCH", color: "#67e8f9", life: 0.7, maxLife: 0.7
+        });
+        playSound("shieldCatch", 0.8, 180);
+        return;
+      }
+
+      if (Math.hypot(clone.x - target.x, clone.y - target.y) < clone.r + target.r && currentTime >= (ball.mirrorNextHitAt || 0)) {
+        ball.mirrorNextHitAt = currentTime + bal.hitCooldown;
+        ball.mirrorFlashUntil = currentTime + 260;
+        applyDamage(target, bal.cloneDamage, `${ball.id}-mirror-clone`, currentTime, bal.hitCooldown - 10);
+        const hitAngle = Math.atan2(target.y - clone.y, target.x - clone.x);
+        if (!hasStringBounceGuard(target)) {
+          target.vx += Math.cos(hitAngle) * bal.knockback;
+          target.vy += Math.sin(hitAngle) * bal.knockback;
+        }
+        if (ball.side === "left") {
+          game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.cloneDamage);
+          game.stats.left.hitsLanded++;
+        } else {
+          game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.cloneDamage);
+          game.stats.right.hitsLanded++;
+        }
+        target.webHitFlashUntil = currentTime + 150;
+        spawnSparks(clone.x, clone.y, "#67e8f9", 10);
       }
     };
 
@@ -6084,6 +6473,7 @@ export default function App() {
 
     const drawTridentBall = (ball) => {
       const config = BALL_TYPES.trident;
+      const bal = game.balance.trident || BALANCE.trident;
       const pulse = 0.5 + Math.sin(game.simTime * 0.009) * 0.5;
       const held = ball.tridentState === "held" || !ball.tridentState;
       const target = game.balls.find((other) => other.side !== ball.side);
@@ -6093,6 +6483,85 @@ export default function App() {
       const angle = held ? aimAngle : (ball.tridentAngle ?? aimAngle);
       const tx = held ? ball.x + Math.cos(mountAngle) * (ball.r + 19) : ball.tridentX;
       const ty = held ? ball.y + Math.sin(mountAngle) * (ball.r + 19) : ball.tridentY;
+
+      if (ball.tridentDiveState && ball.tridentDiveState !== "idle") {
+        const state = ball.tridentDiveState;
+        const dx = ball.tridentDiveX || ball.x;
+        const dy = ball.tridentDiveY || ball.y;
+        const burst = state === "burst";
+        const poolRadius = bal.diveBurstRadius || 58;
+        const biteProgress = burst ? clamp((ball.tridentDiveUntil - game.simTime) / 420, 0, 1) : 0;
+        const finBob = Math.sin(game.simTime * 0.02) * 3;
+        ctx.save();
+        ctx.translate(dx, dy);
+        ctx.rotate(ball.tridentDiveAngle || aimAngle);
+        ctx.globalAlpha = burst ? 0.92 : 0.5 + pulse * 0.2;
+        ctx.shadowColor = "#38bdf8";
+        ctx.shadowBlur = burst ? 30 : 15;
+        ctx.fillStyle = burst ? "rgba(14, 165, 233, 0.38)" : "rgba(14, 165, 233, 0.24)";
+        ctx.strokeStyle = burst ? "#facc15" : "#38bdf8";
+        ctx.lineWidth = burst ? 4 : 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, poolRadius * (burst ? 1.42 : 0.95), poolRadius * (burst ? 0.48 : 0.28), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        if (!burst) {
+          ctx.fillStyle = state === "pause" ? "#facc15" : "#65a30d";
+          ctx.strokeStyle = "#fef3c7";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(12, -2 + finBob);
+          ctx.lineTo(-20, -27 - pulse * 6 + finBob);
+          ctx.lineTo(-10, 6 + finBob);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.globalAlpha *= 0.7;
+          ctx.strokeStyle = "#e0f2fe";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-poolRadius * 0.72, 8);
+          ctx.quadraticCurveTo(-poolRadius * 0.15, 15 + pulse * 4, poolRadius * 0.55, 5);
+          ctx.stroke();
+        } else {
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = "#f8fafc";
+          ctx.lineWidth = 6;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.arc(6, 0, poolRadius * (0.62 + (1 - biteProgress) * 0.24), -0.92, 0.92);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(6, 0, poolRadius * (0.62 + (1 - biteProgress) * 0.24), -0.92, 0.92, true);
+          ctx.stroke();
+          ctx.fillStyle = "#fef3c7";
+          for (let i = -3; i <= 3; i++) {
+            const toothX = 4 + Math.abs(i) * 4;
+            const toothY = i * 7;
+            ctx.beginPath();
+            ctx.moveTo(toothX, toothY);
+            ctx.lineTo(toothX + 13 + (1 - biteProgress) * 6, toothY - 4);
+            ctx.lineTo(toothX + 13 + (1 - biteProgress) * 6, toothY + 4);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.globalAlpha = 0.5;
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, poolRadius * (1.1 + (1 - biteProgress) * 0.55), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = "#65a30d";
+          ctx.globalAlpha = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(-poolRadius * 0.25, -poolRadius * 0.18);
+          ctx.lineTo(-poolRadius * 0.52, -poolRadius * 0.56);
+          ctx.lineTo(-poolRadius * 0.48, -poolRadius * 0.08);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
 
       drawTridentWeapon(tx, ty, angle, held ? 0.82 : 0.9, ball.tridentState === "recalling" ? 0.82 : 1);
 
@@ -6109,6 +6578,9 @@ export default function App() {
 
       ctx.save();
       ctx.translate(ball.x, ball.y);
+      if (ball.tridentDiveState === "tracking" || ball.tridentDiveState === "pause") {
+        ctx.globalAlpha = 0.72;
+      }
       if (ball.tridentState === "thrown" || ball.tridentState === "recalling") {
         ctx.globalAlpha = 0.25;
         ctx.strokeStyle = "#facc15";
@@ -6150,13 +6622,6 @@ export default function App() {
       ctx.beginPath(); ctx.arc(-8 + Math.cos(angle) * 1.2, -5 + Math.sin(angle) * 1.2, 2, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(8 + Math.cos(angle) * 1.2, -5 + Math.sin(angle) * 1.2, 2, 0, Math.PI * 2); ctx.fill();
 
-      const cd = Math.max(0, (ball.nextShotAt || 0) - game.simTime);
-      if (cd > 0) {
-        ctx.fillStyle = "#fef3c7";
-        ctx.font = "bold 8px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(`${Math.ceil(cd / 1000)}s`, 0, ball.r + 14);
-      }
       ctx.restore();
       drawHealthInsideBall(ball);
     };
@@ -6281,6 +6746,310 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawShadowBall = (ball) => {
+      const config = BALL_TYPES.shadow;
+      const bal = game.balance.shadow || BALANCE.shadow;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.012) * 0.5;
+
+      (ball.shadowMinions || []).forEach((minion) => {
+        const minionPulse = 0.5 + Math.sin(game.simTime * 0.018 + minion.pulseOffset) * 0.5;
+        ctx.save();
+        ctx.translate(minion.x, minion.y);
+        ctx.shadowColor = "#8b5cf6";
+        ctx.shadowBlur = 8 + minionPulse * 5;
+        ctx.beginPath();
+        ctx.arc(0, 0, minion.r, 0, Math.PI * 2);
+        ctx.fillStyle = "#020617";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#7c3aed";
+        ctx.stroke();
+        ctx.fillStyle = "#c4b5fd";
+        ctx.beginPath(); ctx.arc(-2.5, -1.5, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3, -1.5, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      });
+
+      if (ball.shadowSlashUntil && game.simTime < ball.shadowSlashUntil) {
+        const progress = clamp((ball.shadowSlashUntil - game.simTime) / 220, 0, 1);
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.rotate(ball.shadowSlashAngle || 0);
+        ctx.globalAlpha = progress;
+        ctx.shadowColor = "#c4b5fd";
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = "#e9d5ff";
+        ctx.lineWidth = 7;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + bal.slashRange * 0.55, -0.45, 0.45);
+        ctx.stroke();
+        ctx.strokeStyle = "#7c3aed";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + bal.slashRange * 0.55, -0.36, 0.36);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.shadowColor = "#7c3aed";
+      ctx.shadowBlur = 12 + pulse * 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
+      grad.addColorStop(0, "#334155");
+      grad.addColorStop(0.48, config.color);
+      grad.addColorStop(1, "#020617");
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = config.stroke;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#c4b5fd";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.72, game.simTime * 0.005, game.simTime * 0.005 + Math.PI * 1.45);
+      ctx.stroke();
+      ctx.strokeStyle = "#4c1d95";
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.42, -game.simTime * 0.006, -game.simTime * 0.006 + Math.PI * 1.25);
+      ctx.stroke();
+
+      const daggerAngle = ball.shadowSlashAngle || (ball.side === "left" ? 0 : Math.PI);
+      ctx.save();
+      ctx.rotate(daggerAngle);
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.35, -ball.r * 0.42);
+      ctx.lineTo(ball.r + 18, -ball.r * 0.42);
+      ctx.stroke();
+      ctx.fillStyle = "#7c3aed";
+      ctx.fillRect(ball.r * 0.22, -ball.r * 0.52, 10, 7);
+      ctx.restore();
+
+      ctx.fillStyle = "#c4b5fd";
+      ctx.beginPath(); ctx.arc(-8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#020617";
+      ctx.beginPath(); ctx.arc(-8, -5, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -5, 2, 0, Math.PI * 2); ctx.fill();
+
+      const count = (ball.shadowMinions || []).length;
+      if (count > 0) {
+        ctx.fillStyle = "#c4b5fd";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${count}/${bal.maxMinions}`, 0, ball.r + 15);
+      }
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawChainsawBall = (ball) => {
+      const config = BALL_TYPES.chainsaw;
+      const bal = game.balance.chainsaw || BALANCE.chainsaw;
+      const active = ball.chainsawSpinUntil && game.simTime < ball.chainsawSpinUntil;
+      const spin = ball.chainsawAngle || 0;
+      const sawReach = active ? bal.sawReach : bal.sawReach * 0.48;
+
+      const drawSideSaw = (side) => {
+        ctx.save();
+        ctx.rotate(side === "left" ? Math.PI : 0);
+        const baseX = ball.r - 2;
+        const tipX = ball.r + sawReach;
+        ctx.shadowColor = active ? "#f97316" : "rgba(15, 23, 42, 0.45)";
+        ctx.shadowBlur = active ? 12 : 2;
+        ctx.strokeStyle = "#374151";
+        ctx.lineWidth = 10;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(baseX, 0);
+        ctx.lineTo(tipX, 0);
+        ctx.stroke();
+        ctx.strokeStyle = "#e5e7eb";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(baseX + 2, 0);
+        ctx.lineTo(tipX - 2, 0);
+        ctx.stroke();
+
+        ctx.fillStyle = active ? "#f97316" : "#9ca3af";
+        const toothCount = 8;
+        for (let i = 0; i < toothCount; i++) {
+          const t = i / Math.max(1, toothCount - 1);
+          const x = baseX + 6 + t * Math.max(1, sawReach - 10);
+          const flip = (i + Math.floor(spin * 4)) % 2 === 0 ? 1 : -1;
+          ctx.beginPath();
+          ctx.moveTo(x - 3, flip * 5);
+          ctx.lineTo(x + 3, flip * 5);
+          ctx.lineTo(x, flip * 12);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      };
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      drawSideSaw("left");
+      drawSideSaw("right");
+
+      if (active) {
+        ctx.save();
+        ctx.globalAlpha = 0.45 + Math.sin(game.simTime * 0.025) * 0.15;
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.lineDashOffset = -game.simTime * 0.08;
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + bal.sawReach, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      ctx.shadowColor = active ? "#f97316" : "#fb923c";
+      ctx.shadowBlur = active ? 16 : 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
+      grad.addColorStop(0, "#fed7aa");
+      grad.addColorStop(0.45, config.color);
+      grad.addColorStop(1, "#7c2d12");
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = config.stroke;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.25, -ball.r * 0.9);
+      ctx.lineTo(-ball.r * 0.05, -ball.r * 0.42);
+      ctx.lineTo(-ball.r * 0.44, -ball.r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.25, -ball.r * 0.9);
+      ctx.lineTo(ball.r * 0.05, -ball.r * 0.42);
+      ctx.lineTo(ball.r * 0.44, -ball.r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#fef2f2";
+      ctx.beginPath(); ctx.arc(-8, -3, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -3, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#dc2626";
+      ctx.beginPath(); ctx.arc(-8, -3, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -3, 2, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 9, 9, 0.1, Math.PI - 0.1);
+      ctx.stroke();
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawMirrorBody = (x, y, r, alpha, flash = false) => {
+      const config = BALL_TYPES.mirror;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalAlpha = alpha;
+      ctx.shadowColor = "#67e8f9";
+      ctx.shadowBlur = flash ? 18 : 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 4, 0, 0, r);
+      grad.addColorStop(0, "#f8fafc");
+      grad.addColorStop(0.42, config.color);
+      grad.addColorStop(1, "#0e7490");
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = config.stroke;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(248, 250, 252, 0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.55, -r * 0.4);
+      ctx.lineTo(r * 0.5, r * 0.35);
+      ctx.moveTo(r * 0.35, -r * 0.55);
+      ctx.lineTo(-r * 0.42, r * 0.45);
+      ctx.stroke();
+
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath(); ctx.arc(-r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    };
+
+    const drawMirrorBall = (ball) => {
+      const bal = game.balance.mirror || BALANCE.mirror;
+      const clone = {
+        x: game.width - ball.x,
+        y: game.height - ball.y,
+        r: ball.r * (bal.cloneRadiusScale || 0.82)
+      };
+      const flash = ball.mirrorFlashUntil && game.simTime < ball.mirrorFlashUntil;
+      const switchFlash = ball.mirrorSwitchFlashUntil && game.simTime < ball.mirrorSwitchFlashUntil;
+
+      ctx.save();
+      ctx.strokeStyle = switchFlash ? "rgba(248, 250, 252, 0.85)" : "rgba(103, 232, 249, 0.32)";
+      ctx.lineWidth = switchFlash ? 4 : 2;
+      ctx.setLineDash([7, 7]);
+      ctx.lineDashOffset = -game.simTime * 0.04;
+      ctx.beginPath();
+      ctx.moveTo(ball.x, ball.y);
+      ctx.lineTo(game.width / 2, game.height / 2);
+      ctx.lineTo(clone.x, clone.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(248, 250, 252, 0.75)";
+      ctx.beginPath();
+      ctx.arc(game.width / 2, game.height / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      if (switchFlash) {
+        const progress = clamp((ball.mirrorSwitchFlashUntil - game.simTime) / 420, 0, 1);
+        ctx.save();
+        ctx.globalAlpha = progress;
+        ctx.strokeStyle = "#67e8f9";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 12 + (1 - progress) * 16, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(clone.x, clone.y, clone.r + 10 + (1 - progress) * 14, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawMirrorBody(clone.x, clone.y, clone.r, flash ? 0.78 : 0.52, flash);
+      drawMirrorBody(ball.x, ball.y, ball.r, 1, flash);
+      const cd = Math.max(0, (ball.mirrorNextSwitchAt ?? 0) - game.simTime);
+      if (cd > 0) {
+        ctx.save();
+        ctx.fillStyle = "#e0f2fe";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.ceil(cd / 1000)}s`, ball.x, ball.y + ball.r + 15);
+        ctx.restore();
+      }
+      drawHealthInsideBall(ball);
+    };
+
     const drawBall = (ball, currentTime) => {
       if (ball.shattered) return;
       if (ball.type === "knife") drawKnifeBall(ball);
@@ -6307,6 +7076,9 @@ export default function App() {
       else if (ball.type === "chaos") drawChaosBall(ball);
       else if (ball.type === "trident") drawTridentBall(ball);
       else if (ball.type === "spirit") drawSpiritBall(ball);
+      else if (ball.type === "shadow") drawShadowBall(ball);
+      else if (ball.type === "chainsaw") drawChainsawBall(ball);
+      else if (ball.type === "mirror") drawMirrorBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -6340,6 +7112,23 @@ export default function App() {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 8 + (1 - progress) * 10, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
+      }
+
+      if (ball.shadowMarkedUntil && game.simTime < ball.shadowMarkedUntil) {
+        const progress = clamp((ball.shadowMarkedUntil - game.simTime) / 1400, 0, 1);
+        ctx.save();
+        ctx.globalAlpha = 0.35 + progress * 0.35;
+        ctx.strokeStyle = "#a78bfa";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#7c3aed";
+        ctx.shadowBlur = 12;
+        ctx.setLineDash([6, 6]);
+        ctx.lineDashOffset = -game.simTime * 0.05;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 12 + Math.sin(game.simTime * 0.018) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
         ctx.restore();
       }
 
@@ -7494,6 +8283,9 @@ export default function App() {
                   if (ball.type === "chaos") updateChaos(ball, target, game.simTime);
                   if (ball.type === "trident") updateTrident(ball, target, game.simTime, stepDt);
                   if (ball.type === "spirit") updateSpirit(ball, target, game.simTime);
+                  if (ball.type === "shadow") updateShadow(ball, target, game.simTime, stepDt);
+                  if (ball.type === "chainsaw") updateChainsaw(ball, target, game.simTime, stepDt);
+                  if (ball.type === "mirror") updateMirror(ball, target, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
@@ -7819,10 +8611,18 @@ export default function App() {
             <>
               {renderSlider("Throw Damage", "trident", "throwDamage", 1, 25)}
               {renderSlider("Wall Pin Damage", "trident", "wallDamage", 1, 30)}
-              {renderSlider("Throw Speed", "trident", "throwSpeed", 250, 1100, 20, "px/s")}
+              {renderSlider("Throw Speed", "trident", "throwSpeed", 250, 1400, 20, "px/s")}
               {renderSlider("Recall Speed", "trident", "recallSpeed", 250, 1300, 20, "px/s")}
               {renderSlider("Throw Cooldown", "trident", "cooldown", 1500, 14000, 100, "ms")}
               {renderSlider("Wall Stick Duration", "trident", "stuckDuration", 200, 2500, 50, "ms")}
+              {renderSlider("Dive Damage", "trident", "diveDamage", 1, 25)}
+              {renderSlider("Dive Cooldown", "trident", "diveCooldown", 2500, 16000, 100, "ms")}
+              {renderSlider("Dive Track Time", "trident", "diveTrackDuration", 300, 2200, 50, "ms")}
+              {renderSlider("Dive Stop Time", "trident", "divePauseDuration", 100, 1200, 50, "ms")}
+              {renderSlider("Dive Speed", "trident", "diveSpeed", 180, 1000, 20, "px/s")}
+              {renderSlider("Bite Hit Radius", "trident", "diveBurstRadius", 20, 70, 5, "px")}
+              {renderSlider("Dive Slow Duration", "trident", "diveSlowDuration", 300, 4000, 50, "ms")}
+              {renderSlider("Dive Slow Multiplier", "trident", "diveSlowMultiplier", 0.1, 1, 0.05, "x")}
             </>
           )}
           {type === "spirit" && (
@@ -7834,6 +8634,40 @@ export default function App() {
               {renderSlider("Beam Width", "spirit", "beamWidth", 16, 90, 2, "px")}
               {renderSlider("Recovery Cooldown", "spirit", "cooldown", 500, 6000, 100, "ms")}
               {renderSlider("Beam Knockback", "spirit", "knockback", 100, 900, 20)}
+            </>
+          )}
+          {type === "shadow" && (
+            <>
+              {renderSlider("Slash Damage", "shadow", "slashDamage", 1, 20)}
+              {renderSlider("Slash Range", "shadow", "slashRange", 20, 120, 5, "px")}
+              {renderSlider("Slash Cooldown", "shadow", "slashCooldown", 200, 3000, 50, "ms")}
+              {renderSlider("Summon Cooldown", "shadow", "summonCooldown", 500, 8000, 100, "ms")}
+              {renderSlider("Max Minions", "shadow", "maxMinions", 1, 8, 1)}
+              {renderSlider("Minion Damage", "shadow", "minionDamage", 1, 12)}
+              {renderSlider("Minion Speed", "shadow", "minionSpeed", 80, 420, 10, "px/s")}
+              {renderSlider("Minion Life", "shadow", "minionLife", 2000, 20000, 500, "ms")}
+              {renderSlider("Minion Hit Cooldown", "shadow", "minionHitCooldown", 200, 2000, 50, "ms")}
+              {renderSlider("Command Duration", "shadow", "commandDuration", 200, 2500, 50, "ms")}
+              {renderSlider("Mark Duration", "shadow", "markDuration", 300, 3000, 50, "ms")}
+            </>
+          )}
+          {type === "chainsaw" && (
+            <>
+              {renderSlider("Spin Damage", "chainsaw", "spinDamage", 1, 20)}
+              {renderSlider("Hit Cooldown", "chainsaw", "hitCooldown", 100, 1000, 10, "ms")}
+              {renderSlider("Saw Reach", "chainsaw", "sawReach", 15, 80, 1, "px")}
+              {renderSlider("Spin Duration", "chainsaw", "spinDuration", 400, 4000, 50, "ms")}
+              {renderSlider("Spin Cooldown", "chainsaw", "cooldown", 500, 8000, 100, "ms")}
+              {renderSlider("Knockback", "chainsaw", "knockback", 50, 700, 10)}
+            </>
+          )}
+          {type === "mirror" && (
+            <>
+              {renderSlider("Clone Damage", "mirror", "cloneDamage", 1, 20)}
+              {renderSlider("Hit Cooldown", "mirror", "hitCooldown", 150, 2000, 50, "ms")}
+              {renderSlider("Clone Size", "mirror", "cloneRadiusScale", 0.4, 1.2, 0.05, "x")}
+              {renderSlider("Knockback", "mirror", "knockback", 50, 800, 10)}
+              {renderSlider("Switch Cooldown", "mirror", "switchCooldown", 1000, 10000, 100, "ms")}
             </>
           )}
           {type === "wrecker" && (
