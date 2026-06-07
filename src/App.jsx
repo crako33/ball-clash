@@ -1134,6 +1134,8 @@ export default function App() {
           balls.forEach((ball, idx) => {
             const enemy = idx === 0 ? rightBall : leftBall;
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) return;
+            const isGrabbedByArm = balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > simTime);
+            if (isGrabbedByArm) return;
             if (simTime >= OPENING_SKILL_DELAY) {
               if (ball.type === "knife") {
                 const bal = balance.knife;
@@ -1672,7 +1674,7 @@ export default function App() {
                   enemy.vy += Math.sin(targetAngle) * balance.arm.punchKnockback;
                 }
 
-                const elbowDropRange = Math.max(88, balance.arm.punchRange + ball.r + enemy.r + 12);
+                const elbowDropRange = Math.max(88, balance.arm.grabRange + ball.r + enemy.r + 12);
                 if (targetDist <= elbowDropRange && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
                   const leadTime = clamp(targetDist / 520, 0.06, 0.24);
                   const landX = clamp(enemy.x + (enemy.vx || 0) * leadTime, ball.r + 20, ARENA_SIZE - ball.r - 20);
@@ -2869,7 +2871,7 @@ export default function App() {
           });
         }
         
-        const elbowDropRange = Math.max(88, bal.arm.punchRange + armBall.r + target.r + 12);
+        const elbowDropRange = Math.max(88, bal.arm.grabRange + armBall.r + target.r + 12);
         if (targetDist <= elbowDropRange && currentTime >= (armBall.nextSecondaryAt || 0) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
           const leadTime = clamp(targetDist / 520, 0.06, 0.24);
           const landX = clamp(target.x + (target.vx || 0) * leadTime, armBall.r + 20, game.width - armBall.r - 20);
@@ -8716,6 +8718,7 @@ export default function App() {
 
           game.balls.forEach((ball) => {
             const target = ball.side === "left" ? right : left;
+            const isGrabbedByArm = game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime);
             if (game.simTime >= OPENING_SKILL_DELAY) {
                 if (ball.burnUntil && game.simTime < ball.burnUntil && game.simTime >= (ball.nextBurnTickAt || 0)) {
                   const burnDamage = Math.max(MIN_DAMAGE, 1);
@@ -8725,7 +8728,7 @@ export default function App() {
                   game.floatingTexts = game.floatingTexts || [];
                   game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 8, vy: -45, text: `BURN -${burnDamage}`, color: "#fb923c", life: 0.55, maxLife: 0.55 });
                 }
-                if (ball.type === "knife") {
+                if (ball.type === "knife" && !isGrabbedByArm) {
                   const bal = game.balance.knife;
                   if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
                   
@@ -8786,7 +8789,7 @@ export default function App() {
                   }
                 }
                 const isParalyzed = ball.paralyzedUntil && game.simTime < ball.paralyzedUntil;
-                if (!isParalyzed) {
+                if (!isParalyzed && !isGrabbedByArm) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
@@ -9078,6 +9081,7 @@ export default function App() {
             <>
               {renderSlider("Punch Damage", "arm", "punchDamage", 1, 30)}
               {renderSlider("Punch Range", "arm", "punchRange", 20, 160, 5, "px")}
+              {renderSlider("Elbow Drop Grab Range", "arm", "grabRange", 20, 160, 5, "px")}
               {renderSlider("Punch Cooldown", "arm", "punchCooldown", 200, 3000, 50, "ms")}
               {renderSlider("Punch Knockback", "arm", "punchKnockback", 50, 800, 20)}
               {renderSlider("Sec: Elbow Drop Cooldown", "arm", "secCooldown", 1000, 8000, 100, "ms")}
