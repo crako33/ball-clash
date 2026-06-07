@@ -369,6 +369,7 @@ export default function App() {
   const mediaRecorderRef = useRef(null);
   const recordingFrameRef = useRef(null);
   const recordedChunksRef = useRef([]);
+  const recordingIntroRef = useRef({ text: "", until: 0 });
   const [selectedBalls, setSelectedBalls] = useState(["knife", "laser"]);
   const [gameStarted, setGameStarted] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1.5);
@@ -765,6 +766,23 @@ export default function App() {
     ctx.restore();
   };
 
+  const getRecordingIntroText = () => {
+    const left = gameRef.current.balls?.find((ball) => ball.side === "left");
+    const right = gameRef.current.balls?.find((ball) => ball.side === "right");
+    const cleanName = (name = "") => name.replace(/\s*Ball$/i, "").trim() || "Fighter";
+    return `${cleanName(left?.name || gameState.leftName)} versus ${cleanName(right?.name || gameState.rightName)}. Who would win?`;
+  };
+
+  const speakRecordingIntro = (text) => {
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.92;
+    utterance.pitch = 0.82;
+    utterance.volume = 1;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const drawRecordingFrame = () => {
     const sourceCanvas = canvasRef.current;
     const recordCanvas = recordingCanvasRef.current;
@@ -804,6 +822,22 @@ export default function App() {
     ctx.restore();
 
     ctx.drawImage(sourceCanvas, arenaX, arenaY, arenaSize, arenaSize);
+
+    const intro = recordingIntroRef.current;
+    if (intro.text && performance.now() < intro.until) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(2, 6, 23, 0.75)";
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "rgba(15, 23, 42, 0.72)";
+      drawRoundedRect(ctx, 92, arenaY + arenaSize - 136, width - 184, 92, 18);
+      ctx.fill();
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "900 38px Arial, sans-serif";
+      ctx.fillText(intro.text, width / 2, arenaY + arenaSize - 90, width - 230);
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.lineWidth = 8;
@@ -850,6 +884,8 @@ export default function App() {
     recordCanvas.height = 1920;
     recordingCanvasRef.current = recordCanvas;
     recordedChunksRef.current = [];
+    const introText = getRecordingIntroText();
+    recordingIntroRef.current = { text: introText, until: performance.now() + 3600 };
     drawRecordingFrame();
 
     const stream = recordCanvas.captureStream(60);
@@ -892,6 +928,7 @@ export default function App() {
       setRecordingStatus("Downloaded 1080x1920 recording with audio");
       mediaRecorderRef.current = null;
       recordingCanvasRef.current = null;
+      recordingIntroRef.current = { text: "", until: 0 };
       recordedChunksRef.current = [];
     };
 
@@ -902,6 +939,7 @@ export default function App() {
 
     mediaRecorderRef.current = recorder;
     recorder.start(250);
+    speakRecordingIntro(introText);
     setIsRecording(true);
     setRecordingStatus("Recording 1080x1920 60fps");
     renderRecording();
