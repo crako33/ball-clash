@@ -1864,7 +1864,6 @@ export default function App() {
               const heatRequired = bal.heatRequired || 5;
               const fireballDamage = bal.fireballDamage || 5;
               const fireballSpeed = bal.fireballSpeed || 440;
-              const fireballBounces = bal.fireballBounces || 1;
               const burnDuration = bal.burnDuration || 900;
               const fireballCooldown = bal.cooldown || 2300;
               const secCooldown = bal.secCooldown || 5000;
@@ -1930,7 +1929,7 @@ export default function App() {
                     localBullets.push({
                       ownerId: ball.id, targetSide: enemy.side, kind: "dragonFireball",
                       x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
-                      r: 9, damage: fireballDamage, life: 2.4, bouncesLeft: fireballBounces, burnDuration
+                      r: 9, damage: fireballDamage, life: 9999, bouncesLeft: 9999, burnDuration
                     });
                     ball.dragonHeat = 0;
                     ball.nextShotAt = simTime + fireballCooldown;
@@ -1999,8 +1998,21 @@ export default function App() {
           });
 
           localBullets = localBullets.filter((bullet) => {
-            bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt; bullet.life -= dt;
-            if (bullet.x < 18 || bullet.x > ARENA_SIZE - 18 || bullet.y < 18 || bullet.y > ARENA_SIZE - 18 || bullet.life <= 0) return false;
+            bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
+            if (bullet.kind !== "dragonFireball") {
+              bullet.life -= dt;
+            }
+            if (bullet.life <= 0) return false;
+            
+            if (bullet.kind === "dragonFireball") {
+              const pad = 18 + bullet.r;
+              if (bullet.x < pad) { bullet.x = pad; bullet.vx = Math.abs(bullet.vx); }
+              if (bullet.x > ARENA_SIZE - pad) { bullet.x = ARENA_SIZE - pad; bullet.vx = -Math.abs(bullet.vx); }
+              if (bullet.y < pad) { bullet.y = pad; bullet.vy = Math.abs(bullet.vy); }
+              if (bullet.y > ARENA_SIZE - pad) { bullet.y = ARENA_SIZE - pad; bullet.vy = -Math.abs(bullet.vy); }
+            } else if (bullet.x < 18 || bullet.x > ARENA_SIZE - 18 || bullet.y < 18 || bullet.y > ARENA_SIZE - 18) {
+              return false;
+            }
             
             const shieldBall = bullet.targetSide === "left" ? leftBall : rightBall;
             if (shieldBall.type === "shield" && !bullet.piercesDefense && !bullet.cannotReflect) {
@@ -4061,7 +4073,6 @@ export default function App() {
       const heatRequired = bal.heatRequired || 5;
       const fireballDamage = bal.fireballDamage || 5;
       const fireballSpeed = bal.fireballSpeed || 440;
-      const fireballBounces = bal.fireballBounces || 1;
       const burnDuration = bal.burnDuration || 900;
       const fireballCooldown = bal.cooldown || 2300;
       const secCooldown = bal.secCooldown || 5000;
@@ -4171,7 +4182,7 @@ export default function App() {
             game.bullets.push({
               ownerId: ball.id, targetSide: target.side, kind: "dragonFireball",
               x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
-              r: 9, damage: fireballDamage, life: 2.4, bouncesLeft: fireballBounces, burnDuration
+              r: 9, damage: fireballDamage, life: 9999, bouncesLeft: 9999, burnDuration
             });
             ball.dragonHeat = 0;
             ball.nextShotAt = currentTime + fireballCooldown;
@@ -5218,7 +5229,10 @@ export default function App() {
 
     const updateBullets = (dt, balls) => {
       game.bullets = game.bullets.filter((bullet) => {
-        bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt; bullet.life -= dt;
+        bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
+        if (bullet.kind !== "dragonFireball") {
+          bullet.life -= dt;
+        }
         if (bullet.life <= 0) return false;
         if (bullet.kind === "laserPulse" || bullet.kind === "dragonFireball") {
           let bounced = false;
@@ -5228,9 +5242,11 @@ export default function App() {
           if (bullet.y < pad) { bullet.y = pad; bullet.vy = Math.abs(bullet.vy); bounced = true; }
           if (bullet.y > game.height - pad) { bullet.y = game.height - pad; bullet.vy = -Math.abs(bullet.vy); bounced = true; }
           if (bounced) {
-            bullet.bouncesLeft = (bullet.bouncesLeft ?? (bullet.kind === "laserPulse" ? 4 : 3)) - 1;
+            if (bullet.kind !== "dragonFireball") {
+              bullet.bouncesLeft = (bullet.bouncesLeft ?? (bullet.kind === "laserPulse" ? 4 : 3)) - 1;
+              if (bullet.bouncesLeft < 0) return false;
+            }
             spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : "#facc15", 8);
-            if (bullet.bouncesLeft < 0) return false;
           }
         } else if (bullet.x < 18 || bullet.x > game.width - 18 || bullet.y < 18 || bullet.y > game.height - 18) {
           return false;
