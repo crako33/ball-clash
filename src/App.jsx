@@ -6,8 +6,8 @@ import { useSoundEngine } from "./useSoundEngine";
 const BALL_TYPES = {
   knife: {
     id: "knife",
-    name: "Knifer Ball",
-    shortName: "KNIFR",
+    name: "Saber Ball",
+    shortName: "SABR",
     color: "#4ade80",
     stroke: "#15803d",
     radius: 30,
@@ -24,7 +24,7 @@ const BALL_TYPES = {
   },
   vampire: {
     id: "vampire",
-    name: "Vampirer Ball",
+    name: "Vamper Ball",
     shortName: "VAMP",
     color: "#1e1b4b",
     stroke: "#b91c1c",
@@ -78,7 +78,7 @@ const BALL_TYPES = {
   },
   hammer: {
     id: "hammer",
-    name: "Hammerer Ball",
+    name: "Hammer Ball",
     shortName: "HAMR",
     color: "#cbd5e1",
     stroke: "#64748b",
@@ -141,19 +141,19 @@ const BALL_TYPES = {
   },
   chaos: {
     id: "chaos",
-    name: "Chaos Ball",
-    shortName: "CHAO",
+    name: "Warper Ball",
+    shortName: "WARP",
     color: "#111827",
     stroke: "#f97316",
     radius: 31,
-    description: "Drops chaos circles that fling enemies toward the farthest wall.",
+    description: "Drops warp circles that control enemies and slam them toward the farthest wall.",
   },
   trident: {
     id: "trident",
     name: "Trident Ball",
     shortName: "TRID",
-    color: "#d6a15f",
-    stroke: "#facc15",
+    color: "#fbbf24",
+    stroke: "#22c55e",
     radius: 31,
     description: "Throws a trident that pins enemies to walls, sticks on miss, then recalls.",
   },
@@ -361,7 +361,7 @@ const drawStar = (ctx, cx, cy, spikes, outerRadius, innerRadius) => {
 };
 
 export default function App() {
-  const { playSound } = useSoundEngine();
+  const { playSound, getAudioStream } = useSoundEngine();
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const recordingCanvasRef = useRef(null);
@@ -380,7 +380,7 @@ export default function App() {
   const [gameState, setGameState] = useState({
     leftHealth: MAX_HEALTH,
     rightHealth: MAX_HEALTH,
-    leftName: "Knifer Ball",
+    leftName: "Saber Ball",
     rightName: "Laser Ball",
     winner: null,
     running: false,
@@ -488,6 +488,7 @@ export default function App() {
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
       armState: "idle", armStateUntil: 0, armAngle: 0, armBaseAngle: 0, armDirection: 1, armThrowWallUntil: 0, armThrowWallSourceId: null, armGrabDamageHits: 0,
+      armDropStartAt: 0, armDropStartX: 0, armDropStartY: 0, armDropTargetX: 0, armDropTargetY: 0,
       armNextPunchAt: 0,
       armPunchUntil: 0,
       // Chess Specific
@@ -768,7 +769,9 @@ export default function App() {
     const recordCanvas = recordingCanvasRef.current;
     if (!sourceCanvas || !recordCanvas) return;
 
-    const ctx = recordCanvas.getContext("2d");
+    const ctx = recordCanvas.getContext("2d", { alpha: false });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     const left = gameRef.current.balls?.find((ball) => ball.side === "left");
     const right = gameRef.current.balls?.find((ball) => ball.side === "right");
     const width = 1080;
@@ -848,13 +851,23 @@ export default function App() {
     recordedChunksRef.current = [];
     drawRecordingFrame();
 
-    const stream = recordCanvas.captureStream(30);
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-      ? "video/webm;codecs=vp9"
-      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-        ? "video/webm;codecs=vp8"
+    const stream = recordCanvas.captureStream(60);
+    const audioStream = getAudioStream?.();
+    audioStream?.getAudioTracks?.().forEach((track) => stream.addTrack(track));
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+        ? "video/webm;codecs=vp8,opus"
+        : MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          ? "video/webm;codecs=vp9"
+          : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+            ? "video/webm;codecs=vp8"
         : "video/webm";
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8500000 });
+    const recorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 16000000,
+      audioBitsPerSecond: 192000
+    });
 
     recorder.ondataavailable = (event) => {
       if (event.data?.size) recordedChunksRef.current.push(event.data);
@@ -875,7 +888,7 @@ export default function App() {
       link.remove();
       URL.revokeObjectURL(url);
       setIsRecording(false);
-      setRecordingStatus("Downloaded 1080x1920 recording");
+      setRecordingStatus("Downloaded 1080x1920 recording with audio");
       mediaRecorderRef.current = null;
       recordingCanvasRef.current = null;
       recordedChunksRef.current = [];
@@ -889,7 +902,7 @@ export default function App() {
     mediaRecorderRef.current = recorder;
     recorder.start(250);
     setIsRecording(true);
-    setRecordingStatus("Recording 1080x1920");
+    setRecordingStatus("Recording 1080x1920 60fps");
     renderRecording();
   };
 
@@ -1600,20 +1613,33 @@ export default function App() {
             // Arm Ball Physics in Tournament
             if (ball.type === "arm") {
               if (ball.armState === "elbow_dropping") {
-                ball.x += (enemy.x - ball.x) * 0.18;
-                ball.y += (enemy.y - ball.y) * 0.18;
-                enemy.x = ball.x;
-                enemy.y = ball.y;
-                enemy.vx = 0; enemy.vy = 0;
+                const duration = Math.max(1, ball.armStateUntil - (ball.armDropStartAt || simTime));
+                const progress = clamp((simTime - (ball.armDropStartAt || simTime)) / duration, 0, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                const arc = Math.sin(progress * Math.PI) * 58;
+                const startX = ball.armDropStartX || ball.x;
+                const startY = ball.armDropStartY || ball.y;
+                const landX = ball.armDropTargetX || enemy.x;
+                const landY = ball.armDropTargetY || enemy.y;
+                ball.x = startX + (landX - startX) * ease;
+                ball.y = startY + (landY - startY) * ease - arc;
+                ball.vx = 0;
+                ball.vy = 0;
                 if (simTime >= ball.armStateUntil) {
                   ball.armState = "idle";
                   ball.armGrabTargetId = null;
-                  localApplyDamage(enemy, balance.arm.secSlamDamage, `${ball.id}-elbow-slam`, 500);
-                  const launchAngle = ball.armDropAngle ?? Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  const launchForce = 850;
-                  enemy.vx = Math.cos(launchAngle) * launchForce;
-                  enemy.vy = Math.sin(launchAngle) * launchForce;
-                  const recoilForce = 780;
+                  ball.x = landX;
+                  ball.y = landY;
+                  const impactDist = Math.hypot(enemy.x - landX, enemy.y - landY);
+                  const launchAngle = ball.armDropAngle ?? Math.atan2(enemy.y - landY, enemy.x - landX);
+                  const didHit = impactDist <= ball.r + enemy.r + 24;
+                  if (didHit) {
+                    localApplyDamage(enemy, balance.arm.secSlamDamage, `${ball.id}-elbow-slam`, 500);
+                    const launchForce = 640;
+                    enemy.vx = Math.cos(launchAngle) * launchForce;
+                    enemy.vy = Math.sin(launchAngle) * launchForce;
+                  }
+                  const recoilForce = didHit ? 980 : 760;
                   ball.vx = -Math.cos(launchAngle) * recoilForce;
                   ball.vy = -Math.sin(launchAngle) * recoilForce;
                 }
@@ -1629,13 +1655,21 @@ export default function App() {
                   enemy.vy += Math.sin(targetAngle) * balance.arm.punchKnockback;
                 }
 
-                const elbowDropRange = Math.max(95, balance.arm.punchRange + ball.r + enemy.r + 18);
+                const elbowDropRange = Math.max(88, balance.arm.punchRange + ball.r + enemy.r + 12);
                 if (targetDist <= elbowDropRange && simTime >= (ball.nextSecondaryAt || 0) && canStartSkillConnection(ball, enemy, balls, simTime)) {
+                  const leadTime = clamp(targetDist / 520, 0.06, 0.24);
+                  const landX = clamp(enemy.x + (enemy.vx || 0) * leadTime, ball.r + 20, ARENA_SIZE - ball.r - 20);
+                  const landY = clamp(enemy.y + (enemy.vy || 0) * leadTime, ball.r + 20, ARENA_SIZE - ball.r - 20);
                   ball.nextSecondaryAt = simTime + balance.arm.secCooldown;
                   ball.armState = "elbow_dropping";
-                  ball.armStateUntil = simTime + 520;
+                  ball.armDropStartAt = simTime;
+                  ball.armStateUntil = simTime + 580;
                   ball.armGrabTargetId = enemy.id;
-                  ball.armDropAngle = targetAngle;
+                  ball.armDropStartX = ball.x;
+                  ball.armDropStartY = ball.y;
+                  ball.armDropTargetX = landX;
+                  ball.armDropTargetY = landY;
+                  ball.armDropAngle = Math.atan2(landY - ball.y, landX - ball.x);
                 }
               }
             }
@@ -2723,29 +2757,54 @@ export default function App() {
       const bal = game.balance;
 
       if (armBall.armState === "elbow_dropping") {
-        armBall.x += (target.x - armBall.x) * 0.18;
-        armBall.y += (target.y - armBall.y) * 0.18;
-        target.x = armBall.x;
-        target.y = armBall.y;
-        target.vx = 0; target.vy = 0;
+        const duration = Math.max(1, armBall.armStateUntil - (armBall.armDropStartAt || currentTime));
+        const progress = clamp((currentTime - (armBall.armDropStartAt || currentTime)) / duration, 0, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const arc = Math.sin(progress * Math.PI) * 58;
+        const startX = armBall.armDropStartX || armBall.x;
+        const startY = armBall.armDropStartY || armBall.y;
+        const landX = armBall.armDropTargetX || target.x;
+        const landY = armBall.armDropTargetY || target.y;
+        armBall.x = startX + (landX - startX) * ease;
+        armBall.y = startY + (landY - startY) * ease - arc;
+        armBall.vx = 0;
+        armBall.vy = 0;
         
         if (currentTime >= armBall.armStateUntil) {
           armBall.armState = "idle";
           armBall.armGrabTargetId = null;
-          applyDamage(target, bal.arm.secSlamDamage, `${armBall.id}-elbow-slam`, currentTime, 500);
-          const launchAngle = armBall.armDropAngle ?? Math.atan2(target.y - armBall.y, target.x - armBall.x);
-          const launchForce = 880;
-          target.vx = Math.cos(launchAngle) * launchForce;
-          target.vy = Math.sin(launchAngle) * launchForce;
-          const recoilForce = 820;
+          armBall.x = landX;
+          armBall.y = landY;
+          const impactDist = Math.hypot(target.x - landX, target.y - landY);
+          const launchAngle = armBall.armDropAngle ?? Math.atan2(target.y - landY, target.x - landX);
+          const didHit = impactDist <= armBall.r + target.r + 24;
+          if (didHit) {
+            applyDamage(target, bal.arm.secSlamDamage, `${armBall.id}-elbow-slam`, currentTime, 500);
+            const launchForce = 640;
+            target.vx = Math.cos(launchAngle) * launchForce;
+            target.vy = Math.sin(launchAngle) * launchForce;
+            target.armThrowWallUntil = currentTime + 1400;
+            target.armThrowWallSourceId = armBall.id;
+            spawnSparks(target.x, target.y, "#ef4444", 15);
+            game.screenShake = Math.max(game.screenShake, 16);
+          } else {
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: armBall.x,
+              y: armBall.y - armBall.r - 18,
+              vy: -42,
+              text: "MISS",
+              color: "#cbd5e1",
+              life: 0.6,
+              maxLife: 0.6
+            });
+            game.screenShake = Math.max(game.screenShake, 5);
+          }
+          const recoilForce = didHit ? 980 : 760;
           armBall.vx = -Math.cos(launchAngle) * recoilForce;
           armBall.vy = -Math.sin(launchAngle) * recoilForce;
-          target.armThrowWallUntil = currentTime + 1600;
-          target.armThrowWallSourceId = armBall.id;
           playSound("armSlam");
-          spawnDust(target.x, target.y, 16);
-          spawnSparks(target.x, target.y, "#ef4444", 15);
-          game.screenShake = Math.max(game.screenShake, 18);
+          spawnDust(armBall.x, armBall.y, didHit ? 16 : 9);
         }
         return;
       }
@@ -2778,13 +2837,21 @@ export default function App() {
           });
         }
         
-        const elbowDropRange = Math.max(95, bal.arm.punchRange + armBall.r + target.r + 18);
+        const elbowDropRange = Math.max(88, bal.arm.punchRange + armBall.r + target.r + 12);
         if (targetDist <= elbowDropRange && currentTime >= (armBall.nextSecondaryAt || 0) && canStartSkillConnection(armBall, target, game.balls, currentTime)) {
+          const leadTime = clamp(targetDist / 520, 0.06, 0.24);
+          const landX = clamp(target.x + (target.vx || 0) * leadTime, armBall.r + 20, game.width - armBall.r - 20);
+          const landY = clamp(target.y + (target.vy || 0) * leadTime, armBall.r + 20, game.height - armBall.r - 20);
           armBall.nextSecondaryAt = currentTime + bal.arm.secCooldown;
           armBall.armState = "elbow_dropping";
-          armBall.armStateUntil = currentTime + 520;
+          armBall.armDropStartAt = currentTime;
+          armBall.armStateUntil = currentTime + 580;
           armBall.armGrabTargetId = target.id;
-          armBall.armDropAngle = targetAngle;
+          armBall.armDropStartX = armBall.x;
+          armBall.armDropStartY = armBall.y;
+          armBall.armDropTargetX = landX;
+          armBall.armDropTargetY = landY;
+          armBall.armDropAngle = Math.atan2(landY - armBall.y, landX - armBall.x);
           playSound("armGrab");
           
           game.floatingTexts = game.floatingTexts || [];
@@ -4911,8 +4978,6 @@ export default function App() {
       
       const displayHp = Math.ceil(ball.health);
       ctx.fillText(displayHp, ball.x, ball.y + 2);
-      ctx.font = "bold 9px sans-serif"; ctx.fillStyle = "rgba(248,250,252,0.82)";
-      ctx.fillText(ball.type === "gun" ? `${ball.ammo}/6` : ball.shortName, ball.x, ball.y - 16);
       ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
     };
 
@@ -5788,9 +5853,10 @@ export default function App() {
       
       let yOffset = 0;
       if (ball.armState === "elbow_dropping") {
-        const elapsed = game.simTime - (ball.armStateUntil - 520);
-        const progress = clamp(elapsed / 520, 0, 1);
-        yOffset = -70 * Math.sin(progress * Math.PI);
+        const duration = Math.max(1, ball.armStateUntil - (ball.armDropStartAt || game.simTime));
+        const elapsed = game.simTime - (ball.armDropStartAt || game.simTime);
+        const progress = clamp(elapsed / duration, 0, 1);
+        yOffset = -18 * Math.sin(progress * Math.PI);
       }
       
       const armAngle = ball.armAngle || 0;
@@ -5801,10 +5867,17 @@ export default function App() {
       const punchExtend = punching
         ? Math.sin(Math.min(1, punchProgress * 1.35) * Math.PI) * 42 - Math.sin(punchProgress * Math.PI) * 9
         : 0;
-      const drawArmAngle = punching ? (ball.armPunchAngle ?? armAngle) : armAngle;
+      const dropAngle = ball.armState === "elbow_dropping"
+        ? Math.atan2((ball.armDropTargetY || ball.y) - ball.y, (ball.armDropTargetX || ball.x) - ball.x)
+        : armAngle;
+      const drawArmAngle = punching ? (ball.armPunchAngle ?? armAngle) : dropAngle;
       const reach = L + punchExtend;
-      const handX = ball.armState === "elbow_dropping" && enemy ? enemy.x : ball.x + Math.cos(drawArmAngle) * reach;
-      const handY = ball.armState === "elbow_dropping" && enemy ? enemy.y : ball.y + Math.sin(drawArmAngle) * reach;
+      const handX = ball.armState === "elbow_dropping"
+        ? (ball.armDropTargetX || (enemy ? enemy.x : ball.x))
+        : ball.x + Math.cos(drawArmAngle) * reach;
+      const handY = ball.armState === "elbow_dropping"
+        ? (ball.armDropTargetY || (enemy ? enemy.y : ball.y))
+        : ball.y + Math.sin(drawArmAngle) * reach;
 
       // Draw the arm line / segments
       ctx.save();
@@ -6598,7 +6671,7 @@ export default function App() {
       const grad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
       grad.addColorStop(0, "#fef3c7");
       grad.addColorStop(0.45, config.color);
-      grad.addColorStop(1, "#92400e");
+      grad.addColorStop(1, "#854d0e");
       ctx.fillStyle = grad;
       ctx.fill();
       ctx.lineWidth = 4;
@@ -6606,7 +6679,7 @@ export default function App() {
       ctx.stroke();
 
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(250, 204, 21, 0.85)";
+      ctx.strokeStyle = "rgba(34, 197, 94, 0.9)";
       ctx.lineWidth = 2.2;
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.62, Math.PI * 0.2 + pulse * 0.2, Math.PI * 1.4 + pulse * 0.2);
@@ -6614,13 +6687,6 @@ export default function App() {
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.36, -Math.PI * 0.25 - pulse * 0.25, Math.PI * 0.9 - pulse * 0.25);
       ctx.stroke();
-
-      ctx.fillStyle = "#f8fafc";
-      ctx.beginPath(); ctx.arc(-8, -5, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(8, -5, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#365314";
-      ctx.beginPath(); ctx.arc(-8 + Math.cos(angle) * 1.2, -5 + Math.sin(angle) * 1.2, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(8 + Math.cos(angle) * 1.2, -5 + Math.sin(angle) * 1.2, 2, 0, Math.PI * 2); ctx.fill();
 
       ctx.restore();
       drawHealthInsideBall(ball);
@@ -6988,9 +7054,6 @@ export default function App() {
       ctx.lineTo(-r * 0.42, r * 0.45);
       ctx.stroke();
 
-      ctx.fillStyle = "#0f172a";
-      ctx.beginPath(); ctx.arc(-r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     };
 
