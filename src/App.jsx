@@ -128,7 +128,7 @@ const BALL_TYPES = {
     color: "#dc2626",
     stroke: "#f97316",
     radius: 33,
-    description: "Burst fire-breather. Short flame windows build into limited bouncing fireballs.",
+    description: "Burst fire-breather. Exploding giant fireballs. Secondary: Flame Dash.",
   },
   psychicer: {
     id: "psychicer",
@@ -241,10 +241,10 @@ const BALANCE = {
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
   stringWeb: { stringDamage: 3, stringLifetime: 9000, maxStrings: 14, stringSlowDuration: 1400, stringSlowMultiplier: 0.32, stringHitPadding: 10, stringPullForce: 260, trampolineCooldown: 1100, trampolineBoost: 1.45, trampolineMinSpeed: 310 },
-  arm: { slamDamage: 1, grabRange: 60, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
+  arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
   wrecker: { cooldown: 1200, leapDamage: 14, megaLeapDamage: 22, shockwaveRadius: 92, megaShockwaveRadius: 132, knockbackForce: 620, rageRequired: 5, megaRageRequired: 10, pushCooldown: 1650, pushRange: 42, pushForce: 520, pushDamage: 3, leapCooldown: 6400, bounceBoost: 1.14, maxBounceSpeed: 320, sizePerRage: 0.018, maxRageSizeScale: 1.2, megaSizeScale: 1.3 },
-  dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300 },
+  dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300, secCooldown: 5000, secDamage: 8, secDashForce: 650 },
   psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
   chaos: { circleRadius: 48, launchSpeed: 620, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000 },
   trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 760, recallSpeed: 720, cooldown: 6800, stuckDuration: 800, diveDamage: 6, diveCooldown: 8400, diveTrackDuration: 1150, divePauseDuration: 520, diveSpeed: 720, diveBurstRadius: 44, diveSlowDuration: 1600, diveSlowMultiplier: 0.35 },
@@ -278,7 +278,32 @@ const loadSavedBalanceSettings = () => {
 };
 
 const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
-const isWreckerJumpInvulnerable = (ball) => ball?.type === "wrecker" && ball.wreckerState === "leaping";
+const isWreckerJumpInvulnerable = (ball) => (ball?.type === "wrecker" && ball.wreckerState === "leaping") || (ball?.type === "dragon" && ball.dragonState === "dashing");
+
+const interruptSkills = (ball) => {
+  if (!ball) return;
+  if (ball.laserState) ball.laserState = "idle";
+  if (ball.laserStateUntil) ball.laserStateUntil = 0;
+  if (ball.hammerState) ball.hammerState = "spinning";
+  if (ball.hammerStateUntil) ball.hammerStateUntil = 0;
+  if (ball.dragonBreathUntil) ball.dragonBreathUntil = 0;
+  if (ball.chainsawSpinUntil) ball.chainsawSpinUntil = 0;
+  if (ball.knifeBladeState && ball.knifeBladeState !== "rotating") ball.knifeBladeState = "rotating";
+  if (ball.tridentDiveState && ball.tridentDiveState !== "idle") ball.tridentDiveState = "idle";
+  if (ball.type === "shield" && ball.shieldState === "held") {
+    ball.shieldState = "dropped";
+    ball.shieldGuardHits = 0;
+    ball.shieldX = ball.x;
+    ball.shieldY = ball.y;
+    ball.shieldVx = 0;
+    ball.shieldVy = 0;
+    ball.shieldThrownUntil = 0;
+    ball.shieldNextHitAt = 0;
+    ball.shieldSpinAngle = 0;
+    ball.shieldBonusDamage = 0;
+    ball.shieldLaserPierceHits = 0;
+  }
+};
 
 const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (!ball) return false;
@@ -971,7 +996,9 @@ export default function App() {
             });
             if (insideWeb) slowMult *= 0.5;
             if (ball.stringSlowUntil && simTime < ball.stringSlowUntil) slowMult *= (balance.stringWeb.stringSlowMultiplier || 0.45);
+            if (ball.dragonScorchedUntil && simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) slowMult = 0;
+            if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
               ball.x += ball.vx * dt * slowMult;
@@ -1689,6 +1716,7 @@ export default function App() {
                   ball.armDropTargetX = landX;
                   ball.armDropTargetY = landY;
                   ball.armDropAngle = Math.atan2(landY - ball.y, landX - ball.x);
+                  interruptSkills(enemy);
                 }
               }
             }
@@ -1824,6 +1852,93 @@ export default function App() {
               }
             }
 
+            // Dragon Ball Physics in Tournament
+            if (ball.type === "dragon") {
+              const bal = balance.dragon;
+              const flameDamage = bal.flameDamage || 1;
+              const flameRange = bal.flameRange || 100;
+              const flameAngle = bal.flameAngle || 0.55;
+              const tickCooldown = bal.tickCooldown || 460;
+              const breathDuration = bal.breathDuration || 650;
+              const breathCooldown = bal.breathCooldown || 1800;
+              const heatRequired = bal.heatRequired || 5;
+              const fireballDamage = bal.fireballDamage || 5;
+              const fireballSpeed = bal.fireballSpeed || 440;
+              const fireballBounces = bal.fireballBounces || 1;
+              const burnDuration = bal.burnDuration || 900;
+              const fireballCooldown = bal.cooldown || 2300;
+              const secCooldown = bal.secCooldown || 5000;
+              const secDamage = bal.secDamage || 8;
+              const secDashForce = bal.secDashForce || 650;
+
+              const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+              const currentAim = ball.dragonAngle ?? targetAngle;
+              const aimDiff = Math.atan2(Math.sin(targetAngle - currentAim), Math.cos(targetAngle - currentAim));
+              const aimTurn = Math.abs(aimDiff) > 1.1 ? 0.12 : 0.065;
+              ball.dragonAngle = currentAim + aimDiff * aimTurn;
+              const angle = ball.dragonAngle;
+              const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+              const diff = Math.abs(Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle)));
+              const targetInBreathLane = dist <= flameRange * 1.12 && diff <= flameAngle * 1.35;
+
+              if (ball.dragonState === "dashing") {
+                if (simTime >= ball.dragonDashUntil) {
+                  ball.dragonState = "normal";
+                } else {
+                  ball.vx = ball.dragonDashVx;
+                  ball.vy = ball.dragonDashVy;
+                  if (simTime >= (ball.dragonNextTrailEmberAt || 0)) {
+                    localBullets.push({
+                      ownerId: ball.id, targetSide: enemy.side, kind: "dragonEmber",
+                      x: ball.x, y: ball.y, vx: 0, vy: 0, r: 5, damage: 1, life: 1.2, burnDuration
+                    });
+                    ball.dragonNextTrailEmberAt = simTime + 80;
+                  }
+                  if (dist < ball.r + enemy.r) {
+                    localApplyDamage(enemy, secDamage, `${ball.id}-dragon-dash`, 300);
+                    enemy.vx = Math.cos(ball.dragonAngle) * secDashForce * 1.25;
+                    enemy.vy = Math.sin(ball.dragonAngle) * secDashForce * 1.25;
+                    ball.dragonState = "normal";
+                    ball.vx = -Math.cos(ball.dragonAngle) * 220;
+                    ball.vy = -Math.sin(ball.dragonAngle) * 220;
+                  }
+                }
+              } else {
+                if (simTime >= (ball.nextSecondaryAt || 0) && dist <= 280) {
+                  ball.dragonState = "dashing";
+                  ball.dragonDashUntil = simTime + 400;
+                  ball.nextSecondaryAt = simTime + secCooldown;
+                  ball.dragonDashVx = Math.cos(targetAngle) * secDashForce;
+                  ball.dragonDashVy = Math.sin(targetAngle) * secDashForce;
+                  ball.vx = ball.dragonDashVx;
+                  ball.vy = ball.dragonDashVy;
+                } else {
+                  if (targetInBreathLane && simTime >= (ball.dragonNextBreathAt || 0)) {
+                    ball.dragonBreathUntil = simTime + breathDuration;
+                    ball.dragonNextBreathAt = simTime + breathDuration + breathCooldown;
+                  }
+                  const breathing = simTime < (ball.dragonBreathUntil || 0);
+                  if (breathing && dist <= flameRange && diff <= flameAngle && simTime >= (ball.dragonNextTickAt || 0)) {
+                    localApplyDamage(enemy, flameDamage, `${ball.id}-dragon-flame`, tickCooldown);
+                    ball.dragonNextTickAt = simTime + tickCooldown;
+                    enemy.dragonScorchedUntil = simTime + 220;
+                  }
+                  if ((ball.dragonHeat || 0) >= heatRequired && simTime >= (ball.nextShotAt || 0)) {
+                    const sx = ball.x + Math.cos(angle) * (ball.r + 12);
+                    const sy = ball.y + Math.sin(angle) * (ball.r + 12);
+                    const shotAngle = angle + (Math.random() - 0.5) * 0.22;
+                    localBullets.push({
+                      ownerId: ball.id, targetSide: enemy.side, kind: "dragonFireball",
+                      x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
+                      r: 9, damage: fireballDamage, life: 2.4, bouncesLeft: fireballBounces, burnDuration
+                    });
+                    ball.dragonHeat = 0;
+                    ball.nextShotAt = simTime + fireballCooldown;
+                  }
+                }
+              }
+            }
+
             if (ball.type === "spore" && ball.nextSporeAt <= simTime) {
               for (let i = 0; i < 5; i++) {
                 const rx = clamp(ball.x + (Math.random() - 0.5) * 280, 120, ARENA_SIZE - 120);
@@ -1935,6 +2050,28 @@ export default function App() {
               if (isChessCrownActive(target)) return false;
               if (isWreckerJumpInvulnerable(target)) return false;
               target.health = Math.max(0, target.health - bullet.damage);
+              if (bullet.burnDuration) {
+                target.burnUntil = Math.max(target.burnUntil || 0, simTime + bullet.burnDuration);
+              }
+              if (bullet.kind === "dragonFireball") {
+                for (let i = 0; i < 3; i++) {
+                  const angle = Math.atan2(bullet.vy, bullet.vx) + Math.PI + (i - 1) * 0.42 + (Math.random() - 0.5) * 0.15;
+                  const spd = 260 + Math.random() * 80;
+                  localBullets.push({
+                    ownerId: bullet.ownerId,
+                    targetSide: bullet.targetSide,
+                    kind: "dragonEmber",
+                    x: bullet.x,
+                    y: bullet.y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    r: 5,
+                    damage: Math.max(1, Math.round(bullet.damage * 0.35)),
+                    life: 1.2,
+                    burnDuration: bullet.burnDuration ? Math.round(bullet.burnDuration * 0.5) : 400
+                  });
+                }
+              }
               return false;
             }
             return true;
@@ -2896,6 +3033,7 @@ export default function App() {
             
           if (armBall.side === "left") game.stats.left.totalShots++;
           else game.stats.right.totalShots++;
+          interruptSkills(target);
         }
       }
     };
@@ -3914,18 +4052,22 @@ export default function App() {
 
     const updateDragon = (ball, target, currentTime) => {
       const bal = game.balance.dragon;
-      const flameDamage = Math.min(bal.flameDamage || 1, 2);
-      const flameRange = Math.min(bal.flameRange || 100, 105);
-      const flameAngle = Math.min(bal.flameAngle || 0.55, 0.62);
-      const tickCooldown = Math.max(bal.tickCooldown || 460, 420);
-      const breathDuration = Math.min(bal.breathDuration || 650, 850);
-      const breathCooldown = Math.max(bal.breathCooldown || 1800, 1500);
-      const heatRequired = Math.max(bal.heatRequired || 5, 5);
-      const fireballDamage = Math.min(bal.fireballDamage || 5, 6);
-      const fireballSpeed = Math.min(bal.fireballSpeed || 440, 500);
-      const fireballBounces = Math.min(bal.fireballBounces || 1, 2);
-      const burnDuration = Math.min(bal.burnDuration || 900, 1100);
-      const fireballCooldown = Math.max(bal.cooldown || 2300, 2000);
+      const flameDamage = bal.flameDamage || 1;
+      const flameRange = bal.flameRange || 100;
+      const flameAngle = bal.flameAngle || 0.55;
+      const tickCooldown = bal.tickCooldown || 460;
+      const breathDuration = bal.breathDuration || 650;
+      const breathCooldown = bal.breathCooldown || 1800;
+      const heatRequired = bal.heatRequired || 5;
+      const fireballDamage = bal.fireballDamage || 5;
+      const fireballSpeed = bal.fireballSpeed || 440;
+      const fireballBounces = bal.fireballBounces || 1;
+      const burnDuration = bal.burnDuration || 900;
+      const fireballCooldown = bal.cooldown || 2300;
+      const secCooldown = bal.secCooldown || 5000;
+      const secDamage = bal.secDamage || 8;
+      const secDashForce = bal.secDashForce || 650;
+
       const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
       const currentAim = ball.dragonAngle ?? targetAngle;
       const aimDiff = Math.atan2(Math.sin(targetAngle - currentAim), Math.cos(targetAngle - currentAim));
@@ -3936,66 +4078,109 @@ export default function App() {
       const diff = Math.abs(Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle)));
       const targetInBreathLane = dist <= flameRange * 1.12 && diff <= flameAngle * 1.35;
 
-      if (targetInBreathLane && currentTime >= (ball.dragonNextBreathAt || 0)) {
-        ball.dragonBreathUntil = currentTime + breathDuration;
-        ball.dragonNextBreathAt = currentTime + breathDuration + breathCooldown;
-        ball.dragonFlameActiveUntil = ball.dragonBreathUntil;
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: ball.x,
-          y: ball.y - ball.r - 18,
-          vy: -45,
-          text: "BREATH",
-          color: "#fb923c",
-          life: 0.65,
-          maxLife: 0.65
-        });
-      }
+      if (ball.dragonState === "dashing") {
+        if (currentTime >= ball.dragonDashUntil) {
+          ball.dragonState = "normal";
+        } else {
+          ball.vx = ball.dragonDashVx;
+          ball.vy = ball.dragonDashVy;
+          
+          if (currentTime >= (ball.dragonNextTrailEmberAt || 0)) {
+            game.bullets.push({
+              ownerId: ball.id, targetSide: target.side, kind: "dragonEmber",
+              x: ball.x, y: ball.y, vx: 0, vy: 0, r: 5, damage: 1, life: 1.2, burnDuration
+            });
+            ball.dragonNextTrailEmberAt = currentTime + 80;
+          }
 
-      const breathing = currentTime < (ball.dragonBreathUntil || 0);
-
-      if (breathing) {
-        if (currentTime >= (ball.dragonNextEmberAt || 0)) {
-          const mouthX = ball.x + Math.cos(angle) * (ball.r + 16);
-          const mouthY = ball.y + Math.sin(angle) * (ball.r + 16);
-          const emberDistance = Math.min(dist, flameRange) * (0.25 + Math.random() * 0.45);
-          const emberAngle = angle + (Math.random() - 0.5) * flameAngle * 0.72;
-          spawnSparks(mouthX + Math.cos(emberAngle) * emberDistance, mouthY + Math.sin(emberAngle) * emberDistance, Math.random() > 0.45 ? "#facc15" : "#fb923c", 3);
-          ball.dragonNextEmberAt = currentTime + 130;
+          if (dist < ball.r + target.r) {
+            applyDamage(target, secDamage, `${ball.id}-dragon-dash`, currentTime, 300);
+            target.vx = Math.cos(ball.dragonAngle) * secDashForce * 1.25;
+            target.vy = Math.sin(ball.dragonAngle) * secDashForce * 1.25;
+            ball.dragonState = "normal";
+            ball.vx = -Math.cos(ball.dragonAngle) * 220;
+            ball.vy = -Math.sin(ball.dragonAngle) * 220;
+            playSound("explosion");
+            spawnSparks(ball.x, ball.y, "#f97316", 18);
+            game.screenShake = Math.max(game.screenShake, 8);
+          }
         }
-      }
+      } else {
+        if (currentTime >= (ball.nextSecondaryAt || 0) && dist <= 280) {
+          ball.dragonState = "dashing";
+          ball.dragonDashUntil = currentTime + 400;
+          ball.nextSecondaryAt = currentTime + secCooldown;
+          ball.dragonDashVx = Math.cos(targetAngle) * secDashForce;
+          ball.dragonDashVy = Math.sin(targetAngle) * secDashForce;
+          ball.vx = ball.dragonDashVx;
+          ball.vy = ball.dragonDashVy;
+          playSound("shieldThrow");
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 20, vy: -50,
+            text: "FLAME DASH", color: "#fb923c", life: 0.8, maxLife: 0.8
+          });
+          if (ball.side === "left") game.stats.left.totalShots++;
+          else game.stats.right.totalShots++;
+        } else {
+          if (targetInBreathLane && currentTime >= (ball.dragonNextBreathAt || 0)) {
+            ball.dragonBreathUntil = currentTime + breathDuration;
+            ball.dragonNextBreathAt = currentTime + breathDuration + breathCooldown;
+            ball.dragonFlameActiveUntil = ball.dragonBreathUntil;
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -45,
+              text: "BREATH", color: "#fb923c", life: 0.65, maxLife: 0.65
+            });
+          }
 
-      if (breathing && dist <= flameRange && diff <= flameAngle && currentTime >= (ball.dragonNextTickAt || 0)) {
-        applyDamage(target, flameDamage, `${ball.id}-dragon-flame`, currentTime, tickCooldown);
-        ball.dragonNextTickAt = currentTime + tickCooldown;
-        target.dragonScorchedUntil = currentTime + 220;
-        spawnSparks(target.x, target.y, "#fb923c", 4);
-        if (ball.side === "left") { game.stats.left.damageDealt += flameDamage; game.stats.left.hitsLanded++; }
-        else { game.stats.right.damageDealt += flameDamage; game.stats.right.hitsLanded++; }
-      }
+          const breathing = currentTime < (ball.dragonBreathUntil || 0);
 
-      const wallBounces = ball.consecutiveWallBounces || 0;
-      if (ball.dragonLastWallBounces === undefined) ball.dragonLastWallBounces = wallBounces;
-      if (wallBounces > (ball.dragonLastWallBounces || 0)) {
-        ball.dragonHeat = Math.min(heatRequired, (ball.dragonHeat || 0) + Math.min(bal.heatPerWallBounce || 1, 1));
-        ball.dragonLastWallBounces = wallBounces;
-      }
+          if (breathing) {
+            if (currentTime >= (ball.dragonNextEmberAt || 0)) {
+              const mouthX = ball.x + Math.cos(angle) * (ball.r + 16);
+              const mouthY = ball.y + Math.sin(angle) * (ball.r + 16);
+              const emberDistance = Math.min(dist, flameRange) * (0.25 + Math.random() * 0.45);
+              const emberAngle = angle + (Math.random() - 0.5) * flameAngle * 0.72;
+              spawnSparks(mouthX + Math.cos(emberAngle) * emberDistance, mouthY + Math.sin(emberAngle) * emberDistance, Math.random() > 0.45 ? "#facc15" : "#fb923c", 3);
+              ball.dragonNextEmberAt = currentTime + 130;
+            }
+          }
 
-      if ((ball.dragonHeat || 0) >= heatRequired && currentTime >= (ball.nextShotAt || 0)) {
-        const sx = ball.x + Math.cos(angle) * (ball.r + 12);
-        const sy = ball.y + Math.sin(angle) * (ball.r + 12);
-        const shotAngle = angle + (Math.random() - 0.5) * 0.22;
-        game.bullets.push({
-          ownerId: ball.id, targetSide: target.side, kind: "dragonFireball",
-          x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
-          r: 9, damage: fireballDamage, life: 2.4, bouncesLeft: fireballBounces, burnDuration
-        });
-        ball.dragonHeat = 0;
-        ball.nextShotAt = currentTime + fireballCooldown;
-        if (ball.side === "left") game.stats.left.totalShots++;
-        else game.stats.right.totalShots++;
-        game.screenShake = Math.max(game.screenShake, 6);
-        spawnSparks(sx, sy, "#f97316", 12);
+          if (breathing && dist <= flameRange && diff <= flameAngle && currentTime >= (ball.dragonNextTickAt || 0)) {
+            applyDamage(target, flameDamage, `${ball.id}-dragon-flame`, currentTime, tickCooldown);
+            ball.dragonNextTickAt = currentTime + tickCooldown;
+            target.dragonScorchedUntil = currentTime + 220;
+            spawnSparks(target.x, target.y, "#fb923c", 4);
+            if (ball.side === "left") { game.stats.left.damageDealt += flameDamage; game.stats.left.hitsLanded++; }
+            else { game.stats.right.damageDealt += flameDamage; game.stats.right.hitsLanded++; }
+          }
+
+          const wallBounces = ball.consecutiveWallBounces || 0;
+          if (ball.dragonLastWallBounces === undefined) ball.dragonLastWallBounces = wallBounces;
+          if (wallBounces > (ball.dragonLastWallBounces || 0)) {
+            ball.dragonHeat = Math.min(heatRequired, (ball.dragonHeat || 0) + Math.min(bal.heatPerWallBounce || 1, 1));
+            ball.dragonLastWallBounces = wallBounces;
+          }
+
+          if ((ball.dragonHeat || 0) >= heatRequired && currentTime >= (ball.nextShotAt || 0)) {
+            const sx = ball.x + Math.cos(angle) * (ball.r + 12);
+            const sy = ball.y + Math.sin(angle) * (ball.r + 12);
+            const shotAngle = angle + (Math.random() - 0.5) * 0.22;
+            game.bullets.push({
+              ownerId: ball.id, targetSide: target.side, kind: "dragonFireball",
+              x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
+              r: 9, damage: fireballDamage, life: 2.4, bouncesLeft: fireballBounces, burnDuration
+            });
+            ball.dragonHeat = 0;
+            ball.nextShotAt = currentTime + fireballCooldown;
+            if (ball.side === "left") game.stats.left.totalShots++;
+            else game.stats.right.totalShots++;
+            game.screenShake = Math.max(game.screenShake, 6);
+            spawnSparks(sx, sy, "#f97316", 12);
+          }
+        }
       }
     };
 
@@ -6432,6 +6617,19 @@ export default function App() {
       const angle = ball.dragonAngle || ball.angle || 0;
       ctx.save();
       ctx.translate(ball.x, ball.y);
+      if (ball.dragonState === "dashing") {
+        ctx.save();
+        ctx.shadowColor = "#f97316";
+        ctx.shadowBlur = 25;
+        ctx.globalAlpha = 0.65 + Math.sin(game.simTime * 0.04) * 0.15;
+        const radGrad = ctx.createRadialGradient(0, 0, ball.r - 2, 0, 0, ball.r + 14);
+        radGrad.addColorStop(0, "rgba(254, 240, 138, 0.45)");
+        radGrad.addColorStop(0.5, "rgba(249, 115, 22, 0.35)");
+        radGrad.addColorStop(1, "rgba(220, 38, 38, 0)");
+        ctx.fillStyle = radGrad;
+        ctx.beginPath(); ctx.arc(0, 0, ball.r + 14, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
       ctx.rotate(angle);
       ctx.fillStyle = "#f97316";
       ctx.strokeStyle = "#7f1d1d";
@@ -6459,8 +6657,8 @@ export default function App() {
       const target = game.balls.find(o => o.side !== ball.side);
       if (target) {
         const bal = game.balance.dragon;
-        const flameRange = Math.min(bal.flameRange || 100, 105);
-        const flameAngle = Math.min(bal.flameAngle || 0.55, 0.62);
+        const flameRange = bal.flameRange || 100;
+        const flameAngle = bal.flameAngle || 0.55;
         const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
         const active = game.simTime < (ball.dragonFlameActiveUntil || 0);
         if (active) {
@@ -7569,6 +7767,13 @@ export default function App() {
           coreGrad.addColorStop(1, "#f97316");
           ctx.fillStyle = coreGrad; ctx.fill();
           ctx.strokeStyle = "#fef3c7"; ctx.lineWidth = 2.5; ctx.stroke();
+        } else if (bullet.kind === "dragonEmber") {
+          ctx.shadowColor = "#ef4444";
+          ctx.shadowBlur = 8;
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r + 2 * Math.abs(Math.sin(game.simTime * 0.03)), 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(239, 68, 68, 0.3)"; ctx.fill();
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+          ctx.fillStyle = "#fb923c"; ctx.fill();
         } else {
           ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
           ctx.fillStyle = bullet.piercesDefense ? "#67e8f9" : "#facc15"; ctx.fill();
@@ -8647,7 +8852,9 @@ export default function App() {
             if (insideWeb) slowMult *= 0.5;
             if (ball.stringSlowUntil && game.simTime < ball.stringSlowUntil) slowMult *= ((game.balance.stringWeb || BALANCE.stringWeb).stringSlowMultiplier || 0.45);
             if (ball.judgementSlowUntil && game.simTime < ball.judgementSlowUntil) slowMult *= (ball.judgementSlowMultiplier || 0.72);
+            if (ball.dragonScorchedUntil && game.simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
+            if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
             if (!isTridentPinned && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
@@ -9112,6 +9319,9 @@ export default function App() {
               {renderSlider("Fireball Bounces", "dragon", "fireballBounces", 0, 4, 1)}
               {renderSlider("Burn Duration", "dragon", "burnDuration", 300, 1800, 50, "ms")}
               {renderSlider("Fireball Cooldown", "dragon", "cooldown", 1200, 5000, 50, "ms")}
+              {renderSlider("Sec: Dash Cooldown", "dragon", "secCooldown", 1000, 9000, 100, "ms")}
+              {renderSlider("Sec: Dash Damage", "dragon", "secDamage", 1, 30)}
+              {renderSlider("Sec: Dash Speed", "dragon", "secDashForce", 300, 900, 50, "px/s")}
             </>
           )}
           {type === "psychicer" && (
