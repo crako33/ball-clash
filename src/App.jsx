@@ -198,6 +198,7 @@ const BALL_TYPES = {
 const GRID_SIZE = 7;
 const TILE_SIZE = 64;
 const ARENA_SIZE = GRID_SIZE * TILE_SIZE;
+const OPENING_SKILL_DELAY = 3000;
 const MIN_DAMAGE = 1;
 const SHIELD_GUARD_HITS = 5;
 const SHIELD_PICKUP_RADIUS = 30;
@@ -239,7 +240,7 @@ const BALANCE = {
   chaos: { circleRadius: 48, launchSpeed: 620, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000 },
   trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 760, recallSpeed: 720, cooldown: 6800, stuckDuration: 800, diveDamage: 6, diveCooldown: 8400, diveTrackDuration: 1150, divePauseDuration: 520, diveSpeed: 720, diveBurstRadius: 44, diveSlowDuration: 1600, diveSlowMultiplier: 0.35 },
   spirit: { chargeRequired: 5, beamDamage: 6, tickCooldown: 180, beamDuration: 900, beamWidth: 42, cooldown: 1800, knockback: 420 },
-  shadow: { slashDamage: 3, slashRange: 58, slashCooldown: 1050, summonCooldown: 2200, maxMinions: 4, minionDamage: 1, minionSpeed: 190, minionLife: 10000, minionHitCooldown: 850, commandDuration: 900, markDuration: 1400 },
+  shadow: { slashDamage: 2, slashRange: 35, slashCooldown: 450, comboRange: 36, comboSecondDamage: 2, summonCooldown: 4600, maxMinions: 3, minionHealth: 4, minionDamage: 1, minionSpeed: 33, minionLife: 6200, minionHitCooldown: 1100, commandDuration: 700, markDuration: 1100, switchCooldown: 6000, switchRange: 145, switchDamage: 3 },
   chainsaw: { spinDamage: 3, hitCooldown: 260, sawReach: 34, spinDuration: 1600, cooldown: 2600, knockback: 220 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
 };
@@ -479,7 +480,7 @@ export default function App() {
       // Spirit Specific
       kiCharge: 0, spiritBeamUntil: 0, spiritBeamAngle: side === "left" ? 0 : Math.PI, spiritNextTickAt: 0, spiritCooldownUntil: 0, spiritFlashUntil: 0,
       // Shadow Specific
-      shadowMinions: [], shadowNextSummonAt: 0, shadowNextSlashAt: 0, shadowSlashUntil: 0, shadowSlashAngle: side === "left" ? 0 : Math.PI, shadowCommandUntil: 0,
+      shadowMinions: [], shadowNextSummonAt: 0, shadowNextSlashAt: 0, shadowNextSwitchAt: 0, shadowSlashUntil: 0, shadowSlashAngle: side === "left" ? 0 : Math.PI, shadowCommandUntil: 0, shadowComboSecondAt: 0, shadowComboTargetId: null,
       // Chainsaw Specific
       chainsawSpinUntil: 0, chainsawNextSpinAt: 0, chainsawNextHitAt: 0, chainsawAngle: 0,
       // Mirror Specific
@@ -984,7 +985,7 @@ export default function App() {
                   }
                 }
                 
-                if (bounced && simTime >= 3000) {
+                if (bounced && simTime >= OPENING_SKILL_DELAY) {
                 if (ball.type === "stringWeb") {
                     if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
                       const newString = {
@@ -1075,7 +1076,7 @@ export default function App() {
               damageCooldowns[cooldownKey] = simTime + cd;
             };
 
-          if (collided) {
+          if (collided && simTime >= OPENING_SKILL_DELAY) {
             if (leftBall.type === "spore" && leftBall.hydraGlowStacks > 0) {
               localApplyDamage(rightBall, leftBall.hydraGlowStacks * balance.spore.cactusDamage, `${leftBall.id}-hydra-glow-hit`, 250);
               leftBall.hydraGlowStacks = 0;
@@ -1117,7 +1118,7 @@ export default function App() {
           balls.forEach((ball, idx) => {
             const enemy = idx === 0 ? rightBall : leftBall;
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) return;
-            if (simTime >= 3000) {
+            if (simTime >= OPENING_SKILL_DELAY) {
               if (ball.type === "knife") {
                 const bal = balance.knife;
                 if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
@@ -2254,6 +2255,21 @@ export default function App() {
       }
     };
 
+    const pruneShadowMinions = () => {
+      game.balls.forEach((owner) => {
+        if (owner.type !== "shadow" || !owner.shadowMinions) return;
+        owner.shadowMinions = owner.shadowMinions.filter((minion) => {
+          const alive = minion.health > 0 && game.simTime < minion.createdTime + (game.balance.shadow?.minionLife || BALANCE.shadow.minionLife);
+          if (!alive && !minion.deathFxDone) {
+            minion.deathFxDone = true;
+            spawnSparks(minion.x, minion.y, "#a78bfa", 8);
+          }
+          return alive;
+        });
+      });
+    };
+
+
     const spawnDeathShatter = (defeated, currentTime) => {
       const config = BALL_TYPES[defeated.type] || BALL_TYPES.knife;
       const colors = [config.color, config.stroke, "#f8fafc", "#94a3b8"];
@@ -2454,7 +2470,7 @@ export default function App() {
             spawnDust(ball.x, ball.y, 10);
           }
         }
-        if (gameStarted && game.simTime >= 3000) {
+        if (gameStarted && game.simTime >= OPENING_SKILL_DELAY) {
           if (ball.type === "stringWeb") {
             if (!game.strings) game.strings = [];
             if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
@@ -4426,21 +4442,90 @@ export default function App() {
 
     const updateShadow = (ball, target, currentTime, stepDt) => {
       const bal = game.balance.shadow || BALANCE.shadow;
-      ball.shadowMinions = (ball.shadowMinions || []).filter((minion) => currentTime < minion.createdTime + bal.minionLife);
+      ball.shadowMinions = (ball.shadowMinions || []).filter((minion) => minion.health > 0 && currentTime < minion.createdTime + bal.minionLife).slice(0, bal.maxMinions);
 
       const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
       const targetDist = Math.hypot(target.x - ball.x, target.y - ball.y);
-      if (targetDist <= ball.r + target.r + bal.slashRange && currentTime >= (ball.shadowNextSlashAt || 0)) {
+      if (ball.shadowComboSecondAt && currentTime >= ball.shadowComboSecondAt) {
+        ball.shadowComboSecondAt = 0;
+        if (target.id === ball.shadowComboTargetId && targetDist <= ball.r + target.r + bal.slashRange + 8) {
+          const secondAngle = Math.atan2(target.y - ball.y, target.x - ball.x) + 0.18;
+          ball.shadowSlashUntil = currentTime + 240;
+          ball.shadowSlashAngle = secondAngle;
+          applyDamage(target, bal.comboSecondDamage, `${ball.id}-shadow-combo-second`, currentTime, bal.slashCooldown - 10);
+          if (!hasStringBounceGuard(target)) {
+            target.vx += Math.cos(secondAngle) * 170;
+            target.vy += Math.sin(secondAngle) * 170;
+          }
+          if (ball.side === "left") {
+            game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.comboSecondDamage);
+            game.stats.left.hitsLanded++;
+          } else {
+            game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.comboSecondDamage);
+            game.stats.right.hitsLanded++;
+          }
+          target.webHitFlashUntil = currentTime + 170;
+          spawnSparks(target.x, target.y, "#e9d5ff", 8);
+        }
+        ball.shadowComboTargetId = null;
+      }
+      const switchCandidate = (ball.shadowMinions || [])
+        .filter((minion) => minion.health > 0 && Math.hypot(minion.x - target.x, minion.y - target.y) <= bal.switchRange)
+        .sort((a, b) => Math.hypot(a.x - target.x, a.y - target.y) - Math.hypot(b.x - target.x, b.y - target.y))[0];
+      if (switchCandidate && currentTime >= (ball.shadowNextSwitchAt || 0) && currentTime >= (ball.shadowNextSlashAt || 0)) {
+        const oldX = ball.x;
+        const oldY = ball.y;
+        ball.x = switchCandidate.x;
+        ball.y = switchCandidate.y;
+        switchCandidate.x = oldX;
+        switchCandidate.y = oldY;
+        ball.vx *= 0.65;
+        ball.vy *= 0.65;
+        ball.shadowNextSwitchAt = currentTime + bal.switchCooldown;
         ball.shadowNextSlashAt = currentTime + bal.slashCooldown;
-        ball.shadowSlashUntil = currentTime + 220;
+        ball.shadowSlashUntil = currentTime + 260;
+        ball.shadowSlashAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        applyDamage(target, bal.switchDamage, `${ball.id}-shadow-switch-knife`, currentTime, bal.switchCooldown - 10);
+        if (!hasStringBounceGuard(target)) {
+          target.vx += Math.cos(ball.shadowSlashAngle) * 240;
+          target.vy += Math.sin(ball.shadowSlashAngle) * 240;
+        }
+        if (ball.side === "left") {
+          game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.switchDamage);
+          game.stats.left.hitsLanded++;
+        } else {
+          game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.switchDamage);
+          game.stats.right.hitsLanded++;
+        }
+        spawnSparks(ball.x, ball.y, "#c4b5fd", 14);
+        spawnSparks(switchCandidate.x, switchCandidate.y, "#6d28d9", 8);
+        game.screenShake = Math.max(game.screenShake, 6);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x,
+          y: ball.y - ball.r - 22,
+          vy: -45,
+          text: "SHADOW SWITCH",
+          color: "#c4b5fd",
+          life: 0.75,
+          maxLife: 0.75
+        });
+        playSound("knifeHit", 0.8, 120);
+      }
+      if (targetDist <= ball.r + target.r + bal.slashRange && currentTime >= (ball.shadowNextSlashAt || 0)) {
+        const comboReady = targetDist <= ball.r + target.r + (bal.comboRange || 36);
+        ball.shadowNextSlashAt = currentTime + bal.slashCooldown;
+        ball.shadowSlashUntil = currentTime + (comboReady ? 330 : 240);
         ball.shadowSlashAngle = targetAngle;
         ball.shadowCommandUntil = currentTime + bal.commandDuration;
+        ball.shadowComboSecondAt = comboReady ? currentTime + 150 : 0;
+        ball.shadowComboTargetId = comboReady ? target.id : null;
         target.shadowMarkedUntil = currentTime + bal.markDuration;
         target.shadowMarkedBy = ball.id;
         applyDamage(target, bal.slashDamage, `${ball.id}-shadow-slash`, currentTime, bal.slashCooldown - 10);
         if (!hasStringBounceGuard(target)) {
-          target.vx += Math.cos(targetAngle) * 210;
-          target.vy += Math.sin(targetAngle) * 210;
+          target.vx += Math.cos(targetAngle) * (comboReady ? 150 : 210);
+          target.vy += Math.sin(targetAngle) * (comboReady ? 150 : 210);
         }
         if (ball.side === "left") {
           game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.slashDamage);
@@ -4451,15 +4536,6 @@ export default function App() {
         }
         target.webHitFlashUntil = currentTime + 160;
         spawnSparks(target.x, target.y, "#c4b5fd", 9);
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: target.x, y: target.y - target.r - 20, vy: -45,
-          text: "MARKED", color: "#c4b5fd", life: 0.65, maxLife: 0.65
-        });
-        game.floatingTexts.push({
-          x: ball.x, y: ball.y - ball.r - 20, vy: -45,
-          text: "COMMAND", color: "#a78bfa", life: 0.65, maxLife: 0.65
-        });
         playSound("hammerHit", 0.65, -180);
       }
 
@@ -4468,11 +4544,19 @@ export default function App() {
         const spawnDist = ball.r + 12;
         const minion = {
           id: `${ball.id}-shadow-${currentTime}-${ball.shadowMinions.length}`,
+          type: "shadowMinion",
+          name: "Shadow Minion",
+          side: ball.side,
+          ownerId: ball.id,
           x: ball.x + Math.cos(angle) * spawnDist,
           y: ball.y + Math.sin(angle) * spawnDist,
           vx: Math.cos(angle) * bal.minionSpeed,
           vy: Math.sin(angle) * bal.minionSpeed,
           r: 8,
+          health: bal.minionHealth || BALANCE.shadow.minionHealth,
+          maxHealth: bal.minionHealth || BALANCE.shadow.minionHealth,
+          hitsLeft: 2,
+          flankSlot: ball.shadowMinions.length % 3,
           createdTime: currentTime,
           nextHitAt: 0,
           pulseOffset: Math.random() * Math.PI * 2
@@ -4491,12 +4575,40 @@ export default function App() {
 
       ball.shadowMinions.forEach((minion) => {
         const commandActive = currentTime < (ball.shadowCommandUntil || 0);
-        const dx = target.x - minion.x;
-        const dy = target.y - minion.y;
+        const moveSpeed = Math.hypot(target.vx || 0, target.vy || 0);
+        const forwardAngle = moveSpeed > 35 ? Math.atan2(target.vy, target.vx) : Math.atan2(target.y - ball.y, target.x - ball.x);
+        const sideSign = minion.flankSlot === 1 ? -1 : 1;
+        const slotAngle = minion.flankSlot === 2
+          ? forwardAngle + Math.PI
+          : forwardAngle + Math.PI * 0.72 * sideSign;
+        const contactDist = target.r + minion.r + 5;
+        const flankDist = contactDist + 18;
+        const slotX = clamp(target.x + Math.cos(slotAngle) * flankDist, minion.r + 20, game.width - minion.r - 20);
+        const slotY = clamp(target.y + Math.sin(slotAngle) * flankDist, minion.r + 20, game.height - minion.r - 20);
+        const dx = slotX - minion.x;
+        const dy = slotY - minion.y;
         const dist = Math.max(1, Math.hypot(dx, dy));
+        const toTargetX = target.x - minion.x;
+        const toTargetY = target.y - minion.y;
+        const targetDist = Math.max(1, Math.hypot(toTargetX, toTargetY));
         const speedMult = commandActive ? 1.55 : 1;
-        let desiredVx = (dx / dist) * bal.minionSpeed * speedMult;
-        let desiredVy = (dy / dist) * bal.minionSpeed * speedMult;
+        const orbitDir = minion.orbitDir || (minion.id.length % 2 === 0 ? 1 : -1);
+        minion.orbitDir = orbitDir;
+        let desiredVx;
+        let desiredVy;
+        if (targetDist <= contactDist) {
+          desiredVx = -(toTargetX / targetDist) * bal.minionSpeed * 1.35 + (-toTargetY / targetDist) * bal.minionSpeed * 0.32 * orbitDir;
+          desiredVy = -(toTargetY / targetDist) * bal.minionSpeed * 1.35 + (toTargetX / targetDist) * bal.minionSpeed * 0.32 * orbitDir;
+          const pushOut = contactDist - targetDist;
+          minion.x -= (toTargetX / targetDist) * pushOut;
+          minion.y -= (toTargetY / targetDist) * pushOut;
+        } else if (dist < 10) {
+          desiredVx = (-toTargetY / targetDist) * bal.minionSpeed * 0.55 * orbitDir;
+          desiredVy = (toTargetX / targetDist) * bal.minionSpeed * 0.55 * orbitDir;
+        } else {
+          desiredVx = (dx / dist) * bal.minionSpeed * speedMult;
+          desiredVy = (dy / dist) * bal.minionSpeed * speedMult;
+        }
         ball.shadowMinions.forEach((other) => {
           if (other === minion) return;
           const sepDx = minion.x - other.x;
@@ -4519,7 +4631,10 @@ export default function App() {
         if (minion.y < pad) { minion.y = pad; minion.vy = Math.abs(minion.vy); }
         if (minion.y > game.height - pad) { minion.y = game.height - pad; minion.vy = -Math.abs(minion.vy); }
 
-        if (Math.hypot(minion.x - target.x, minion.y - target.y) < minion.r + target.r && currentTime >= (minion.nextHitAt || 0)) {
+        const attackAngle = Math.atan2(minion.y - target.y, minion.x - target.x);
+        const flankDiffRaw = attackAngle - slotAngle;
+        const flankDiff = Math.abs(Math.atan2(Math.sin(flankDiffRaw), Math.cos(flankDiffRaw)));
+        if (targetDist <= contactDist + 2 && flankDiff < 0.95 && currentTime >= (minion.nextHitAt || 0)) {
           minion.nextHitAt = currentTime + bal.minionHitCooldown;
           const markedBonus = target.shadowMarkedBy === ball.id && currentTime < (target.shadowMarkedUntil || 0) ? 1 : 0;
           const minionDamage = bal.minionDamage + markedBonus;
@@ -4536,11 +4651,26 @@ export default function App() {
             game.stats.right.damageDealt += Math.max(MIN_DAMAGE, minionDamage);
             game.stats.right.hitsLanded++;
           }
+          minion.hitsLeft = (minion.hitsLeft ?? 2) - 1;
+          if (minion.hitsLeft <= 0) minion.health = 0;
           minion.vx = -Math.cos(hitAngle) * bal.minionSpeed;
           minion.vy = -Math.sin(hitAngle) * bal.minionSpeed;
-          spawnSparks(minion.x, minion.y, "#8b5cf6", 6);
+          spawnSparks(minion.x, minion.y, "#8b5cf6", minion.health <= 0 ? 10 : 5);
+          if (minion.health <= 0) {
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: minion.x,
+              y: minion.y - minion.r - 10,
+              vy: -38,
+              text: "POOF",
+              color: "#c4b5fd",
+              life: 0.55,
+              maxLife: 0.55
+            });
+          }
         }
       });
+      ball.shadowMinions = ball.shadowMinions.filter((minion) => minion.health > 0);
     };
 
     const updateChainsaw = (ball, target, currentTime, stepDt) => {
@@ -4918,8 +5048,8 @@ export default function App() {
             });
           }
           
-          if (bullet.ownerId.startsWith("left")) { game.stats.left.damageDealt += bullet.damage; game.stats.left.hitsLanded++; }
-          else { game.stats.right.damageDealt += bullet.damage; game.stats.right.hitsLanded++; }
+          if (bullet.ownerId?.startsWith("left")) { game.stats.left.damageDealt += bullet.damage; game.stats.left.hitsLanded++; }
+          else if (bullet.ownerId?.startsWith("right")) { game.stats.right.damageDealt += bullet.damage; game.stats.right.hitsLanded++; }
 
           spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : "#facc15", bullet.kind === "laserPulse" ? 16 : 8);
           return false;
@@ -6833,28 +6963,46 @@ export default function App() {
         ctx.fillStyle = "#c4b5fd";
         ctx.beginPath(); ctx.arc(-2.5, -1.5, 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(3, -1.5, 1.5, 0, Math.PI * 2); ctx.fill();
+        const hpRatio = clamp((minion.health || 0) / Math.max(1, minion.maxHealth || minion.health || 1), 0, 1);
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(15, 23, 42, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, minion.r + 3, -Math.PI / 2, Math.PI * 1.5); ctx.stroke();
+        ctx.strokeStyle = "#c4b5fd";
+        ctx.beginPath(); ctx.arc(0, 0, minion.r + 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hpRatio); ctx.stroke();
         ctx.restore();
       });
 
       if (ball.shadowSlashUntil && game.simTime < ball.shadowSlashUntil) {
-        const progress = clamp((ball.shadowSlashUntil - game.simTime) / 220, 0, 1);
+        const duration = ball.shadowComboSecondAt && game.simTime < ball.shadowComboSecondAt + 180 ? 330 : 240;
+        const progress = clamp((ball.shadowSlashUntil - game.simTime) / duration, 0, 1);
+        const comboActive = !!(ball.shadowComboSecondAt && game.simTime < ball.shadowComboSecondAt + 220);
         ctx.save();
         ctx.translate(ball.x, ball.y);
         ctx.rotate(ball.shadowSlashAngle || 0);
         ctx.globalAlpha = progress;
         ctx.shadowColor = "#c4b5fd";
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = comboActive ? 24 : 16;
         ctx.strokeStyle = "#e9d5ff";
-        ctx.lineWidth = 7;
+        ctx.lineWidth = comboActive ? 9 : 7;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.arc(0, 0, ball.r + bal.slashRange * 0.55, -0.45, 0.45);
+        ctx.arc(0, 0, ball.r + bal.slashRange * 0.58, comboActive ? -0.72 : -0.45, comboActive ? 0.58 : 0.45);
         ctx.stroke();
         ctx.strokeStyle = "#7c3aed";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(0, 0, ball.r + bal.slashRange * 0.55, -0.36, 0.36);
+        ctx.arc(0, 0, ball.r + bal.slashRange * 0.58, comboActive ? -0.62 : -0.36, comboActive ? 0.5 : 0.36);
         ctx.stroke();
+        if (comboActive) {
+          ctx.rotate(0.5);
+          ctx.globalAlpha = progress * 0.72;
+          ctx.strokeStyle = "#f5d0fe";
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.arc(0, 0, ball.r + bal.slashRange * 0.42, -0.52, 0.64);
+          ctx.stroke();
+        }
         ctx.restore();
       }
 
@@ -6906,13 +7054,6 @@ export default function App() {
       ctx.beginPath(); ctx.arc(-8, -5, 2, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(8, -5, 2, 0, Math.PI * 2); ctx.fill();
 
-      const count = (ball.shadowMinions || []).length;
-      if (count > 0) {
-        ctx.fillStyle = "#c4b5fd";
-        ctx.font = "bold 8px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(`${count}/${bal.maxMinions}`, 0, ball.r + 15);
-      }
       ctx.restore();
       drawHealthInsideBall(ball);
     };
@@ -8221,7 +8362,7 @@ export default function App() {
           const collided = resolveBallCollision(left, right);
           if (collided) {
             playSound("ballCollision", 1, 80);
-            if (game.simTime >= 3000) {
+            if (game.simTime >= OPENING_SKILL_DELAY) {
             if (left.type === "spore" && left.hydraGlowStacks > 0) {
               const glowDamage = left.hydraGlowStacks * game.balance.spore.cactusDamage;
               applyDamage(right, glowDamage, `${left.id}-hydra-glow-hit`, game.simTime, 250);
@@ -8258,7 +8399,7 @@ export default function App() {
 
           game.balls.forEach((ball) => {
             const target = ball.side === "left" ? right : left;
-            if (game.simTime >= 3000) {
+            if (game.simTime >= OPENING_SKILL_DELAY) {
                 if (ball.burnUntil && game.simTime < ball.burnUntil && game.simTime >= (ball.nextBurnTickAt || 0)) {
                   const burnDamage = Math.max(MIN_DAMAGE, 1);
                   ball.health = clamp(ball.health - burnDamage, 0, MAX_HEALTH);
@@ -8358,6 +8499,7 @@ export default function App() {
           updateBullets(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
           updateMines(stepDt, game.balls);
+          pruneShadowMinions();
           updateExplosions(stepDt);
           updateParticles(stepDt);
           updateFloatingTexts(stepDt);
@@ -8703,15 +8845,21 @@ export default function App() {
             <>
               {renderSlider("Slash Damage", "shadow", "slashDamage", 1, 20)}
               {renderSlider("Slash Range", "shadow", "slashRange", 20, 120, 5, "px")}
-              {renderSlider("Slash Cooldown", "shadow", "slashCooldown", 200, 3000, 50, "ms")}
-              {renderSlider("Summon Cooldown", "shadow", "summonCooldown", 500, 8000, 100, "ms")}
-              {renderSlider("Max Minions", "shadow", "maxMinions", 1, 8, 1)}
+              {renderSlider("Slash Cooldown", "shadow", "slashCooldown", 100, 3000, 50, "ms")}
+              {renderSlider("Blade Combo Range", "shadow", "comboRange", 10, 80, 5, "px")}
+              {renderSlider("Combo Second Damage", "shadow", "comboSecondDamage", 1, 12)}
+              {renderSlider("Summon Cooldown", "shadow", "summonCooldown", 2000, 10000, 100, "ms")}
+              {renderSlider("Max Minions", "shadow", "maxMinions", 1, 3, 1)}
+              {renderSlider("Minion Health", "shadow", "minionHealth", 1, 10, 1)}
               {renderSlider("Minion Damage", "shadow", "minionDamage", 1, 12)}
-              {renderSlider("Minion Speed", "shadow", "minionSpeed", 80, 420, 10, "px/s")}
-              {renderSlider("Minion Life", "shadow", "minionLife", 2000, 20000, 500, "ms")}
+              {renderSlider("Minion Speed", "shadow", "minionSpeed", 20, 420, 1, "px/s")}
+              {renderSlider("Minion Life", "shadow", "minionLife", 2000, 12000, 500, "ms")}
               {renderSlider("Minion Hit Cooldown", "shadow", "minionHitCooldown", 200, 2000, 50, "ms")}
               {renderSlider("Command Duration", "shadow", "commandDuration", 200, 2500, 50, "ms")}
               {renderSlider("Mark Duration", "shadow", "markDuration", 300, 3000, 50, "ms")}
+              {renderSlider("Switch Cooldown", "shadow", "switchCooldown", 2000, 12000, 100, "ms")}
+              {renderSlider("Switch Range", "shadow", "switchRange", 60, 240, 5, "px")}
+              {renderSlider("Switch Knife Damage", "shadow", "switchDamage", 1, 12)}
             </>
           )}
           {type === "chainsaw" && (
@@ -8837,7 +8985,13 @@ export default function App() {
                 <div>
                   <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Combat Status</div>
                   <div className="mt-1 text-lg font-bold text-sky-400">
-                    {gameState.winner ? `${gameState.winner} Wins!` : gameState.running ? "Fighting..." : "Ready to Brawl"}
+                    {gameState.winner
+                      ? `${gameState.winner} Wins!`
+                      : gameState.running && elapsedTime < OPENING_SKILL_DELAY / 1000
+                        ? `Skills in ${Math.max(1, Math.ceil(OPENING_SKILL_DELAY / 1000 - elapsedTime))}s`
+                        : gameState.running
+                          ? "Fighting..."
+                          : "Ready to Brawl"}
                   </div>
                 </div>
                 <div className="mt-3 text-[10px] text-slate-500 font-medium uppercase">
