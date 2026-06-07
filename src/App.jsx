@@ -223,7 +223,7 @@ const ARM_RAGDOLL_WALL_DAMAGE = 7;
 const ARM_THROW_WALL_DAMAGE = 10;
 const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
-const MAX_HEALTH = 150;
+const MAX_HEALTH = 100;
 const MAX_PARTICLES = 180;
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 8;
@@ -241,7 +241,7 @@ const BALANCE = {
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 1.5, cactusLife: 3000, cooldown: 6000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
   stringWeb: { stringDamage: 3, stringLifetime: 9000, maxStrings: 14, stringSlowDuration: 1400, stringSlowMultiplier: 0.32, stringHitPadding: 10, stringPullForce: 260, trampolineCooldown: 1100, trampolineBoost: 1.45, trampolineMinSpeed: 310 },
-  arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 80, punchCooldown: 900, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
+  arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 55, punchCooldown: 600, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
   wrecker: { cooldown: 1200, leapDamage: 14, megaLeapDamage: 22, shockwaveRadius: 92, megaShockwaveRadius: 132, knockbackForce: 620, rageRequired: 5, megaRageRequired: 10, pushCooldown: 1650, pushRange: 42, pushForce: 520, pushDamage: 3, leapCooldown: 6400, bounceBoost: 1.14, maxBounceSpeed: 320, sizePerRage: 0.018, maxRageSizeScale: 1.2, megaSizeScale: 1.3 },
   dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300, secCooldown: 5000, secDamage: 8, secDashForce: 650 },
@@ -997,6 +997,7 @@ export default function App() {
             if (insideWeb) slowMult *= 0.5;
             if (ball.stringSlowUntil && simTime < ball.stringSlowUntil) slowMult *= (balance.stringWeb.stringSlowMultiplier || 0.45);
             if (ball.dragonScorchedUntil && simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
+            if (ball.shadowSlowedUntil && simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
@@ -1988,12 +1989,200 @@ export default function App() {
                     ball.hammerNextHitAt = simTime + balance.hammer.launchDuration;
                   }
                 }
-                if (simTime >= ball.hammerStateUntil) {
-                  ball.hammerState = "spinning";
-                  ball.hammerAngle = 0;
-                }
-              }
-            }
+                 if (simTime >= ball.hammerStateUntil) {
+                   ball.hammerState = "spinning";
+                   ball.hammerAngle = 0;
+                 }
+               }
+             }
+             if (ball.type === "shadow") {
+               const bal = balance.shadow;
+               const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+               const targetDist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+               if (ball.shadowComboSecondAt && simTime >= ball.shadowComboSecondAt) {
+                 ball.shadowComboSecondAt = 0;
+                 if (enemy.id === ball.shadowComboTargetId && targetDist <= ball.r + enemy.r + bal.slashRange + 8) {
+                   localApplyDamage(enemy, bal.comboSecondDamage, `${ball.id}-shadow-combo-second`, bal.slashCooldown - 10);
+                   if (!hasStringBounceGuard(enemy)) {
+                     const secondAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x) + 0.18;
+                     enemy.vx += Math.cos(secondAngle) * 170;
+                     enemy.vy += Math.sin(secondAngle) * 170;
+                   }
+                 }
+                 ball.shadowComboTargetId = null;
+               }
+               const switchCandidate = (ball.shadowMinions || [])
+                 .filter((minion) => minion.health > 0 && Math.hypot(minion.x - enemy.x, minion.y - enemy.y) <= bal.switchRange)
+                 .sort((a, b) => Math.hypot(a.x - enemy.x, a.y - enemy.y) - Math.hypot(b.x - enemy.x, b.y - enemy.y))[0];
+               if (switchCandidate && simTime >= (ball.shadowNextSwitchAt || 0) && simTime >= (ball.shadowNextSlashAt || 0)) {
+                 const oldX = ball.x;
+                 const oldY = ball.y;
+                 ball.x = switchCandidate.x;
+                 ball.y = switchCandidate.y;
+                 switchCandidate.x = oldX;
+                 switchCandidate.y = oldY;
+                 ball.vx *= 0.65;
+                 ball.vy *= 0.65;
+                 ball.shadowNextSwitchAt = simTime + bal.switchCooldown;
+                 ball.shadowNextSlashAt = simTime + bal.slashCooldown;
+                 ball.shadowSlashUntil = simTime + 260;
+                 ball.shadowSlashAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                 localApplyDamage(enemy, bal.switchDamage, `${ball.id}-shadow-switch-knife`, bal.switchCooldown - 10);
+                 if (!hasStringBounceGuard(enemy)) {
+                   enemy.vx += Math.cos(ball.shadowSlashAngle) * 240;
+                   enemy.vy += Math.sin(ball.shadowSlashAngle) * 240;
+                 }
+                 const hitOld = Math.hypot(enemy.x - oldX, enemy.y - oldY) <= enemy.r + 64;
+                 const hitNew = Math.hypot(enemy.x - ball.x, enemy.y - ball.y) <= enemy.r + 64;
+                 if (hitOld || hitNew) {
+                   localApplyDamage(enemy, 3, `${ball.id}-shadow-shockwave`, 400);
+                   enemy.shadowSlowedUntil = simTime + 1500;
+                 }
+               }
+               if (targetDist <= ball.r + enemy.r + bal.slashRange && simTime >= (ball.shadowNextSlashAt || 0)) {
+                 const comboReady = targetDist <= ball.r + enemy.r + (bal.comboRange || 36);
+                 ball.shadowNextSlashAt = simTime + bal.slashCooldown;
+                 ball.shadowSlashUntil = simTime + (comboReady ? 330 : 240);
+                 ball.shadowSlashAngle = targetAngle;
+                 ball.shadowCommandUntil = simTime + bal.commandDuration;
+                 ball.shadowComboSecondAt = comboReady ? simTime + 150 : 0;
+                 ball.shadowComboTargetId = comboReady ? enemy.id : null;
+                 enemy.shadowMarkedUntil = simTime + bal.markDuration;
+                 enemy.shadowMarkedBy = ball.id;
+                 localApplyDamage(enemy, bal.slashDamage, `${ball.id}-shadow-slash`, bal.slashCooldown - 10);
+                 if (!hasStringBounceGuard(enemy)) {
+                   enemy.vx += Math.cos(targetAngle) * (comboReady ? 150 : 210);
+                   enemy.vy += Math.sin(targetAngle) * (comboReady ? 150 : 210);
+                 }
+               }
+               if (simTime >= (ball.shadowNextSummonAt || 0) && (ball.shadowMinions || []).length < bal.maxMinions) {
+                 const angle = Math.random() * Math.PI * 2;
+                 const spawnDist = ball.r + 12;
+                 const minion = {
+                   id: `${ball.id}-shadow-${simTime}-${(ball.shadowMinions || []).length}`,
+                   type: "shadowMinion",
+                   side: ball.side,
+                   ownerId: ball.id,
+                   x: ball.x + Math.cos(angle) * spawnDist,
+                   y: ball.y + Math.sin(angle) * spawnDist,
+                   vx: Math.cos(angle) * bal.minionSpeed,
+                   vy: Math.sin(angle) * bal.minionSpeed,
+                   r: 8,
+                   health: bal.minionHealth,
+                   maxHealth: bal.minionHealth,
+                   hitsLeft: 2,
+                   flankSlot: (ball.shadowMinions || []).length % 3,
+                   createdTime: simTime,
+                   nextHitAt: 0
+                 };
+                 if (!ball.shadowMinions) ball.shadowMinions = [];
+                 ball.shadowMinions.push(minion);
+                 ball.shadowNextSummonAt = simTime + bal.summonCooldown;
+               }
+               const deadMinions = [];
+               const aliveMinions = [];
+               (ball.shadowMinions || []).forEach((minion) => {
+                 const expired = simTime >= minion.createdTime + bal.minionLife;
+                 if (minion.health <= 0 || expired) {
+                   deadMinions.push(minion);
+                 } else {
+                   aliveMinions.push(minion);
+                 }
+               });
+               ball.shadowMinions = aliveMinions.slice(0, bal.maxMinions);
+               ball.shadowMinions.forEach((minion) => {
+                 const commandActive = simTime < (ball.shadowCommandUntil || 0);
+                 const moveSpeed = Math.hypot(enemy.vx || 0, enemy.vy || 0);
+                 const forwardAngle = moveSpeed > 35 ? Math.atan2(enemy.vy, enemy.vx) : Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                 const sideSign = minion.flankSlot === 1 ? -1 : 1;
+                 const slotAngle = minion.flankSlot === 2
+                   ? forwardAngle + Math.PI
+                   : forwardAngle + Math.PI * 0.72 * sideSign;
+                 const contactDist = enemy.r + minion.r + 5;
+                 const flankDist = contactDist + 18;
+                 const slotX = clamp(enemy.x + Math.cos(slotAngle) * flankDist, minion.r + 20, ARENA_SIZE - minion.r - 20);
+                 const slotY = clamp(enemy.y + Math.sin(slotAngle) * flankDist, minion.r + 20, ARENA_SIZE - minion.r - 20);
+                 const dx = slotX - minion.x;
+                 const dy = slotY - minion.y;
+                 const dist = Math.max(1, Math.hypot(dx, dy));
+                 const toTargetX = enemy.x - minion.x;
+                 const toTargetY = enemy.y - minion.y;
+                 const minionTargetDist = Math.max(1, Math.hypot(toTargetX, toTargetY));
+                 const speedMult = commandActive ? 1.55 : 1;
+                 const orbitDir = minion.orbitDir || (minion.id.length % 2 === 0 ? 1 : -1);
+                 minion.orbitDir = orbitDir;
+                 let desiredVx;
+                 let desiredVy;
+                 if (minionTargetDist <= contactDist) {
+                   desiredVx = -(toTargetX / minionTargetDist) * bal.minionSpeed * 1.35 + (-toTargetY / minionTargetDist) * bal.minionSpeed * 0.32 * orbitDir;
+                   desiredVy = -(toTargetY / minionTargetDist) * bal.minionSpeed * 1.35 + (toTargetX / minionTargetDist) * bal.minionSpeed * 0.32 * orbitDir;
+                   const pushOut = contactDist - minionTargetDist;
+                   minion.x -= (toTargetX / minionTargetDist) * pushOut;
+                   minion.y -= (toTargetY / minionTargetDist) * pushOut;
+                 } else if (dist < 10) {
+                   desiredVx = (-toTargetY / minionTargetDist) * bal.minionSpeed * 0.55 * orbitDir;
+                   desiredVy = (toTargetX / minionTargetDist) * bal.minionSpeed * 0.55 * orbitDir;
+                 } else {
+                   desiredVx = (dx / dist) * bal.minionSpeed * speedMult;
+                   desiredVy = (dy / dist) * bal.minionSpeed * speedMult;
+                 }
+                 ball.shadowMinions.forEach((other) => {
+                   if (other === minion) return;
+                   const sepDx = minion.x - other.x;
+                   const sepDy = minion.y - other.y;
+                   const sepDist = Math.max(1, Math.hypot(sepDx, sepDy));
+                   if (sepDist < minion.r * 3.2) {
+                     const push = (minion.r * 3.2 - sepDist) * 4.5;
+                     desiredVx += (sepDx / sepDist) * push;
+                     desiredVy += (sepDy / sepDist) * push;
+                   }
+                 });
+                 minion.vx += (desiredVx - minion.vx) * (commandActive ? 0.16 : 0.07);
+                 minion.vy += (desiredVy - minion.vy) * (commandActive ? 0.16 : 0.07);
+                 minion.x += minion.vx * dt;
+                 minion.y += minion.vy * dt;
+                 const pad = 18 + minion.r;
+                 if (minion.x < pad) { minion.x = pad; minion.vx = Math.abs(minion.vx); }
+                 if (minion.x > ARENA_SIZE - pad) { minion.x = ARENA_SIZE - pad; minion.vx = -Math.abs(minion.vx); }
+                 if (minion.y < pad) { minion.y = pad; minion.vy = Math.abs(minion.vy); }
+                 if (minion.y > ARENA_SIZE - pad) { minion.y = ARENA_SIZE - pad; minion.vy = -Math.abs(minion.vy); }
+                 const attackAngle = Math.atan2(minion.y - enemy.y, minion.x - enemy.x);
+                 const flankDiffRaw = attackAngle - slotAngle;
+                 const flankDiff = Math.abs(Math.atan2(Math.sin(flankDiffRaw), Math.cos(flankDiffRaw)));
+                 if (minionTargetDist <= contactDist + 2 && flankDiff < 0.95 && simTime >= (minion.nextHitAt || 0)) {
+                   minion.nextHitAt = simTime + bal.minionHitCooldown;
+                   const markedBonus = enemy.shadowMarkedBy === ball.id && simTime < (enemy.shadowMarkedUntil || 0) ? 1 : 0;
+                   const minionDamage = bal.minionDamage + markedBonus;
+                   localApplyDamage(enemy, minionDamage, `${minion.id}-hit`, bal.minionHitCooldown - 10);
+                   const hitAngle = Math.atan2(enemy.y - minion.y, enemy.x - minion.x);
+                   if (!hasStringBounceGuard(enemy)) {
+                     enemy.vx += Math.cos(hitAngle) * 130;
+                     enemy.vy += Math.sin(hitAngle) * 130;
+                   }
+                   minion.hitsLeft = (minion.hitsLeft ?? 2) - 1;
+                   if (minion.hitsLeft <= 0) {
+                     minion.health = 0;
+                     deadMinions.push(minion);
+                   }
+                   minion.vx = -Math.cos(hitAngle) * bal.minionSpeed;
+                   minion.vy = -Math.sin(hitAngle) * bal.minionSpeed;
+                 }
+               });
+               deadMinions.forEach((minion) => {
+                 const d = Math.hypot(enemy.x - minion.x, enemy.y - minion.y);
+                 if (d <= enemy.r + 48) {
+                   localApplyDamage(enemy, 2, `${minion.id}-death-burst`, 300);
+                   enemy.shadowMarkedUntil = simTime + 1200;
+                   enemy.shadowMarkedBy = ball.id;
+                   if (!hasStringBounceGuard(enemy)) {
+                     const angle = Math.atan2(enemy.y - minion.y, enemy.x - minion.x);
+                     enemy.vx += Math.cos(angle) * 80;
+                     enemy.vy += Math.sin(angle) * 80;
+                   }
+                 }
+               });
+               ball.shadowMinions = ball.shadowMinions.filter((minion) => minion.health > 0);
+             }
           }
           });
 
@@ -2425,13 +2614,34 @@ export default function App() {
     const pruneShadowMinions = () => {
       game.balls.forEach((owner) => {
         if (owner.type !== "shadow" || !owner.shadowMinions) return;
+        const target = game.balls.find(o => o.id !== owner.id);
+        const bal = game.balance.shadow || BALANCE.shadow;
         owner.shadowMinions = owner.shadowMinions.filter((minion) => {
-          const alive = minion.health > 0 && game.simTime < minion.createdTime + (game.balance.shadow?.minionLife || BALANCE.shadow.minionLife);
-          if (!alive && !minion.deathFxDone) {
-            minion.deathFxDone = true;
-            spawnSparks(minion.x, minion.y, "#a78bfa", 8);
+          const alive = minion.health > 0 && game.simTime < minion.createdTime + bal.minionLife;
+          if (!alive) {
+            // Shadow burst explosion visual
+            spawnSparks(minion.x, minion.y, "#8b5cf6", 14);
+            playSound("armSlam", 0.5, 200);
+            
+            // Deal shadow burst damage to target if close
+            if (target) {
+              const d = Math.hypot(target.x - minion.x, target.y - minion.y);
+              if (d <= target.r + 48) {
+                applyDamage(target, 2, `${minion.id}-death-burst`, game.simTime, 300);
+                target.shadowMarkedUntil = game.simTime + 1200;
+                target.shadowMarkedBy = owner.id;
+                if (!hasStringBounceGuard(target)) {
+                  const angle = Math.atan2(target.y - minion.y, target.x - minion.x);
+                  target.vx += Math.cos(angle) * 80;
+                  target.vy += Math.sin(angle) * 80;
+                }
+                if (owner.side === "left") game.stats.left.damageDealt += 2;
+                else game.stats.right.damageDealt += 2;
+              }
+            }
+            return false;
           }
-          return alive;
+          return true;
         });
       });
     };
@@ -4765,6 +4975,18 @@ export default function App() {
           game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.switchDamage);
           game.stats.right.hitsLanded++;
         }
+        
+        // Switch shockwave checks
+        const hitOld = Math.hypot(target.x - oldX, target.y - oldY) <= target.r + 64;
+        const hitNew = Math.hypot(target.x - ball.x, target.y - ball.y) <= target.r + 64;
+        if (hitOld || hitNew) {
+          applyDamage(target, 3, `${ball.id}-shadow-shockwave`, currentTime, 400);
+          target.shadowSlowedUntil = currentTime + 1500;
+          if (ball.side === "left") game.stats.left.damageDealt += 3;
+          else game.stats.right.damageDealt += 3;
+          spawnSparks(target.x, target.y, "#a78bfa", 12);
+        }
+
         spawnSparks(ball.x, ball.y, "#c4b5fd", 14);
         spawnSparks(switchCandidate.x, switchCandidate.y, "#6d28d9", 8);
         game.screenShake = Math.max(game.screenShake, 6);
@@ -4842,6 +5064,10 @@ export default function App() {
       }
 
       ball.shadowMinions.forEach((minion) => {
+        if (!minion.trail) minion.trail = [];
+        minion.trail.push({ x: minion.x, y: minion.y });
+        if (minion.trail.length > 6) minion.trail.shift();
+
         const commandActive = currentTime < (ball.shadowCommandUntil || 0);
         const moveSpeed = Math.hypot(target.vx || 0, target.vy || 0);
         const forwardAngle = moveSpeed > 35 ? Math.atan2(target.vy, target.vx) : Math.atan2(target.y - ball.y, target.x - ball.x);
@@ -7235,6 +7461,17 @@ export default function App() {
 
       (ball.shadowMinions || []).forEach((minion) => {
         const minionPulse = 0.5 + Math.sin(game.simTime * 0.018 + minion.pulseOffset) * 0.5;
+        
+        // Draw trail in global coords
+        (minion.trail || []).forEach((pt, index) => {
+          const alpha = (index + 1) / (minion.trail.length + 1) * 0.22;
+          ctx.save();
+          ctx.translate(pt.x, pt.y);
+          ctx.beginPath(); ctx.arc(0, 0, minion.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(124, 58, 237, ${alpha})`; ctx.fill();
+          ctx.restore();
+        });
+
         ctx.save();
         ctx.translate(minion.x, minion.y);
         ctx.shadowColor = "#8b5cf6";
@@ -8869,6 +9106,7 @@ export default function App() {
             if (ball.stringSlowUntil && game.simTime < ball.stringSlowUntil) slowMult *= ((game.balance.stringWeb || BALANCE.stringWeb).stringSlowMultiplier || 0.45);
             if (ball.judgementSlowUntil && game.simTime < ball.judgementSlowUntil) slowMult *= (ball.judgementSlowMultiplier || 0.72);
             if (ball.dragonScorchedUntil && game.simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
+            if (ball.shadowSlowedUntil && game.simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
