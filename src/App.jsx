@@ -87,7 +87,7 @@ const BALL_TYPES = {
   },
   stringWeb: {
     id: "stringWeb",
-    name: "String Weber Ball",
+    name: "Line Weaver Ball",
     shortName: "WEB",
     color: "#d946ef",
     stroke: "#fdf4ff",
