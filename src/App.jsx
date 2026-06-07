@@ -204,6 +204,12 @@ const BALL_TYPES = {
   },
 };
 
+const getHpBarColor = (type) => {
+  if (type === "arm") return "#8b0000";
+  if (type === "gun") return "#ffffff";
+  return BALL_TYPES[type]?.color || "#4ade80";
+};
+
 const GRID_SIZE = 7;
 const TILE_SIZE = 64;
 const ARENA_SIZE = GRID_SIZE * TILE_SIZE;
@@ -223,7 +229,7 @@ const ARM_RAGDOLL_WALL_DAMAGE = 7;
 const ARM_THROW_WALL_DAMAGE = 10;
 const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
-const MAX_HEALTH = 100;
+const MAX_HEALTH = 150;
 const MAX_PARTICLES = 180;
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 8;
@@ -800,7 +806,7 @@ export default function App() {
     ctx.fillStyle = "#0f172a";
     drawRoundedRect(ctx, barX, barY, barW, barH, 9);
     ctx.fill();
-    ctx.fillStyle = config.color;
+    ctx.fillStyle = getHpBarColor(ball?.type);
     drawRoundedRect(ctx, barX, barY, barW * (hp / MAX_HEALTH), barH, 9);
     ctx.fill();
     ctx.restore();
@@ -9767,7 +9773,7 @@ export default function App() {
                   <span className="text-base font-bold text-slate-200">{gameState.leftHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.leftHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: BALL_TYPES[selectedBalls[0]]?.color }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.leftHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: getHpBarColor(selectedBalls[0]) }} />
                 </div>
               </Card>
 
@@ -9779,7 +9785,7 @@ export default function App() {
                   <span className="text-base font-bold text-slate-200">{gameState.rightHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.rightHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: BALL_TYPES[selectedBalls[1]]?.color }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.rightHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: getHpBarColor(selectedBalls[1]) }} />
                 </div>
               </Card>
 
