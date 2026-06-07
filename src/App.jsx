@@ -193,12 +193,21 @@ const BALL_TYPES = {
     radius: 31,
     description: "Creates a mirrored clone across the arena center. Clone damages, main body bounces.",
   },
+  judger: {
+    id: "judger",
+    name: "Judger Ball",
+    shortName: "JUDG",
+    color: "#f8fafc",
+    stroke: "#7c3aed",
+    radius: 31,
+    description: "Expands a trial domain that changes arena rules for a short time.",
+  },
 };
 
 const GRID_SIZE = 7;
 const TILE_SIZE = 64;
 const ARENA_SIZE = GRID_SIZE * TILE_SIZE;
-const OPENING_SKILL_DELAY = 3000;
+const OPENING_SKILL_DELAY = 6000;
 const MIN_DAMAGE = 1;
 const SHIELD_GUARD_HITS = 5;
 const SHIELD_PICKUP_RADIUS = 30;
@@ -243,6 +252,7 @@ const BALANCE = {
   shadow: { slashDamage: 2, slashRange: 35, slashCooldown: 450, comboRange: 36, comboSecondDamage: 2, summonCooldown: 4600, maxMinions: 3, minionHealth: 4, minionDamage: 1, minionSpeed: 33, minionLife: 6200, minionHitCooldown: 1100, commandDuration: 700, markDuration: 1100, switchCooldown: 6000, switchRange: 145, switchDamage: 3 },
   chainsaw: { spinDamage: 3, hitCooldown: 260, sawReach: 34, spinDuration: 1600, cooldown: 2600, knockback: 220 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
+  judger: { cooldown: 9000, fieldRadius: 155, fieldLife: 4600, warningTime: 650, verdictDamage: 2, maxVerdicts: 3, gravityPull: 145, slowMultiplier: 0.72, edgeBounce: 360, reversalCooldown: 900 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -485,6 +495,8 @@ export default function App() {
       chainsawSpinUntil: 0, chainsawNextSpinAt: 0, chainsawNextHitAt: 0, chainsawAngle: 0,
       // Mirror Specific
       mirrorNextHitAt: 0, mirrorFlashUntil: 0, mirrorNextSwitchAt: type === "mirror" ? (balanceSettings.mirror?.switchCooldown ?? BALANCE.mirror.switchCooldown) : 0, mirrorSwitchFlashUntil: 0,
+      // Judger Specific
+      nextJudgementAt: type === "judger" ? (balanceSettings.judger?.cooldown ?? BALANCE.judger.cooldown) : 0, judgementFlashUntil: 0,
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
@@ -538,6 +550,7 @@ export default function App() {
     cacti: [],
     psychicCircles: [],
     chaosCircles: [],
+    judgementFields: [],
     venomPools: [],
     screenShake: 0,
     deathEffectStarted: false,
@@ -575,6 +588,7 @@ export default function App() {
     gameRef.current.cacti = [];
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
+    gameRef.current.judgementFields = [];
     gameRef.current.venomPools = [];
     gameRef.current.deathEffectStarted = false;
     gameRef.current.deathSlowMoUntil = 0;
@@ -603,6 +617,7 @@ export default function App() {
       cacti: [],
       psychicCircles: [],
       chaosCircles: [],
+      judgementFields: [],
       venomPools: [],
       screenShake: 0,
       deathEffectStarted: false,
@@ -650,6 +665,7 @@ export default function App() {
     gameRef.current.cacti = [];
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
+    gameRef.current.judgementFields = [];
     gameRef.current.venomPools = [];
     gameRef.current.deathEffectStarted = false;
     gameRef.current.deathSlowMoUntil = 0;
@@ -4062,6 +4078,60 @@ export default function App() {
       playSound("sporeShoot", 0.85, 80);
     };
 
+    const JUDGEMENT_TRIALS = [
+      { id: "gravity", label: "GRAVITY", color: "#38bdf8" },
+      { id: "verdict", label: "VERDICT", color: "#facc15" },
+      { id: "lockdown", label: "LOCKDOWN", color: "#c084fc" },
+      { id: "reversal", label: "REVERSAL", color: "#fb7185" },
+    ];
+
+    const updateJudger = (ball, target, currentTime) => {
+      const bal = game.balance.judger || BALANCE.judger;
+      if (currentTime < (ball.nextJudgementAt || 0)) return;
+
+      if (!game.judgementFields) game.judgementFields = [];
+      game.judgementFields = game.judgementFields.filter((field) => field.ownerId !== ball.id);
+      const trial = JUDGEMENT_TRIALS[Math.floor(Math.random() * JUDGEMENT_TRIALS.length)];
+      const radius = bal.fieldRadius || BALANCE.judger.fieldRadius;
+      const centerBias = 0.42;
+      const x = clamp(target.x * (1 - centerBias) + game.width * 0.5 * centerBias, radius + 12, game.width - radius - 12);
+      const y = clamp(target.y * (1 - centerBias) + game.height * 0.5 * centerBias, radius + 12, game.height - radius - 12);
+      game.judgementFields.push({
+        id: `${ball.id}-judgement-${currentTime}`,
+        ownerId: ball.id,
+        ownerSide: ball.side,
+        x,
+        y,
+        r: radius,
+        trial: trial.id,
+        label: trial.label,
+        color: trial.color,
+        createdTime: currentTime,
+        warningUntil: currentTime + (bal.warningTime || 650),
+        life: (bal.fieldLife || BALANCE.judger.fieldLife) + (bal.warningTime || 650),
+        hitCounts: {},
+        lastWallBounces: {},
+        lastReversalAt: {},
+        insideState: {},
+      });
+
+      ball.nextJudgementAt = currentTime + bal.cooldown;
+      ball.judgementFlashUntil = currentTime + 700;
+      game.screenShake = Math.max(game.screenShake, 5);
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({
+        x: ball.x, y: ball.y - ball.r - 22, vy: -46,
+        text: `TRIAL: ${trial.label}`,
+        color: trial.color,
+        life: 0.85,
+        maxLife: 0.85
+      });
+      spawnSparks(x, y, trial.color, 14);
+      if (ball.side === "left") game.stats.left.totalShots++;
+      else game.stats.right.totalShots++;
+      playSound("shieldCatch", 0.8, 120);
+    };
+
     const drawTridentText = (ball, text, color) => {
       game.floatingTexts = game.floatingTexts || [];
       game.floatingTexts.push({
@@ -7254,6 +7324,73 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawJudgerBall = (ball) => {
+      const config = BALL_TYPES.judger;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.011) * 0.5;
+      const flash = ball.judgementFlashUntil && game.simTime < ball.judgementFlashUntil;
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      if (flash) {
+        ctx.globalAlpha = 0.28 + pulse * 0.18;
+        ctx.strokeStyle = "#c084fc";
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(0, 0, ball.r + 12 + pulse * 7, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.shadowColor = "#a78bfa";
+      ctx.shadowBlur = 12 + pulse * 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(-ball.r * 0.32, -ball.r * 0.36, 4, 0, 0, ball.r);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.5, config.color);
+      grad.addColorStop(1, "#7c3aed");
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = config.stroke;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 0.55);
+      ctx.lineTo(0, ball.r * 0.45);
+      ctx.moveTo(-ball.r * 0.46, -ball.r * 0.2);
+      ctx.lineTo(ball.r * 0.46, -ball.r * 0.2);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#fbbf24";
+      ctx.lineWidth = 2;
+      const sway = Math.sin(game.simTime * 0.008) * 0.08;
+      const drawScale = (side) => {
+        const x = side * ball.r * 0.36;
+        ctx.beginPath();
+        ctx.moveTo(x, -ball.r * 0.2);
+        ctx.lineTo(x + side * sway * 18, ball.r * 0.18);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(x + side * sway * 18, ball.r * 0.24, 8, 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      };
+      drawScale(-1);
+      drawScale(1);
+
+      const cd = Math.max(0, (ball.nextJudgementAt || 0) - game.simTime);
+      if (cd > 0) {
+        ctx.fillStyle = "#111827";
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.ceil(cd / 1000)}s`, 0, ball.r + 14);
+      }
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawBall = (ball, currentTime) => {
       if (ball.shattered) return;
       if (ball.type === "knife") drawKnifeBall(ball);
@@ -7283,6 +7420,7 @@ export default function App() {
       else if (ball.type === "shadow") drawShadowBall(ball);
       else if (ball.type === "chainsaw") drawChainsawBall(ball);
       else if (ball.type === "mirror") drawMirrorBall(ball);
+      else if (ball.type === "judger") drawJudgerBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -7872,6 +8010,118 @@ export default function App() {
       });
     };
 
+    const updateJudgementFields = (dt) => {
+      if (!game.judgementFields) return;
+      const bal = game.balance.judger || BALANCE.judger;
+      const maxVerdicts = bal.maxVerdicts || BALANCE.judger.maxVerdicts;
+      game.judgementFields = game.judgementFields.filter((field) => {
+        field.life -= dt * 1000;
+        if (field.life <= 0) return false;
+
+        const active = game.simTime >= (field.warningUntil || 0);
+        game.balls.forEach((ball) => {
+          if (ball.side === field.ownerSide) return;
+          const dx = ball.x - field.x;
+          const dy = ball.y - field.y;
+          const dist = Math.max(0.001, Math.hypot(dx, dy));
+          const inside = dist <= field.r + ball.r * 0.2;
+          if (!inside) {
+            if (field.insideState) field.insideState[ball.id] = false;
+            return;
+          }
+          if (!active) {
+            ball.judgementWarnUntil = game.simTime + 160;
+            return;
+          }
+
+          ball.judgementFieldUntil = game.simTime + 180;
+          ball.judgementFieldColor = field.color;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const ownerStats = field.ownerSide === "left" ? game.stats.left : game.stats.right;
+
+          if (field.trial === "gravity") {
+            const pull = (bal.gravityPull || 145) * dt;
+            ball.vx += ((field.x - ball.x) / Math.max(1, field.r)) * pull;
+            ball.vy += ((field.y - ball.y) / Math.max(1, field.r)) * pull;
+            ball.judgementSlowUntil = game.simTime + 180;
+            ball.judgementSlowMultiplier = bal.slowMultiplier || 0.72;
+          } else if (field.trial === "verdict") {
+            if (!field.lastWallBounces) field.lastWallBounces = {};
+            if (!field.hitCounts) field.hitCounts = {};
+            const currentBounces = ball.consecutiveWallBounces || 0;
+            if (field.lastWallBounces[ball.id] === undefined) field.lastWallBounces[ball.id] = currentBounces;
+            const hitCount = field.hitCounts[ball.id] || 0;
+            if (currentBounces > field.lastWallBounces[ball.id] && hitCount < maxVerdicts) {
+              const damage = bal.verdictDamage || 2;
+              applyDamage(ball, damage, `${field.id}-verdict-${ball.id}-${hitCount}`, game.simTime, 80);
+              field.hitCounts[ball.id] = hitCount + 1;
+              ownerStats.damageDealt += Math.max(MIN_DAMAGE, damage);
+              ownerStats.hitsLanded++;
+              field.flashUntil = game.simTime + 260;
+              ball.webHitFlashUntil = game.simTime + 170;
+              game.screenShake = Math.max(game.screenShake, 6);
+              spawnSparks(ball.x, ball.y, field.color, 12);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: ball.x, y: ball.y - ball.r - 18, vy: -50,
+                text: `VERDICT -${damage}`,
+                color: field.color,
+                life: 0.65,
+                maxLife: 0.65
+              });
+            }
+            field.lastWallBounces[ball.id] = currentBounces;
+          } else if (field.trial === "lockdown") {
+            const cageR = field.r - ball.r * 0.9;
+            if (dist > cageR) {
+              ball.x = field.x + nx * cageR;
+              ball.y = field.y + ny * cageR;
+              const outwardVelocity = ball.vx * nx + ball.vy * ny;
+              if (outwardVelocity > -35) {
+                const tx = -ny;
+                const ty = nx;
+                const tangent = ball.vx * tx + ball.vy * ty;
+                const bounce = bal.edgeBounce || 360;
+                ball.vx = -nx * bounce + tx * (tangent * 0.62 + Math.sin(game.simTime * 0.02) * 70);
+                ball.vy = -ny * bounce + ty * (tangent * 0.62 + Math.cos(game.simTime * 0.018) * 70);
+                field.flashUntil = game.simTime + 200;
+                spawnSparks(ball.x, ball.y, field.color, 5);
+              }
+            }
+          } else if (field.trial === "reversal") {
+            const innerR = field.r * 0.48;
+            if (!field.insideState) field.insideState = {};
+            const wasInner = !!field.insideState[ball.id];
+            const isInner = dist < innerR;
+            const cooldownReady = game.simTime >= ((field.lastReversalAt || {})[ball.id] || 0);
+            if (wasInner !== isInner && cooldownReady) {
+              if (!field.lastReversalAt) field.lastReversalAt = {};
+              field.lastReversalAt[ball.id] = game.simTime + (bal.reversalCooldown || 900);
+              ball.vx *= -0.92;
+              ball.vy *= -0.92;
+              ball.spinAngle = (ball.spinAngle || 0) + Math.PI * 0.7;
+              field.flashUntil = game.simTime + 240;
+              ball.webHitFlashUntil = game.simTime + 150;
+              spawnSparks(ball.x, ball.y, field.color, 10);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: ball.x, y: ball.y - ball.r - 18, vy: -48,
+                text: "REVERSED",
+                color: field.color,
+                life: 0.58,
+                maxLife: 0.58
+              });
+              playSound("shieldBlock", 0.45, -120);
+            }
+            field.insideState[ball.id] = isInner;
+          }
+        });
+
+        return true;
+      });
+    };
+
     const drawCacti = () => {
       if (!game.cacti) return;
       game.cacti.forEach((cactus) => {
@@ -8248,6 +8498,72 @@ export default function App() {
       });
     };
 
+    const drawJudgementFields = () => {
+      if (!game.judgementFields) return;
+      game.judgementFields.forEach((field) => {
+        const bal = game.balance.judger || BALANCE.judger;
+        const totalLife = (bal.fieldLife || BALANCE.judger.fieldLife) + (bal.warningTime || BALANCE.judger.warningTime);
+        const lifeAlpha = clamp(field.life / Math.max(1, totalLife), 0, 1);
+        const warning = game.simTime < (field.warningUntil || 0);
+        const pulse = 0.5 + Math.sin(game.simTime * 0.012 + field.createdTime * 0.01) * 0.5;
+        const flash = game.simTime < (field.flashUntil || 0);
+
+        ctx.save();
+        ctx.translate(field.x, field.y);
+        ctx.globalAlpha = Math.min(1, 0.32 + lifeAlpha * 0.46 + (flash ? 0.22 : 0));
+        const grad = ctx.createRadialGradient(0, 0, 5, 0, 0, field.r);
+        grad.addColorStop(0, warning ? "rgba(248, 250, 252, 0.08)" : `${field.color}22`);
+        grad.addColorStop(0.58, warning ? "rgba(124, 58, 237, 0.08)" : "rgba(124, 58, 237, 0.13)");
+        grad.addColorStop(1, "rgba(15, 23, 42, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(0, 0, field.r, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = warning ? "rgba(248, 250, 252, 0.7)" : field.color;
+        ctx.lineWidth = warning ? 2.5 : flash ? 5 : 3.5;
+        ctx.setLineDash(warning ? [5, 9] : [14, 8]);
+        ctx.lineDashOffset = warning ? -game.simTime * 0.055 : game.simTime * 0.04;
+        ctx.beginPath(); ctx.arc(0, 0, field.r + pulse * 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+
+        const innerR = field.trial === "reversal" ? field.r * 0.48 : field.r * 0.66;
+        ctx.globalAlpha *= warning ? 0.55 : 0.82;
+        ctx.strokeStyle = field.color;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.arc(0, 0, innerR + Math.sin(game.simTime * 0.018) * 3, 0, Math.PI * 2); ctx.stroke();
+
+        ctx.globalAlpha = warning ? 0.68 : 0.9;
+        ctx.fillStyle = warning ? "#e2e8f0" : field.color;
+        ctx.font = "900 16px Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(15, 23, 42, 0.9)";
+        ctx.shadowBlur = 5;
+        ctx.fillText(warning ? "TRIAL" : field.label, 0, -4);
+        ctx.font = "800 10px Arial, sans-serif";
+        const secondsLeft = Math.max(0, Math.ceil((warning ? field.warningUntil - game.simTime : field.life) / 1000));
+        ctx.fillText(warning ? "OPENING" : `${secondsLeft}s`, 0, 13);
+
+        const marks = field.trial === "verdict" ? 5 : 4;
+        ctx.shadowBlur = 0;
+        for (let i = 0; i < marks; i++) {
+          const a = game.simTime * 0.0015 + (i / marks) * Math.PI * 2;
+          const x = Math.cos(a) * field.r * 0.82;
+          const y = Math.sin(a) * field.r * 0.82;
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(a + Math.PI / 2);
+          ctx.fillStyle = field.color;
+          ctx.beginPath();
+          ctx.moveTo(0, -7);
+          ctx.lineTo(5, 5);
+          ctx.lineTo(-5, 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
+      });
+    };
+
     const drawStringWebBall = (ball) => {
       const config = BALL_TYPES.stringWeb;
       ctx.save(); ctx.translate(ball.x, ball.y);
@@ -8328,6 +8644,7 @@ export default function App() {
             }) : false;
             if (insideWeb) slowMult *= 0.5;
             if (ball.stringSlowUntil && game.simTime < ball.stringSlowUntil) slowMult *= ((game.balance.stringWeb || BALANCE.stringWeb).stringSlowMultiplier || 0.45);
+            if (ball.judgementSlowUntil && game.simTime < ball.judgementSlowUntil) slowMult *= (ball.judgementSlowMultiplier || 0.72);
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
 
             if (!isTridentPinned && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
@@ -8485,6 +8802,7 @@ export default function App() {
                   if (ball.type === "dragon") updateDragon(ball, target, game.simTime);
                   if (ball.type === "psychicer") updatePsychicer(ball, target, game.simTime);
                   if (ball.type === "chaos") updateChaos(ball, target, game.simTime);
+                  if (ball.type === "judger") updateJudger(ball, target, game.simTime);
                   if (ball.type === "trident") updateTrident(ball, target, game.simTime, stepDt);
                   if (ball.type === "spirit") updateSpirit(ball, target, game.simTime);
                   if (ball.type === "shadow") updateShadow(ball, target, game.simTime, stepDt);
@@ -8508,12 +8826,14 @@ export default function App() {
           updateVenomPools(stepDt);
           updatePsychicCircles(stepDt);
           updateChaosCircles(stepDt);
+          updateJudgementFields(stepDt);
         }
       } else if (gameStarted) {
         const slowMoActive = game.deathSlowMoUntil && time < game.deathSlowMoUntil;
         const effectDt = slowMoActive ? dt * 0.24 : dt;
         updateParticles(effectDt);
         updateFloatingTexts(effectDt);
+        updateJudgementFields(effectDt);
       } else if (!gameStarted) {
         game.balls.forEach((ball) => {
           ball.x += ball.vx * dt; ball.y += ball.vy * dt;
@@ -8557,7 +8877,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawStrings(); drawVenomPools(); drawPsychicCircles(); drawChaosCircles();
+      drawStrings(); drawVenomPools(); drawPsychicCircles(); drawChaosCircles(); drawJudgementFields();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
@@ -8810,6 +9130,20 @@ export default function App() {
               {renderSlider("Drop Cooldown", "chaos", "cooldown", 1000, 12000, 100, "ms")}
               {renderSlider("Circle Lifetime", "chaos", "circleLife", 1000, 15000, 500, "ms")}
               {renderSlider("Trigger Cooldown", "chaos", "triggerCooldown", 200, 3000, 100, "ms")}
+            </>
+          )}
+          {type === "judger" && (
+            <>
+              {renderSlider("Domain Cooldown", "judger", "cooldown", 2500, 16000, 100, "ms")}
+              {renderSlider("Domain Radius", "judger", "fieldRadius", 90, 210, 5, "px")}
+              {renderSlider("Domain Lifetime", "judger", "fieldLife", 1500, 9000, 250, "ms")}
+              {renderSlider("Warning Time", "judger", "warningTime", 200, 1500, 50, "ms")}
+              {renderSlider("Verdict Damage", "judger", "verdictDamage", 1, 8)}
+              {renderSlider("Max Verdict Hits", "judger", "maxVerdicts", 1, 6, 1)}
+              {renderSlider("Gravity Pull", "judger", "gravityPull", 20, 380, 10)}
+              {renderSlider("Gravity Slow", "judger", "slowMultiplier", 0.35, 1, 0.05, "x")}
+              {renderSlider("Edge Bounce", "judger", "edgeBounce", 120, 760, 20)}
+              {renderSlider("Reversal Cooldown", "judger", "reversalCooldown", 250, 2500, 50, "ms")}
             </>
           )}
           {type === "trident" && (
