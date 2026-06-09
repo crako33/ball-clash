@@ -13,6 +13,10 @@ export function useSoundEngine() {
   const mutedRef = useRef(false);
   const mutedStateRef = useRef(false); // for react-less read
   const masterGainRef = useRef(null);
+  const musicGainRef = useRef(null);
+  const musicTimerRef = useRef(null);
+  const musicStepRef = useRef(0);
+  const audioBufferCacheRef = useRef({});
   // cooldown map: soundKey -> earliest next play time (AudioContext time)
   const cooldowns = useRef({});
 
@@ -24,6 +28,9 @@ export function useSoundEngine() {
       masterGainRef.current = ctxRef.current.createGain();
       masterGainRef.current.gain.value = 0.55;
       masterGainRef.current.connect(ctxRef.current.destination);
+      musicGainRef.current = ctxRef.current.createGain();
+      musicGainRef.current.gain.value = 0.18;
+      musicGainRef.current.connect(masterGainRef.current);
 
       // Create stream destination node to allow recording audio
       ctxRef.current.recStreamDestination = ctxRef.current.createMediaStreamDestination();
@@ -323,5 +330,79 @@ export function useSoundEngine() {
     return ctxRef.current ? ctxRef.current.recStreamDestination?.stream : null;
   }, [getCtx]);
 
-  return { playSound, toggleMute, isMuted, getAudioStream };
+  const playAudioFile = useCallback(async (url, volume = 1, delay = 0) => {
+    if (mutedRef.current) return;
+    const ctx = getCtx();
+    if (!ctx || !masterGainRef.current) return;
+    try {
+      if (!audioBufferCacheRef.current[url]) {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        audioBufferCacheRef.current[url] = await ctx.decodeAudioData(arrayBuffer);
+      }
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      source.buffer = audioBufferCacheRef.current[url];
+      gain.gain.value = Math.max(0, Math.min(2, volume));
+      source.connect(gain);
+      gain.connect(masterGainRef.current);
+      source.start(ctx.currentTime + Math.max(0, delay));
+    } catch {
+      // Ignore announcer/music file failures; procedural SFX should continue.
+    }
+  }, [getCtx]);
+
+  const stopMatchMusic = useCallback(() => {
+    if (musicTimerRef.current) {
+      clearInterval(musicTimerRef.current);
+      musicTimerRef.current = null;
+    }
+    const ctx = ctxRef.current;
+    if (ctx && musicGainRef.current) {
+      const t = ctx.currentTime;
+      musicGainRef.current.gain.cancelScheduledValues(t);
+      musicGainRef.current.gain.setTargetAtTime(0.0001, t, 0.08);
+    }
+  }, []);
+
+  const startMatchMusic = useCallback(() => {
+    if (mutedRef.current || musicTimerRef.current) return;
+    const ctx = getCtx();
+    if (!ctx || !musicGainRef.current) return;
+    const musicGain = musicGainRef.current;
+    const t = ctx.currentTime;
+    musicGain.gain.cancelScheduledValues(t);
+    musicGain.gain.setValueAtTime(Math.max(musicGain.gain.value, 0.0001), t);
+    musicGain.gain.linearRampToValueAtTime(0.18, t + 0.18);
+
+    const scale = [0, 3, 5, 7, 10, 12, 15, 17];
+    const bass = [0, 0, 7, 0, 10, 7, 5, 7, 0, 0, 12, 10, 7, 5, 3, 5];
+    const lead = [12, 15, 17, 19, 17, 15, 12, 10, 12, 15, 19, 22, 20, 19, 17, 15];
+    const tempo = 0.125;
+    const root = 110;
+
+    const scheduleStep = () => {
+      if (mutedRef.current || !musicTimerRef.current) return;
+      const now = ctx.currentTime;
+      const step = musicStepRef.current++;
+      const bassSemi = bass[step % bass.length];
+      const leadSemi = lead[step % lead.length] + (step % 32 > 15 ? 2 : 0);
+      const arpSemi = scale[(step * 3) % scale.length] + 24;
+      const bassFreq = root * Math.pow(2, bassSemi / 12);
+      const leadFreq = root * Math.pow(2, leadSemi / 12);
+      const arpFreq = root * Math.pow(2, arpSemi / 12);
+
+      osc(ctx, musicGain, "square", bassFreq, 0.18, now, 0.105, bassFreq * 0.99);
+      if (step % 2 === 0) osc(ctx, musicGain, "square", leadFreq, 0.095, now + 0.012, 0.09, leadFreq * 1.005);
+      osc(ctx, musicGain, "triangle", arpFreq, 0.055, now + 0.052, 0.06, arpFreq);
+      if (step % 4 === 0) noise(ctx, musicGain, 0.035, now, 0.045, 1200, 1.8);
+      if (step % 8 === 4) noise(ctx, musicGain, 0.025, now, 0.035, 4200, 2.2);
+    };
+
+    musicStepRef.current = 0;
+    scheduleStep();
+    musicTimerRef.current = setInterval(scheduleStep, tempo * 1000);
+  }, [getCtx, noise, osc]);
+
+  return { playSound, playAudioFile, toggleMute, isMuted, getAudioStream, startMatchMusic, stopMatchMusic };
 }
