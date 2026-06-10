@@ -1,0 +1,55 @@
+"    const updateWrecker = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.wrecker || BALANCE.wrecker;
+
+      // Dynamically set physical hitbox size based on rage stacks and mega enlargement
+      let sizeScale = 1 + (ball.rageStacks || 0) * 0.03;
+      if (ball.wreckerEnlargedUntil > 0 && currentTime < ball.wreckerEnlargedUntil) {
+        ball.r = ball.originalRadius * 1.4;
+      } else {
+        ball.r = ball.originalRadius * sizeScale;
+      }
+      
+      // Handle dazed cooldown from miss or landing
+      if (ball.wreckerState === "cooldown") {
+        if (currentTime >= ball.wreckerCooldownUntil) {
+          ball.wreckerState = "normal";
+          const speed = Math.hypot(ball.vx, ball.vy);
+          const recoverSpeed = 220;
+          if (speed > 0) {
+            ball.vx = (ball.vx / speed) * recoverSpeed;
+            ball.vy = (ball.vy / speed) * recoverSpeed;
+          } else {
+            const angle = Math.random() * Math.PI * 2;
+            ball.vx = Math.cos(angle) * recoverSpeed;
+            ball.vy = Math.sin(angle) * recoverSpeed;
+          }
+        } else {
+          const speed = Math.hypot(ball.vx, ball.vy);
+          if (speed > 55) {
+            ball.vx = (ball.vx / speed) * 55;
+            ball.vy = (ball.vy / speed) * 55;
+          }
+        }
+        return;
+      }
+
+      if (ball.wreckerState === "leaping") {
+        ball.vx = 0;
+        ball.vy = 0;
+        
+        const timeLeft = ball.wreckerLeapUntil - currentTime;
+        
+        if (timeLeft > 200) {
+          const leadTime = 0.55;
+          let tx = target.x + target.vx * leadTime;
+          let ty = target.y + target.vy * leadTime;
+          const pad = 18 + ball.r;
+          tx = Math.max(pad, Math.min(game.width - pad, tx));
+          ty = Math.max(pad, Math.min(game.height - pad, ty));
+          ball.wreckerTargetX = tx;
+          ball.wreckerTargetY = ty;
+        }
+
+        const duration = 600;
+        const elapsed = currentTime - ball.w
+<truncated 2849 bytes>

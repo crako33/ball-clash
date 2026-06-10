@@ -1,0 +1,55 @@
+"    const drawWreckerBall = (ball) => {
+      const config = BALL_TYPES.wrecker;
+      
+      // Determine if leaping to draw ground shadow
+      let height = 0;
+      if (ball.wreckerState === "leaping") {
+        const elapsed = game.simTime - ball.wreckerLeapStart;
+        const progress = clamp(elapsed / 600, 0, 1);
+        height = Math.sin(progress * Math.PI) * 170;
+
+        // Draw ground shadow
+        ctx.save();
+        ctx.fillStyle = "rgba(15, 23, 42, 0.45)";
+        ctx.beginPath();
+        const shadowScale = 1 - (height / 170) * 0.45;
+        ctx.ellipse(ball.x, ball.y, ball.r * shadowScale, ball.r * 0.3 * shadowScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y - height);
+
+      // Physical size scaling based on rage stacks
+      let sizeScale = 1 + (ball.rageStacks || 0) * 0.03;
+      if (ball.wreckerEnlargedUntil > 0 && game.simTime < ball.wreckerEnlargedUntil) {
+        sizeScale = 1.4;
+      }
+      const drawR = ball.originalRadius * sizeScale;
+
+      // Green glow representing anger/rage
+      if (ball.rageStacks > 0) {
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = ball.rageStacks * 6.5;
+      } else if (ball.wreckerEnlargedUntil > 0 && game.simTime < ball.wreckerEnlargedUntil) {
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 45;
+      }
+
+      // Draw Main Green Body
+      const greenGrad = ctx.createRadialGradient(-drawR * 0.3, -drawR * 0.3, drawR * 0.05, 0, 0, drawR);
+      greenGrad.addColorStop(0, "#4ade80");
+      greenGrad.addColorStop(0.65, "#15803d");
+      greenGrad.addColorStop(1, "#14532d");
+      ctx.beginPath(); ctx.arc(0, 0, drawR, 0, Math.PI * 2);
+      ctx.fillStyle = greenGrad; ctx.fill();
+
+      // Draw purple pants/accent at the bottom
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, drawR, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = "#a855f7";
+      ctx.fillRect(-draw
+<truncated 3969 bytes>

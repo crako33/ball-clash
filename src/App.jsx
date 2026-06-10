@@ -270,7 +270,12 @@ const BALANCE = {
   chainsaw: { spinDamage: 3, hitCooldown: 260, sawReach: 34, spinDuration: 1600, cooldown: 2600, knockback: 220 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
   joker: { throwSpeed: 580, cooldown: 6000, secCooldown: 8000, tipRadius: 9, maxBounces: 15, threadLife: 4000 },
-  blackSpider: { cooldown: 8000, secCooldown: 10000, markDuration: 5000, breakDistance: 480, speedPenalty: 0.15, dashSpeed: 900, pullSpeed: 1200, baseDamage: 5, baseSlamDamage: 12, maxSlamDamage: 26, cornerFrictionDamage: 3, cornerStaggerDuration: 200, tensionSnapLowDmg: 6, tensionSnapHighDmg: 14 },
+  blackSpider: { cooldown: 8000, secCooldown: 10000, markDuration: 5000, breakDistance: 480, speedPenalty: 0.15, dashSpeed: 900, pullSpeed: 1200, baseDamage: 5, baseSlamDamage: 12, maxSlamDamage: 26, cornerFrictionDamage: 3, cornerStaggerDuration: 200, tensionSnapLowDmg: 6, tensionSnapHighDmg: 14,
+    // Symbiote Lash
+    lashBounceThreshold: 4, lashDamage: 5, lashPullForce: 320, lashStunDuration: 180,
+    // Tendril Trap
+    trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
+  },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -557,6 +562,10 @@ export default function App() {
       blackSpiderSecondaryAnchorVx: 0,
       blackSpiderSecondaryAnchorVy: 0,
       attachmentResistanceUntil: 0,
+      // Venom Abilities
+      venomWallBounces: 0,
+      venomLashFlashUntil: 0,
+      venomSpeedBoostUntil: 0,
       // Vampire Specific
       hasStuck: false,
       // Spore Specific
@@ -2916,6 +2925,28 @@ export default function App() {
           }
           spawnSparks(ball.x, ball.y, "#22c55e", Math.min(16, 5 + (ball.rageStacks || 0)));
         }
+        // Symbiote Lash – count wall bounces for Black Spider
+        if (ball.type === "blackSpider") {
+          ball.venomWallBounces = (ball.venomWallBounces || 0) + 1;
+        }
+        // Tendril Trap – leave goo on the wall where we bounced
+        if (ball.type === "blackSpider" && (gameStarted || game.combatStarted) && game.simTime >= OPENING_SKILL_DELAY) {
+          const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
+          game.venomTraps = game.venomTraps || [];
+          const myTraps = game.venomTraps.filter(t => t.ownerId === ball.id);
+          if (myTraps.length < (bsBal.maxTraps || 3)) {
+            game.venomTraps.push({
+              ownerId: ball.id,
+              ownerSide: ball.side,
+              x: bx,
+              y: by,
+              r: bsBal.trapRadius || 32,
+              createdTime: game.simTime,
+              duration: bsBal.trapDuration || 6000,
+              triggered: false,
+            });
+          }
+        }
         if (ball.type === "spirit") {
           const spiritBal = game.balance.spirit || BALANCE.spirit;
           if (game.simTime >= (ball.spiritCooldownUntil || 0) && !(ball.spiritBeamUntil && game.simTime < ball.spiritBeamUntil)) {
@@ -4117,7 +4148,70 @@ export default function App() {
     };
 
     const updateBlackSpider = (ball, target, currentTime, stepDt) => {
-      // Disabled skills
+      const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
+
+      // --- Symbiote Lash: every N wall bounces, fire tendril at nearest enemy ---
+      const lashThreshold = bsBal.lashBounceThreshold || 4;
+      if ((ball.venomWallBounces || 0) >= lashThreshold) {
+        ball.venomWallBounces = 0;
+
+        const dx = target.x - ball.x;
+        const dy = target.y - ball.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          // Pull target toward ball
+          const pullForce = bsBal.lashPullForce || 320;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          // Pull target toward us (negate direction)
+          if (!hasStringBounceGuard(target)) {
+            target.vx -= nx * pullForce;
+            target.vy -= ny * pullForce;
+          }
+          // Deal lash damage
+          applyDamage(target, bsBal.lashDamage || 5, `${ball.id}-venom-lash-${currentTime}`, currentTime, 300);
+          if (ball.side === "left") {
+            game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bsBal.lashDamage || 5);
+            game.stats.left.hitsLanded++;
+          } else {
+            game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bsBal.lashDamage || 5);
+            game.stats.right.hitsLanded++;
+          }
+
+          // Store lash visual data on ball
+          ball.venomLashFlashUntil = currentTime + 400;
+          ball.venomLashTargetX = target.x;
+          ball.venomLashTargetY = target.y;
+
+          // Stun flash on target
+          target.webHitFlashUntil = (target.webHitFlashUntil || 0) > currentTime
+            ? target.webHitFlashUntil
+            : currentTime + (bsBal.lashStunDuration || 180);
+
+          spawnSparks(target.x, target.y, "#1e293b", 12);
+          game.screenShake = Math.max(game.screenShake, 8);
+          playSound("webShoot", 0.9, 85);
+
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 22, vy: -55,
+            text: "SYMBIOTE LASH!", color: "#cbd5e1", life: 0.85, maxLife: 0.85
+          });
+
+          // Spawn dark tendril particles along path
+          const steps = 6;
+          for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            game.particles.push({
+              x: ball.x + dx * t + (Math.random() - 0.5) * 14,
+              y: ball.y + dy * t + (Math.random() - 0.5) * 14,
+              vx: -nx * 40 + (Math.random() - 0.5) * 30,
+              vy: -ny * 40 + (Math.random() - 0.5) * 30,
+              color: "#0f172a", radius: 4 + Math.random() * 3, life: 0.35, maxLife: 0.35
+            });
+          }
+        }
+      }
     };
 
     const updateShield = (shieldBall, target, currentTime, stepDt) => {
@@ -5777,6 +5871,63 @@ export default function App() {
       });
     };
 
+    // Tendril Trap – sticky goo patches left by Black Spider on wall bounces
+    const updateVenomTraps = (dt) => {
+      if (!game.venomTraps) return;
+      const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
+      game.venomTraps = game.venomTraps.filter((trap) => {
+        if (trap.triggered) return false;
+        if (game.simTime >= trap.createdTime + trap.duration) return false;
+
+        // Bubble ambient particles
+        if (canSpawnParticle() && Math.random() < 0.06) {
+          const a = Math.random() * Math.PI * 2;
+          const d = Math.random() * trap.r * 0.8;
+          game.particles.push({
+            x: trap.x + Math.cos(a) * d, y: trap.y + Math.sin(a) * d,
+            vx: (Math.random() - 0.5) * 18, vy: -10 - Math.random() * 16,
+            color: "#0f172a", radius: 2.5 + Math.random() * 2, life: 0.45, maxLife: 0.45
+          });
+        }
+
+        // Check enemy collision
+        game.balls.forEach((ball) => {
+          if (ball.side === trap.ownerSide) return;
+          const dist = Math.hypot(ball.x - trap.x, ball.y - trap.y);
+          if (dist < ball.r + trap.r) {
+            trap.triggered = true;
+
+            // Stick enemy
+            const stickDur = bsBal.trapStickDuration || 500;
+            ball.paralyzedUntil = Math.max(ball.paralyzedUntil || 0, game.simTime + stickDur);
+
+            // Speed boost for the owner
+            const owner = game.balls.find(b => b.id === trap.ownerId);
+            if (owner) {
+              const boostForce = bsBal.trapSpeedBoost || 280;
+              const toEnemy = Math.atan2(ball.y - owner.y, ball.x - owner.x);
+              owner.vx += Math.cos(toEnemy) * boostForce;
+              owner.vy += Math.sin(toEnemy) * boostForce;
+              owner.venomSpeedBoostUntil = game.simTime + 600;
+            }
+
+            spawnSparks(trap.x, trap.y, "#1e293b", 14);
+            spawnDust(ball.x, ball.y, 8);
+            game.screenShake = Math.max(game.screenShake, 7);
+            playSound("webShoot", 0.75, 80);
+
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 22, vy: -55,
+              text: "TRAPPED!", color: "#94a3b8", life: 0.85, maxLife: 0.85
+            });
+          }
+        });
+
+        return !trap.triggered;
+      });
+    };
+
     const updateBullets = (dt, balls) => {
       game.bullets = game.bullets.filter((bullet) => {
         bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
@@ -6716,8 +6867,41 @@ export default function App() {
       ctx.strokeStyle = config.stroke || "#f1f5f9";
       ctx.stroke();
 
+      // Draw Symbiote Lash tendril visual
+      if (ball.venomLashFlashUntil && game.simTime < ball.venomLashFlashUntil) {
+        const progress = 1 - (ball.venomLashFlashUntil - game.simTime) / 400;
+        const alpha = Math.max(0, 1 - progress);
+        const tx = ball.venomLashTargetX || 0;
+        const ty = ball.venomLashTargetY || 0;
+        ctx.restore(); ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.shadowColor = "#0f172a";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        // Wavy tendril using multiple control points
+        const midX = (ball.x + tx) / 2 + Math.sin(game.simTime * 0.04) * 18;
+        const midY = (ball.y + ty) / 2 + Math.cos(game.simTime * 0.04) * 18;
+        ctx.moveTo(ball.x, ball.y);
+        ctx.quadraticCurveTo(midX, midY, tx, ty);
+        ctx.stroke();
+        // White inner line
+        ctx.strokeStyle = "rgba(241, 245, 249, 0.55)";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.quadraticCurveTo(midX, midY, tx, ty);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.restore(); ctx.save();
+        ctx.translate(ball.x, ball.y);
+      }
+
       // 3. Draw white eye markings (Venom style)
-      const isAggressive = ball.blackSpiderAnchorState === "dashing" || ball.blackSpiderAnchorState === "pulling" || ball.blackSpiderMarkedTargetId;
+      const isAggressive = ball.venomLashFlashUntil && game.simTime < ball.venomLashFlashUntil;
       ctx.fillStyle = "#ffffff";
       ctx.shadowColor = "#f1f5f9";
       ctx.shadowBlur = isAggressive ? 6 : 2;
@@ -9592,6 +9776,55 @@ export default function App() {
       });
     };
 
+    // Draw Tendril Traps – dark symbiote goo puddles left by Black Spider
+    const drawVenomTraps = () => {
+      if (!game.venomTraps) return;
+      game.venomTraps.forEach((trap) => {
+        if (trap.triggered) return;
+        const age = game.simTime - trap.createdTime;
+        const lifeRatio = 1 - age / trap.duration;
+        const alpha = Math.min(0.85, lifeRatio * 1.1);
+        const pulse = 0.85 + Math.sin(game.simTime * 0.009 + trap.createdTime * 0.01) * 0.12;
+
+        ctx.save();
+        // Outer glow
+        const grad = ctx.createRadialGradient(trap.x, trap.y, 2, trap.x, trap.y, trap.r);
+        grad.addColorStop(0, `rgba(15, 23, 42, ${alpha * 0.9})`);
+        grad.addColorStop(0.55, `rgba(2, 6, 23, ${alpha * 0.65})`);
+        grad.addColorStop(1, `rgba(0, 0, 0, 0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(trap.x, trap.y, trap.r * pulse, trap.r * 0.55 * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Symbiote web lines radiating from center
+        ctx.strokeStyle = `rgba(30, 41, 59, ${alpha * 0.7})`;
+        ctx.lineWidth = 2;
+        const numSpokes = 6;
+        for (let i = 0; i < numSpokes; i++) {
+          const angle = (i * Math.PI * 2) / numSpokes + game.simTime * 0.002;
+          ctx.beginPath();
+          ctx.moveTo(trap.x, trap.y);
+          ctx.quadraticCurveTo(
+            trap.x + Math.cos(angle + 0.4) * trap.r * 0.5,
+            trap.y + Math.sin(angle + 0.4) * trap.r * 0.3,
+            trap.x + Math.cos(angle) * trap.r * pulse,
+            trap.y + Math.sin(angle) * trap.r * 0.55 * pulse
+          );
+          ctx.stroke();
+        }
+
+        // Ring
+        ctx.strokeStyle = `rgba(51, 65, 85, ${alpha * 0.5})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(trap.x, trap.y, trap.r * 0.6 * pulse, trap.r * 0.34 * pulse, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+      });
+    };
+
     const drawPsychicCircles = () => {
       if (!game.psychicCircles) return;
       game.psychicCircles.forEach((circle) => {
@@ -10120,6 +10353,7 @@ export default function App() {
           updateCacti(stepDt);
           updateStrings(stepDt);
           updateVenomPools(stepDt);
+          updateVenomTraps(stepDt);
           updatePsychicCircles(stepDt);
           updateChaosCircles(stepDt);
           updateJokerThreads(stepDt);
@@ -10174,7 +10408,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawStrings(); drawJokerThreads(); drawVenomPools(); drawPsychicCircles(); drawChaosCircles();
+      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawPsychicCircles(); drawChaosCircles();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
