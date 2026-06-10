@@ -58,6 +58,15 @@ const BALL_TYPES = {
     radius: 30,
     description: "Webs enemies, pulls them in. Secondary: Slow Web.",
   },
+  blackSpider: {
+    id: "blackSpider",
+    name: "Black Spider Ball",
+    shortName: "BSPD",
+    color: "#020617",
+    stroke: "#f1f5f9",
+    radius: 30,
+    description: "Venom-style symbiote. Mark targets, dash to walls, and slingshot them into the arena boundaries.",
+  },
   bomber: {
     id: "bomber",
     name: "Bomber Ball",
@@ -143,10 +152,10 @@ const BALL_TYPES = {
     id: "chaos",
     name: "Warper Ball",
     shortName: "WARP",
-    color: "#111827",
-    stroke: "#f97316",
+    color: "#1e3a8a",
+    stroke: "#f59e0b",
     radius: 31,
-    description: "Drops warp circles that control enemies and slam them toward the farthest wall.",
+    description: "Sorcerer brawler with Eldritch shields and Time portals. Conjures magic circles that slam enemies into walls.",
   },
   trident: {
     id: "trident",
@@ -193,15 +202,6 @@ const BALL_TYPES = {
     radius: 31,
     description: "Creates a mirrored clone across the arena center. Clone damages, main body bounces.",
   },
-  judger: {
-    id: "judger",
-    name: "Judger Ball",
-    shortName: "JUDG",
-    color: "#f8fafc",
-    stroke: "#7c3aed",
-    radius: 31,
-    description: "Expands a trial domain that changes arena rules for a short time.",
-  },
   joker: {
     id: "joker",
     name: "Joker Ball",
@@ -209,7 +209,7 @@ const BALL_TYPES = {
     color: "#fb7185",
     stroke: "#f9a8d4",
     radius: 31,
-    description: "Throws a bouncing Gum String. On hit, reels enemies through the path and hurts them on wall pulls.",
+    description: "Trickster brawler with elastic Bungee Lines. Sets up ricochet angles to hook enemies and drag them through wall corners.",
   },
 };
 
@@ -269,8 +269,8 @@ const BALANCE = {
   shadow: { slashDamage: 2, slashRange: 35, slashCooldown: 450, comboRange: 36, comboSecondDamage: 2, summonCooldown: 4600, maxMinions: 3, minionHealth: 4, minionDamage: 1, minionSpeed: 33, minionLife: 6200, minionHitCooldown: 1100, commandDuration: 700, markDuration: 1100, switchCooldown: 6000, switchRange: 145, switchDamage: 3 },
   chainsaw: { spinDamage: 3, hitCooldown: 260, sawReach: 34, spinDuration: 1600, cooldown: 2600, knockback: 220 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
-  judger: { cooldown: 9000, fieldRadius: 155, fieldLife: 4600, warningTime: 650, verdictDamage: 2, maxVerdicts: 3, gravityPull: 145, slowMultiplier: 0.72, edgeBounce: 360, reversalCooldown: 900 },
-  joker: { threadDamage: 3, throwSpeed: 560, cooldown: 5200, tipRadius: 9, maxBounces: 20, pullSpeed: 620, pullWallDamage: 5, pullDuration: 1500, threadLife: 9000 },
+  joker: { throwSpeed: 580, cooldown: 6000, secCooldown: 8000, tipRadius: 9, maxBounces: 15, threadLife: 4000 },
+  blackSpider: { cooldown: 8000, secCooldown: 10000, markDuration: 5000, breakDistance: 480, speedPenalty: 0.15, dashSpeed: 900, pullSpeed: 1200, baseDamage: 5, baseSlamDamage: 12, maxSlamDamage: 26, cornerFrictionDamage: 3, cornerStaggerDuration: 200, tensionSnapLowDmg: 6, tensionSnapHighDmg: 14 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -330,6 +330,7 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (ball.type === "arm" && ball.armState === "elbow_dropping" && ball.armStateUntil > currentTime) return true;
   if (ball.type === "hammer" && ball.hammerState === "charging") return true;
   if (ball.jokerPulledUntil && ball.jokerPulledUntil > currentTime) return true;
+  if (ball.type === "blackSpider" && ball.blackSpiderMarkedTargetId) return true;
 
   return balls.some((other) => {
     if (!other || other.id === ball.id) return false;
@@ -337,12 +338,15 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
     if (other.type === "spider" && other.webTargetId === ball.id && (other.webState === "pulling" || other.webState === "webBouncing")) return true;
     if (other.type === "arm" && other.armGrabTargetId === ball.id && other.armState === "elbow_dropping" && other.armStateUntil > currentTime) return true;
     if (other.type === "joker" && other.jokerPullTargetId === ball.id && other.jokerPullUntil > currentTime) return true;
+    if (other.type === "blackSpider" && other.blackSpiderMarkedTargetId === ball.id) return true;
     return false;
   });
 };
 
 const canStartSkillConnection = (actor, target, balls, currentTime) => (
-  !isBallConnected(actor, balls, currentTime) && !isBallConnected(target, balls, currentTime)
+  !isBallConnected(actor, balls, currentTime) && 
+  !isBallConnected(target, balls, currentTime) &&
+  (!target.attachmentResistanceUntil || target.attachmentResistanceUntil <= currentTime)
 );
 
 const linePointDist = (px, py, x1, y1, x2, y2) => {
@@ -355,6 +359,21 @@ const linePointDist = (px, py, x1, y1, x2, y2) => {
   else if (param > 1) { xx = x2; yy = y2; }
   else { xx = x1 + param * C; yy = y1 + param * D; }
   return Math.hypot(px - xx, py - yy);
+};
+
+const isLineWrappingCorner = (x1, y1, x2, y2, cx, cy, threshold = 28) => {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1) return false;
+  
+  const dot1 = (cx - x1) * dx + (cy - y1) * dy;
+  if (dot1 < 0) return false;
+  const dot2 = (cx - x2) * (-dx) + (cy - y2) * (-dy);
+  if (dot2 < 0) return false;
+  
+  const dist = linePointDist(cx, cy, x1, y1, x2, y2);
+  return dist < threshold;
 };
 
 const getStringBounceVelocity = (ball, str, hitX, hitY, speed, seed = 0) => {
@@ -521,6 +540,23 @@ export default function App() {
       shieldState: "held", shieldX: 0, shieldY: 0, shieldVx: 0, shieldVy: 0, shieldThrownUntil: 0, shieldNextHitAt: 0, nextThrowAt: 0, shieldSpinAngle: 0, shieldGuardHits: 0, shieldBonusDamage: 0,
       // Spider Specific
       webState: "idle", webX: 0, webY: 0, webVx: 0, webVy: 0, webStateUntil: 0, webTargetId: null, webBouncesLeft: 0, webLastTargetX: 0, webLastTargetY: 0, fangFlashUntil: 0,
+      // Black Spider Specific
+      blackSpiderMarkedTargetId: null,
+      blackSpiderMarkUntil: 0,
+      blackSpiderAnchorState: "idle",
+      blackSpiderAnchorWall: null,
+      blackSpiderDashUntil: 0,
+      blackSpiderDashVx: 0,
+      blackSpiderDashVy: 0,
+      blackSpiderProjectileX: 0,
+      blackSpiderProjectileY: 0,
+      blackSpiderProjectileVx: 0,
+      blackSpiderProjectileVy: 0,
+      blackSpiderSecondaryAnchorX: 0,
+      blackSpiderSecondaryAnchorY: 0,
+      blackSpiderSecondaryAnchorVx: 0,
+      blackSpiderSecondaryAnchorVy: 0,
+      attachmentResistanceUntil: 0,
       // Vampire Specific
       hasStuck: false,
       // Spore Specific
@@ -542,8 +578,7 @@ export default function App() {
       chainsawSpinUntil: 0, chainsawNextSpinAt: 0, chainsawNextHitAt: 0, chainsawAngle: 0,
       // Mirror Specific
       mirrorNextHitAt: 0, mirrorFlashUntil: 0, mirrorNextSwitchAt: type === "mirror" ? (balanceSettings.mirror?.switchCooldown ?? BALANCE.mirror.switchCooldown) : 0, mirrorSwitchFlashUntil: 0,
-      // Judger Specific
-      nextJudgementAt: type === "judger" ? (balanceSettings.judger?.cooldown ?? BALANCE.judger.cooldown) : 0, judgementFlashUntil: 0,
+
       // Joker Specific
       jokerNextThreadAt: type === "joker" ? (balanceSettings.joker?.cooldown ?? BALANCE.joker.cooldown) : 0, jokerFlashUntil: 0,
       // Hammer Specific
@@ -599,7 +634,6 @@ export default function App() {
     cacti: [],
     psychicCircles: [],
     chaosCircles: [],
-    judgementFields: [],
     jokerThreads: [],
     venomPools: [],
     screenShake: 0,
@@ -642,7 +676,6 @@ export default function App() {
     gameRef.current.cacti = [];
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
-    gameRef.current.judgementFields = [];
     gameRef.current.jokerThreads = [];
     gameRef.current.venomPools = [];
     gameRef.current.deathEffectStarted = false;
@@ -673,7 +706,6 @@ export default function App() {
       cacti: [],
       psychicCircles: [],
       chaosCircles: [],
-      judgementFields: [],
       jokerThreads: [],
       venomPools: [],
       screenShake: 0,
@@ -776,7 +808,6 @@ export default function App() {
     gameRef.current.cacti = [];
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
-    gameRef.current.judgementFields = [];
     gameRef.current.jokerThreads = [];
     gameRef.current.venomPools = [];
     gameRef.current.deathEffectStarted = false;
@@ -1084,6 +1115,9 @@ export default function App() {
           balls.forEach((ball) => {
             const isPulling = ball.type === "spider" && ball.webState === "pulling";
             const isChargingHammer = ball.type === "hammer" && ball.hammerState === "charging";
+            const isBlackSpiderDashing = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "dashing";
+            const isBlackSpiderPullingSelf = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "pulling";
+            const isBlackSpiderPulled = balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderAnchorState === "pulling");
             
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
@@ -1095,12 +1129,16 @@ export default function App() {
               return dist < ball.r + pool.r;
             });
             if (insideWeb) slowMult *= 0.5;
+            
+            const isBlackSpiderMarked = balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderMarkUntil > simTime);
+            if (isBlackSpiderMarked) slowMult *= 0.85;
+
             if (ball.dragonScorchedUntil && simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
             if (ball.shadowSlowedUntil && simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
-            if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed)) {
+            if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled)) {
               ball.x += ball.vx * dt * slowMult;
               ball.y += ball.vy * dt * slowMult;
               
@@ -1263,6 +1301,8 @@ export default function App() {
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) return;
             const isGrabbedByArm = balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > simTime);
             if (isGrabbedByArm) return;
+            const isBlackSpiderPulled = balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderAnchorState === "pulling");
+            if (isBlackSpiderPulled) return;
             if (simTime >= OPENING_SKILL_DELAY) {
               if (ball.type === "knife") {
                 const bal = balance.knife;
@@ -1642,6 +1682,10 @@ export default function App() {
                 }
               }
             }
+            // Black Spider Ball Physics in Tournament
+            if (ball.type === "blackSpider") {
+              // Disabled skills
+            }
             // Bomber Ball Physics in Tournament
             if (ball.type === "bomber") {
               if (ball.nextShotAt <= simTime) {
@@ -1951,88 +1995,7 @@ export default function App() {
 
             // Dragon Ball Physics in Tournament
             if (ball.type === "dragon") {
-              const bal = balance.dragon;
-              const flameDamage = bal.flameDamage || 1;
-              const flameRange = bal.flameRange || 100;
-              const flameAngle = bal.flameAngle || 0.55;
-              const tickCooldown = bal.tickCooldown || 460;
-              const breathDuration = bal.breathDuration || 650;
-              const breathCooldown = bal.breathCooldown || 1800;
-              const heatRequired = bal.heatRequired || 5;
-              const fireballDamage = bal.fireballDamage || 5;
-              const fireballSpeed = bal.fireballSpeed || 440;
-              const burnDuration = bal.burnDuration || 900;
-              const fireballCooldown = bal.cooldown || 2300;
-              const secCooldown = bal.secCooldown || 5000;
-              const secDamage = bal.secDamage || 8;
-              const secDashForce = bal.secDashForce || 650;
-
-              const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-              const currentAim = ball.dragonAngle ?? targetAngle;
-              const aimDiff = Math.atan2(Math.sin(targetAngle - currentAim), Math.cos(targetAngle - currentAim));
-              const aimTurn = Math.abs(aimDiff) > 1.1 ? 0.12 : 0.065;
-              ball.dragonAngle = currentAim + aimDiff * aimTurn;
-              const angle = ball.dragonAngle;
-              const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-              const diff = Math.abs(Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle)));
-              const targetInBreathLane = dist <= flameRange * 1.12 && diff <= flameAngle * 1.35;
-
-              if (ball.dragonState === "dashing") {
-                if (simTime >= ball.dragonDashUntil) {
-                  ball.dragonState = "normal";
-                } else {
-                  ball.vx = ball.dragonDashVx;
-                  ball.vy = ball.dragonDashVy;
-                  if (simTime >= (ball.dragonNextTrailEmberAt || 0)) {
-                    localBullets.push({
-                      ownerId: ball.id, targetSide: enemy.side, kind: "dragonEmber",
-                      x: ball.x, y: ball.y, vx: 0, vy: 0, r: 5, damage: 1, life: 1.2, burnDuration
-                    });
-                    ball.dragonNextTrailEmberAt = simTime + 80;
-                  }
-                  if (dist < ball.r + enemy.r) {
-                    localApplyDamage(enemy, secDamage, `${ball.id}-dragon-dash`, 300);
-                    enemy.vx = Math.cos(ball.dragonAngle) * secDashForce * 1.25;
-                    enemy.vy = Math.sin(ball.dragonAngle) * secDashForce * 1.25;
-                    ball.dragonState = "normal";
-                    ball.vx = -Math.cos(ball.dragonAngle) * 220;
-                    ball.vy = -Math.sin(ball.dragonAngle) * 220;
-                  }
-                }
-              } else {
-                if (simTime >= (ball.nextSecondaryAt || 0) && dist <= 280) {
-                  ball.dragonState = "dashing";
-                  ball.dragonDashUntil = simTime + 400;
-                  ball.nextSecondaryAt = simTime + secCooldown;
-                  ball.dragonDashVx = Math.cos(targetAngle) * secDashForce;
-                  ball.dragonDashVy = Math.sin(targetAngle) * secDashForce;
-                  ball.vx = ball.dragonDashVx;
-                  ball.vy = ball.dragonDashVy;
-                } else {
-                  if (targetInBreathLane && simTime >= (ball.dragonNextBreathAt || 0)) {
-                    ball.dragonBreathUntil = simTime + breathDuration;
-                    ball.dragonNextBreathAt = simTime + breathDuration + breathCooldown;
-                  }
-                  const breathing = simTime < (ball.dragonBreathUntil || 0);
-                  if (breathing && dist <= flameRange && diff <= flameAngle && simTime >= (ball.dragonNextTickAt || 0)) {
-                    localApplyDamage(enemy, flameDamage, `${ball.id}-dragon-flame`, tickCooldown);
-                    ball.dragonNextTickAt = simTime + tickCooldown;
-                    enemy.dragonScorchedUntil = simTime + 220;
-                  }
-                  if ((ball.dragonHeat || 0) >= heatRequired && simTime >= (ball.nextShotAt || 0)) {
-                    const sx = ball.x + Math.cos(angle) * (ball.r + 12);
-                    const sy = ball.y + Math.sin(angle) * (ball.r + 12);
-                    const shotAngle = angle + (Math.random() - 0.5) * 0.22;
-                    localBullets.push({
-                      ownerId: ball.id, targetSide: enemy.side, kind: "dragonFireball",
-                      x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
-                      r: 9, damage: fireballDamage, life: 9999, bouncesLeft: 9999, burnDuration
-                    });
-                    ball.dragonHeat = 0;
-                    ball.nextShotAt = simTime + fireballCooldown;
-                  }
-                }
-              }
+              // Disabled skills
             }
 
             if (ball.type === "spore" && ball.nextSporeAt <= simTime) {
@@ -2619,6 +2582,42 @@ export default function App() {
       game.damageCooldowns[cooldownKey] = currentTime + cooldown;
       game.screenShake = Math.max(game.screenShake || 0, Math.min(10, 3 + finalAmount * 0.65));
       defender.webHitFlashUntil = currentTime + 120;
+
+      // Determine hit flash color based on source/weapon prefix in cooldownKey
+      let flashColor = "#ef4444"; // Default red
+      const keyLower = cooldownKey.toLowerCase();
+      if (keyLower.includes("knife") || keyLower.includes("saber")) {
+        flashColor = "#4ade80"; // Saber Ball green
+      } else if (keyLower.includes("laser")) {
+        flashColor = "#facc15"; // Laser Ball gold
+      } else if (keyLower.includes("shield")) {
+        flashColor = "#3b82f6"; // Shield Ball blue
+      } else if (keyLower.includes("spider") || keyLower.includes("string") || keyLower.includes("joker") || keyLower.includes("gum")) {
+        flashColor = "#d946ef"; // Spider/Web/Joker pink/magenta
+      } else if (keyLower.includes("dragon") || keyLower.includes("ember") || keyLower.includes("fireball")) {
+        flashColor = "#ff781f"; // Dragon orange
+      } else if (keyLower.includes("shadow") || keyLower.includes("minion") || keyLower.includes("burst")) {
+        flashColor = "#8b5cf6"; // Shadow purple
+      } else if (keyLower.includes("spirit")) {
+        flashColor = "#38bdf8"; // Spirit sky blue
+      } else if (keyLower.includes("trident") || keyLower.includes("dive")) {
+        flashColor = "#38bdf8"; // Trident sky blue
+      } else if (keyLower.includes("hammer")) {
+        flashColor = "#f59e0b"; // Hammer gold/amber
+      } else if (keyLower.includes("bomb") || keyLower.includes("explosion") || keyLower.includes("mine")) {
+        flashColor = "#f97316"; // Bomber orange
+      } else if (keyLower.includes("cactus") || keyLower.includes("spore") || keyLower.includes("hydra")) {
+        flashColor = "#86efac"; // Sporer light green
+      } else if (keyLower.includes("wrecker")) {
+        flashColor = "#22c55e"; // Wrecker green
+      } else if (keyLower.includes("chainsaw")) {
+        flashColor = "#f97316"; // Chainsaw orange
+      } else if (keyLower.includes("mirror")) {
+        flashColor = "#67e8f9"; // Mirror cyan
+
+      }
+      defender.webHitFlashColor = flashColor;
+
       if (defender.type === "wrecker") {
         defender.rageStacks = (defender.rageStacks || 0) + 1;
         if (!defender.nextGrumbleAt || currentTime >= defender.nextGrumbleAt) {
@@ -2644,7 +2643,6 @@ export default function App() {
       });
 
       // Play damage sound effects based on the source
-      const keyLower = cooldownKey.toLowerCase();
       if (keyLower.includes("knife")) {
         playSound("knifeHit", 1, 80);
       } else if (keyLower.includes("wallspike")) {
@@ -2692,6 +2690,8 @@ export default function App() {
         });
       }
     };
+
+
 
     const spawnDust = (x, y, count = 4) => {
       count = getParticleBudget(count);
@@ -2965,18 +2965,42 @@ export default function App() {
           }
         }
         if (ball.jokerPulledUntil && game.simTime <= ball.jokerPulledUntil + 160) {
-          const jokerBal = game.balance.joker || BALANCE.joker;
-          const cooldownKey = `${ball.jokerPullOwnerId || "joker"}-joker-wall-pull`;
-          applyDamage(ball, jokerBal.pullWallDamage || 5, cooldownKey, game.simTime, 260);
-          const ownerStats = ball.jokerPullOwnerSide === "left" ? game.stats.left : game.stats.right;
-          if (ownerStats) {
-            ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(jokerBal.pullWallDamage || 5));
-            ownerStats.hitsLanded++;
-          }
-          ball.webHitFlashUntil = game.simTime + 180;
-          game.screenShake = Math.max(game.screenShake, 10);
-          spawnSparks(ball.x, ball.y, "#f9a8d4", 16);
           const activeGum = (game.jokerThreads || []).find((thread) => thread.state === "pulling" && thread.targetId === ball.id);
+          
+          if (game.simTime >= (ball.jokerNextSlamAllowedAt || 0)) {
+            ball.jokerNextSlamAllowedAt = game.simTime + 120; // 120ms invulnerability window
+            
+            let slamCount = activeGum ? (activeGum.slamCount || 0) : 0;
+            if (slamCount < 6) {
+              if (activeGum) activeGum.slamCount = slamCount + 1;
+              
+              const isNudge = Math.random() < 0.35;
+              const slamDmg = isNudge ? 2.5 : 5.0;
+
+              const cooldownKey = `${ball.jokerPullOwnerId || "joker"}-joker-wall-pull`;
+              applyDamage(ball, slamDmg, cooldownKey, game.simTime, 260);
+              
+              const ownerStats = ball.jokerPullOwnerSide === "left" ? game.stats.left : game.stats.right;
+              if (ownerStats) {
+                ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(slamDmg));
+                ownerStats.hitsLanded++;
+              }
+              
+              ball.webHitFlashUntil = game.simTime + 180;
+              game.screenShake = Math.max(game.screenShake, 10);
+              spawnSparks(ball.x, ball.y, "#f9a8d4", 16);
+              playSound("wallBounce", 1.0, 90);
+
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: ball.x, y: ball.y - ball.r - 20, vy: -50,
+                text: isNudge ? "NUDGED! -2.5" : "WALL SLAM! -5",
+                color: isNudge ? "#22d3ee" : "#fb7185",
+                life: 0.6, maxLife: 0.6
+              });
+            }
+          }
+
           if (activeGum) {
             activeGum.pullIndex = Math.max(0, (activeGum.pullIndex || 0) - 1);
             activeGum.lastWallNudgeAt = game.simTime;
@@ -4092,6 +4116,9 @@ export default function App() {
       }
     };
 
+    const updateBlackSpider = (ball, target, currentTime, stepDt) => {
+      // Disabled skills
+    };
 
     const updateShield = (shieldBall, target, currentTime, stepDt) => {
       const bal = game.balance;
@@ -4437,136 +4464,7 @@ export default function App() {
     };
 
     const updateDragon = (ball, target, currentTime) => {
-      const bal = game.balance.dragon;
-      const flameDamage = bal.flameDamage || 1;
-      const flameRange = bal.flameRange || 100;
-      const flameAngle = bal.flameAngle || 0.55;
-      const tickCooldown = bal.tickCooldown || 460;
-      const breathDuration = bal.breathDuration || 650;
-      const breathCooldown = bal.breathCooldown || 1800;
-      const heatRequired = bal.heatRequired || 5;
-      const fireballDamage = bal.fireballDamage || 5;
-      const fireballSpeed = bal.fireballSpeed || 440;
-      const burnDuration = bal.burnDuration || 900;
-      const fireballCooldown = bal.cooldown || 2300;
-      const secCooldown = bal.secCooldown || 5000;
-      const secDamage = bal.secDamage || 8;
-      const secDashForce = bal.secDashForce || 650;
-
-      const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-      const currentAim = ball.dragonAngle ?? targetAngle;
-      const aimDiff = Math.atan2(Math.sin(targetAngle - currentAim), Math.cos(targetAngle - currentAim));
-      const aimTurn = Math.abs(aimDiff) > 1.1 ? 0.12 : 0.065;
-      ball.dragonAngle = currentAim + aimDiff * aimTurn;
-      const angle = ball.dragonAngle;
-      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-      const diff = Math.abs(Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle)));
-      const targetInBreathLane = dist <= flameRange * 1.12 && diff <= flameAngle * 1.35;
-
-      if (ball.dragonState === "dashing") {
-        if (currentTime >= ball.dragonDashUntil) {
-          ball.dragonState = "normal";
-        } else {
-          ball.vx = ball.dragonDashVx;
-          ball.vy = ball.dragonDashVy;
-          
-          if (currentTime >= (ball.dragonNextTrailEmberAt || 0)) {
-            game.bullets.push({
-              ownerId: ball.id, targetSide: target.side, kind: "dragonEmber",
-              x: ball.x, y: ball.y, vx: 0, vy: 0, r: 5, damage: 1, life: 1.2, burnDuration
-            });
-            ball.dragonNextTrailEmberAt = currentTime + 80;
-          }
-
-          if (dist < ball.r + target.r) {
-            applyDamage(target, secDamage, `${ball.id}-dragon-dash`, currentTime, 300);
-            target.vx = Math.cos(ball.dragonAngle) * secDashForce * 1.25;
-            target.vy = Math.sin(ball.dragonAngle) * secDashForce * 1.25;
-            ball.dragonState = "normal";
-            ball.vx = -Math.cos(ball.dragonAngle) * 220;
-            ball.vy = -Math.sin(ball.dragonAngle) * 220;
-            playSound("explosion");
-            spawnSparks(ball.x, ball.y, "#f97316", 18);
-            game.screenShake = Math.max(game.screenShake, 8);
-          }
-        }
-      } else {
-        if (currentTime >= (ball.nextSecondaryAt || 0) && dist <= 280) {
-          ball.dragonState = "dashing";
-          ball.dragonDashUntil = currentTime + 400;
-          ball.nextSecondaryAt = currentTime + secCooldown;
-          ball.dragonDashVx = Math.cos(targetAngle) * secDashForce;
-          ball.dragonDashVy = Math.sin(targetAngle) * secDashForce;
-          ball.vx = ball.dragonDashVx;
-          ball.vy = ball.dragonDashVy;
-          playSound("shieldThrow");
-          
-          game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({
-            x: ball.x, y: ball.y - ball.r - 20, vy: -50,
-            text: "FLAME DASH", color: "#fb923c", life: 0.8, maxLife: 0.8
-          });
-          if (ball.side === "left") game.stats.left.totalShots++;
-          else game.stats.right.totalShots++;
-        } else {
-          if (targetInBreathLane && currentTime >= (ball.dragonNextBreathAt || 0)) {
-            ball.dragonBreathUntil = currentTime + breathDuration;
-            ball.dragonNextBreathAt = currentTime + breathDuration + breathCooldown;
-            ball.dragonFlameActiveUntil = ball.dragonBreathUntil;
-            game.floatingTexts = game.floatingTexts || [];
-            game.floatingTexts.push({
-              x: ball.x, y: ball.y - ball.r - 18, vy: -45,
-              text: "BREATH", color: "#fb923c", life: 0.65, maxLife: 0.65
-            });
-          }
-
-          const breathing = currentTime < (ball.dragonBreathUntil || 0);
-
-          if (breathing) {
-            if (currentTime >= (ball.dragonNextEmberAt || 0)) {
-              const mouthX = ball.x + Math.cos(angle) * (ball.r + 16);
-              const mouthY = ball.y + Math.sin(angle) * (ball.r + 16);
-              const emberDistance = Math.min(dist, flameRange) * (0.25 + Math.random() * 0.45);
-              const emberAngle = angle + (Math.random() - 0.5) * flameAngle * 0.72;
-              spawnSparks(mouthX + Math.cos(emberAngle) * emberDistance, mouthY + Math.sin(emberAngle) * emberDistance, Math.random() > 0.45 ? "#facc15" : "#fb923c", 3);
-              ball.dragonNextEmberAt = currentTime + 130;
-            }
-          }
-
-          if (breathing && dist <= flameRange && diff <= flameAngle && currentTime >= (ball.dragonNextTickAt || 0)) {
-            applyDamage(target, flameDamage, `${ball.id}-dragon-flame`, currentTime, tickCooldown);
-            ball.dragonNextTickAt = currentTime + tickCooldown;
-            target.dragonScorchedUntil = currentTime + 220;
-            spawnSparks(target.x, target.y, "#fb923c", 4);
-            if (ball.side === "left") { game.stats.left.damageDealt += flameDamage; game.stats.left.hitsLanded++; }
-            else { game.stats.right.damageDealt += flameDamage; game.stats.right.hitsLanded++; }
-          }
-
-          const wallBounces = ball.consecutiveWallBounces || 0;
-          if (ball.dragonLastWallBounces === undefined) ball.dragonLastWallBounces = wallBounces;
-          if (wallBounces > (ball.dragonLastWallBounces || 0)) {
-            ball.dragonHeat = Math.min(heatRequired, (ball.dragonHeat || 0) + Math.min(bal.heatPerWallBounce || 1, 1));
-            ball.dragonLastWallBounces = wallBounces;
-          }
-
-          if ((ball.dragonHeat || 0) >= heatRequired && currentTime >= (ball.nextShotAt || 0)) {
-            const sx = ball.x + Math.cos(angle) * (ball.r + 12);
-            const sy = ball.y + Math.sin(angle) * (ball.r + 12);
-            const shotAngle = angle + (Math.random() - 0.5) * 0.22;
-            game.bullets.push({
-              ownerId: ball.id, targetSide: target.side, kind: "dragonFireball",
-              x: sx, y: sy, vx: Math.cos(shotAngle) * fireballSpeed, vy: Math.sin(shotAngle) * fireballSpeed,
-              r: 9, damage: fireballDamage, life: 9999, bouncesLeft: 9999, burnDuration
-            });
-            ball.dragonHeat = 0;
-            ball.nextShotAt = currentTime + fireballCooldown;
-            if (ball.side === "left") game.stats.left.totalShots++;
-            else game.stats.right.totalShots++;
-            game.screenShake = Math.max(game.screenShake, 6);
-            spawnSparks(sx, sy, "#f97316", 12);
-          }
-        }
-      }
+      // Disabled skills
     };
 
     const updatePsychicer = (ball, target, currentTime) => {
@@ -4636,10 +4534,11 @@ export default function App() {
       };
 
       const trapCount = Math.max(1, Math.round(bal.trapCount || 3));
+      const randomAxis = Math.random() > 0.5 ? "vertical" : "horizontal";
       const trapPatterns = [
-        ["vertical", "left", "#38bdf8"],
-        ["horizontal", "right", "#fb923c"],
-        [Math.random() > 0.5 ? "vertical" : "horizontal", "center", "#c084fc"],
+        ["vertical", "left", "#10b981"],
+        ["horizontal", "right", "#f59e0b"],
+        [randomAxis, "center", randomAxis === "vertical" ? "#10b981" : "#f59e0b"],
       ];
       for (let i = 0; i < trapCount; i++) {
         const pattern = trapPatterns[i % trapPatterns.length];
@@ -4651,112 +4550,87 @@ export default function App() {
       game.floatingTexts = game.floatingTexts || [];
       game.floatingTexts.push({
         x: ball.x, y: ball.y - ball.r - 20, vy: -45,
-        text: "CHAOS FIELD", color: "#fdba74", life: 0.8, maxLife: 0.8
+        text: "CHAOS FIELD", color: "#f59e0b", life: 0.8, maxLife: 0.8
       });
       if (ball.side === "left") game.stats.left.totalShots++;
       else game.stats.right.totalShots++;
       playSound("sporeShoot", 0.85, 80);
     };
 
-    const JUDGEMENT_TRIALS = [
-      { id: "gravity", label: "GRAVITY", color: "#38bdf8" },
-      { id: "verdict", label: "VERDICT", color: "#facc15" },
-      { id: "lockdown", label: "LOCKDOWN", color: "#c084fc" },
-      { id: "reversal", label: "REVERSAL", color: "#fb7185" },
-    ];
 
-    const updateJudger = (ball, target, currentTime) => {
-      const bal = game.balance.judger || BALANCE.judger;
-      if (currentTime < (ball.nextJudgementAt || 0)) return;
-
-      if (!game.judgementFields) game.judgementFields = [];
-      game.judgementFields = game.judgementFields.filter((field) => field.ownerId !== ball.id);
-      const trial = JUDGEMENT_TRIALS[Math.floor(Math.random() * JUDGEMENT_TRIALS.length)];
-      const radius = bal.fieldRadius || BALANCE.judger.fieldRadius;
-      const centerBias = 0.42;
-      const x = clamp(target.x * (1 - centerBias) + game.width * 0.5 * centerBias, radius + 12, game.width - radius - 12);
-      const y = clamp(target.y * (1 - centerBias) + game.height * 0.5 * centerBias, radius + 12, game.height - radius - 12);
-      game.judgementFields.push({
-        id: `${ball.id}-judgement-${currentTime}`,
-        ownerId: ball.id,
-        ownerSide: ball.side,
-        x,
-        y,
-        r: radius,
-        trial: trial.id,
-        label: trial.label,
-        color: trial.color,
-        createdTime: currentTime,
-        warningUntil: currentTime + (bal.warningTime || 650),
-        life: (bal.fieldLife || BALANCE.judger.fieldLife) + (bal.warningTime || 650),
-        hitCounts: {},
-        lastWallBounces: {},
-        lastReversalAt: {},
-        insideState: {},
-      });
-
-      ball.nextJudgementAt = currentTime + bal.cooldown;
-      ball.judgementFlashUntil = currentTime + 700;
-      game.screenShake = Math.max(game.screenShake, 5);
-      game.floatingTexts = game.floatingTexts || [];
-      game.floatingTexts.push({
-        x: ball.x, y: ball.y - ball.r - 22, vy: -46,
-        text: `TRIAL: ${trial.label}`,
-        color: trial.color,
-        life: 0.85,
-        maxLife: 0.85
-      });
-      spawnSparks(x, y, trial.color, 14);
-      if (ball.side === "left") game.stats.left.totalShots++;
-      else game.stats.right.totalShots++;
-      playSound("shieldCatch", 0.8, 120);
-    };
 
     const updateJoker = (ball, target, currentTime) => {
       const bal = game.balance.joker || BALANCE.joker;
-      if (currentTime < (ball.jokerNextThreadAt || 0)) return;
-      if (!game.jokerThreads) game.jokerThreads = [];
-      if (game.jokerThreads.some((thread) => thread.ownerId === ball.id && thread.state !== "done")) return;
 
-      const angle = Math.random() * Math.PI * 2;
-      const sx = ball.x + Math.cos(angle) * (ball.r + 8);
-      const sy = ball.y + Math.sin(angle) * (ball.r + 8);
-      game.jokerThreads.push({
-        id: `${ball.id}-joker-${currentTime}`,
-        ownerId: ball.id,
-        ownerSide: ball.side,
-        x: sx,
-        y: sy,
-        vx: Math.cos(angle) * (bal.throwSpeed || 560),
-        vy: Math.sin(angle) * (bal.throwSpeed || 560),
-        r: bal.tipRadius || 9,
-        state: "flying",
-        targetId: null,
-        anchorAngle: angle,
-        anchorRadius: ball.r + 8,
-        bouncesLeft: bal.maxBounces || 4,
-        points: [{ x: sx, y: sy }],
-        life: bal.threadLife || 4200,
-        createdTime: currentTime,
-        pullIndex: 0,
-        returnIndex: 0,
-      });
-      ball.jokerNextThreadAt = currentTime + (bal.cooldown || 5200);
-      ball.jokerFlashUntil = currentTime + 520;
-      game.floatingTexts = game.floatingTexts || [];
-      game.floatingTexts.push({
-        x: ball.x,
-        y: ball.y - ball.r - 20,
-        vy: -48,
-        text: "GUM STRING",
-        color: "#f9a8d4",
-        life: 0.75,
-        maxLife: 0.75
-      });
-      spawnSparks(sx, sy, "#f9a8d4", 10);
-      playSound("shieldThrow", 0.8, 260);
-      if (ball.side === "left") game.stats.left.totalShots++;
-      else game.stats.right.totalShots++;
+      if (!game.jokerThreads) game.jokerThreads = [];
+      const activeThread = game.jokerThreads.find((thread) => thread.ownerId === ball.id && thread.state !== "done");
+
+      // 1. Signature Ability: Bungee Gum Reel
+      if (!activeThread && currentTime >= (ball.jokerNextThreadAt || 0)) {
+        const aimAngle = Math.atan2(target.y - ball.y, target.x - ball.x) + (Math.random() - 0.5) * 0.35;
+        const sx = ball.x + Math.cos(aimAngle) * (ball.r + 8);
+        const sy = ball.y + Math.sin(aimAngle) * (ball.r + 8);
+        game.jokerThreads.push({
+          id: `${ball.id}-joker-${currentTime}`,
+          ownerId: ball.id,
+          ownerSide: ball.side,
+          x: sx,
+          y: sy,
+          vx: Math.cos(aimAngle) * (bal.throwSpeed || 580),
+          vy: Math.sin(aimAngle) * (bal.throwSpeed || 580),
+          r: bal.tipRadius || 9,
+          state: "flying",
+          targetId: null,
+          anchorAngle: aimAngle,
+          anchorRadius: ball.r + 8,
+          bouncesLeft: bal.maxBounces || 15,
+          points: [{ x: sx, y: sy }],
+          life: bal.threadLife || 4000,
+          createdTime: currentTime,
+          pullIndex: 0,
+          slamCount: 0,
+          initialBounces: bal.maxBounces || 15,
+        });
+        ball.jokerNextThreadAt = Infinity; // Disable primary during active hook
+        ball.jokerFlashUntil = currentTime + 520;
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 20, vy: -48,
+          text: "BUNGEE REEL", color: "#fb7185", life: 0.75, maxLife: 0.75
+        });
+        spawnSparks(sx, sy, "#f9a8d4", 10);
+        playSound("shieldThrow", 0.8, 260);
+        if (ball.side === "left") game.stats.left.totalShots++;
+        else game.stats.right.totalShots++;
+      }
+    };
+
+    const checkTetherIntersection = (thread, game) => {
+      if (!game.bullets) return false;
+      const owner = game.balls.find(b => b.id === thread.ownerId);
+      if (!owner) return false;
+      
+      const anchorPoint = {
+        x: owner.x + Math.cos(thread.anchorAngle || 0) * (thread.anchorRadius || owner.r + 8),
+        y: owner.y + Math.sin(thread.anchorAngle || 0) * (thread.anchorRadius || owner.r + 8)
+      };
+      const points = [anchorPoint, ...(thread.points || []), { x: thread.x, y: thread.y }];
+      
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        
+        for (const bullet of game.bullets) {
+          if (bullet.ownerId === thread.ownerId) continue;
+          
+          const dist = linePointDist(bullet.x, bullet.y, p1.x, p1.y, p2.x, p2.y);
+          if (dist < bullet.r + 6) {
+            bullet.life = 0; // destroy projectile
+            return true;
+          }
+        }
+      }
+      return false;
     };
 
     const updateJokerThreads = (dt) => {
@@ -4766,10 +4640,24 @@ export default function App() {
         const owner = game.balls.find((ball) => ball.id === thread.ownerId);
         if (!owner) return false;
         const bal = game.balance.joker || BALANCE.joker;
+        
         const getAnchorPoint = () => ({
           x: owner.x + Math.cos(thread.anchorAngle || 0) * (thread.anchorRadius || owner.r + 8),
           y: owner.y + Math.sin(thread.anchorAngle || 0) * (thread.anchorRadius || owner.r + 8)
         });
+
+        const finishGumString = () => {
+          owner.jokerPullTargetId = null;
+          owner.jokerPullUntil = 0;
+          owner.jokerNextThreadAt = game.simTime + (bal.cooldown || 6000);
+          const target = game.balls.find((ball) => ball.id === thread.targetId);
+          if (target) {
+            target.jokerPulledUntil = 0;
+            target.jokerPullOwnerId = null;
+          }
+          return false;
+        };
+
         const startPathReturn = () => {
           if (thread.state === "returning") return true;
           const lastPoint = thread.points?.[thread.points.length - 1];
@@ -4781,17 +4669,7 @@ export default function App() {
           thread.life = Math.max(thread.life || 0, 2200);
           return true;
         };
-        const finishGumString = () => {
-          owner.jokerPullTargetId = null;
-          owner.jokerPullUntil = 0;
-          owner.jokerNextThreadAt = game.simTime + (bal.cooldown || 5200);
-          const target = game.balls.find((ball) => ball.id === thread.targetId);
-          if (target) {
-            target.jokerPulledUntil = 0;
-            target.jokerPullOwnerId = null;
-          }
-          return false;
-        };
+
         if (thread.state === "flying") {
           thread.life -= dt * 1000;
           if (thread.life <= 0) {
@@ -4803,20 +4681,25 @@ export default function App() {
           const target = game.balls.find((ball) => ball.side !== thread.ownerSide);
           if (!target || Math.hypot(thread.x - target.x, thread.y - target.y) > target.r + thread.r) return false;
           if (!canStartSkillConnection(owner, target, game.balls, game.simTime)) return false;
+          
           thread.points.push({ x: thread.x, y: thread.y });
           thread.state = "pulling";
           thread.targetId = target.id;
           thread.pullIndex = Math.max(0, thread.points.length - 2);
-          thread.life = Math.max(thread.life, bal.pullDuration || 1500);
+          thread.slamCount = 0;
+          thread.life = Math.max(thread.life, 2500);
+          
           owner.jokerPullTargetId = target.id;
-          owner.jokerPullUntil = game.simTime + (bal.pullDuration || 1500);
+          owner.jokerPullUntil = game.simTime + 2500;
           target.jokerPulledUntil = owner.jokerPullUntil;
           target.jokerPullOwnerId = owner.id;
           target.jokerPullOwnerSide = owner.side;
-          applyDamage(target, bal.threadDamage || 3, `${owner.id}-joker-tip`, game.simTime, 500);
+
+          applyDamage(target, 4, `${owner.id}-joker-tip`, game.simTime, 500);
+          
           const ownerStats = owner.side === "left" ? game.stats.left : game.stats.right;
           if (ownerStats) {
-            ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(bal.threadDamage || 3));
+            ownerStats.damageDealt += 4;
             ownerStats.hitsLanded++;
           }
           spawnSparks(target.x, target.y, "#f9a8d4", 16);
@@ -4826,8 +4709,8 @@ export default function App() {
             x: target.x,
             y: target.y - target.r - 18,
             vy: -55,
-            text: "HOOKED",
-            color: "#f9a8d4",
+            text: "HOOKED!",
+            color: "#fb7185",
             life: 0.7,
             maxLife: 0.7
           });
@@ -4835,114 +4718,163 @@ export default function App() {
         };
 
         if (thread.state === "flying") {
-          thread.x += thread.vx * dt;
-          thread.y += thread.vy * dt;
-          let bounced = false;
-          if (thread.x - thread.r < pad) {
-            thread.x = pad + thread.r;
-            thread.vx = Math.abs(thread.vx);
-            bounced = true;
-          } else if (thread.x + thread.r > game.width - pad) {
-            thread.x = game.width - pad - thread.r;
-            thread.vx = -Math.abs(thread.vx);
-            bounced = true;
-          }
-          if (thread.y - thread.r < pad) {
-            thread.y = pad + thread.r;
-            thread.vy = Math.abs(thread.vy);
-            bounced = true;
-          } else if (thread.y + thread.r > game.height - pad) {
-            thread.y = game.height - pad - thread.r;
-            thread.vy = -Math.abs(thread.vy);
-            bounced = true;
-          }
-          if (bounced) {
-            thread.points.push({ x: thread.x, y: thread.y });
-            thread.bouncesLeft -= 1;
-            spawnSparks(thread.x, thread.y, "#f9a8d4", 8);
-            playSound("stringTwang", 0.65, 260);
-            if (thread.bouncesLeft <= 0) {
-              startPathReturn();
+            thread.x += thread.vx * dt;
+            thread.y += thread.vy * dt;
+            let bounced = false;
+            if (thread.x - thread.r < pad) {
+              thread.x = pad + thread.r;
+              thread.vx = Math.abs(thread.vx);
+              bounced = true;
+            } else if (thread.x + thread.r > game.width - pad) {
+              thread.x = game.width - pad - thread.r;
+              thread.vx = -Math.abs(thread.vx);
+              bounced = true;
             }
+            if (thread.y - thread.r < pad) {
+              thread.y = pad + thread.r;
+              thread.vy = Math.abs(thread.vy);
+              bounced = true;
+            } else if (thread.y + thread.r > game.height - pad) {
+              thread.y = game.height - pad - thread.r;
+              thread.vy = -Math.abs(thread.vy);
+              bounced = true;
+            }
+            if (bounced) {
+              thread.points.push({ x: thread.x, y: thread.y });
+              thread.bouncesLeft -= 1;
+              spawnSparks(thread.x, thread.y, "#f9a8d4", 6);
+              playSound("stringTwang", 0.65, 260);
+              if (thread.bouncesLeft <= 0) {
+                startPathReturn();
+              }
+            }
+
+            tryHookTarget();
+            return true;
           }
 
-          tryHookTarget();
-          return true;
-        }
+          if (thread.state === "returning") {
+            const point = thread.returnIndex <= 0 ? getAnchorPoint() : thread.points[thread.returnIndex];
+            const dx = point.x - thread.x;
+            const dy = point.y - thread.y;
+            const dist = Math.max(1, Math.hypot(dx, dy));
+            const speed = (bal.throwSpeed || 580) * 1.25;
+            thread.x += (dx / dist) * speed * dt;
+            thread.y += (dy / dist) * speed * dt;
+            if (dist < 12) {
+              thread.returnIndex -= 1;
+            }
 
-        if (thread.state === "returning") {
-          const point = thread.returnIndex <= 0 ? getAnchorPoint() : thread.points[thread.returnIndex];
-          const dx = point.x - thread.x;
-          const dy = point.y - thread.y;
-          const dist = Math.max(1, Math.hypot(dx, dy));
-          const speed = (bal.pullSpeed || 620) * 1.1;
-          thread.x += (dx / dist) * speed * dt;
-          thread.y += (dy / dist) * speed * dt;
-          if (dist < 12) {
-            thread.returnIndex -= 1;
+            if (tryHookTarget()) return true;
+            const anchor = getAnchorPoint();
+            if (thread.returnIndex < 0 || Math.hypot(thread.x - anchor.x, thread.y - anchor.y) < 14) {
+              spawnSparks(owner.x, owner.y, "#f9a8d4", 8);
+              return finishGumString();
+            }
+            return true;
           }
-          if (tryHookTarget()) return true;
-          const anchor = getAnchorPoint();
-          if (thread.returnIndex < 0 || Math.hypot(thread.x - anchor.x, thread.y - anchor.y) < 14) {
-            spawnSparks(owner.x, owner.y, "#f9a8d4", 8);
-            return finishGumString();
-          }
-          return true;
-        }
 
-        if (thread.state === "pulling") {
-          const target = game.balls.find((ball) => ball.id === thread.targetId);
-          if (!target || target.health <= 0) return finishGumString();
-          const ownerPoint = getAnchorPoint();
-          const point = thread.pullIndex <= 0 ? ownerPoint : thread.points[thread.pullIndex];
-          const dx = point.x - target.x;
-          const dy = point.y - target.y;
-          const dist = Math.max(1, Math.hypot(dx, dy));
-          const speed = bal.pullSpeed || 620;
-          const wallRecovery = game.simTime < (thread.lastWallNudgeAt || 0) + 140;
-          const pullSpeed = wallRecovery ? speed * 0.45 : speed;
-          target.vx = (dx / dist) * pullSpeed;
-          target.vy = (dy / dist) * pullSpeed;
-          target.jokerPulledUntil = game.simTime + 80;
-          target.jokerPullOwnerId = owner.id;
-          target.jokerPullOwnerSide = owner.side;
-          owner.jokerPullUntil = game.simTime + 220;
-          thread.x = target.x;
-          thread.y = target.y;
-          if (dist < Math.max(18, target.r * 0.7)) {
-            thread.pullIndex -= 1;
-            spawnSparks(target.x, target.y, "#fecdd3", 6);
-          }
-          if (thread.pullIndex < 0 || Math.hypot(target.x - ownerPoint.x, target.y - ownerPoint.y) < target.r + 14) {
-            const releaseAngle = Math.atan2(target.y - ownerPoint.y, target.x - ownerPoint.x);
-            target.vx = Math.cos(releaseAngle) * 330;
-            target.vy = Math.sin(releaseAngle) * 330;
-            target.jokerPulledUntil = 0;
-            target.jokerPullOwnerId = null;
-            owner.jokerPullTargetId = null;
-            owner.jokerPullUntil = 0;
-            spawnSparks(owner.x, owner.y, "#fb7185", 12);
-            return finishGumString();
-          }
-          return true;
-        }
+          if (thread.state === "pulling") {
+            const target = game.balls.find((ball) => ball.id === thread.targetId);
+            if (!target || target.health <= 0) return finishGumString();
 
-        return false;
-      });
-    };
+            const targetDashing = isWreckerJumpInvulnerable(target) || (target.type === "hammer" && target.hammerState === "launching");
+            const tetherIntersected = checkTetherIntersection(thread, game);
+            
+            if (targetDashing || tetherIntersected) {
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: target.x, y: target.y - target.r - 20, vy: -50,
+                text: targetDashing ? "SEVERED! (DASH)" : "SEVERED! (PROJECTILE)",
+                color: "#38bdf8", life: 0.8, maxLife: 0.8
+              });
+              playSound("stringTwang", 1.0, 150);
+              return finishGumString();
+            }
 
-    const drawTridentText = (ball, text, color) => {
-      game.floatingTexts = game.floatingTexts || [];
-      game.floatingTexts.push({
-        x: ball.x,
-        y: ball.y - ball.r - 22,
-        vy: -48,
-        text,
-        color,
-        life: 0.8,
-        maxLife: 0.8
-      });
-    };
+            const ownerPoint = getAnchorPoint();
+            const point = thread.pullIndex <= 0 ? ownerPoint : thread.points[thread.pullIndex];
+            const dx = point.x - target.x;
+            const dy = point.y - target.y;
+            const dist = Math.max(1, Math.hypot(dx, dy));
+
+            const totalBounces = Math.max(0, thread.points.length - 2);
+            const pullSpeed = 500 + Math.min(5, totalBounces) * 64;
+
+            const wallRecovery = game.simTime < (thread.lastWallNudgeAt || 0) + 140;
+            const currentPullSpeed = wallRecovery ? pullSpeed * 0.45 : pullSpeed;
+
+            target.vx = (dx / dist) * currentPullSpeed;
+            target.vy = (dy / dist) * currentPullSpeed;
+            target.jokerPulledUntil = game.simTime + 80;
+            target.jokerPullOwnerId = owner.id;
+            target.jokerPullOwnerSide = owner.side;
+            owner.jokerPullUntil = game.simTime + 220;
+            thread.x = target.x;
+            thread.y = target.y;
+
+            if (dist < Math.max(18, target.r * 0.7)) {
+              thread.pullIndex -= 1;
+
+              if (game.simTime >= (target.jokerNextSlamAllowedAt || 0)) {
+                target.jokerNextSlamAllowedAt = game.simTime + 120;
+                
+                let slamCount = thread.slamCount || 0;
+                if (slamCount < 6) {
+                  thread.slamCount = slamCount + 1;
+                  
+                  const isNudge = Math.random() < 0.35;
+                  const slamDmg = isNudge ? 2.5 : 5.0;
+
+                  applyDamage(target, slamDmg, `${owner.id}-joker-slam-${thread.pullIndex}`, game.simTime, 100);
+                  const ownerStats = owner.side === "left" ? game.stats.left : game.stats.right;
+                  if (ownerStats) {
+                    ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(slamDmg));
+                  }
+                  spawnSparks(target.x, target.y, "#f9a8d4", 14);
+                  playSound("wallBounce", 1.0, 90);
+
+                  game.floatingTexts = game.floatingTexts || [];
+                  game.floatingTexts.push({
+                    x: target.x, y: target.y - target.r - 20, vy: -50,
+                    text: isNudge ? "NUDGED! -2.5" : "WALL SLAM! -5",
+                    color: isNudge ? "#22d3ee" : "#fb7185",
+                    life: 0.6, maxLife: 0.6
+                  });
+                }
+              }
+            }
+
+            if (thread.pullIndex < 0 || Math.hypot(target.x - ownerPoint.x, target.y - ownerPoint.y) < target.r + 14) {
+              const releaseAngle = Math.atan2(target.y - ownerPoint.y, target.x - ownerPoint.x);
+              target.vx = Math.cos(releaseAngle) * 330;
+              target.vy = Math.sin(releaseAngle) * 330;
+              target.jokerPulledUntil = 0;
+              target.jokerPullOwnerId = null;
+              owner.jokerPullTargetId = null;
+              owner.jokerPullUntil = 0;
+              spawnSparks(owner.x, owner.y, "#f9a8d4", 12);
+              return finishGumString();
+            }
+            return true;
+          }
+
+          return false;
+        });
+      };
+
+      const drawTridentText = (ball, text, color) => {
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x,
+          y: ball.y - ball.r - 22,
+          vy: -48,
+          text,
+          color,
+          life: 0.8,
+          maxLife: 0.8
+        });
+      };
 
     const startTridentRecall = (ball, currentTime) => {
       if (ball.tridentState === "held") return;
@@ -5085,6 +5017,7 @@ export default function App() {
               target.vy *= slowMultiplier;
               target.stringSlowUntil = currentTime + (bal.diveSlowDuration || 1600);
               target.webHitFlashUntil = currentTime + 220;
+              target.webHitFlashColor = "#38bdf8";
               ball.tridentDiveAngle = hitAngle;
               ball.tridentDiveX = target.x - Math.cos(hitAngle) * target.r * 0.3;
               ball.tridentDiveY = target.y - Math.sin(hitAngle) * target.r * 0.3;
@@ -5860,7 +5793,8 @@ export default function App() {
           if (bullet.y > game.height - pad) { bullet.y = game.height - pad; bullet.vy = -Math.abs(bullet.vy); bounced = true; }
           if (bounced) {
             if (bullet.kind !== "dragonFireball") {
-              bullet.bouncesLeft = (bullet.bouncesLeft ?? (bullet.kind === "laserPulse" ? 4 : 3)) - 1;
+              const defaultBounces = bullet.kind === "laserPulse" ? 4 : 3;
+              bullet.bouncesLeft = (bullet.bouncesLeft ?? defaultBounces) - 1;
               if (bullet.bouncesLeft < 0) return false;
             }
             spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : "#facc15", 8);
@@ -6718,6 +6652,106 @@ export default function App() {
       }
     };
 
+    const drawBlackSpiderBall = (ball) => {
+      const config = BALL_TYPES.blackSpider || { color: "#020617", stroke: "#f1f5f9" };
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      
+      // 1. Draw writhing tendrils/legs
+      ctx.strokeStyle = "#090d16";
+      ctx.lineWidth = 4.5;
+      ctx.lineCap = "round";
+      
+      const timeOffset = game.simTime * 0.016;
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3 + Math.sin(timeOffset + i) * 0.22;
+        const jX = Math.cos(angle) * ball.r;
+        const jY = Math.sin(angle) * ball.r;
+        const cX = Math.cos(angle + 0.1) * (ball.r + 8 + Math.sin(timeOffset * 2 + i) * 4);
+        const cY = Math.sin(angle + 0.1) * (ball.r + 8 + Math.sin(timeOffset * 2 + i) * 4);
+        const tX = Math.cos(angle) * (ball.r + 14 + Math.sin(timeOffset * 1.5 + i) * 6);
+        const tY = Math.sin(angle) * (ball.r + 14 + Math.sin(timeOffset * 1.5 + i) * 6);
+        
+        ctx.beginPath();
+        ctx.moveTo(jX * 0.8, jY * 0.8);
+        ctx.quadraticCurveTo(cX, cY, tX, tY);
+        ctx.stroke();
+      }
+
+      // 2. Draw glossy black body background
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const metalGrad = ctx.createRadialGradient(
+        -ball.r * 0.25, -ball.r * 0.25, 2,
+        0, 0, ball.r
+      );
+      metalGrad.addColorStop(0, "#1f2937");
+      metalGrad.addColorStop(0.4, "#0f172a");
+      metalGrad.addColorStop(0.75, "#020617");
+      metalGrad.addColorStop(1, "#000000");
+      ctx.fillStyle = metalGrad;
+      ctx.fill();
+
+      // 2b. Draw white web pattern inside the black spider ball
+      ctx.save();
+      ctx.strokeStyle = "rgba(241, 245, 249, 0.4)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.95, 0); ctx.lineTo(ball.r * 0.95, 0);
+      ctx.moveTo(0, -ball.r * 0.95); ctx.lineTo(0, ball.r * 0.95);
+      ctx.moveTo(-ball.r * 0.67, -ball.r * 0.67); ctx.lineTo(ball.r * 0.67, ball.r * 0.67);
+      ctx.moveTo(-ball.r * 0.67, ball.r * 0.67); ctx.lineTo(ball.r * 0.67, -ball.r * 0.67);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.42, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.72, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Outer light stroke
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = config.stroke || "#f1f5f9";
+      ctx.stroke();
+
+      // 3. Draw white eye markings (Venom style)
+      const isAggressive = ball.blackSpiderAnchorState === "dashing" || ball.blackSpiderAnchorState === "pulling" || ball.blackSpiderMarkedTargetId;
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#f1f5f9";
+      ctx.shadowBlur = isAggressive ? 6 : 2;
+
+      // Left eye path
+      ctx.beginPath();
+      if (isAggressive) {
+        ctx.moveTo(-16, -6);
+        ctx.quadraticCurveTo(-6, -11, -3, -5);
+        ctx.quadraticCurveTo(-7, -4, -16, -6);
+      } else {
+        ctx.moveTo(-18, -2);
+        ctx.quadraticCurveTo(-11, -16, -4, -4);
+        ctx.quadraticCurveTo(-10, -5, -18, -2);
+      }
+      ctx.fill();
+
+      // Right eye path
+      ctx.beginPath();
+      if (isAggressive) {
+        ctx.moveTo(16, -6);
+        ctx.quadraticCurveTo(6, -11, 3, -5);
+        ctx.quadraticCurveTo(7, -4, 16, -6);
+      } else {
+        ctx.moveTo(18, -2);
+        ctx.quadraticCurveTo(11, -16, 4, -4);
+        ctx.quadraticCurveTo(10, -5, 18, -2);
+      }
+      ctx.fill();
+
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawBomberBall = (ball) => {
       const config = BALL_TYPES.bomber;
       ctx.save(); ctx.translate(ball.x, ball.y);
@@ -7448,7 +7482,7 @@ export default function App() {
 
         ctx.save();
         ctx.lineCap = "round";
-        ctx.strokeStyle = side === "left" ? "#38bdf8" : "#fb923c";
+        ctx.strokeStyle = side === "left" ? "#0ea5e9" : "#3b82f6";
         ctx.shadowColor = ctx.strokeStyle;
         ctx.shadowBlur = hasCircle ? 10 : 4;
         ctx.lineWidth = 7;
@@ -7462,10 +7496,10 @@ export default function App() {
         ctx.moveTo(sx, sy);
         ctx.quadraticCurveTo(midX, midY, ex, ey);
         ctx.stroke();
-        ctx.fillStyle = side === "left" ? "#bae6fd" : "#fed7aa";
+        ctx.fillStyle = side === "left" ? "#bae6fd" : "#bfdbfe";
         ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI * 2); ctx.fill();
         if (targetControlledByArm) {
-          ctx.strokeStyle = side === "left" ? "rgba(186, 230, 253, 0.75)" : "rgba(254, 215, 170, 0.75)";
+          ctx.strokeStyle = side === "left" ? "rgba(186, 230, 253, 0.75)" : "rgba(191, 219, 254, 0.75)";
           ctx.lineWidth = 2;
           ctx.setLineDash([5, 8]);
           ctx.lineDashOffset = -game.simTime * 0.08;
@@ -7490,36 +7524,119 @@ export default function App() {
       ctx.translate(ball.x, ball.y);
       if (ball.chaosFlashUntil && game.simTime < ball.chaosFlashUntil) {
         ctx.globalAlpha = 0.3;
-        ctx.strokeStyle = "#fdba74";
+        ctx.strokeStyle = "#f59e0b";
         ctx.lineWidth = 5;
         ctx.beginPath(); ctx.arc(0, 0, ball.r + 10 + pulse * 10, 0, Math.PI * 2); ctx.stroke();
         ctx.globalAlpha = 1;
       }
 
-      ctx.shadowColor = "#fb923c";
-      ctx.shadowBlur = 10 + pulse * 8;
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const grad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
-      grad.addColorStop(0, "#475569");
-      grad.addColorStop(0.5, config.color);
-      grad.addColorStop(1, "#020617");
-      ctx.fillStyle = grad; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+      // 1. Dark navy background for the ball
+      ctx.fillStyle = "#0c101d";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.fill();
+
+      // 2. High-contrast orange-gold outer strokes
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#ea580c";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.stroke();
+
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#f59e0b";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r - 2, 0, Math.PI * 2); ctx.stroke();
+
+      // 3. Glowing orange-gold mystical magic circles (Tao Mandalas)
+      ctx.shadowColor = "#f59e0b";
+      ctx.shadowBlur = 8 + pulse * 4;
+
+      const rRing1 = ball.r * 0.76;
+      const rRing2 = ball.r * 0.64;
+
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, rRing1, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, rRing2, 0, Math.PI * 2); ctx.stroke();
+
+      // Intersecting rotated squares (spinning 8-point mandala star)
+      ctx.save();
+      ctx.rotate(game.simTime * 0.0035);
+      ctx.beginPath();
+      for (let i = 0; i <= 4; i++) {
+        const angle = (i * Math.PI) / 2;
+        const px = Math.cos(angle) * rRing2;
+        const py = Math.sin(angle) * rRing2;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (let i = 0; i <= 4; i++) {
+        const angle = (i * Math.PI) / 2 + Math.PI / 4;
+        const px = Math.cos(angle) * rRing2;
+        const py = Math.sin(angle) * rRing2;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // 4. Arcane runes rotating counter-wise between the gold rings
+      ctx.save();
+      ctx.rotate(-game.simTime * 0.0018);
+      const rRune = (rRing1 + rRing2) / 2;
+      ctx.strokeStyle = "#f59e0b";
+      ctx.fillStyle = "#f59e0b";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI) / 4;
+        ctx.save();
+        ctx.rotate(angle);
+        ctx.translate(rRune, 0);
+        ctx.beginPath();
+        if (i % 3 === 0) {
+          // Tiny diamond
+          ctx.moveTo(-1.5, 0);
+          ctx.lineTo(0, -1.5);
+          ctx.lineTo(1.5, 0);
+          ctx.lineTo(0, 1.5);
+          ctx.closePath();
+          ctx.fill();
+        } else if (i % 3 === 1) {
+          // Radial tick mark
+          ctx.moveTo(0, -2);
+          ctx.lineTo(0, 2);
+          ctx.stroke();
+        } else {
+          // Small triangle
+          ctx.moveTo(-1.5, -1.5);
+          ctx.lineTo(1.5, 0);
+          ctx.lineTo(-1.5, 1.5);
+          ctx.closePath();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // 5. Subtle green magical accents
+      ctx.shadowColor = "#10b981";
+      ctx.shadowBlur = 4;
+      ctx.fillStyle = "#10b981";
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI) / 2 + game.simTime * 0.0015;
+        const px = Math.cos(angle) * (ball.r * 0.48);
+        const py = Math.sin(angle) * (ball.r * 0.48);
+        ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
 
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#fdba74";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.62, game.simTime * 0.006, game.simTime * 0.006 + Math.PI * 1.35); ctx.stroke();
-      ctx.strokeStyle = "#38bdf8";
-      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.38, -game.simTime * 0.007, -game.simTime * 0.007 + Math.PI * 1.45); ctx.stroke();
 
-      ctx.fillStyle = "#f8fafc";
-      ctx.beginPath(); ctx.arc(-8, -5, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(8, -5, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#fb923c";
-      ctx.beginPath(); ctx.arc(-8 + Math.sin(game.simTime * 0.01) * 1.5, -5, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#38bdf8";
-      ctx.beginPath(); ctx.arc(8 - Math.sin(game.simTime * 0.01) * 1.5, -5, 2, 0, Math.PI * 2); ctx.fill();
+      // 6. Eye of Agamotto / Center stat number backdrop (Clean dark area for high contrast)
+      ctx.fillStyle = "#070b13";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.42, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = "#10b981";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.42, 0, Math.PI * 2); ctx.stroke();
 
       const cd = Math.max(0, (ball.nextChaosAt || 0) - game.simTime);
       if (cd > 0) {
@@ -8169,72 +8286,7 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawJudgerBall = (ball) => {
-      const config = BALL_TYPES.judger;
-      const pulse = 0.5 + Math.sin(game.simTime * 0.011) * 0.5;
-      const flash = ball.judgementFlashUntil && game.simTime < ball.judgementFlashUntil;
 
-      ctx.save();
-      ctx.translate(ball.x, ball.y);
-      if (flash) {
-        ctx.globalAlpha = 0.28 + pulse * 0.18;
-        ctx.strokeStyle = "#c084fc";
-        ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.arc(0, 0, ball.r + 12 + pulse * 7, 0, Math.PI * 2); ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
-
-      ctx.shadowColor = "#a78bfa";
-      ctx.shadowBlur = 12 + pulse * 8;
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const grad = ctx.createRadialGradient(-ball.r * 0.32, -ball.r * 0.36, 4, 0, 0, ball.r);
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.5, config.color);
-      grad.addColorStop(1, "#7c3aed");
-      ctx.fillStyle = grad;
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = config.stroke;
-      ctx.stroke();
-
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#111827";
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(0, -ball.r * 0.55);
-      ctx.lineTo(0, ball.r * 0.45);
-      ctx.moveTo(-ball.r * 0.46, -ball.r * 0.2);
-      ctx.lineTo(ball.r * 0.46, -ball.r * 0.2);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#fbbf24";
-      ctx.lineWidth = 2;
-      const sway = Math.sin(game.simTime * 0.008) * 0.08;
-      const drawScale = (side) => {
-        const x = side * ball.r * 0.36;
-        ctx.beginPath();
-        ctx.moveTo(x, -ball.r * 0.2);
-        ctx.lineTo(x + side * sway * 18, ball.r * 0.18);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.ellipse(x + side * sway * 18, ball.r * 0.24, 8, 4, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      };
-      drawScale(-1);
-      drawScale(1);
-
-      const cd = Math.max(0, (ball.nextJudgementAt || 0) - game.simTime);
-      if (cd > 0) {
-        ctx.fillStyle = "#111827";
-        ctx.font = "bold 8px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(`${Math.ceil(cd / 1000)}s`, 0, ball.r + 14);
-      }
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
 
     const drawJokerBall = (ball) => {
       const config = BALL_TYPES.joker;
@@ -8252,66 +8304,60 @@ export default function App() {
         ctx.globalAlpha = 1;
       }
 
-      const grad = ctx.createRadialGradient(-ball.r * 0.28, -ball.r * 0.38, 4, 0, 0, ball.r);
-      grad.addColorStop(0, "#fecdd3");
-      grad.addColorStop(0.5, config.color);
-      grad.addColorStop(1, "#ef4444");
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
+      // 1. Solid rose body background
+      ctx.fillStyle = "#fb7185";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.fill();
+
+      // Outer gold border stroke
       ctx.lineWidth = 4;
-      ctx.strokeStyle = config.stroke;
+      ctx.strokeStyle = "#f9a8d4";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.stroke();
+
+      // 2. Inner light rose disc
+      ctx.fillStyle = "#ffe4e6";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.78, 0, Math.PI * 2); ctx.fill();
+
+      // 3. Draw clean concentric target rings to represent the hunter/angler theme
+      ctx.strokeStyle = "#be123c";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.58, 0, Math.PI * 2);
       ctx.stroke();
 
-      const drawClub = (x, y, scale) => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(scale, scale);
-        ctx.fillStyle = "#020617";
-        ctx.beginPath(); ctx.arc(0, -5, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-5, 1, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(5, 1, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-2, 4);
-        ctx.lineTo(2, 4);
-        ctx.lineTo(4, 11);
-        ctx.lineTo(-4, 11);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      };
+      // 4. Center clean dark backdrop for the large HP stat number
+      ctx.fillStyle = "#4c0519";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.38, 0, Math.PI * 2); ctx.fill();
 
-      const drawSpade = (x, y, scale) => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(scale, scale);
-        ctx.fillStyle = "#020617";
-        ctx.beginPath();
-        ctx.moveTo(0, -12);
-        ctx.bezierCurveTo(-13, -2, -11, 8, -3, 8);
-        ctx.bezierCurveTo(-1, 8, 0, 7, 0, 6);
-        ctx.bezierCurveTo(0, 7, 1, 8, 3, 8);
-        ctx.bezierCurveTo(11, 8, 13, -2, 0, -12);
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-3, 8);
-        ctx.lineTo(3, 8);
-        ctx.lineTo(5, 14);
-        ctx.lineTo(-5, 14);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      };
+      ctx.strokeStyle = "#f9a8d4";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.38, 0, Math.PI * 2); ctx.stroke();
 
-      ctx.shadowBlur = 0;
-      drawClub(-ball.r * 0.36, 1, 0.82);
-      drawSpade(ball.r * 0.36, 0, 0.78);
+      // 5. Draw reel meter progress ring around Joker Ball if pulling
+      const activeThread = game.jokerThreads && game.jokerThreads.find(t => t.ownerId === ball.id && t.state === "pulling");
+      if (activeThread) {
+        const totalNodes = activeThread.points.length;
+        const remainingNodes = activeThread.pullIndex + 1;
+        const progress = remainingNodes / Math.max(1, totalNodes);
+        
+        ctx.save();
+        ctx.strokeStyle = "rgba(217, 70, 239, 0.25)";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + 6, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.strokeStyle = "#d946ef";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       const cd = Math.max(0, (ball.jokerNextThreadAt || 0) - game.simTime);
       if (cd > 0) {
-        ctx.fillStyle = "#020617";
+        ctx.fillStyle = "#ffe4e6";
         ctx.font = "bold 8px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(`${Math.ceil(cd / 1000)}s`, 0, ball.r + 14);
@@ -8328,17 +8374,93 @@ export default function App() {
           x: owner.x + Math.cos(thread.anchorAngle || 0) * (thread.anchorRadius || owner.r + 8),
           y: owner.y + Math.sin(thread.anchorAngle || 0) * (thread.anchorRadius || owner.r + 8)
         } : null;
-        const points = anchor ? [anchor, ...(thread.points || [])] : [...(thread.points || [])];
+        if (!anchor) return;
+
+        // Dotted trajectory preview
+        if (thread.state === "flying") {
+          ctx.save();
+          ctx.strokeStyle = "rgba(249, 168, 212, 0.45)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 6]);
+          
+          let tx = thread.x, ty = thread.y;
+          let tvx = thread.vx, tvy = thread.vy;
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          
+          for (let b = 0; b < 2; b++) {
+            const pad = 18 + (thread.r || 9);
+            let tMin = Infinity;
+            let sideHit = "";
+            
+            if (tvx < 0) {
+              const t = (pad - tx) / tvx;
+              if (t > 0 && t < tMin) { tMin = t; sideHit = "left"; }
+            } else if (tvx > 0) {
+              const t = (game.width - pad - tx) / tvx;
+              if (t > 0 && t < tMin) { tMin = t; sideHit = "right"; }
+            }
+            
+            if (tvy < 0) {
+              const t = (pad - ty) / tvy;
+              if (t > 0 && t < tMin) { tMin = t; sideHit = "top"; }
+            } else if (tvy > 0) {
+              const t = (game.height - pad - ty) / tvy;
+              if (t > 0 && t < tMin) { tMin = t; sideHit = "bottom"; }
+            }
+            
+            if (tMin !== Infinity) {
+              tx += tvx * tMin;
+              ty += tvy * tMin;
+              ctx.lineTo(tx, ty);
+              if (sideHit === "left" || sideHit === "right") tvx = -tvx;
+              if (sideHit === "top" || sideHit === "bottom") tvy = -tvy;
+            }
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Draw faint glowing original path guide line when pulling
+        if (thread.state === "pulling") {
+          ctx.save();
+          ctx.strokeStyle = "rgba(249, 168, 212, 0.25)";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          const fullPoints = [anchor, ...(thread.points || [])];
+          ctx.moveTo(fullPoints[0].x, fullPoints[0].y);
+          for (let i = 1; i < fullPoints.length; i++) {
+            ctx.lineTo(fullPoints[i].x, fullPoints[i].y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Construct active remaining segments
+        const points = [anchor];
+        if (thread.state === "pulling") {
+          for (let i = 0; i <= thread.pullIndex; i++) {
+            if (thread.points[i]) points.push(thread.points[i]);
+          }
+        } else {
+          points.push(...(thread.points || []));
+        }
         points.push({ x: thread.x, y: thread.y });
-        if (points.length < 2) return;
 
         ctx.save();
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.shadowColor = "#f9a8d4";
+        
+        const isTense = thread.state === "pulling";
+        const threadColor = isTense ? "rgba(225, 29, 72, 0.95)" : "rgba(249, 168, 212, 0.85)";
+        const glowColor = isTense ? "#e11d48" : "#f9a8d4";
+        const threadWidth = isTense ? 8 : 6;
+
+        ctx.shadowColor = glowColor;
         ctx.shadowBlur = 14;
-        ctx.strokeStyle = "rgba(249, 168, 212, 0.9)";
-        ctx.lineWidth = 8;
+        ctx.strokeStyle = threadColor;
+        ctx.lineWidth = threadWidth;
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
@@ -8352,17 +8474,17 @@ export default function App() {
         for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
         ctx.stroke();
 
-        const pulse = 0.75 + Math.sin(game.simTime * 0.024) * 0.25;
-        ctx.shadowColor = "#fb7185";
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = "#fff1f2";
+        // Draw the tip as a glowing pink gum blob
+        ctx.save();
+        ctx.translate(thread.x, thread.y);
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = isTense ? "#e11d48" : "#d946ef";
         ctx.beginPath();
-        ctx.arc(thread.x, thread.y, (thread.r || 9) + pulse * 4, 0, Math.PI * 2);
+        ctx.arc(0, 0, thread.r || 9, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#fb7185";
-        ctx.beginPath();
-        ctx.arc(thread.x, thread.y, thread.r || 9, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.restore();
+        
         ctx.restore();
       });
     };
@@ -8396,8 +8518,9 @@ export default function App() {
       else if (ball.type === "shadow") drawShadowBall(ball);
       else if (ball.type === "chainsaw") drawChainsawBall(ball);
       else if (ball.type === "mirror") drawMirrorBall(ball);
-      else if (ball.type === "judger") drawJudgerBall(ball);
+
       else if (ball.type === "joker") drawJokerBall(ball);
+      else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -8424,9 +8547,9 @@ export default function App() {
         const progress = (ball.webHitFlashUntil - game.simTime) / 180;
         ctx.save();
         ctx.globalAlpha = Math.max(0, progress);
-        ctx.strokeStyle = "#f0abfc";
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 3;
-        ctx.shadowColor = "#d946ef";
+        ctx.shadowColor = ball.webHitFlashColor || BALL_TYPES[ball.type]?.color || "#ef4444";
         ctx.shadowBlur = 14;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 8 + (1 - progress) * 10, 0, Math.PI * 2);
@@ -8480,16 +8603,185 @@ export default function App() {
         ctx.fillText("ELECTRIFIED", ball.x, ball.y - ball.r - 14);
         ctx.restore();
       }
+
+      // Draw Attachment Resistance aura (shimmering silver honeycomb grid)
+      if (ball.attachmentResistanceUntil && game.simTime < ball.attachmentResistanceUntil) {
+        const progress = clamp((ball.attachmentResistanceUntil - game.simTime) / 1750, 0, 1);
+        ctx.save();
+        ctx.globalAlpha = 0.28 + progress * 0.42;
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#f1f5f9";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 9, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 6; i++) {
+          const angle = game.simTime * 0.005 + (i * Math.PI) / 3;
+          ctx.beginPath();
+          ctx.moveTo(ball.x + Math.cos(angle) * ball.r, ball.y + Math.sin(angle) * ball.r);
+          ctx.lineTo(ball.x + Math.cos(angle) * (ball.r + 14), ball.y + Math.sin(angle) * (ball.r + 14));
+          ctx.stroke();
+          
+          const nextAngle = game.simTime * 0.005 + ((i + 1) * Math.PI) / 3;
+          ctx.beginPath();
+          ctx.moveTo(ball.x + Math.cos(angle) * (ball.r + 14), ball.y + Math.sin(angle) * (ball.r + 14));
+          ctx.lineTo(ball.x + Math.cos(nextAngle) * (ball.r + 14), ball.y + Math.sin(nextAngle) * (ball.r + 14));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      if (ball.type === "blackSpider") {
+        if (ball.blackSpiderMarkedTargetId) {
+          const target = game.balls.find(o => o.id === ball.blackSpiderMarkedTargetId);
+          if (target) {
+            // Draw wall anchor puddle if pulling
+            if (ball.blackSpiderAnchorState === "pulling" && ball.blackSpiderAnchorWall) {
+              ctx.save();
+              ctx.translate(ball.blackSpiderAnchorWall.x, ball.blackSpiderAnchorWall.y);
+              ctx.fillStyle = "#090d16";
+              ctx.shadowColor = "#020617";
+              ctx.shadowBlur = 8;
+              ctx.beginPath();
+              ctx.arc(0, 0, 18, 0, Math.PI * 2);
+              ctx.fill();
+              
+              ctx.strokeStyle = "#020617";
+              ctx.lineWidth = 3;
+              for (let i = 0; i < 4; i++) {
+                const angle = (i * Math.PI) / 2 + Math.sin(game.simTime * 0.02 + i) * 0.4;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(angle) * 24, Math.sin(angle) * 24);
+                ctx.stroke();
+              }
+              ctx.restore();
+            }
+
+            // Draw elastic black-and-white cord
+            ctx.save();
+            const startPt = ball.blackSpiderAnchorState === "pulling" ? ball.blackSpiderAnchorWall : ball;
+            const dist = Math.hypot(target.x - startPt.x, target.y - startPt.y);
+            const isTense = dist > 400;
+            const wrap = ball.blackSpiderWrappedCorner;
+            
+            ctx.strokeStyle = isTense ? "#ef4444" : "#090d16";
+            ctx.lineWidth = isTense ? 8 : 6;
+            ctx.shadowColor = isTense ? "#ef4444" : "#020617";
+            ctx.shadowBlur = 10;
+            ctx.lineCap = "round";
+            
+            ctx.beginPath();
+            ctx.moveTo(startPt.x, startPt.y);
+            if (wrap) {
+              ctx.lineTo(wrap.x, wrap.y);
+            }
+            ctx.lineTo(target.x, target.y);
+            ctx.stroke();
+            
+            ctx.strokeStyle = "#f1f5f9";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 6]);
+            ctx.lineDashOffset = game.simTime * 0.03;
+            ctx.beginPath();
+            ctx.moveTo(startPt.x, startPt.y);
+            if (wrap) {
+              ctx.lineTo(wrap.x, wrap.y);
+            }
+            ctx.lineTo(target.x, target.y);
+            ctx.stroke();
+            
+            ctx.restore();
+          }
+        }
+
+        if (ball.blackSpiderAnchorState === "shooting") {
+          ctx.save();
+          ctx.translate(ball.blackSpiderProjectileX, ball.blackSpiderProjectileY);
+          ctx.fillStyle = "#020617";
+          ctx.shadowColor = "#3b82f6";
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(0, 0, 8, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.strokeStyle = "#3b82f6";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, 8, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.restore();
+        }
+
+        if (ball.blackSpiderAnchorState === "anchoring") {
+          ctx.save();
+          ctx.translate(ball.blackSpiderSecondaryAnchorX, ball.blackSpiderSecondaryAnchorY);
+          ctx.fillStyle = "#020617";
+          ctx.shadowColor = "#000000";
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(0, 0, 9, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.strokeStyle = "#cbd5e1";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 9, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Draw small organic tendril shapes wiggling around the anchor projectile
+          ctx.strokeStyle = "#020617";
+          ctx.lineWidth = 2.5;
+          for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI) / 2 + Math.sin(game.simTime * 0.05 + i) * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(angle) * 15, Math.sin(angle) * 15);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
     };
 
     const drawBallTrail = (ball) => {
       if (!ball.trail || ball.trail.length < 2) return;
       const config = BALL_TYPES[ball.type];
       ctx.save();
-      for (let i = 0; i < ball.trail.length; i++) {
-        const pt = ball.trail[i], progress = i / ball.trail.length;
-        ctx.globalAlpha = progress * 0.12; ctx.fillStyle = config.color;
-        ctx.beginPath(); ctx.arc(pt.x, pt.y, ball.r * (0.4 + 0.6 * progress), 0, Math.PI * 2); ctx.fill();
+      if (ball.type === "chaos") {
+        // Magical energy trails: multi-layered orange, gold, and blue glowing trail
+        for (let i = 0; i < ball.trail.length; i++) {
+          const pt = ball.trail[i];
+          const progress = i / ball.trail.length;
+          
+          // Outer orange/gold mystical trail
+          ctx.shadowColor = "#ea580c";
+          ctx.shadowBlur = 8 * progress;
+          ctx.globalAlpha = progress * 0.22;
+          ctx.fillStyle = "#f59e0b";
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, ball.r * (0.35 + 0.65 * progress), 0, Math.PI * 2);
+          ctx.fill();
+
+          // Inner glowing blue magic trail
+          ctx.shadowColor = "#3b82f6";
+          ctx.shadowBlur = 4 * progress;
+          ctx.globalAlpha = progress * 0.32;
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, ball.r * (0.18 + 0.42 * progress), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        for (let i = 0; i < ball.trail.length; i++) {
+          const pt = ball.trail[i], progress = i / ball.trail.length;
+          ctx.globalAlpha = progress * 0.12; ctx.fillStyle = config.color;
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, ball.r * (0.4 + 0.6 * progress), 0, Math.PI * 2); ctx.fill();
+        }
       }
       ctx.restore();
     };
@@ -8755,6 +9047,7 @@ export default function App() {
             ball.nextStringTrampolineAt = game.simTime + (stringBal.trampolineCooldown || 1100);
             ball.stringBounceWallBouncesLeft = 2;
             ball.webHitFlashUntil = game.simTime + 160;
+            ball.webHitFlashColor = "#d946ef";
             game.screenShake = Math.max(game.screenShake, 5);
             spawnSparks(xx, yy, "#f0abfc", 12);
             game.floatingTexts = game.floatingTexts || [];
@@ -8999,6 +9292,7 @@ export default function App() {
           ball.chaosControlledUntil = game.simTime + (bal.controlHold || 220) + (bal.controlDuration || 1200);
           ball.chaosDraggedUntil = game.simTime + 360;
           ball.webHitFlashUntil = game.simTime + 160;
+          ball.webHitFlashColor = circle.color || "#fdba74";
           ball.spinAngle = (ball.spinAngle || 0) + 0.85;
           circle.consumed = true;
           game.screenShake = Math.max(game.screenShake, 8);
@@ -9016,117 +9310,7 @@ export default function App() {
       });
     };
 
-    const updateJudgementFields = (dt) => {
-      if (!game.judgementFields) return;
-      const bal = game.balance.judger || BALANCE.judger;
-      const maxVerdicts = bal.maxVerdicts || BALANCE.judger.maxVerdicts;
-      game.judgementFields = game.judgementFields.filter((field) => {
-        field.life -= dt * 1000;
-        if (field.life <= 0) return false;
 
-        const active = game.simTime >= (field.warningUntil || 0);
-        game.balls.forEach((ball) => {
-          if (ball.side === field.ownerSide) return;
-          const dx = ball.x - field.x;
-          const dy = ball.y - field.y;
-          const dist = Math.max(0.001, Math.hypot(dx, dy));
-          const inside = dist <= field.r + ball.r * 0.2;
-          if (!inside) {
-            if (field.insideState) field.insideState[ball.id] = false;
-            return;
-          }
-          if (!active) {
-            ball.judgementWarnUntil = game.simTime + 160;
-            return;
-          }
-
-          ball.judgementFieldUntil = game.simTime + 180;
-          ball.judgementFieldColor = field.color;
-          const nx = dx / dist;
-          const ny = dy / dist;
-          const ownerStats = field.ownerSide === "left" ? game.stats.left : game.stats.right;
-
-          if (field.trial === "gravity") {
-            const pull = (bal.gravityPull || 145) * dt;
-            ball.vx += ((field.x - ball.x) / Math.max(1, field.r)) * pull;
-            ball.vy += ((field.y - ball.y) / Math.max(1, field.r)) * pull;
-            ball.judgementSlowUntil = game.simTime + 180;
-            ball.judgementSlowMultiplier = bal.slowMultiplier || 0.72;
-          } else if (field.trial === "verdict") {
-            if (!field.lastWallBounces) field.lastWallBounces = {};
-            if (!field.hitCounts) field.hitCounts = {};
-            const currentBounces = ball.consecutiveWallBounces || 0;
-            if (field.lastWallBounces[ball.id] === undefined) field.lastWallBounces[ball.id] = currentBounces;
-            const hitCount = field.hitCounts[ball.id] || 0;
-            if (currentBounces > field.lastWallBounces[ball.id] && hitCount < maxVerdicts) {
-              const damage = bal.verdictDamage || 2;
-              applyDamage(ball, damage, `${field.id}-verdict-${ball.id}-${hitCount}`, game.simTime, 80);
-              field.hitCounts[ball.id] = hitCount + 1;
-              ownerStats.damageDealt += Math.max(MIN_DAMAGE, damage);
-              ownerStats.hitsLanded++;
-              field.flashUntil = game.simTime + 260;
-              ball.webHitFlashUntil = game.simTime + 170;
-              game.screenShake = Math.max(game.screenShake, 6);
-              spawnSparks(ball.x, ball.y, field.color, 12);
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({
-                x: ball.x, y: ball.y - ball.r - 18, vy: -50,
-                text: `VERDICT -${damage}`,
-                color: field.color,
-                life: 0.65,
-                maxLife: 0.65
-              });
-            }
-            field.lastWallBounces[ball.id] = currentBounces;
-          } else if (field.trial === "lockdown") {
-            const cageR = field.r - ball.r * 0.9;
-            if (dist > cageR) {
-              ball.x = field.x + nx * cageR;
-              ball.y = field.y + ny * cageR;
-              const outwardVelocity = ball.vx * nx + ball.vy * ny;
-              if (outwardVelocity > -35) {
-                const tx = -ny;
-                const ty = nx;
-                const tangent = ball.vx * tx + ball.vy * ty;
-                const bounce = bal.edgeBounce || 360;
-                ball.vx = -nx * bounce + tx * (tangent * 0.62 + Math.sin(game.simTime * 0.02) * 70);
-                ball.vy = -ny * bounce + ty * (tangent * 0.62 + Math.cos(game.simTime * 0.018) * 70);
-                field.flashUntil = game.simTime + 200;
-                spawnSparks(ball.x, ball.y, field.color, 5);
-              }
-            }
-          } else if (field.trial === "reversal") {
-            const innerR = field.r * 0.48;
-            if (!field.insideState) field.insideState = {};
-            const wasInner = !!field.insideState[ball.id];
-            const isInner = dist < innerR;
-            const cooldownReady = game.simTime >= ((field.lastReversalAt || {})[ball.id] || 0);
-            if (wasInner !== isInner && cooldownReady) {
-              if (!field.lastReversalAt) field.lastReversalAt = {};
-              field.lastReversalAt[ball.id] = game.simTime + (bal.reversalCooldown || 900);
-              ball.vx *= -0.92;
-              ball.vy *= -0.92;
-              ball.spinAngle = (ball.spinAngle || 0) + Math.PI * 0.7;
-              field.flashUntil = game.simTime + 240;
-              ball.webHitFlashUntil = game.simTime + 150;
-              spawnSparks(ball.x, ball.y, field.color, 10);
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({
-                x: ball.x, y: ball.y - ball.r - 18, vy: -48,
-                text: "REVERSED",
-                color: field.color,
-                life: 0.58,
-                maxLife: 0.58
-              });
-              playSound("shieldBlock", 0.45, -120);
-            }
-            field.insideState[ball.id] = isInner;
-          }
-        });
-
-        return true;
-      });
-    };
 
     const drawCacti = () => {
       if (!game.cacti) return;
@@ -9461,21 +9645,17 @@ export default function App() {
         ctx.save();
         ctx.translate(circle.x, circle.y);
         ctx.globalAlpha = Math.min(1, 0.38 + lifeAlpha * 0.5 + (flash ? 0.22 : 0));
-        const grad = ctx.createRadialGradient(0, 0, 3, 0, 0, circle.r);
-        grad.addColorStop(0, circle.axis === "vertical" ? "rgba(56, 189, 248, 0.24)" : "rgba(251, 146, 60, 0.24)");
-        grad.addColorStop(0.65, "rgba(15, 23, 42, 0.1)");
-        grad.addColorStop(1, "rgba(15, 23, 42, 0)");
-        ctx.fillStyle = grad;
+        ctx.fillStyle = circle.axis === "vertical" ? "rgba(16, 185, 129, 0.22)" : "rgba(245, 158, 11, 0.22)";
         ctx.beginPath(); ctx.arc(0, 0, circle.r, 0, Math.PI * 2); ctx.fill();
 
-        ctx.strokeStyle = circle.color || "#fdba74";
+        ctx.strokeStyle = circle.color || "#f59e0b";
         ctx.lineWidth = flash ? 5 : 3;
         ctx.setLineDash([8, 7]);
         ctx.lineDashOffset = circle.axis === "vertical" ? -game.simTime * 0.045 : game.simTime * 0.045;
         ctx.beginPath(); ctx.arc(0, 0, circle.r + pulse * 3, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]);
 
-        ctx.fillStyle = circle.color || "#fdba74";
+        ctx.fillStyle = circle.color || "#f59e0b";
         ctx.strokeStyle = "#020617";
         ctx.lineWidth = 2;
         const arrowSize = 10 + pulse * 2;
@@ -9504,71 +9684,7 @@ export default function App() {
       });
     };
 
-    const drawJudgementFields = () => {
-      if (!game.judgementFields) return;
-      game.judgementFields.forEach((field) => {
-        const bal = game.balance.judger || BALANCE.judger;
-        const totalLife = (bal.fieldLife || BALANCE.judger.fieldLife) + (bal.warningTime || BALANCE.judger.warningTime);
-        const lifeAlpha = clamp(field.life / Math.max(1, totalLife), 0, 1);
-        const warning = game.simTime < (field.warningUntil || 0);
-        const pulse = 0.5 + Math.sin(game.simTime * 0.012 + field.createdTime * 0.01) * 0.5;
-        const flash = game.simTime < (field.flashUntil || 0);
 
-        ctx.save();
-        ctx.translate(field.x, field.y);
-        ctx.globalAlpha = Math.min(1, 0.32 + lifeAlpha * 0.46 + (flash ? 0.22 : 0));
-        const grad = ctx.createRadialGradient(0, 0, 5, 0, 0, field.r);
-        grad.addColorStop(0, warning ? "rgba(248, 250, 252, 0.08)" : `${field.color}22`);
-        grad.addColorStop(0.58, warning ? "rgba(124, 58, 237, 0.08)" : "rgba(124, 58, 237, 0.13)");
-        grad.addColorStop(1, "rgba(15, 23, 42, 0)");
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.arc(0, 0, field.r, 0, Math.PI * 2); ctx.fill();
-
-        ctx.strokeStyle = warning ? "rgba(248, 250, 252, 0.7)" : field.color;
-        ctx.lineWidth = warning ? 2.5 : flash ? 5 : 3.5;
-        ctx.setLineDash(warning ? [5, 9] : [14, 8]);
-        ctx.lineDashOffset = warning ? -game.simTime * 0.055 : game.simTime * 0.04;
-        ctx.beginPath(); ctx.arc(0, 0, field.r + pulse * 4, 0, Math.PI * 2); ctx.stroke();
-        ctx.setLineDash([]);
-
-        const innerR = field.trial === "reversal" ? field.r * 0.48 : field.r * 0.66;
-        ctx.globalAlpha *= warning ? 0.55 : 0.82;
-        ctx.strokeStyle = field.color;
-        ctx.lineWidth = 1.8;
-        ctx.beginPath(); ctx.arc(0, 0, innerR + Math.sin(game.simTime * 0.018) * 3, 0, Math.PI * 2); ctx.stroke();
-
-        ctx.globalAlpha = warning ? 0.68 : 0.9;
-        ctx.fillStyle = warning ? "#e2e8f0" : field.color;
-        ctx.font = "900 16px Arial, sans-serif";
-        ctx.textAlign = "center";
-        ctx.shadowColor = "rgba(15, 23, 42, 0.9)";
-        ctx.shadowBlur = 5;
-        ctx.fillText(warning ? "TRIAL" : field.label, 0, -4);
-        ctx.font = "800 10px Arial, sans-serif";
-        const secondsLeft = Math.max(0, Math.ceil((warning ? field.warningUntil - game.simTime : field.life) / 1000));
-        ctx.fillText(warning ? "OPENING" : `${secondsLeft}s`, 0, 13);
-
-        const marks = field.trial === "verdict" ? 5 : 4;
-        ctx.shadowBlur = 0;
-        for (let i = 0; i < marks; i++) {
-          const a = game.simTime * 0.0015 + (i / marks) * Math.PI * 2;
-          const x = Math.cos(a) * field.r * 0.82;
-          const y = Math.sin(a) * field.r * 0.82;
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(a + Math.PI / 2);
-          ctx.fillStyle = field.color;
-          ctx.beginPath();
-          ctx.moveTo(0, -7);
-          ctx.lineTo(5, 5);
-          ctx.lineTo(-5, 5);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
-        }
-        ctx.restore();
-      });
-    };
 
     const drawStringWebBall = (ball) => {
       const config = BALL_TYPES.stringWeb;
@@ -9798,6 +9914,9 @@ export default function App() {
           game.balls.forEach((ball) => {
             const isPulling = ball.type === "spider" && ball.webState === "pulling";
             const isChargingHammer = ball.type === "hammer" && ball.hammerState === "charging";
+            const isBlackSpiderDashing = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "dashing";
+            const isBlackSpiderPullingSelf = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "pulling";
+            const isBlackSpiderPulled = game.balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderAnchorState === "pulling");
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
@@ -9810,13 +9929,16 @@ export default function App() {
               return dist < ball.r + pool.r;
             }) : false;
             if (insideWeb) slowMult *= 0.5;
-            if (ball.judgementSlowUntil && game.simTime < ball.judgementSlowUntil) slowMult *= (ball.judgementSlowMultiplier || 0.72);
+            
+            const isBlackSpiderMarked = game.balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderMarkUntil > game.simTime);
+            if (isBlackSpiderMarked) slowMult *= 0.85;
+
             if (ball.dragonScorchedUntil && game.simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
             if (ball.shadowSlowedUntil && game.simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
-            if (!isTridentPinned && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
+            if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
               handleWallBounce(ball);
             }
@@ -9896,7 +10018,8 @@ export default function App() {
                   game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 8, vy: -45, text: `BURN -${burnDamage}`, color: "#fb923c", life: 0.55, maxLife: 0.55 });
                 }
                 const isGumPulled = ball.jokerPulledUntil && game.simTime < ball.jokerPulledUntil;
-                if (ball.type === "knife" && !isGrabbedByArm && !isGumPulled) {
+                const isBlackSpiderPulled = ball.blackSpiderPulledUntil && game.simTime < ball.blackSpiderPulledUntil;
+                if (ball.type === "knife" && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled) {
                   const bal = game.balance.knife;
                   if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
                   
@@ -9957,7 +10080,7 @@ export default function App() {
                   }
                 }
                 const isParalyzed = ball.paralyzedUntil && game.simTime < ball.paralyzedUntil;
-                if (!isParalyzed && !isGrabbedByArm && !isGumPulled) {
+                if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
@@ -9973,13 +10096,14 @@ export default function App() {
                   if (ball.type === "dragon") updateDragon(ball, target, game.simTime);
                   if (ball.type === "psychicer") updatePsychicer(ball, target, game.simTime);
                   if (ball.type === "chaos") updateChaos(ball, target, game.simTime);
-                  if (ball.type === "judger") updateJudger(ball, target, game.simTime);
+
                   if (ball.type === "trident") updateTrident(ball, target, game.simTime, stepDt);
                   if (ball.type === "spirit") updateSpirit(ball, target, game.simTime);
                   if (ball.type === "shadow") updateShadow(ball, target, game.simTime, stepDt);
                   if (ball.type === "chainsaw") updateChainsaw(ball, target, game.simTime, stepDt);
                   if (ball.type === "mirror") updateMirror(ball, target, game.simTime);
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
+                  if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
@@ -9998,7 +10122,6 @@ export default function App() {
           updateVenomPools(stepDt);
           updatePsychicCircles(stepDt);
           updateChaosCircles(stepDt);
-          updateJudgementFields(stepDt);
           updateJokerThreads(stepDt);
         }
       } else if (combatActive) {
@@ -10006,7 +10129,6 @@ export default function App() {
         const effectDt = slowMoActive ? dt * 0.24 : dt;
         updateParticles(effectDt);
         updateFloatingTexts(effectDt);
-        updateJudgementFields(effectDt);
         updateJokerThreads(effectDt);
       } else if (!combatActive) {
         game.balls.forEach((ball) => {
@@ -10052,7 +10174,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawStrings(); drawJokerThreads(); drawVenomPools(); drawPsychicCircles(); drawChaosCircles(); drawJudgementFields();
+      drawStrings(); drawJokerThreads(); drawVenomPools(); drawPsychicCircles(); drawChaosCircles();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
@@ -10310,20 +10432,7 @@ export default function App() {
               {renderSlider("Trap Count", "chaos", "trapCount", 1, 5, 1)}
             </>
           )}
-          {type === "judger" && (
-            <>
-              {renderSlider("Domain Cooldown", "judger", "cooldown", 2500, 16000, 100, "ms")}
-              {renderSlider("Domain Radius", "judger", "fieldRadius", 90, 210, 5, "px")}
-              {renderSlider("Domain Lifetime", "judger", "fieldLife", 1500, 9000, 250, "ms")}
-              {renderSlider("Warning Time", "judger", "warningTime", 200, 1500, 50, "ms")}
-              {renderSlider("Verdict Damage", "judger", "verdictDamage", 1, 8)}
-              {renderSlider("Max Verdict Hits", "judger", "maxVerdicts", 1, 6, 1)}
-              {renderSlider("Gravity Pull", "judger", "gravityPull", 20, 380, 10)}
-              {renderSlider("Gravity Slow", "judger", "slowMultiplier", 0.35, 1, 0.05, "x")}
-              {renderSlider("Edge Bounce", "judger", "edgeBounce", 120, 760, 20)}
-              {renderSlider("Reversal Cooldown", "judger", "reversalCooldown", 250, 2500, 50, "ms")}
-            </>
-          )}
+
           {type === "joker" && (
             <>
               {renderSlider("Gum String Hit Damage", "joker", "threadDamage", 1, 12)}
