@@ -211,6 +211,15 @@ const BALL_TYPES = {
     radius: 31,
     description: "Trickster brawler with elastic Bungee Lines. Sets up ricochet angles to hook enemies and drag them through wall corners.",
   },
+  prismer: {
+    id: "prismer",
+    name: "Prismer Ball",
+    shortName: "PRSM",
+    color: "#312e81",
+    stroke: "#22d3ee",
+    radius: 31,
+    description: "Prismatic beam warrior. Charges a devastating optic blast that ricochets off walls. Recoil repositions on fire.",
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -276,6 +285,7 @@ const BALANCE = {
     // Tendril Trap
     trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
   },
+  prismer: { chargeDuration: 450, cooldown: 7500, beamDamage: 40, beamKnockback: 900, beamWidth: 48, stunDuration: 300, recoilForce: 580, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [32, 24, 18, 12], ricochetKb: [700, 550, 400, 250], postFireSlowDuration: 400 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -566,6 +576,14 @@ export default function App() {
       venomWallBounces: 0,
       venomLashFlashUntil: 0,
       venomSpeedBoostUntil: 0,
+      // Prismer Specific
+      prismerState: "idle",
+      prismerChargeTimer: 0,
+      prismerBeamAngle: 0,
+      prismerBeamFlashUntil: 0,
+      prismerCooldownUntil: 0,
+      prismerChargingUntil: 0,
+      prismerRecoilUntil: 0,
       // Vampire Specific
       hasStuck: false,
       // Spore Specific
@@ -4145,6 +4163,182 @@ export default function App() {
           spiderBall.webStateUntil = currentTime + bal.spider.pullDuration;
         }
       }
+    };
+
+    const updatePrismer = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.prismer || BALANCE.prismer;
+
+      // Post-fire slow
+      if (ball.prismerRecoilUntil && currentTime < ball.prismerRecoilUntil) {
+        // slow is applied via slowMult in the movement section
+      }
+
+      // Charging phase
+      if (ball.prismerState === "charging") {
+        ball.prismerChargeTimer += stepDt * 1000;
+        // Lock beam angle toward target during charge
+        ball.prismerBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        if (ball.prismerChargeTimer >= bal.chargeDuration) {
+          // FIRE
+          ball.prismerState = "firing";
+          ball.prismerChargeTimer = 0;
+
+          const angle = ball.prismerBeamAngle;
+          const dx = Math.cos(angle);
+          const dy = Math.sin(angle);
+
+          // Hitscan: check if beam intersects target
+          const sx = ball.x + dx * ball.r;
+          const sy = ball.y + dy * ball.r;
+          const ex = sx + dx * 1500;
+          const ey = sy + dy * 1500;
+          const hitDist = linePointDist(target.x, target.y, sx, sy, ex, ey);
+          const ahead = (target.x - sx) * dx + (target.y - sy) * dy;
+
+          if (ahead > 0 && hitDist < target.r + bal.beamWidth / 2) {
+            // Direct hit
+            const tv = Math.hypot(target.vx, target.vy);
+            const approachDot = -(target.vx * dx + target.vy * dy) / Math.max(1, tv);
+            const approachFactor = Math.max(0, approachDot);
+            const momentumBonus = Math.min(15, approachFactor * tv * 0.35);
+            const finalDamage = bal.beamDamage + momentumBonus;
+            const finalKb = bal.beamKnockback + approachFactor * tv * 0.6;
+
+            applyDamage(target, finalDamage, `${ball.id}-prismer-beam`, currentTime, 300);
+            if (!hasStringBounceGuard(target)) {
+              target.vx += dx * finalKb;
+              target.vy += dy * finalKb;
+            }
+            target.webHitFlashUntil = currentTime + (bal.stunDuration || 300);
+            if (ball.side === "left") {
+              game.stats.left.damageDealt += Math.max(MIN_DAMAGE, Math.round(finalDamage));
+              game.stats.left.hitsLanded++;
+            } else {
+              game.stats.right.damageDealt += Math.max(MIN_DAMAGE, Math.round(finalDamage));
+              game.stats.right.hitsLanded++;
+            }
+            game.screenShake = Math.max(game.screenShake, 20);
+            spawnSparks(target.x, target.y, "#22d3ee", 20);
+            spawnDust(target.x, target.y, 10);
+            playSound("laserFire", 1.0, 160);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x, y: target.y - target.r - 26, vy: -60,
+              text: `OPTIC BLAST! -${Math.round(finalDamage)}`, color: "#22d3ee", life: 0.9, maxLife: 0.9
+            });
+          } else {
+            // Miss → spawn ricochet
+            if (!game.prismerRicochets) game.prismerRicochets = [];
+            game.prismerRicochets.push({
+              ownerId: ball.id,
+              ownerSide: ball.side,
+              x: sx,
+              y: sy,
+              vx: dx * bal.ricochetSpeed,
+              vy: dy * bal.ricochetSpeed,
+              bounces: 0,
+              spawnTime: currentTime,
+              life: bal.ricochetLife,
+              trail: [],
+            });
+            playSound("wallBounce", 0.9, 100);
+          }
+
+          // Recoil self
+          if (!hasStringBounceGuard(ball)) {
+            ball.vx -= dx * bal.recoilForce;
+            ball.vy -= dy * bal.recoilForce;
+          }
+          ball.prismerBeamFlashUntil = currentTime + 220;
+          ball.prismerRecoilUntil = currentTime + (bal.postFireSlowDuration || 400);
+          ball.prismerCooldownUntil = currentTime + bal.cooldown;
+          ball.prismerState = "cooldown";
+
+          if (ball.side === "left") game.stats.left.totalShots++;
+          else game.stats.right.totalShots++;
+        }
+        return;
+      }
+
+      if (ball.prismerState === "cooldown") {
+        if (currentTime >= ball.prismerCooldownUntil) {
+          ball.prismerState = "idle";
+        }
+        return;
+      }
+
+      // Idle: begin charge when cooldown done
+      if (ball.prismerState === "idle" && currentTime >= (ball.prismerCooldownUntil || 0)) {
+        ball.prismerState = "charging";
+        ball.prismerChargeTimer = 0;
+        ball.prismerBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        playSound("laserCharge", 0.8, 180);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 20, vy: -40,
+          text: "CHARGING...", color: "#a5f3fc", life: 0.5, maxLife: 0.5
+        });
+      }
+    };
+
+    const updatePrismerRicochets = (dt) => {
+      if (!game.prismerRicochets) return;
+      const pad = 18;
+      game.prismerRicochets = game.prismerRicochets.filter((r) => {
+        if (game.simTime >= r.spawnTime + r.life) return false;
+
+        // Store trail
+        r.trail = r.trail || [];
+        r.trail.push({ x: r.x, y: r.y });
+        if (r.trail.length > 10) r.trail.shift();
+
+        r.x += r.vx * dt;
+        r.y += r.vy * dt;
+
+        // Wall bounce
+        let bounced = false;
+        if (r.x - 8 < pad) { r.x = pad + 8; r.vx = Math.abs(r.vx); bounced = true; }
+        if (r.x + 8 > game.width - pad) { r.x = game.width - pad - 8; r.vx = -Math.abs(r.vx); bounced = true; }
+        if (r.y - 8 < pad) { r.y = pad + 8; r.vy = Math.abs(r.vy); bounced = true; }
+        if (r.y + 8 > game.height - pad) { r.y = game.height - pad - 8; r.vy = -Math.abs(r.vy); bounced = true; }
+
+        if (bounced) {
+          r.bounces++;
+          spawnSparks(r.x, r.y, "#22d3ee", 8);
+          playSound("wallBounce", 0.6, 110);
+          if (r.bounces >= 4) return false;
+        }
+
+        // Check target hit
+        const target = game.balls.find(b => b.side !== r.ownerSide);
+        if (target) {
+          const dist = Math.hypot(r.x - target.x, r.y - target.y);
+          if (dist < target.r + 10) {
+            const bal = BALANCE.prismer;
+            const dmg = (bal.ricochetDmg || [32,24,18,12])[Math.min(r.bounces, 3)];
+            const kb = (bal.ricochetKb || [700,550,400,250])[Math.min(r.bounces, 3)];
+            applyDamage(target, dmg, `${r.ownerId}-prismer-ricochet-${r.bounces}`, game.simTime, 300);
+            const angle = Math.atan2(r.vy, r.vx);
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(angle) * kb;
+              target.vy += Math.sin(angle) * kb;
+            }
+            const ownerStats = r.ownerSide === "left" ? game.stats.left : game.stats.right;
+            ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(dmg));
+            ownerStats.hitsLanded++;
+            spawnSparks(target.x, target.y, "#a5f3fc", 14);
+            game.screenShake = Math.max(game.screenShake, 8);
+            playSound("laserFire", 0.65, 120);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x, y: target.y - target.r - 20, vy: -50,
+              text: `RICOCHET! -${dmg}`, color: "#a5f3fc", life: 0.7, maxLife: 0.7
+            });
+            return false;
+          }
+        }
+        return true;
+      });
     };
 
     const updateBlackSpider = (ball, target, currentTime, stepDt) => {
@@ -8472,6 +8666,185 @@ export default function App() {
 
 
 
+    const drawPrismerRicochets = () => {
+      if (!game.prismerRicochets) return;
+      game.prismerRicochets.forEach((r) => {
+        // Draw trail
+        if (r.trail && r.trail.length > 1) {
+          for (let i = 1; i < r.trail.length; i++) {
+            const alpha = (i / r.trail.length) * 0.55;
+            const hue = (200 + i * 15) % 360;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = `hsl(${hue}, 90%, 70%)`;
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(r.trail[i-1].x, r.trail[i-1].y);
+            ctx.lineTo(r.trail[i].x, r.trail[i].y);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        // Draw projectile body
+        ctx.save();
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = "#22d3ee";
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f0f9ff";
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    };
+
+    const drawPrismerBall = (ball) => {
+      const bal = game.balance.prismer || BALANCE.prismer;
+      const isCharging = ball.prismerState === "charging";
+      const chargeRatio = isCharging ? Math.min(1, ball.prismerChargeTimer / (bal.chargeDuration || 450)) : 0;
+      const isFiring = ball.prismerBeamFlashUntil && game.simTime < ball.prismerBeamFlashUntil;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.014) * 0.5;
+
+      // Draw beam flash on fire
+      if (isFiring) {
+        const angle = ball.prismerBeamAngle;
+        const sx = ball.x + Math.cos(angle) * ball.r;
+        const sy = ball.y + Math.sin(angle) * ball.r;
+        const ex = sx + Math.cos(angle) * 1600;
+        const ey = sy + Math.sin(angle) * 1600;
+        const flashAlpha = Math.max(0, (ball.prismerBeamFlashUntil - game.simTime) / 220);
+        ctx.save();
+        ctx.globalAlpha = flashAlpha;
+        ctx.lineCap = "round";
+        // Outer bloom
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = 36;
+        ctx.strokeStyle = "rgba(34, 211, 238, 0.3)";
+        ctx.lineWidth = 96;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        // Mid aura
+        ctx.strokeStyle = "rgba(103, 232, 249, 0.6)";
+        ctx.lineWidth = 48;
+        ctx.shadowBlur = 24;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        // Core
+        ctx.strokeStyle = "#f0f9ff";
+        ctx.lineWidth = 16;
+        ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw charge corona rays
+      if (isCharging && chargeRatio > 0.1) {
+        ctx.save();
+        for (let i = 0; i < 8; i++) {
+          const rayAngle = (i * Math.PI * 2) / 8;
+          const rayLen = chargeRatio * 28;
+          const hue = (180 + i * 20 + game.simTime * 0.05) % 360;
+          ctx.strokeStyle = `hsl(${hue}, 90%, 70%)`;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = chargeRatio * 0.85;
+          ctx.shadowColor = `hsl(${hue}, 90%, 70%)`;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.moveTo(ball.x + Math.cos(rayAngle) * ball.r, ball.y + Math.sin(rayAngle) * ball.r);
+          ctx.lineTo(ball.x + Math.cos(rayAngle) * (ball.r + rayLen), ball.y + Math.sin(rayAngle) * (ball.r + rayLen));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      // Outer energy aura
+      const auraR = ball.r + (isCharging ? chargeRatio * 10 : 0) + (isFiring ? 8 : 0);
+      ctx.beginPath();
+      ctx.arc(0, 0, auraR + 8, 0, Math.PI * 2);
+      const auraGrad = ctx.createRadialGradient(0, 0, ball.r * 0.4, 0, 0, auraR + 12);
+      auraGrad.addColorStop(0, `rgba(34, 211, 238, ${0.12 + chargeRatio * 0.25})`);
+      auraGrad.addColorStop(1, "rgba(34, 211, 238, 0)");
+      ctx.fillStyle = auraGrad;
+      ctx.fill();
+
+      // Body
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.28, -ball.r * 0.28, 3, 0, 0, ball.r);
+      bodyGrad.addColorStop(0, isCharging ? "#4338ca" : "#3730a3");
+      bodyGrad.addColorStop(0.5, "#1e1b4b");
+      bodyGrad.addColorStop(1, "#0a0a1a");
+      ctx.fillStyle = bodyGrad;
+      ctx.fill();
+
+      // Crystalline hex lattice overlay
+      ctx.save();
+      ctx.strokeStyle = `rgba(165, 243, 252, ${0.15 + chargeRatio * 0.2})`;
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < 6; i++) {
+        const a1 = (i * Math.PI) / 3;
+        const a2 = ((i + 1) * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a1) * ball.r * 0.55, Math.sin(a1) * ball.r * 0.55);
+        ctx.lineTo(Math.cos(a2) * ball.r * 0.55, Math.sin(a2) * ball.r * 0.55);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a1) * ball.r * 0.9, Math.sin(a1) * ball.r * 0.9);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Visor - horizontal bar
+      const visorGlow = isCharging ? chargeRatio : (isFiring ? 1.0 : 0.3 + pulse * 0.2);
+      ctx.save();
+      ctx.shadowColor = "#22d3ee";
+      ctx.shadowBlur = 6 + visorGlow * 22;
+      // Visor background
+      ctx.fillStyle = `rgba(34, 211, 238, ${0.15 + visorGlow * 0.25})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ball.r * 0.88, ball.r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Visor core gradient
+      const visorGrad = ctx.createLinearGradient(-ball.r * 0.88, 0, ball.r * 0.88, 0);
+      visorGrad.addColorStop(0, `rgba(34, 211, 238, ${visorGlow * 0.7})`);
+      visorGrad.addColorStop(0.5, `rgba(240, 249, 255, ${0.5 + visorGlow * 0.5})`);
+      visorGrad.addColorStop(1, `rgba(34, 211, 238, ${visorGlow * 0.7})`);
+      ctx.fillStyle = visorGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ball.r * 0.82, ball.r * 0.11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Scan line pulse when charging
+      if (isCharging) {
+        const scanX = -ball.r * 0.75 + chargeRatio * ball.r * 1.5;
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(scanX, -ball.r * 0.12);
+        ctx.lineTo(scanX, ball.r * 0.12);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Outer stroke
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = isCharging ? `rgba(34, 211, 238, ${0.5 + chargeRatio * 0.5})` : "#22d3ee";
+      ctx.shadowColor = "#22d3ee";
+      ctx.shadowBlur = 4 + visorGlow * 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawJokerBall = (ball) => {
       const config = BALL_TYPES.joker;
       const pulse = 0.5 + Math.sin(game.simTime * 0.014) * 0.5;
@@ -8705,6 +9078,7 @@ export default function App() {
 
       else if (ball.type === "joker") drawJokerBall(ball);
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
+      else if (ball.type === "prismer") drawPrismerBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -10168,6 +10542,8 @@ export default function App() {
 
             if (ball.dragonScorchedUntil && game.simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
             if (ball.shadowSlowedUntil && game.simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
+            if (ball.type === "prismer" && ball.prismerState === "charging") slowMult *= 0.4;
+            if (ball.type === "prismer" && ball.prismerRecoilUntil && game.simTime < ball.prismerRecoilUntil) slowMult *= 0.55;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
@@ -10337,6 +10713,7 @@ export default function App() {
                   if (ball.type === "mirror") updateMirror(ball, target, game.simTime);
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
+                  if (ball.type === "prismer") updatePrismer(ball, target, game.simTime, stepDt);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
@@ -10354,6 +10731,7 @@ export default function App() {
           updateStrings(stepDt);
           updateVenomPools(stepDt);
           updateVenomTraps(stepDt);
+          updatePrismerRicochets(stepDt);
           updatePsychicCircles(stepDt);
           updateChaosCircles(stepDt);
           updateJokerThreads(stepDt);
@@ -10408,7 +10786,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawPsychicCircles(); drawChaosCircles();
+      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawPrismerRicochets(); drawPsychicCircles(); drawChaosCircles();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
