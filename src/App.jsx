@@ -65,7 +65,7 @@ const BALL_TYPES = {
     color: "#020617",
     stroke: "#f1f5f9",
     radius: 30,
-    description: "Venom-style symbiote. Mark targets, dash to walls, and slingshot them into the arena boundaries.",
+    description: "Throws a web line to pull, spin, and slam enemies into corners.",
   },
   bomber: {
     id: "bomber",
@@ -211,6 +211,15 @@ const BALL_TYPES = {
     radius: 31,
     description: "Cosmic weaver. Bounces place stars. Active skill connects stars into active shapes (Circle, Line, Triangle, Square) with powerful effects.",
   },
+  fireSkull: {
+    id: "fireSkull",
+    name: "Fire Driver",
+    shortName: "FDRV",
+    color: "#f8fafc",
+    stroke: "#ef4444",
+    radius: 31,
+    description: "Draws a burning road across wall bounces, then drives a blazing car along it five times.",
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -241,7 +250,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 const MAX_HEALTH = 150;
 const MAX_PARTICLES = 180;
 const MAX_FLOATING_TEXTS = 48;
-const MAX_TRAIL_POINTS = 8;
+const MAX_TRAIL_POINTS = 13;
 const MAX_EXPLOSIONS = 12;
 const DEATH_SLOW_MO_DURATION = 1400;
 const FIGHT_INTRO_DURATION = 2050;
@@ -253,7 +262,7 @@ const BALANCE = {
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 10, pulseSpeed: 620, pulseStunDuration: 950, recoilForce: 180 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
-  spider: { fangDamage: 2, webSpeed: 580, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
+  spider: { fangDamage: 2, webSpeed: 900, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 2, cactusLife: 5000, cooldown: 6000 },
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
@@ -263,21 +272,20 @@ const BALANCE = {
   wrecker: { cooldown: 950, leapDamage: 10, megaLeapDamage: 16, shockwaveRadius: 78, megaShockwaveRadius: 108, knockbackForce: 500, rageRequired: 6, megaRageRequired: 12, pushCooldown: 2200, pushRange: 52, pushForce: 420, pushDamage: 2, leapCooldown: 7200, leapDuration: 680, leapLeadTime: 0.38, landingRecoil: 240, recoverySpeed: 230, bounceBoost: 1.1, maxBounceSpeed: 300, sizePerRage: 0.015, maxRageSizeScale: 1.16, megaSizeScale: 1.24 },
   dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300, secCooldown: 5000, secDamage: 8, secDashForce: 650 },
   psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
-  chaos: { circleRadius: 48, launchSpeed: 620, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000, trapCount: 3 },
+  chaos: { circleRadius: 48, launchSpeed: 950, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000, trapCount: 3 },
   trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 760, recallSpeed: 720, cooldown: 6800, stuckDuration: 800, diveDamage: 6, diveCooldown: 8400, diveTrackDuration: 1150, divePauseDuration: 520, diveSpeed: 720, diveBurstRadius: 44, diveSlowDuration: 1600, diveSlowMultiplier: 0.35 },
   shadow: { slashDamage: 2, slashRange: 35, slashCooldown: 450, comboRange: 36, comboSecondDamage: 2, summonCooldown: 4600, maxMinions: 3, minionHealth: 4, minionDamage: 1, minionSpeed: 33, minionLife: 6200, minionHitCooldown: 1100, commandDuration: 700, markDuration: 1100, switchCooldown: 6000, switchRange: 145, switchDamage: 3 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
   joker: { throwSpeed: 580, cooldown: 6000, secCooldown: 8000, tipRadius: 9, maxBounces: 15, threadLife: 4000 },
-  blackSpider: { cooldown: 8000, secCooldown: 10000, markDuration: 5000, breakDistance: 480, speedPenalty: 0.15, dashSpeed: 900, pullSpeed: 1200, baseDamage: 5, baseSlamDamage: 12, maxSlamDamage: 26, cornerFrictionDamage: 3, cornerStaggerDuration: 200, tensionSnapLowDmg: 6, tensionSnapHighDmg: 14,
-    // Symbiote Lash
-    lashBounceThreshold: 4, lashDamage: 5, lashPullForce: 320, lashStunDuration: 180,
+  blackSpider: { cooldown: 7000, secCooldown: 10000, pullSpeed: 1200,
+    // String Pull Slam
+    slamCooldown: 7000, slamStringSpeed: 900, slamPullDuration: 600, slamSpinDuration: 700, slamSpinRadius: 75, slamLaunchSpeed: 1150, slamWallDamage: 12, slamHitDamage: 4,
     // Tendril Trap
     trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
-    // Web Weave (wall-bounce strands)
-    webStrandDamage: 4, maxWebStrands: 20, webStrandWidth: 5,
   },
-  gazerBall: { chargeDuration: 450, cooldown: 1800, beamDamage: 1, beamKnockback: 550, beamWidth: 2, stunDuration: 300, recoilForce: 700, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [10, 8, 6, 4], ricochetKb: [400, 300, 200, 100], focusInterval: 1000, maxFocusStacks: 5, focusBonus: 0.05, ultDuration: 5000, ultWidthMult: 2, ultMaxBounces: 8, ultCDRMult: 0.5, postFireSlowDuration: 400 },
-  constellation: { cooldown: 5000, activePatternDuration: 4000, circleDamage: 3, circleRadius: 95, fenceDamage: 14, barrierDamage: 10, prisonDamage: 4, postFireSlowDuration: 300, ultDuration: 5000 },
+  gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
+  constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
+  fireSkull: { cooldown: 8000, carDamage: 18, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 300, carPasses: 5, maxRoadLife: 8000 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -368,12 +376,12 @@ const cancelActiveMovementStates = (ball) => {
 const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (!ball) return false;
   if (ball.type === "vampire" && ball.latchedTo && ball.latchUntil > currentTime) return true;
-  if (ball.type === "spider" && (ball.webState === "pulling" || ball.webState === "webBouncing") && ball.webTargetId) return true;
+  if (ball.type === "spider" && (ball.webState === "pulling" || ball.webState === "webBouncing")) return true;
   if (ball.type === "arm" && ball.armState === "elbow_dropping" && ball.armStateUntil > currentTime) return true;
   if (ball.type === "hammer" && ball.hammerState === "charging") return true;
   if (ball.jokerPulledUntil && ball.jokerPulledUntil > currentTime) return true;
   if (ball.tridentPinnedUntil && ball.tridentPinnedUntil > currentTime) return true;
-  if (ball.type === "blackSpider" && ball.blackSpiderMarkedTargetId) return true;
+  if (ball.type === "blackSpider" && ball.bsSkillState && ball.bsSkillState !== "idle") return true;
 
   return balls.some((other) => {
     if (!other || other.id === ball.id) return false;
@@ -382,7 +390,7 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
     if (other.type === "arm" && other.armGrabTargetId === ball.id && other.armState === "elbow_dropping" && other.armStateUntil > currentTime) return true;
     if (other.type === "joker" && other.jokerPullTargetId === ball.id && other.jokerPullUntil > currentTime) return true;
     if (other.tridentTargetId === ball.id && (other.tridentState === "thrown" || other.tridentState === "stuck")) return true;
-    if (other.type === "blackSpider" && other.blackSpiderMarkedTargetId === ball.id) return true;
+    if (other.type === "blackSpider" && other.bsHookedTargetId === ball.id && (other.bsSkillState === "pulling" || other.bsSkillState === "spinning")) return true;
     return false;
   });
 };
@@ -560,6 +568,7 @@ export default function App() {
       maxAmmo: type === "gun" ? 6 : null,
       reloadUntil: 0,
       nextShotAt: 0,
+      skillLockedUntil: 0,
       flashUntil: 0,
       dogSummoned: false,
       dog: null,
@@ -606,6 +615,17 @@ export default function App() {
       venomWallBounces: 0,
       venomLashFlashUntil: 0,
       venomSpeedBoostUntil: 0,
+      bsSkillState: "idle",
+      bsSlamWallUntil: 0,
+      bsSlamWallSourceId: null,
+      bsSpinAngle: 0,
+      bsSpinUntil: 0,
+      bsPullUntil: 0,
+      bsStringX: 0,
+      bsStringY: 0,
+      bsStringVx: 0,
+      bsStringVy: 0,
+      bsHookedTargetId: null,
       // Gazer Ball Specific
       gazerState: "idle",
       gazerChargeTimer: 0,
@@ -626,6 +646,12 @@ export default function App() {
       constellationShieldedUntil: 0,
       // Vampire Specific
       hasStuck: false,
+      // Fire Skull Specific
+      fsLastWallX: null,
+      fsLastWallY: null,
+      fsRoadActive: false,
+      fsRoadSegments: [],
+      fsNextRoadAt: 0,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
       nextPsychicAt: 0,
@@ -700,6 +726,7 @@ export default function App() {
     jokerThreads: [],
     venomPools: [],
     webStrands: [],
+    fireCars: [],
     screenShake: 0,
     deathEffectStarted: false,
     deathSlowMoUntil: 0,
@@ -773,6 +800,7 @@ export default function App() {
       jokerThreads: [],
       venomPools: [],
       webStrands: [],
+      fireCars: [],
       screenShake: 0,
       deathEffectStarted: false,
       deathSlowMoUntil: 0,
@@ -1180,9 +1208,9 @@ export default function App() {
           balls.forEach((ball) => {
             const isPulling = ball.type === "spider" && ball.webState === "pulling";
             const isChargingHammer = ball.type === "hammer" && ball.hammerState === "charging";
-            const isBlackSpiderDashing = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "dashing";
-            const isBlackSpiderPullingSelf = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "pulling";
-            const isBlackSpiderPulled = balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderAnchorState === "pulling");
+            const isBlackSpiderDashing = false;
+            const isBlackSpiderPullingSelf = false;
+            const isBlackSpiderPulled = balls.some(b => b.type === "blackSpider" && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
             
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
@@ -1366,7 +1394,7 @@ export default function App() {
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) return;
             const isGrabbedByArm = balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > simTime);
             if (isGrabbedByArm) return;
-            const isBlackSpiderPulled = balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderAnchorState === "pulling");
+            const isBlackSpiderPulled = balls.some(b => b.type === "blackSpider" && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
             if (isBlackSpiderPulled) return;
             if (simTime >= OPENING_SKILL_DELAY) {
               if (ball.type === "knife") {
@@ -1374,17 +1402,45 @@ export default function App() {
                 if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
                 
                 if (ball.knifeBladeState === "rotating") {
-                  ball.spinAngle += bal.spinSpeed;
-                  const tip = {
-                    x: ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength),
-                    y: ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength),
-                  };
-                  if (Math.hypot(tip.x - enemy.x, tip.y - enemy.y) < enemy.r + 14) {
-                    localApplyDamage(enemy, bal.damage, `${ball.id}-knife-hit`, bal.cooldown);
-                  }
-                  
                   const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                  if (dist >= 120 && dist <= 240 && simTime >= (ball.nextSecondaryAt || 0)) {
+                  const maxSlashRange = ball.r + bal.bladeLength + 22;
+                  const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                  
+                  if (ball.saberSlashActive === undefined) {
+                    ball.saberSlashActive = false;
+                  }
+
+                  if (dist < maxSlashRange && !ball.saberSlashActive && simTime >= (ball.nextSlashAt || 0)) {
+                    ball.saberSlashActive = true;
+                    ball.saberSlashStart = simTime;
+                    ball.saberSlashDuration = 160;
+                    ball.saberSlashDir = Math.random() < 0.5 ? 1 : -1;
+                    ball.saberSlashBase = targetAngle;
+                    ball.nextSlashAt = simTime + (bal.cooldown || 390);
+                    playSound("laserFire", 0.48, 195);
+                  }
+
+                  if (ball.saberSlashActive) {
+                    const p = (simTime - ball.saberSlashStart) / ball.saberSlashDuration;
+                    if (p >= 1) {
+                      ball.saberSlashActive = false;
+                      const breath = Math.sin(simTime * 0.006) * 0.12;
+                      ball.spinAngle = targetAngle + breath;
+                    } else {
+                      ball.spinAngle = ball.saberSlashBase + ball.saberSlashDir * (-1.35 + p * 2.7);
+                      const bladeEndX = ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength);
+                      const bladeEndY = ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength);
+                      const distToBlade = linePointDist(enemy.x, enemy.y, ball.x, ball.y, bladeEndX, bladeEndY);
+                      if (distToBlade < enemy.r + 14) {
+                        localApplyDamage(enemy, bal.damage, `${ball.id}-saber-slash-hit-${ball.saberSlashStart}`, 150);
+                      }
+                    }
+                  } else {
+                    const breath = Math.sin(simTime * 0.006) * 0.12;
+                    ball.spinAngle = targetAngle + breath;
+                  }
+
+                  if (dist >= 120 && dist <= 240 && simTime >= (ball.nextSecondaryAt || 0) && !ball.saberSlashActive) {
                     ball.knifeBladeState = "thrown";
                     ball.knifeBladeX = ball.x;
                     ball.knifeBladeY = ball.y;
@@ -1395,6 +1451,7 @@ export default function App() {
                     ball.knifeBladeVy = Math.sin(angle) * 500;
                     ball.knifeBladeAngle = angle;
                     ball.nextSecondaryAt = simTime + bal.secCooldown;
+                    playSound("webShoot", 0.7, 140);
                   }
                 } else {
                   if (ball.knifeBladeState === "thrown") {
@@ -2660,7 +2717,7 @@ export default function App() {
 
       defender.health = clamp(defender.health - finalAmount, 0, MAX_HEALTH);
       game.damageCooldowns[cooldownKey] = currentTime + cooldown;
-      game.screenShake = Math.max(game.screenShake || 0, Math.min(10, 3 + finalAmount * 0.65));
+      game.screenShake = Math.max(game.screenShake || 0, Math.min(22, 6 + finalAmount * 1.5));
       defender.webHitFlashUntil = currentTime + 120;
 
       // Determine hit flash color based on source/weapon prefix in cooldownKey
@@ -2996,7 +3053,7 @@ export default function App() {
           game.constellationStars = game.constellationStars || [];
           const addStar = (offsetX = 0, offsetY = 0) => {
             const myStars = game.constellationStars.filter(s => s.ownerId === ball.id);
-            if (myStars.length >= 4) {
+            if (myStars.length >= 5) {
               myStars.sort((a, b) => a.createdAt - b.createdAt);
               const oldest = myStars[0];
               game.constellationStars = game.constellationStars.filter(s => s.id !== oldest.id);
@@ -3022,52 +3079,100 @@ export default function App() {
           }
           playSound("wallBounce", 0.8, 140);
         }
-        // Symbiote Lash – count wall bounces for Black Spider
-        if (ball.type === "blackSpider") {
-          ball.venomWallBounces = (ball.venomWallBounces || 0) + 1;
-        }
-        // Tendril Trap – leave goo on the wall where we bounced
-        if (ball.type === "blackSpider" && (gameStarted || game.combatStarted) && game.simTime >= OPENING_SKILL_DELAY) {
-          const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
-          game.venomTraps = game.venomTraps || [];
-          const myTraps = game.venomTraps.filter(t => t.ownerId === ball.id);
-          if (myTraps.length < (bsBal.maxTraps || 3)) {
-            game.venomTraps.push({
-              ownerId: ball.id,
-              ownerSide: ball.side,
-              x: bx,
-              y: by,
-              r: bsBal.trapRadius || 32,
-              createdTime: game.simTime,
-              duration: bsBal.trapDuration || 6000,
-              triggered: false,
+        if (ball.type === "fireSkull") {
+          const fsBal = game.balance.fireSkull || BALANCE.fireSkull;
+          const carIsRunning = (game.fireCars || []).some((car) => car.ownerId === ball.id);
+          if (!carIsRunning && game.simTime >= (ball.fsNextRoadAt || 0)) {
+            if (!ball.fsRoadActive) {
+            // First wall bounce: mark start
+            ball.fsLastWallX = bx;
+            ball.fsLastWallY = by;
+            ball.fsRoadActive = true;
+            ball.fsRoadSegments = [{ x: bx, y: by }];
+            playSound("repulsorCharge");
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 22, vy: -45,
+              text: "ROAD START!", color: "#f97316", life: 0.75, maxLife: 0.75
             });
+            spawnSparks(bx, by, "#f97316", 12);
+          } else {
+            // Complete the road only after enough actual travel. Short bounce
+            // segments remain active and continue drawing to the next bounce.
+            const segmentCount = ball.fsRoadSegments ? ball.fsRoadSegments.length : 0;
+            if (segmentCount > 0) {
+              const roadPath = [...ball.fsRoadSegments, { x: bx, y: by }];
+              const totalDist = roadPath.slice(1).reduce((sum, point, index) => {
+                const previous = roadPath[index];
+                return sum + Math.hypot(point.x - previous.x, point.y - previous.y);
+              }, 0);
+              const minRoadLength = fsBal.minRoadLength || 300;
+              if (totalDist >= minRoadLength) {
+                const startPoint = roadPath[0];
+                game.fireCars = game.fireCars || [];
+                game.fireCars.push({
+                  id: `${ball.id}-car-${game.simTime}`,
+                  ownerId: ball.id,
+                  ownerSide: ball.side,
+                  startX: startPoint.x,
+                  startY: startPoint.y,
+                  endX: roadPath[roadPath.length - 1].x,
+                  endY: roadPath[roadPath.length - 1].y,
+                  path: roadPath,
+                  pathLength: totalDist,
+                  distanceTravelled: 0,
+                  pass: 1,
+                  maxPasses: fsBal.carPasses || 5,
+                  x: startPoint.x,
+                  y: startPoint.y,
+                  vx: 0,
+                  vy: 0,
+                  radius: fsBal.carRadius || 40,
+                  progress: 0,
+                  speed: fsBal.carSpeed || 950,
+                  damage: fsBal.carDamage || 18,
+                  createdTime: game.simTime,
+                });
+                playSound("megaLeap"); // Roaring engine sound substitute
+                game.screenShake = Math.max(game.screenShake || 0, 18);
+                game.floatingTexts = game.floatingTexts || [];
+                game.floatingTexts.push({
+                  x: (startPoint.x + bx) / 2, y: (startPoint.y + by) / 2 - 22, vy: -55,
+                  text: "FIRE CAR SUMMON!", color: "#ef4444", life: 0.9, maxLife: 0.9
+                });
+                // Spawn big fire blast particles at start and end
+                spawnSparks(startPoint.x, startPoint.y, "#ef4444", 20);
+                spawnSparks(bx, by, "#ef4444", 20);
+                ball.fsLastWallX = null;
+                ball.fsLastWallY = null;
+                ball.fsRoadActive = false;
+                ball.fsRoadSegments = [];
+              } else {
+                ball.fsRoadSegments.push({ x: bx, y: by });
+                game.floatingTexts = game.floatingTexts || [];
+                game.floatingTexts.push({
+                  x: bx, y: by - 18, vy: -35,
+                  text: "ROAD EXTEND!", color: "#fb923c", life: 0.65, maxLife: 0.65
+                });
+              }
+            }
+            }
           }
         }
-        // Web Weave – plant a permanent strand from wall contact point to ball center
-        if (ball.type === "blackSpider" && (gameStarted || game.combatStarted) && game.simTime >= OPENING_SKILL_DELAY) {
+        // Wall goo trigger removed. Black Spider now spits a slime web pool via its secondary skill.
+        if (ball.bsSlamWallUntil && game.simTime <= ball.bsSlamWallUntil) {
           const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
-          game.webStrands = game.webStrands || [];
-          game.webStrands.push({
-            id: `ws-${ball.id}-${game.simTime}`,
-            ownerId: ball.id,
-            ownerSide: ball.side,
-            x1: bx,        // wall contact point
-            y1: by,
-            x2: ball.x,    // ball center at bounce time
-            y2: ball.y,
-            createdTime: game.simTime,
+          applyDamage(ball, bsBal.slamWallDamage || 18, `${ball.bsSlamWallSourceId || ball.id}-bs-slam-wall`, game.simTime, 500);
+          ball.bsSlamWallUntil = 0;
+          ball.bsSlamWallSourceId = null;
+          spawnSparks(ball.x, ball.y, "#0f172a", 20);
+          game.screenShake = Math.max(game.screenShake, 18);
+          playSound("explosion", 1.0, 90);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 22, vy: -55,
+            text: "SLAMMED!", color: "#cbd5e1", life: 1.0, maxLife: 1.0
           });
-          // Cap total strands per owner
-          const maxStrands = bsBal.maxWebStrands || 20;
-          const myStrands = game.webStrands.filter(s => s.ownerId === ball.id);
-          if (myStrands.length > maxStrands) {
-            const oldest = myStrands.sort((a, b) => a.createdTime - b.createdTime)[0];
-            game.webStrands = game.webStrands.filter(s => s.id !== oldest.id);
-          }
-          // Spawn ambient particles at the strand anchor
-          spawnSparks(bx, by, "#1e293b", 6);
-          playSound("webShoot", 0.45, 60);
         }
         if (ball.armThrowWallUntil && game.simTime <= ball.armThrowWallUntil) {
           applyDamage(ball, ARM_THROW_WALL_DAMAGE, `${ball.armThrowWallSourceId || ball.id}-arm-throw-wall`, game.simTime, 500);
@@ -3184,6 +3289,33 @@ export default function App() {
     const resolveBallCollision = (a, b) => {
       const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy), minDist = a.r + b.r;
       if (dist === 0 || dist >= minDist) return false;
+
+      // Disrupt Fire Skull road if it hits opponent
+      if (a.type === "fireSkull" && a.fsRoadActive) {
+        a.fsLastWallX = null;
+        a.fsLastWallY = null;
+        a.fsRoadActive = false;
+        a.fsRoadSegments = [];
+        spawnSparks(a.x, a.y, "#475569", 12);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: a.x, y: a.y - a.r - 22, vy: -45,
+          text: "ROAD DISRUPTED!", color: "#94a3b8", life: 0.75, maxLife: 0.75
+        });
+      }
+      if (b.type === "fireSkull" && b.fsRoadActive) {
+        b.fsLastWallX = null;
+        b.fsLastWallY = null;
+        b.fsRoadActive = false;
+        b.fsRoadSegments = [];
+        spawnSparks(b.x, b.y, "#475569", 12);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: b.x, y: b.y - b.r - 22, vy: -45,
+          text: "ROAD DISRUPTED!", color: "#94a3b8", life: 0.75, maxLife: 0.75
+        });
+      }
+
       if (a.type === "vampire" || b.type === "vampire") return true;
 
       const nx = dx / dist, ny = dy / dist, overlap = minDist - dist;
@@ -4260,6 +4392,7 @@ export default function App() {
           spiderBall.webStateUntil = currentTime + bal.spider.pullDuration;
         }
       }
+
     };
     const updateGazerBall = (ball, target, currentTime, stepDt) => {
       const bal = game.balance.gazerBall || BALANCE.gazerBall;
@@ -4306,8 +4439,8 @@ export default function App() {
 
           const stacks = ball.gazerFocusStacks || 0;
           const stackMult = 1 + stacks * (bal.focusBonus || 0.05);
-          const finalDamage = bal.beamDamage;
-          const finalWidth = effectiveWidth * stackMult;
+          const finalDamage = bal.beamDamage * stackMult * (ball.gazerUltActive ? 1.2 : 1);
+          const finalWidth = effectiveWidth * (1 + stacks * (bal.focusBonus || 0.05) * 0.6);
 
           // Reset focus stacks on fire
           ball.gazerFocusStacks = 0;
@@ -4437,8 +4570,15 @@ export default function App() {
                 const tv = Math.hypot(target.vx, target.vy);
                 const approachDot = tv > 0 ? -(target.vx * cdx + target.vy * cdy) / tv : 0;
                 const approachFactor = Math.max(0, approachDot);
-                const totalDamage = finalDamage;
-                const totalKb = bal.beamKnockback + approachFactor * tv * 0.6;
+                const ricochetIndex = Math.max(0, Math.min(bounces - 1, (bal.ricochetDmg?.length || 1) - 1));
+                const bouncedDamage = bounces > 0
+                  ? ((bal.ricochetDmg?.[ricochetIndex] ?? finalDamage) * (ball.gazerUltActive ? 1.08 : 1))
+                  : finalDamage;
+                const bouncedKb = bounces > 0
+                  ? (bal.ricochetKb?.[ricochetIndex] ?? bal.beamKnockback)
+                  : bal.beamKnockback;
+                const totalDamage = bouncedDamage;
+                const totalKb = bouncedKb * (ball.gazerUltActive ? 1.12 : 1) + approachFactor * tv * 0.6;
 
                 applyDamage(target, totalDamage, `${ball.id}-gazer-beam`, currentTime, 300);
                 if (!hasStringBounceGuard(target)) {
@@ -4567,6 +4707,18 @@ export default function App() {
       return (u >= 0) && (v >= 0) && (u + v < 1);
     };
 
+    const isPointInPolygon = (px, py, points) => {
+      let inside = false;
+      for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const xi = points[i].x, yi = points[i].y;
+        const xj = points[j].x, yj = points[j].y;
+        const intersects = ((yi > py) !== (yj > py)) &&
+          (px < ((xj - xi) * (py - yi)) / ((yj - yi) || 1e-6) + xi);
+        if (intersects) inside = !inside;
+      }
+      return inside;
+    };
+
     const updateConstellation = (ball, currentTime) => {
       const bal = game.balance.constellation || BALANCE.constellation;
 
@@ -4597,21 +4749,22 @@ export default function App() {
         // Get stars owned by this ball
         const myStars = game.constellationStars.filter(s => s.ownerId === ball.id);
         
-        if (myStars.length > 0) {
-          // Consume used stars from the global list, prioritizing the last 4 placed
+        if (myStars.length >= 3) {
+          // Consume used stars from the global list, prioritizing the largest
+          // side-count pattern available from the most recent placements.
           myStars.sort((a, b) => a.createdAt - b.createdAt);
-          const usedStars = myStars.slice(-4);
+          const sideCount = myStars.length >= 5 ? 5 : myStars.length >= 4 ? 4 : 3;
+          const usedStars = myStars.slice(-sideCount);
           
           // Remove usedStars from game.constellationStars
           const usedIds = new Set(usedStars.map(s => s.id));
           game.constellationStars = game.constellationStars.filter(s => !usedIds.has(s.id));
 
           // Identify shape
-          let shapeType = "circle";
-          let label = "Circle Aura";
-          if (usedStars.length === 2) { shapeType = "line"; label = "Laser Fence"; }
-          else if (usedStars.length === 3) { shapeType = "triangle"; label = "Cosmic Shield"; }
-          else if (usedStars.length === 4) { shapeType = "square"; label = "Star Prison"; }
+          let shapeType = "triangle";
+          let label = "Tri Shield";
+          if (usedStars.length === 4) { shapeType = "square"; label = "Star Cage"; }
+          else if (usedStars.length === 5) { shapeType = "pentagon"; label = "Nova Ring"; }
 
           game.activeConstellations = game.activeConstellations || [];
           game.activeConstellations.push({
@@ -4651,47 +4804,7 @@ export default function App() {
         const enemy = game.balls.find(b => b.side !== c.ownerSide);
         const owner = game.balls.find(b => b.side === c.ownerSide);
 
-        if (c.type === "circle") {
-          // Circle Aura (1 star)
-          const star = c.stars[0];
-          const radius = bal.circleRadius || 90;
-          if (enemy) {
-            const dist = Math.hypot(enemy.x - star.x, enemy.y - star.y);
-            if (dist < radius + enemy.r) {
-              if (currentTime >= (c.nextTickAt || 0)) {
-                applyDamage(enemy, bal.circleDamage || 2, `${c.id}-circle-damage`, currentTime, 200);
-              }
-            }
-          }
-          if (currentTime >= (c.nextTickAt || 0)) {
-            c.nextTickAt = currentTime + 200;
-          }
-        } 
-        else if (c.type === "line" && enemy) {
-          // Laser Fence (2 stars)
-          const p1 = c.stars[0], p2 = c.stars[1];
-          const dist = linePointDist(enemy.x, enemy.y, p1.x, p1.y, p2.x, p2.y);
-          if (dist < enemy.r + 5) {
-            const damageKey = `${c.id}-line-damage`;
-            if (!(game.damageCooldowns[damageKey] > currentTime)) {
-              applyDamage(enemy, bal.fenceDamage || 12, damageKey, currentTime, 1000);
-              // Knockback: push away from the line
-              const dx = p2.x - p1.x;
-              const dy = p2.y - p1.y;
-              const len = Math.hypot(dx, dy) || 1;
-              const nx = -dy / len;
-              const ny = dx / len;
-              const side = Math.sign((enemy.x - p1.x) * nx + (enemy.y - p1.y) * ny) || 1;
-              if (!hasStringBounceGuard(enemy)) {
-                enemy.vx += nx * side * 450;
-                enemy.vy += ny * side * 450;
-              }
-              spawnSparks(enemy.x, enemy.y, "#e0f2fe", 12);
-              playSound("wallBounce", 1.0, 90);
-            }
-          }
-        } 
-        else if (c.type === "triangle") {
+        if (c.type === "triangle") {
           // Cosmic Shield (3 stars)
           const p1 = c.stars[0], p2 = c.stars[1], p3 = c.stars[2];
 
@@ -4711,7 +4824,7 @@ export default function App() {
               if (dist < enemy.r + 5) {
                 const damageKey = `${c.id}-triangle-damage`;
                 if (!(game.damageCooldowns[damageKey] > currentTime)) {
-                  applyDamage(enemy, bal.barrierDamage || 8, damageKey, currentTime, 1000);
+                  applyDamage(enemy, bal.triangleDamage || 8, damageKey, currentTime, 1050);
                   const dx = s2.x - s1.x;
                   const dy = s2.y - s1.y;
                   const len = Math.hypot(dx, dy) || 1;
@@ -4719,8 +4832,8 @@ export default function App() {
                   const ny = dx / len;
                   const side = Math.sign((enemy.x - s1.x) * nx + (enemy.y - s1.y) * ny) || 1;
                   if (!hasStringBounceGuard(enemy)) {
-                    enemy.vx += nx * side * 380;
-                    enemy.vy += ny * side * 380;
+                    enemy.vx += nx * side * (bal.triangleKnockback || 460);
+                    enemy.vy += ny * side * (bal.triangleKnockback || 460);
                   }
                   spawnSparks(enemy.x, enemy.y, "#facc15", 10);
                   playSound("wallBounce", 0.9, 100);
@@ -4745,8 +4858,8 @@ export default function App() {
           if (inside) {
             // Apply tick damage
             if (currentTime >= (c.nextTickAt || 0)) {
-              applyDamage(enemy, bal.prisonDamage || 3, `${c.id}-prison-damage`, currentTime, 300);
-            }
+                applyDamage(enemy, bal.squareTickDamage || 2, `${c.id}-prison-damage`, currentTime, 420);
+              }
 
             // Trap enemy inside: reflect velocity inward
             const edges = [[q[0], q[1]], [q[1], q[2]], [q[2], q[3]], [q[3], q[0]]];
@@ -4770,9 +4883,14 @@ export default function App() {
 
                 const dot = enemy.vx * nx + enemy.vy * ny;
                 if (dot < 0) {
+                  applyDamage(enemy, bal.squareEdgeDamage || 4, `${c.id}-square-edge`, currentTime, 760);
                   const bounceD = 1.05;
                   enemy.vx = (enemy.vx - 2 * dot * nx) * bounceD;
                   enemy.vy = (enemy.vy - 2 * dot * ny) * bounceD;
+                  if (!hasStringBounceGuard(enemy)) {
+                    enemy.vx += nx * (bal.squareKnockback || 420);
+                    enemy.vy += ny * (bal.squareKnockback || 420);
+                  }
                   enemy.x = rx + nx * (enemy.r + 8);
                   enemy.y = ry + ny * (enemy.r + 8);
                   spawnSparks(enemy.x, enemy.y, "#c084fc", 8);
@@ -4782,7 +4900,39 @@ export default function App() {
             });
           }
           if (currentTime >= (c.nextTickAt || 0)) {
-            c.nextTickAt = currentTime + 300;
+            c.nextTickAt = currentTime + 420;
+          }
+        } else if (c.type === "pentagon" && enemy) {
+          const cx = c.stars.reduce((sum, p) => sum + p.x, 0) / c.stars.length;
+          const cy = c.stars.reduce((sum, p) => sum + p.y, 0) / c.stars.length;
+          const q = [...c.stars].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+          const inside = isPointInPolygon(enemy.x, enemy.y, q);
+
+          if (inside && currentTime >= (c.nextTickAt || 0)) {
+            applyDamage(enemy, bal.pentagonTickDamage || 3, `${c.id}-pentagon-tick`, currentTime, 460);
+            const pullAngle = Math.atan2(cy - enemy.y, cx - enemy.x);
+            if (!hasStringBounceGuard(enemy)) {
+              enemy.vx += Math.cos(pullAngle) * (bal.pentagonPullStrength || 240);
+              enemy.vy += Math.sin(pullAngle) * (bal.pentagonPullStrength || 240);
+            }
+            spawnSparks(enemy.x, enemy.y, "#f59e0b", 10);
+          }
+
+          const edges = q.map((point, index) => [point, q[(index + 1) % q.length]]);
+          edges.forEach(([s1, s2]) => {
+            const dist = linePointDist(enemy.x, enemy.y, s1.x, s1.y, s2.x, s2.y);
+            if (dist < enemy.r + 5) {
+              const damageKey = `${c.id}-pentagon-edge`;
+              if (!(game.damageCooldowns[damageKey] > currentTime)) {
+                applyDamage(enemy, bal.pentagonEdgeDamage || 5, damageKey, currentTime, 820);
+                spawnSparks(enemy.x, enemy.y, "#fbbf24", 10);
+                playSound("wallBounce", 0.85, 100);
+              }
+            }
+          });
+
+          if (currentTime >= (c.nextTickAt || 0)) {
+            c.nextTickAt = currentTime + 460;
           }
         }
 
@@ -4790,69 +4940,211 @@ export default function App() {
       });
     };
 
+    const updateFireSkull = (ball, target, currentTime, stepDt) => {
+      if (ball.fsRoadActive) {
+        ball.fsRoadSegments = ball.fsRoadSegments || [];
+        ball.fsRoadSegments.push({ x: ball.x, y: ball.y });
+        
+        // Aesthetics: trail particles
+        if (Math.random() < 0.4) {
+          game.particles.push({
+            x: ball.x + (Math.random() - 0.5) * 12,
+            y: ball.y + (Math.random() - 0.5) * 12,
+            vx: (Math.random() - 0.5) * 40,
+            vy: (Math.random() - 0.5) * 40,
+            color: Math.random() < 0.5 ? "#f97316" : "#ef4444",
+            radius: 2 + Math.random() * 3,
+            life: 0.35 + Math.random() * 0.25,
+            maxLife: 0.6
+          });
+        }
+      }
+    };
+
     const updateBlackSpider = (ball, target, currentTime, stepDt) => {
       const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
 
-      // --- Symbiote Lash: every N wall bounces, fire tendril at nearest enemy ---
-      const lashThreshold = bsBal.lashBounceThreshold || 4;
-      if ((ball.venomWallBounces || 0) >= lashThreshold) {
-        ball.venomWallBounces = 0;
+      // --- Spit Symbiote Slime Web secondary skill ---
+      const hasActiveSymbiotePool = () => (game.venomPools || []).some((pool) => pool.ownerId === ball.id && pool.isSymbiote);
+      const dropSymbiotePool = (x, y) => {
+        if (hasActiveSymbiotePool()) return false;
+        game.venomPools = game.venomPools || [];
+        game.venomPools.push({
+          ownerId: ball.id,
+          x,
+          y,
+          r: 50, // unique symbiote pool size
+          ownerSide: ball.side,
+          createdTime: currentTime,
+          duration: 4500, // lasts 4.5 seconds
+          isSymbiote: true,
+        });
+        return true;
+      };
 
-        const dx = target.x - ball.x;
-        const dy = target.y - ball.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > 0) {
-          // Pull target toward ball
-          const pullForce = bsBal.lashPullForce || 320;
-          const nx = dx / dist;
-          const ny = dy / dist;
-          // Pull target toward us (negate direction)
-          if (!hasStringBounceGuard(target)) {
-            target.vx -= nx * pullForce;
-            target.vy -= ny * pullForce;
-          }
-          // Deal lash damage
-          applyDamage(target, bsBal.lashDamage || 5, `${ball.id}-venom-lash-${currentTime}`, currentTime, 300);
-          if (ball.side === "left") {
-            game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bsBal.lashDamage || 5);
-            game.stats.left.hitsLanded++;
-          } else {
-            game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bsBal.lashDamage || 5);
-            game.stats.right.hitsLanded++;
-          }
+      const spitDist = Math.hypot(target.x - ball.x, target.y - ball.y);
+      if (spitDist < 280 && currentTime >= (ball.nextSecondaryAt || 0) && !hasActiveSymbiotePool()) {
+        ball.nextSecondaryAt = currentTime + (bsBal.secCooldown || 10000);
+        const spitX = clamp(ball.x + (target.x - ball.x) * 0.45 + (Math.random() - 0.5) * 15, 30, game.width - 30);
+        const spitY = clamp(ball.y + (target.y - ball.y) * 0.45 + (Math.random() - 0.5) * 15, 30, game.height - 30);
+        if (dropSymbiotePool(spitX, spitY)) {
+          playSound("webShoot");
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 20, vy: -50,
+            text: "SLIME WEB!", color: "#4a044e", life: 0.8, maxLife: 0.8
+          });
+        }
+      }
 
-          // Store lash visual data on ball
-          ball.venomLashFlashUntil = currentTime + 400;
-          ball.venomLashTargetX = target.x;
-          ball.venomLashTargetY = target.y;
+      if (!ball.bsSkillState) ball.bsSkillState = "idle";
 
-          // Stun flash on target
-          target.webHitFlashUntil = (target.webHitFlashUntil || 0) > currentTime
-            ? target.webHitFlashUntil
-            : currentTime + (bsBal.lashStunDuration || 180);
-
-          spawnSparks(target.x, target.y, "#1e293b", 12);
-          game.screenShake = Math.max(game.screenShake, 8);
+      if (ball.bsSkillState === "idle") {
+        const targetDistance = Math.hypot(target.x - ball.x, target.y - ball.y);
+        const canThrow = currentTime >= (ball.nextShotAt || 0) &&
+                         targetDistance < 450 &&
+                         canStartSkillConnection(ball, target, game.balls, currentTime);
+        
+        if (canThrow) {
+          ball.nextShotAt = currentTime + (bsBal.slamCooldown || bsBal.cooldown || 7000);
+          ball.bsSkillState = "throwing";
+          ball.bsStringX = ball.x;
+          ball.bsStringY = ball.y;
+          
+          const dx = target.x - ball.x;
+          const dy = target.y - ball.y;
+          const dist = Math.hypot(dx, dy);
+          const speed = bsBal.slamStringSpeed || 900;
+          
+          ball.bsStringVx = (dx / dist) * speed;
+          ball.bsStringVy = (dy / dist) * speed;
+          ball.bsHookedTargetId = target.id;
+          
           playSound("webShoot", 0.9, 85);
-
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: ball.x, y: ball.y - ball.r - 22, vy: -55,
-            text: "SYMBIOTE LASH!", color: "#cbd5e1", life: 0.85, maxLife: 0.85
+            text: "PULL SLAM!", color: "#cbd5e1", life: 0.85, maxLife: 0.85
           });
-
-          // Spawn dark tendril particles along path
-          const steps = 6;
-          for (let i = 0; i < steps; i++) {
-            const t = i / steps;
-            game.particles.push({
-              x: ball.x + dx * t + (Math.random() - 0.5) * 14,
-              y: ball.y + dy * t + (Math.random() - 0.5) * 14,
-              vx: -nx * 40 + (Math.random() - 0.5) * 30,
-              vy: -ny * 40 + (Math.random() - 0.5) * 30,
-              color: "#0f172a", radius: 4 + Math.random() * 3, life: 0.35, maxLife: 0.35
-            });
+        }
+      } else if (ball.bsSkillState === "throwing") {
+        ball.bsStringX += ball.bsStringVx * stepDt;
+        ball.bsStringY += ball.bsStringVy * stepDt;
+        
+        const dx = target.x - ball.bsStringX;
+        const dy = target.y - ball.bsStringY;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist < target.r + 10) {
+          ball.bsSkillState = "pulling";
+          ball.bsPullUntil = currentTime + (bsBal.slamPullDuration || 600);
+          target.webHitFlashUntil = currentTime + (bsBal.slamPullDuration || 600);
+          target.webHitFlashColor = "#000000";
+          playSound("webShoot", 0.9, 70);
+          spawnSparks(target.x, target.y, "#334155", 8);
+        } else {
+          const distFromSelf = Math.hypot(ball.bsStringX - ball.x, ball.bsStringY - ball.y);
+          const pad = 18;
+          const hitWall = ball.bsStringX < pad || ball.bsStringX > game.width - pad ||
+                          ball.bsStringY < pad || ball.bsStringY > game.height - pad;
+          
+          if (hitWall) {
+            ball.bsSkillState = "idle";
+            ball.bsHookedTargetId = null;
+          } else if (distFromSelf > 650) {
+            ball.bsSkillState = "idle";
+            ball.bsHookedTargetId = null;
           }
+        }
+      } else if (ball.bsSkillState === "pulling") {
+        const dx = ball.x - target.x;
+        const dy = ball.y - target.y;
+        const dist = Math.hypot(dx, dy);
+        
+        target.webHitFlashUntil = currentTime + 100;
+        target.webHitFlashColor = "#000000";
+
+        if (dist > 5) {
+          const pullSpeed = bsBal.pullSpeed || 1200;
+          target.vx = (dx / dist) * pullSpeed;
+          target.vy = (dy / dist) * pullSpeed;
+          target.x += target.vx * stepDt;
+          target.y += target.vy * stepDt;
+        }
+        
+        if (currentTime >= ball.bsPullUntil || dist < ball.r + target.r + 15) {
+          ball.bsSkillState = "spinning";
+          ball.bsSpinUntil = currentTime + (bsBal.slamSpinDuration || 700);
+          ball.bsSpinAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          playSound("webShoot", 0.85, 110);
+        }
+      } else if (ball.bsSkillState === "spinning") {
+        const spinDurationSec = (bsBal.slamSpinDuration || 700) / 1000;
+        const spinSpeed = (4 * Math.PI) / spinDurationSec;
+        ball.bsSpinAngle += spinSpeed * stepDt;
+        
+        target.webHitFlashUntil = currentTime + 100;
+        target.webHitFlashColor = "#000000";
+
+        const orbitRadius = bsBal.slamSpinRadius || 75;
+        target.x = ball.x + Math.cos(ball.bsSpinAngle) * orbitRadius;
+        target.y = ball.y + Math.sin(ball.bsSpinAngle) * orbitRadius;
+        
+        const pad = 18;
+        target.x = clamp(target.x, target.r + pad + 2, game.width - target.r - pad - 2);
+        target.y = clamp(target.y, target.r + pad + 2, game.height - target.r - pad - 2);
+        
+        target.vx = -Math.sin(ball.bsSpinAngle) * orbitRadius * spinSpeed;
+        target.vy = Math.cos(ball.bsSpinAngle) * orbitRadius * spinSpeed;
+        
+        if (currentTime >= ball.bsSpinUntil) {
+          const corners = [
+            { x: pad + 30, y: pad + 30 },
+            { x: game.width - pad - 30, y: pad + 30 },
+            { x: pad + 30, y: game.height - pad - 30 },
+            { x: game.width - pad - 30, y: game.height - pad - 30 },
+          ];
+          
+          let bestCorner = corners[0];
+          let maxDist = 0;
+          for (const c of corners) {
+            const d = Math.hypot(c.x - target.x, c.y - target.y);
+            if (d > maxDist) {
+              maxDist = d;
+              bestCorner = c;
+            }
+          }
+          
+          const angle = Math.atan2(bestCorner.y - target.y, bestCorner.x - target.x);
+          const launchSpeed = bsBal.slamLaunchSpeed || 1150;
+          target.vx = Math.cos(angle) * launchSpeed;
+          target.vy = Math.sin(angle) * launchSpeed;
+          
+          target.bsSlamWallUntil = currentTime + 800;
+          target.bsSlamWallSourceId = ball.id;
+          
+          applyDamage(target, bsBal.slamHitDamage || 4, `${ball.id}-bs-slam-hit-${currentTime}`, currentTime, 300);
+          if (ball.side === "left") {
+            game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bsBal.slamHitDamage || 4);
+            game.stats.left.hitsLanded++;
+          } else {
+            game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bsBal.slamHitDamage || 4);
+            game.stats.right.hitsLanded++;
+          }
+          
+          ball.bsSkillState = "idle";
+          ball.bsHookedTargetId = null;
+          
+          playSound("explosion", 0.9, 100);
+          game.screenShake = Math.max(game.screenShake, 12);
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: target.x, y: target.y - target.r - 20, vy: -60,
+            text: "SLAM SHOT!", color: "#f1f5f9", life: 0.9, maxLife: 0.9
+          });
+          
+          spawnSparks(target.x, target.y, "#334155", 16);
         }
       }
     };
@@ -5273,9 +5565,9 @@ export default function App() {
       const trapCount = Math.max(1, Math.round(bal.trapCount || 3));
       const randomAxis = Math.random() > 0.5 ? "vertical" : "horizontal";
       const trapPatterns = [
-        ["vertical", "left", "#10b981"],
-        ["horizontal", "right", "#f59e0b"],
-        [randomAxis, "center", randomAxis === "vertical" ? "#10b981" : "#f59e0b"],
+        ["vertical", "left", "#fdba74"],
+        ["horizontal", "right", "#f97316"],
+        [randomAxis, "center", randomAxis === "vertical" ? "#fdba74" : "#f97316"],
       ];
       for (let i = 0; i < trapCount; i++) {
         const pattern = trapPatterns[i % trapPatterns.length];
@@ -5287,7 +5579,7 @@ export default function App() {
       game.floatingTexts = game.floatingTexts || [];
       game.floatingTexts.push({
         x: ball.x, y: ball.y - ball.r - 20, vy: -45,
-        text: "CHAOS FIELD", color: "#f59e0b", life: 0.8, maxLife: 0.8
+        text: "WARP MAGIC", color: "#facc15", life: 0.8, maxLife: 0.8
       });
       if (ball.side === "left") game.stats.left.totalShots++;
       else game.stats.right.totalShots++;
@@ -6251,7 +6543,8 @@ export default function App() {
         ball.webY += ball.webVy * stepDt;
         const pad = 18;
         if (ball.webX < pad || ball.webX > game.width - pad || ball.webY < pad || ball.webY > game.height - pad) {
-          ball.webState = "idle"; return;
+          ball.webState = "idle";
+          return;
         }
         const target = balls.find(o => o.side !== ball.side);
         if (Math.hypot(ball.webX - target.x, ball.webY - target.y) < target.r + 6) {
@@ -6270,6 +6563,95 @@ export default function App() {
           spawnSparks(ball.webX, ball.webY, "#818cf8", 8);
           playSound("webHit");
         }
+      });
+    };
+
+    const updateFireCars = (stepDt, balls) => {
+      if (!game.fireCars || game.fireCars.length === 0) return;
+
+      game.fireCars = game.fireCars.filter(car => {
+        const path = car.path || [{ x: car.startX, y: car.startY }, { x: car.endX, y: car.endY }];
+        const totalDist = car.pathLength || Math.hypot(car.endX - car.startX, car.endY - car.startY);
+        if (totalDist <= 0 || path.length < 2) return false;
+
+        car.distanceTravelled = (car.distanceTravelled || 0) + car.speed * stepDt;
+        while (car.distanceTravelled >= totalDist && car.pass < car.maxPasses) {
+          car.distanceTravelled -= totalDist;
+          car.pass += 1;
+          playSound("megaLeap", 0.65, 120);
+        }
+        if (car.distanceTravelled >= totalDist) {
+          const owner = balls.find((ball) => ball.id === car.ownerId);
+          if (owner) {
+            const fsBal = game.balance.fireSkull || BALANCE.fireSkull;
+            owner.fsNextRoadAt = game.simTime + (fsBal.cooldown || 8000);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: owner.x, y: owner.y - owner.r - 20, vy: -38,
+              text: "ENGINE COOLDOWN", color: "#facc15", life: 0.8, maxLife: 0.8
+            });
+          }
+          return false;
+        }
+
+        car.progress = car.distanceTravelled / totalDist;
+        let remaining = car.distanceTravelled;
+        let activeStart = path[0];
+        let activeEnd = path[1];
+        for (let i = 1; i < path.length; i++) {
+          const segmentStart = path[i - 1];
+          const segmentEnd = path[i];
+          const segmentLength = Math.hypot(segmentEnd.x - segmentStart.x, segmentEnd.y - segmentStart.y);
+          activeStart = segmentStart;
+          activeEnd = segmentEnd;
+          if (remaining <= segmentLength || i === path.length - 1) {
+            const segmentProgress = segmentLength > 0 ? Math.min(1, remaining / segmentLength) : 0;
+            car.x = segmentStart.x + (segmentEnd.x - segmentStart.x) * segmentProgress;
+            car.y = segmentStart.y + (segmentEnd.y - segmentStart.y) * segmentProgress;
+            break;
+          }
+          remaining -= segmentLength;
+        }
+        const totalDx = activeEnd.x - activeStart.x;
+        const totalDy = activeEnd.y - activeStart.y;
+        car.angle = Math.atan2(totalDy, totalDx);
+
+        // Tail fire particles
+        if (Math.random() < 0.65) {
+          game.particles.push({
+            x: car.x + (Math.random() - 0.5) * car.radius * 0.8,
+            y: car.y + (Math.random() - 0.5) * car.radius * 0.8,
+            vx: -Math.cos(car.angle) * 120 + (Math.random() - 0.5) * 80,
+            vy: -Math.sin(car.angle) * 120 + (Math.random() - 0.5) * 80,
+            color: Math.random() < 0.6 ? "#ea580c" : "#facc15",
+            radius: 3 + Math.random() * 5,
+            life: 0.35 + Math.random() * 0.35,
+            maxLife: 0.7
+          });
+        }
+
+        balls.forEach(ball => {
+          if (ball.side === car.ownerSide) return;
+          const d = Math.hypot(ball.x - car.x, ball.y - car.y);
+          const carHitRadius = car.radius * ((game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32);
+          if (d < ball.r + carHitRadius) {
+            applyDamage(ball, car.damage, `${car.id}-pass-${car.pass}-hit-${ball.id}`, game.simTime, 400);
+            const recoilForce = 980;
+            ball.vx += Math.cos(car.angle) * recoilForce;
+            ball.vy += Math.sin(car.angle) * recoilForce;
+            ball.skillLockedUntil = Math.max(ball.skillLockedUntil || 0, game.simTime + 1400);
+            game.screenShake = Math.max(game.screenShake || 0, 20);
+            playSound("explosion", 0.9, 130);
+            spawnSparks(ball.x, ball.y, "#ef4444", 18);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -42,
+              text: "SKILL LOCK", color: "#facc15", life: 0.7, maxLife: 0.7
+            });
+          }
+        });
+
+        return true;
       });
     };
 
@@ -6375,15 +6757,58 @@ export default function App() {
           if (ball.side === pool.ownerSide) return;
           const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
           if (dist < ball.r + pool.r) {
-            applyDamage(ball, bal.spider.secDamage, `${ball.id}-venom-tick-${pool.createdTime}`, game.simTime, 250);
+            if (pool.isSymbiote) {
+              // Unique symbiote interaction:
+              // 1. Gravity well: Pull target towards center of the slime pool
+              const dx = pool.x - ball.x;
+              const dy = pool.y - ball.y;
+              const distToCenter = Math.hypot(dx, dy);
+              if (distToCenter > 1) {
+                const pullSpeed = 480; // strong suction
+                ball.vx += (dx / distToCenter) * pullSpeed * dt;
+                ball.vy += (dy / distToCenter) * pullSpeed * dt;
+              }
+              // 2. Damage: 2 tick damage every 250ms, max 6 damage total per pool
+              pool.damageDealtMap = pool.damageDealtMap || {};
+              const currentDamage = pool.damageDealtMap[ball.id] || 0;
+              if (currentDamage < 6) {
+                const tickDamage = Math.min(2, 6 - currentDamage);
+                applyDamage(ball, tickDamage, `${ball.id}-symbiote-tick-${pool.createdTime}`, game.simTime, 250);
+                pool.damageDealtMap[ball.id] = currentDamage + tickDamage;
+                
+                // 3. Stun Flash: Turn stun flash black
+                ball.webHitFlashUntil = game.simTime + 220;
+                ball.webHitFlashColor = "#000000";
 
-            if (canSpawnParticle() && Math.random() < 0.15) {
-              game.particles.push({
-                x: ball.x + (Math.random() - 0.5) * ball.r,
-                y: ball.y + (Math.random() - 0.5) * ball.r,
-                vx: (Math.random() - 0.5) * 20, vy: -20 - Math.random() * 20,
-                color: "#10b981", radius: 1.5, life: 0.35, maxLife: 0.35
-              });
+                // 4. Update owner stats
+                const owner = game.balls.find(b => b.id === pool.ownerId);
+                if (owner) {
+                  const ownerStats = owner.side === "left" ? game.stats.left : game.stats.right;
+                  if (ownerStats) {
+                    ownerStats.damageDealt += Math.max(MIN_DAMAGE, tickDamage);
+                  }
+                }
+              }
+
+              if (canSpawnParticle() && Math.random() < 0.22) {
+                game.particles.push({
+                  x: ball.x + (Math.random() - 0.5) * ball.r,
+                  y: ball.y + (Math.random() - 0.5) * ball.r,
+                  vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 20,
+                  color: "#0f172a", radius: 2, life: 0.35, maxLife: 0.35
+                });
+              }
+            } else {
+              applyDamage(ball, bal.spider.secDamage, `${ball.id}-venom-tick-${pool.createdTime}`, game.simTime, 250);
+
+              if (canSpawnParticle() && Math.random() < 0.15) {
+                game.particles.push({
+                  x: ball.x + (Math.random() - 0.5) * ball.r,
+                  y: ball.y + (Math.random() - 0.5) * ball.r,
+                  vx: (Math.random() - 0.5) * 20, vy: -20 - Math.random() * 20,
+                  color: "#10b981", radius: 1.5, life: 0.35, maxLife: 0.35
+                });
+              }
             }
           }
         });
@@ -6394,7 +6819,7 @@ export default function App() {
           game.particles.push({
             x: pool.x + Math.cos(a) * d, y: pool.y + Math.sin(a) * d,
             vx: 0, vy: -8 - Math.random() * 12,
-            color: "#34d399", radius: 1.2, life: 0.4, maxLife: 0.4
+            color: pool.isSymbiote ? "#3b0764" : "#34d399", radius: 1.2, life: 0.4, maxLife: 0.4
           });
         }
 
@@ -6685,6 +7110,24 @@ export default function App() {
 
       const bladeState = ball.knifeBladeState || "rotating";
       if (bladeState === "rotating") {
+        if (ball.saberSlashActive && game.simTime < ball.saberSlashStart + ball.saberSlashDuration) {
+          const p = (game.simTime - ball.saberSlashStart) / ball.saberSlashDuration;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, 0.45 * (1 - p));
+          ctx.fillStyle = "rgba(74, 222, 128, 0.35)";
+          ctx.strokeStyle = "#4ade80";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(ball.x, ball.y);
+          const startAngle = ball.saberSlashBase - ball.saberSlashDir * 1.35;
+          const currentAngle = ball.spinAngle;
+          ctx.arc(ball.x, ball.y, ball.r + game.balance.knife.bladeLength, startAngle, currentAngle, ball.saberSlashDir < 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
         ctx.save(); ctx.translate(ball.x, ball.y);
         ctx.rotate(ball.spinAngle);
         const hiltX = ball.r - 8;
@@ -7335,6 +7778,11 @@ export default function App() {
 
       if (ball.fangFlashUntil > game.simTime) {
         ctx.save();
+        const target = game.balls.find(o => o.id !== ball.id);
+        if (target) {
+          const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          ctx.rotate(angle + Math.PI / 2);
+        }
         ctx.shadowColor = "#ffffff";
         ctx.shadowBlur = 10;
         ctx.fillStyle = "#f8fafc";
@@ -7378,7 +7826,9 @@ export default function App() {
       if (ball.webState === "shooting" || ball.webState === "pulling" || ball.webState === "webBouncing") {
         ctx.save(); ctx.strokeStyle = "rgba(226, 232, 240, 0.65)"; ctx.lineWidth = 2.5;
         ctx.shadowColor = "#ffffff"; ctx.shadowBlur = 4;
-        ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.webX, ball.webY); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.webX, ball.webY);
+        ctx.stroke();
 
         if (ball.webState === "shooting") {
           ctx.fillStyle = "#cbd5e1"; ctx.beginPath(); ctx.arc(ball.webX, ball.webY, 6, 0, Math.PI * 2); ctx.fill();
@@ -7398,11 +7848,8 @@ export default function App() {
       ctx.translate(ball.x, ball.y);
       
       // 1. Draw writhing tendrils/legs
-      ctx.strokeStyle = "#090d16";
-      ctx.lineWidth = 4.5;
-      ctx.lineCap = "round";
-      
       const timeOffset = game.simTime * 0.016;
+      ctx.lineCap = "round";
       for (let i = 0; i < 6; i++) {
         const angle = (i * Math.PI) / 3 + Math.sin(timeOffset + i) * 0.22;
         const jX = Math.cos(angle) * ball.r;
@@ -7412,6 +7859,21 @@ export default function App() {
         const tX = Math.cos(angle) * (ball.r + 14 + Math.sin(timeOffset * 1.5 + i) * 6);
         const tY = Math.sin(angle) * (ball.r + 14 + Math.sin(timeOffset * 1.5 + i) * 6);
         
+        // Underglow stroke
+        ctx.strokeStyle = "#f1f5f9";
+        ctx.lineWidth = 6.5;
+        ctx.save();
+        ctx.shadowColor = "#cbd5e1";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(jX * 0.8, jY * 0.8);
+        ctx.quadraticCurveTo(cX, cY, tX, tY);
+        ctx.stroke();
+        ctx.restore();
+
+        // Dark central stroke
+        ctx.strokeStyle = "#090d16";
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
         ctx.moveTo(jX * 0.8, jY * 0.8);
         ctx.quadraticCurveTo(cX, cY, tX, tY);
@@ -7425,10 +7887,10 @@ export default function App() {
         -ball.r * 0.25, -ball.r * 0.25, 2,
         0, 0, ball.r
       );
-      metalGrad.addColorStop(0, "#1f2937");
-      metalGrad.addColorStop(0.4, "#0f172a");
-      metalGrad.addColorStop(0.75, "#020617");
-      metalGrad.addColorStop(1, "#000000");
+      metalGrad.addColorStop(0, "#475569");
+      metalGrad.addColorStop(0.4, "#1e293b");
+      metalGrad.addColorStop(0.75, "#0f172a");
+      metalGrad.addColorStop(1, "#020617");
       ctx.fillStyle = metalGrad;
       ctx.fill();
 
@@ -7451,46 +7913,81 @@ export default function App() {
       ctx.stroke();
       ctx.restore();
 
-      // Outer light stroke
+      // Outer light stroke with glow
       ctx.lineWidth = 3.5;
       ctx.strokeStyle = config.stroke || "#f1f5f9";
+      ctx.save();
+      ctx.shadowColor = "#e2e8f0";
+      ctx.shadowBlur = 10;
       ctx.stroke();
+      ctx.restore();
 
-      // Draw Symbiote Lash tendril visual
-      if (ball.venomLashFlashUntil && game.simTime < ball.venomLashFlashUntil) {
-        const progress = 1 - (ball.venomLashFlashUntil - game.simTime) / 400;
-        const alpha = Math.max(0, 1 - progress);
-        const tx = ball.venomLashTargetX || 0;
-        const ty = ball.venomLashTargetY || 0;
+      // Draw String Pull Slam visuals
+      if (ball.bsSkillState === "throwing") {
         ctx.restore(); ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = "#1e293b";
+        ctx.strokeStyle = "#475569";
         ctx.lineWidth = 5;
         ctx.lineCap = "round";
-        ctx.shadowColor = "#0f172a";
-        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#cbd5e1";
+        ctx.shadowBlur = 8;
         ctx.beginPath();
-        // Wavy tendril using multiple control points
-        const midX = (ball.x + tx) / 2 + Math.sin(game.simTime * 0.04) * 18;
-        const midY = (ball.y + ty) / 2 + Math.cos(game.simTime * 0.04) * 18;
+        const midX = (ball.x + ball.bsStringX) / 2 + Math.sin(game.simTime * 0.05) * 8;
+        const midY = (ball.y + ball.bsStringY) / 2 + Math.cos(game.simTime * 0.05) * 8;
         ctx.moveTo(ball.x, ball.y);
-        ctx.quadraticCurveTo(midX, midY, tx, ty);
+        ctx.quadraticCurveTo(midX, midY, ball.bsStringX, ball.bsStringY);
         ctx.stroke();
-        // White inner line
-        ctx.strokeStyle = "rgba(241, 245, 249, 0.55)";
-        ctx.lineWidth = 2;
+        
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2.0;
         ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.moveTo(ball.x, ball.y);
-        ctx.quadraticCurveTo(midX, midY, tx, ty);
+        ctx.quadraticCurveTo(midX, midY, ball.bsStringX, ball.bsStringY);
         ctx.stroke();
-        ctx.globalAlpha = 1;
+        
+        // draw projectile head
+        ctx.fillStyle = "#f1f5f9";
+        ctx.beginPath();
+        ctx.arc(ball.bsStringX, ball.bsStringY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
         ctx.restore(); ctx.save();
         ctx.translate(ball.x, ball.y);
+      } else if ((ball.bsSkillState === "pulling" || ball.bsSkillState === "spinning") && ball.bsHookedTargetId) {
+        const target = game.balls.find(o => o.id === ball.bsHookedTargetId);
+        if (target) {
+          ctx.restore(); ctx.save();
+          ctx.strokeStyle = "#94a3b8";
+          ctx.lineWidth = 5.5;
+          ctx.lineCap = "round";
+          ctx.shadowColor = "#e2e8f0";
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          const midX = (ball.x + target.x) / 2 + (Math.random() - 0.5) * 3;
+          const midY = (ball.y + target.y) / 2 + (Math.random() - 0.5) * 3;
+          ctx.moveTo(ball.x, ball.y);
+          ctx.quadraticCurveTo(midX, midY, target.x, target.y);
+          ctx.stroke();
+          
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 2.2;
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.moveTo(ball.x, ball.y);
+          ctx.quadraticCurveTo(midX, midY, target.x, target.y);
+          ctx.stroke();
+          ctx.restore(); ctx.save();
+          ctx.translate(ball.x, ball.y);
+        }
       }
 
+
       // 3. Draw white eye markings (Venom style)
-      const isAggressive = ball.venomLashFlashUntil && game.simTime < ball.venomLashFlashUntil;
+      const isAggressive = (ball.venomLashFlashUntil && game.simTime < ball.venomLashFlashUntil) ||
+                            (ball.bsSkillState && ball.bsSkillState !== "idle");
       ctx.fillStyle = "#ffffff";
       ctx.shadowColor = "#f1f5f9";
       ctx.shadowBlur = isAggressive ? 6 : 2;
@@ -8847,26 +9344,22 @@ export default function App() {
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         // Outer bloom
-        ctx.shadowColor = "#ef4444";
-        ctx.shadowBlur = 15;
-        ctx.strokeStyle = "rgba(220,38,38,0.22)";
-        ctx.lineWidth = isUlt ? 24 : 12;
+        ctx.strokeStyle = "rgba(220,38,38,0.16)";
+        ctx.lineWidth = isUlt ? 18 : 9;
         ctx.beginPath();
         ctx.moveTo(path[0].x, path[0].y);
         for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
         ctx.stroke();
         // Mid
-        ctx.strokeStyle = "rgba(248,113,113,0.5)";
-        ctx.lineWidth = isUlt ? 14 : 8;
-        ctx.shadowBlur = 8;
+        ctx.strokeStyle = "rgba(248,113,113,0.38)";
+        ctx.lineWidth = isUlt ? 10 : 6;
         ctx.beginPath();
         ctx.moveTo(path[0].x, path[0].y);
         for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
         ctx.stroke();
         // Core
         ctx.strokeStyle = "#fff5f5";
-        ctx.lineWidth = isUlt ? 6 : 3;
-        ctx.shadowBlur = 4;
+        ctx.lineWidth = isUlt ? 4 : 2.5;
         ctx.beginPath();
         ctx.moveTo(path[0].x, path[0].y);
         for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
@@ -8890,11 +9383,11 @@ export default function App() {
       ctx.fill();
 
       // --- Gold Horizontal Band ---
-      ctx.fillStyle = "#ca8a04"; // Rich flat gold
+      ctx.fillStyle = "#b45309"; // richer but less bright gold
       ctx.fillRect(-ball.r, -ball.r * 0.15, ball.r * 2, ball.r * 0.3);
 
       // --- Red Visor Slit (Only on the right side of the central dial) ---
-      const visorGlowColor = isUlt ? "#fbbf24" : "#ef4444";
+      const visorGlowColor = isUlt ? "#f59e0b" : "#dc2626";
       const visorCoreColor = isUlt ? "#ffffff" : "#fca5a5";
       ctx.fillStyle = visorGlowColor;
       ctx.fillRect(0, -ball.r * 0.12, ball.r * 0.9, ball.r * 0.24);
@@ -8902,7 +9395,7 @@ export default function App() {
       ctx.fillRect(ball.r * 0.15, -ball.r * 0.06, ball.r * 0.7, ball.r * 0.12);
 
       // --- Gold Visor Frame/Shade (Bordering the visor slit) ---
-      ctx.strokeStyle = "#a16207"; // Darker gold for borders
+      ctx.strokeStyle = "#92400e"; // Darker gold for borders
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(0, -ball.r * 0.15);
@@ -8915,7 +9408,7 @@ export default function App() {
       // Outer dial circle
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.42, 0, Math.PI * 2);
-      ctx.fillStyle = "#ca8a04";
+      ctx.fillStyle = "#b45309";
       ctx.fill();
       ctx.strokeStyle = "#854d0e";
       ctx.lineWidth = 2.5;
@@ -8924,9 +9417,9 @@ export default function App() {
       // Inner circle details
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.25, 0, Math.PI * 2);
-      ctx.fillStyle = "#b45309";
+      ctx.fillStyle = "#92400e";
       ctx.fill();
-      ctx.strokeStyle = "#d97706";
+      ctx.strokeStyle = "#b45309";
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
@@ -8939,8 +9432,8 @@ export default function App() {
       // --- Outer Stroke / Aura ---
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.strokeStyle = isUlt ? "#fbbf24" : "#ef4444";
-      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = isUlt ? "#f59e0b" : "#dc2626";
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
       ctx.restore();
@@ -9037,6 +9530,356 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    // ─── Fire Skull Ball ──────────────────────────────────────────────────────
+    const drawFireSkullBall = (ball) => {
+      const pulse = 0.5 + Math.sin(game.simTime * 0.018) * 0.5;
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      ctx.save();
+      ctx.globalAlpha = 0.16 + pulse * 0.05;
+      ctx.fillStyle = "#fbbf24";
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r + 7 + pulse * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.25, -ball.r * 0.3, 2, 0, 0, ball.r);
+      bodyGrad.addColorStop(0, "#fff7c2");
+      bodyGrad.addColorStop(0.45, "#fde68a");
+      bodyGrad.addColorStop(0.78, "#fbbf24");
+      bodyGrad.addColorStop(1, "#f59e0b");
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = ball.fsRoadActive ? "#f97316" : "#facc15";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const skullScale = ball.r / 30;
+      ctx.save();
+      ctx.fillStyle = "#252d36";
+      ctx.beginPath();
+      ctx.arc(0, 2 * skullScale, 17 * skullScale, Math.PI * 0.96, Math.PI * 0.04, false);
+      ctx.lineTo(11 * skullScale, 24 * skullScale);
+      ctx.lineTo(6 * skullScale, 24 * skullScale);
+      ctx.lineTo(4 * skullScale, 14 * skullScale);
+      ctx.lineTo(1 * skullScale, 24 * skullScale);
+      ctx.lineTo(-1 * skullScale, 24 * skullScale);
+      ctx.lineTo(-4 * skullScale, 14 * skullScale);
+      ctx.lineTo(-6 * skullScale, 24 * skullScale);
+      ctx.lineTo(-11 * skullScale, 24 * skullScale);
+      ctx.lineTo(-17 * skullScale, 7 * skullScale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#fff3a3";
+      ctx.beginPath();
+      ctx.ellipse(-7.5 * skullScale, 6 * skullScale, 5 * skullScale, 6.5 * skullScale, -0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(7.5 * skullScale, 6 * skullScale, 5 * skullScale, 6.5 * skullScale, 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, 12 * skullScale);
+      ctx.lineTo(3 * skullScale, 17 * skullScale);
+      ctx.quadraticCurveTo(0, 19.5 * skullScale, -3 * skullScale, 17 * skullScale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    // ─── Fire Road (drawn before balls, world-space) ──────────────────────────
+    const drawFireRoads = () => {
+      game.balls.forEach(ball => {
+        if (ball.type !== "fireSkull" || !ball.fsRoadActive) return;
+        const segs = ball.fsRoadSegments;
+        if (!segs || segs.length < 2) return;
+
+        ctx.save();
+
+        // Thick outer glow road
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        const fsBal = game.balance.fireSkull || BALANCE.fireSkull;
+        const roadW = fsBal.roadWidth || 28;
+        const time = game.simTime;
+
+        // Animated dashed lava road — multiple layers
+        for (let layer = 0; layer < 3; layer++) {
+          const widths  = [roadW * 1.4, roadW, roadW * 0.48];
+          const colors  = ["rgba(239,68,68,0.22)", "rgba(249,115,22,0.38)", "rgba(253,186,116,0.75)"];
+          const blurs   = [18, 10, 5];
+          const dashes  = [layer === 2 ? [] : [14, 10], [14, 10], []];
+          const offsets = [0, -time * 0.08, 0];
+
+          ctx.save();
+          ctx.shadowColor = layer === 0 ? "#ef4444" : "#f97316";
+          ctx.shadowBlur = blurs[layer];
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = colors[layer];
+          ctx.lineWidth = widths[layer];
+          if (dashes[layer].length) {
+            ctx.setLineDash(dashes[layer]);
+            ctx.lineDashOffset = offsets[layer];
+          } else {
+            ctx.setLineDash([]);
+          }
+          ctx.beginPath();
+          ctx.moveTo(segs[0].x, segs[0].y);
+          for (let i = 1; i < segs.length; i++) ctx.lineTo(segs[i].x, segs[i].y);
+          ctx.lineTo(ball.x, ball.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Start point flare
+        ctx.save();
+        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = "#fef3c7";
+        ctx.beginPath();
+        ctx.arc(segs[0].x, segs[0].y, 7 + Math.sin(time * 0.02) * 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.restore();
+      });
+    };
+
+    // ─── Fire Car entity rendering ────────────────────────────────────────────
+    const drawFireCarEntities = () => {
+      if (!game.fireCars || game.fireCars.length === 0) return;
+      const time = game.simTime;
+      const pulse = 0.5 + Math.sin(time * 0.025) * 0.5;
+
+      game.fireCars.forEach(car => {
+        if (car.path?.length > 1) {
+          ctx.save();
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = "rgba(251, 191, 36, 0.38)";
+          ctx.lineWidth = (game.balance.fireSkull?.roadWidth || BALANCE.fireSkull.roadWidth) * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(car.path[0].x, car.path[0].y);
+          for (let i = 1; i < car.path.length; i++) ctx.lineTo(car.path[i].x, car.path[i].y);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        const dx = car.endX - car.startX;
+        const dy = car.endY - car.startY;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= 0) return;
+        const angle = car.angle ?? Math.atan2(dy, dx);
+        const carVisualScale = (game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32;
+        const hw = car.radius * 1.45 * carVisualScale;
+        const hh = car.radius * 0.75 * Math.max(1.08, carVisualScale * 0.95);
+        const carBody = "#111315";
+        const carBodyShade = "#23272d";
+        const carWindow = "#3b4550";
+        const carTrim = "#f97316";
+        const carTrimBright = "#fbbf24";
+        const carWheel = "#1f242b";
+
+        ctx.save();
+        ctx.translate(car.x, car.y);
+        ctx.rotate(angle);
+
+        // Road heat trail behind
+        ctx.save();
+        ctx.globalAlpha = 0.22;
+        ctx.strokeStyle = "rgba(251,191,36,0.38)";
+        ctx.lineWidth = car.radius * 1.05 * carVisualScale;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-(car.radius * 3.5 * carVisualScale), 0);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+        ctx.restore();
+
+        // Car body — wide glowing rectangle
+        ctx.save();
+        ctx.shadowColor = "rgba(249, 115, 22, 0.22)";
+        ctx.shadowBlur = 10 + pulse * 4;
+        ctx.fillStyle = carBody;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 1.18, 0);
+        ctx.quadraticCurveTo(-hw * 1.14, -hh * 0.74, -hw * 0.78, -hh * 0.86);
+        ctx.lineTo(hw * 0.72, -hh * 0.86);
+        ctx.quadraticCurveTo(hw * 1.12, -hh * 0.76, hw * 1.18, 0);
+        ctx.quadraticCurveTo(hw * 1.12, hh * 0.76, hw * 0.72, hh * 0.86);
+        ctx.lineTo(-hw * 0.78, hh * 0.86);
+        ctx.quadraticCurveTo(-hw * 1.14, hh * 0.74, -hw * 1.18, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = carBodyShade;
+        ctx.beginPath();
+        ctx.roundRect(-hw * 0.86, -hh * 0.62, hw * 1.72, hh * 1.24, hh * 0.26);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(249, 115, 22, 0.6)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.88, -hh * 0.56);
+        ctx.lineTo(-hw * 0.36, -hh * 0.72);
+        ctx.moveTo(-hw * 0.88, hh * 0.56);
+        ctx.lineTo(-hw * 0.36, hh * 0.72);
+        ctx.moveTo(hw * 0.36, -hh * 0.72);
+        ctx.lineTo(hw * 0.88, -hh * 0.56);
+        ctx.moveTo(hw * 0.36, hh * 0.72);
+        ctx.lineTo(hw * 0.88, hh * 0.56);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(194, 65, 12, 0.88)";
+        ctx.fillRect(-hw * 0.16, -hh * 0.8, hw * 0.08, hh * 1.6);
+        ctx.fillRect(hw * 0.08, -hh * 0.8, hw * 0.08, hh * 1.6);
+        ctx.fillStyle = "rgba(251, 191, 36, 0.6)";
+        ctx.fillRect(-hw * 0.035, -hh * 0.8, hw * 0.07, hh * 1.6);
+
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.2)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.52, -hh * 0.44);
+        ctx.lineTo(hw * 0.52, -hh * 0.44);
+        ctx.moveTo(-hw * 0.5, hh * 0.44);
+        ctx.lineTo(hw * 0.5, hh * 0.44);
+        ctx.stroke();
+
+        ctx.fillStyle = carWindow;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.34, -hh * 0.58);
+        ctx.lineTo(hw * 0.34, -hh * 0.58);
+        ctx.lineTo(hw * 0.44, -hh * 0.22);
+        ctx.lineTo(-hw * 0.44, -hh * 0.22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.3, hh * 0.52);
+        ctx.lineTo(hw * 0.3, hh * 0.52);
+        ctx.lineTo(hw * 0.38, hh * 0.2);
+        ctx.lineTo(-hw * 0.38, hh * 0.2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(17, 19, 21, 0.92)";
+        ctx.beginPath();
+        ctx.roundRect(-hw * 0.48, -hh * 0.18, hw * 0.96, hh * 0.38, hh * 0.12);
+        ctx.fill();
+
+        ctx.save();
+        ctx.shadowColor = "rgba(251, 191, 36, 0.4)";
+        ctx.shadowBlur = 8 + pulse * 2;
+        ctx.fillStyle = "#fef08a";
+        ctx.beginPath();
+        ctx.arc(0, hh * 0.02, hh * 0.18, Math.PI, 0);
+        ctx.lineTo(hh * 0.14, hh * 0.2);
+        ctx.lineTo(hh * 0.08, hh * 0.34);
+        ctx.lineTo(hh * 0.02, hh * 0.18);
+        ctx.lineTo(-hh * 0.02, hh * 0.18);
+        ctx.lineTo(-hh * 0.08, hh * 0.34);
+        ctx.lineTo(-hh * 0.14, hh * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#111315";
+        ctx.beginPath();
+        ctx.arc(-hh * 0.07, hh * 0.02, hh * 0.04, 0, Math.PI * 2);
+        ctx.arc(hh * 0.07, hh * 0.02, hh * 0.04, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(0, hh * 0.08);
+        ctx.lineTo(hh * 0.04, hh * 0.16);
+        ctx.lineTo(-hh * 0.04, hh * 0.16);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        [-0.18, 0.18].forEach(offX => {
+          ctx.beginPath();
+          ctx.roundRect(hw * offX - hw * 0.08, -hh * 0.7, hw * 0.16, hh * 0.08, 3);
+          ctx.fill();
+        });
+
+        ctx.fillStyle = "#0f1419";
+        ctx.beginPath();
+        ctx.ellipse(-hw * 0.74, -hh * 0.08, hw * 0.06, hh * 0.11, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(-hw * 0.74, hh * 0.08, hw * 0.06, hh * 0.11, 0.3, 0, Math.PI * 2);
+        ctx.ellipse(hw * 0.74, -hh * 0.08, hw * 0.06, hh * 0.11, 0.3, 0, Math.PI * 2);
+        ctx.ellipse(hw * 0.74, hh * 0.08, hw * 0.06, hh * 0.11, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.7)";
+        ctx.lineWidth = 2.6;
+        [-1, 1].forEach(side => {
+          ctx.beginPath();
+          ctx.moveTo(-hw * 0.66, hh * 0.54 * side);
+          ctx.quadraticCurveTo(-hw * 0.2, hh * 0.82 * side, hw * 0.3, hh * 0.68 * side);
+          ctx.quadraticCurveTo(hw * 0.54, hh * 0.58 * side, hw * 0.78, hh * 0.44 * side);
+          ctx.stroke();
+        });
+
+        [
+          [-hw * 0.56, -hh * 0.7],
+          [hw * 0.56, -hh * 0.7],
+          [-hw * 0.56, hh * 0.7],
+          [hw * 0.56, hh * 0.7]
+        ].forEach(([wx, wy], idx) => {
+          ctx.save();
+          ctx.globalAlpha = 0.16 + pulse * 0.06;
+          ctx.fillStyle = idx < 2 ? "rgba(148, 163, 184, 0.45)" : "rgba(120, 113, 108, 0.45)";
+          ctx.beginPath();
+          ctx.ellipse(wx - hw * 0.16, wy, hw * 0.22, hh * 0.18, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          ctx.save();
+          ctx.shadowColor = "rgba(249, 115, 22, 0.28)";
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = carWheel;
+          ctx.beginPath();
+          ctx.roundRect(wx - hw * 0.16, wy - hh * 0.13, hw * 0.32, hh * 0.26, 4);
+          ctx.fill();
+          ctx.fillStyle = carTrimBright;
+          ctx.globalAlpha = 0.32;
+          ctx.fillRect(wx - hw * 0.12, wy - hh * 0.03, hw * 0.24, hh * 0.06);
+          ctx.restore();
+        });
+
+        ctx.restore();
+
+        // Flame exhaust jets (2 trails out the back)
+        [-hh * 0.55, hh * 0.55].forEach(offY => {
+          for (let j = 0; j < 3; j++) {
+            const flameLen = (20 + j * 14) * (0.7 + pulse * 0.5);
+            ctx.save();
+            ctx.globalAlpha = (0.52 - j * 0.16) * (0.8 + Math.random() * 0.18);
+            ctx.strokeStyle = j === 0 ? "#fff3a3" : j === 1 ? "#fbbf24" : "#f59e0b";
+            ctx.lineWidth = 4.5 - j;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(-hw, offY);
+            ctx.lineTo(-hw - flameLen, offY + (Math.random() - 0.5) * 10);
+            ctx.stroke();
+            ctx.restore();
+          }
+        });
+
+        ctx.restore();
+      });
+    };
+
     const drawConstellationStars = () => {
       if (!game.constellationStars) return;
 
@@ -9051,36 +9894,26 @@ export default function App() {
       Object.keys(groups).forEach(ownerId => {
         const stars = groups[ownerId];
         stars.sort((a, b) => a.createdAt - b.createdAt);
-        const last4 = stars.slice(-4);
+        const previewStars = stars.slice(-5);
 
-        if (last4.length >= 2) {
+        if (previewStars.length >= 2) {
           ctx.save();
           ctx.strokeStyle = "rgba(224, 242, 254, 0.35)";
           ctx.lineWidth = 1.5;
           ctx.setLineDash([4, 4]);
 
-          if (last4.length === 2) {
+          if (previewStars.length === 2) {
             ctx.beginPath();
-            ctx.moveTo(last4[0].x, last4[0].y);
-            ctx.lineTo(last4[1].x, last4[1].y);
+            ctx.moveTo(previewStars[0].x, previewStars[0].y);
+            ctx.lineTo(previewStars[1].x, previewStars[1].y);
             ctx.stroke();
-          } 
-          else if (last4.length === 3) {
-            ctx.beginPath();
-            ctx.moveTo(last4[0].x, last4[0].y);
-            ctx.lineTo(last4[1].x, last4[1].y);
-            ctx.lineTo(last4[2].x, last4[2].y);
-            ctx.closePath();
-            ctx.stroke();
-          } 
-          else if (last4.length === 4) {
-            const cx = (last4[0].x + last4[1].x + last4[2].x + last4[3].x) / 4;
-            const cy = (last4[0].y + last4[1].y + last4[2].y + last4[3].y) / 4;
-            const sorted = [...last4].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
-
+          } else if (previewStars.length >= 3) {
+            const cx = previewStars.reduce((sum, s) => sum + s.x, 0) / previewStars.length;
+            const cy = previewStars.reduce((sum, s) => sum + s.y, 0) / previewStars.length;
+            const sorted = [...previewStars].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
             ctx.beginPath();
             ctx.moveTo(sorted[0].x, sorted[0].y);
-            for (let i = 1; i < 4; i++) ctx.lineTo(sorted[i].x, sorted[i].y);
+            for (let i = 1; i < sorted.length; i++) ctx.lineTo(sorted[i].x, sorted[i].y);
             ctx.closePath();
             ctx.stroke();
           }
@@ -9128,57 +9961,7 @@ export default function App() {
         ctx.save();
         ctx.globalAlpha = alpha;
 
-        if (c.type === "circle") {
-          const star = c.stars[0];
-          const radius = bal.circleRadius || 90;
-
-          ctx.save();
-          ctx.shadowColor = "#38bdf8";
-          ctx.shadowBlur = 14 + pulse * 6;
-          ctx.strokeStyle = "rgba(56, 189, 248, 0.7)";
-          ctx.lineWidth = 3.5;
-          ctx.beginPath();
-          ctx.arc(star.x, star.y, radius, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-
-          ctx.fillStyle = "rgba(56, 189, 248, 0.08)";
-          ctx.beginPath();
-          ctx.arc(star.x, star.y, radius, 0, Math.PI * 2);
-          ctx.fill();
-
-          const waveRadius = ((game.simTime % 1000) / 1000) * radius;
-          ctx.strokeStyle = `rgba(56, 189, 248, ${0.4 * (1 - waveRadius / radius)})`;
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(star.x, star.y, waveRadius, 0, Math.PI * 2);
-          ctx.stroke();
-        } 
-        else if (c.type === "line") {
-          const p1 = c.stars[0], p2 = c.stars[1];
-
-          ctx.save();
-          ctx.shadowColor = "#38bdf8";
-          ctx.shadowBlur = 12 + pulse * 6;
-          ctx.lineCap = "round";
-
-          ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
-          ctx.lineWidth = 14;
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.stroke();
-
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 3.5;
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.stroke();
-
-          ctx.restore();
-        } 
-        else if (c.type === "triangle") {
+        if (c.type === "triangle") {
           const p1 = c.stars[0], p2 = c.stars[1], p3 = c.stars[2];
 
           ctx.fillStyle = "rgba(250, 204, 21, 0.08)";
@@ -9201,8 +9984,7 @@ export default function App() {
           ctx.closePath();
           ctx.stroke();
           ctx.restore();
-        } 
-        else if (c.type === "square") {
+        } else if (c.type === "square") {
           const p1 = c.stars[0], p2 = c.stars[1], p3 = c.stars[2], p4 = c.stars[3];
           const cx = (p1.x + p2.x + p3.x + p4.x) / 4;
           const cy = (p1.y + p2.y + p3.y + p4.y) / 4;
@@ -9227,7 +10009,7 @@ export default function App() {
           ctx.stroke();
           ctx.restore();
 
-          ctx.strokeStyle = "rgba(192, 132, 252, 0.15)";
+          ctx.strokeStyle = "rgba(192, 132, 252, 0.12)";
           ctx.lineWidth = 1.5;
           ctx.save();
           ctx.clip();
@@ -9238,6 +10020,38 @@ export default function App() {
           }
           ctx.stroke();
           ctx.restore();
+        } else if (c.type === "pentagon") {
+          const cx = c.stars.reduce((sum, p) => sum + p.x, 0) / c.stars.length;
+          const cy = c.stars.reduce((sum, p) => sum + p.y, 0) / c.stars.length;
+          const q = [...c.stars].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+
+          ctx.fillStyle = "rgba(251, 191, 36, 0.08)";
+          ctx.beginPath();
+          ctx.moveTo(q[0].x, q[0].y);
+          for (let i = 1; i < q.length; i++) ctx.lineTo(q[i].x, q[i].y);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.save();
+          ctx.shadowColor = "#f59e0b";
+          ctx.shadowBlur = 12 + pulse * 5;
+          ctx.strokeStyle = "rgba(251, 191, 36, 0.8)";
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(q[0].x, q[0].y);
+          for (let i = 1; i < q.length; i++) ctx.lineTo(q[i].x, q[i].y);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.strokeStyle = "rgba(255, 243, 163, 0.35)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          for (const p of q) {
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(p.x, p.y);
+          }
+          ctx.stroke();
         }
 
         ctx.restore();
@@ -9477,6 +10291,7 @@ export default function App() {
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
       else if (ball.type === "gazerBall") drawGazerBall(ball);
       else if (ball.type === "constellation") drawConstellationBall(ball);
+      else if (ball.type === "fireSkull") drawFireSkullBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -9591,152 +10406,62 @@ export default function App() {
       }
 
       if (ball.type === "blackSpider") {
-        if (ball.blackSpiderMarkedTargetId) {
-          const target = game.balls.find(o => o.id === ball.blackSpiderMarkedTargetId);
-          if (target) {
-            // Draw wall anchor puddle if pulling
-            if (ball.blackSpiderAnchorState === "pulling" && ball.blackSpiderAnchorWall) {
-              ctx.save();
-              ctx.translate(ball.blackSpiderAnchorWall.x, ball.blackSpiderAnchorWall.y);
-              ctx.fillStyle = "#090d16";
-              ctx.shadowColor = "#020617";
-              ctx.shadowBlur = 8;
-              ctx.beginPath();
-              ctx.arc(0, 0, 18, 0, Math.PI * 2);
-              ctx.fill();
-              
-              ctx.strokeStyle = "#020617";
-              ctx.lineWidth = 3;
-              for (let i = 0; i < 4; i++) {
-                const angle = (i * Math.PI) / 2 + Math.sin(game.simTime * 0.02 + i) * 0.4;
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(Math.cos(angle) * 24, Math.sin(angle) * 24);
-                ctx.stroke();
-              }
-              ctx.restore();
-            }
-
-            // Draw elastic black-and-white cord
-            ctx.save();
-            const startPt = ball.blackSpiderAnchorState === "pulling" ? ball.blackSpiderAnchorWall : ball;
-            const dist = Math.hypot(target.x - startPt.x, target.y - startPt.y);
-            const isTense = dist > 400;
-            const wrap = ball.blackSpiderWrappedCorner;
-            
-            ctx.strokeStyle = isTense ? "#ef4444" : "#090d16";
-            ctx.lineWidth = isTense ? 8 : 6;
-            ctx.shadowColor = isTense ? "#ef4444" : "#020617";
-            ctx.shadowBlur = 10;
-            ctx.lineCap = "round";
-            
-            ctx.beginPath();
-            ctx.moveTo(startPt.x, startPt.y);
-            if (wrap) {
-              ctx.lineTo(wrap.x, wrap.y);
-            }
-            ctx.lineTo(target.x, target.y);
-            ctx.stroke();
-            
-            ctx.strokeStyle = "#f1f5f9";
-            ctx.lineWidth = 2;
-            ctx.setLineDash([8, 6]);
-            ctx.lineDashOffset = game.simTime * 0.03;
-            ctx.beginPath();
-            ctx.moveTo(startPt.x, startPt.y);
-            if (wrap) {
-              ctx.lineTo(wrap.x, wrap.y);
-            }
-            ctx.lineTo(target.x, target.y);
-            ctx.stroke();
-            
-            ctx.restore();
-          }
-        }
-
-        if (ball.blackSpiderAnchorState === "shooting") {
-          ctx.save();
-          ctx.translate(ball.blackSpiderProjectileX, ball.blackSpiderProjectileY);
-          ctx.fillStyle = "#020617";
-          ctx.shadowColor = "#3b82f6";
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.arc(0, 0, 8, 0, Math.PI * 2);
-          ctx.fill();
-          
-          ctx.strokeStyle = "#3b82f6";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(0, 0, 8, 0, Math.PI * 2);
-          ctx.stroke();
-          
-          ctx.restore();
-        }
-
-        if (ball.blackSpiderAnchorState === "anchoring") {
-          ctx.save();
-          ctx.translate(ball.blackSpiderSecondaryAnchorX, ball.blackSpiderSecondaryAnchorY);
-          ctx.fillStyle = "#020617";
-          ctx.shadowColor = "#000000";
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.arc(0, 0, 9, 0, Math.PI * 2);
-          ctx.fill();
-          
-          ctx.strokeStyle = "#cbd5e1";
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, 9, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Draw small organic tendril shapes wiggling around the anchor projectile
-          ctx.strokeStyle = "#020617";
-          ctx.lineWidth = 2.5;
-          for (let i = 0; i < 4; i++) {
-            const angle = (i * Math.PI) / 2 + Math.sin(game.simTime * 0.05 + i) * 0.5;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(angle) * 15, Math.sin(angle) * 15);
-            ctx.stroke();
-          }
-          ctx.restore();
-        }
+        // Legacy drawing disabled. String Pull Slam handles its own drawing in drawBlackSpiderBall.
       }
     };
 
     const drawBallTrail = (ball) => {
       if (!ball.trail || ball.trail.length < 2) return;
-      const config = BALL_TYPES[ball.type];
+      const config = BALL_TYPES[ball.type] || { color: "#cbd5e1", stroke: "#94a3b8" };
       ctx.save();
       if (ball.type === "chaos") {
-        // Magical energy trails: multi-layered orange, gold, and blue glowing trail
         for (let i = 0; i < ball.trail.length; i++) {
           const pt = ball.trail[i];
           const progress = i / ball.trail.length;
           
-          // Outer orange/gold mystical trail
-          ctx.shadowColor = "#ea580c";
-          ctx.shadowBlur = 8 * progress;
-          ctx.globalAlpha = progress * 0.22;
-          ctx.fillStyle = "#f59e0b";
+          // Outer light orange mystical trail
+          ctx.shadowColor = "#f97316";
+          ctx.shadowBlur = 10 * progress;
+          ctx.globalAlpha = progress * 0.28;
+          ctx.fillStyle = "#fdba74";
           ctx.beginPath();
           ctx.arc(pt.x, pt.y, ball.r * (0.35 + 0.65 * progress), 0, Math.PI * 2);
           ctx.fill();
 
-          // Inner glowing blue magic trail
-          ctx.shadowColor = "#3b82f6";
-          ctx.shadowBlur = 4 * progress;
-          ctx.globalAlpha = progress * 0.32;
-          ctx.fillStyle = "#38bdf8";
+          // Inner glowing yellow magic trail
+          ctx.shadowColor = "#facc15";
+          ctx.shadowBlur = 6 * progress;
+          ctx.globalAlpha = progress * 0.38;
+          ctx.fillStyle = "#fef08a";
           ctx.beginPath();
           ctx.arc(pt.x, pt.y, ball.r * (0.18 + 0.42 * progress), 0, Math.PI * 2);
           ctx.fill();
         }
       } else {
+        // Draw continuous connecting path line
+        ctx.beginPath();
+        ctx.moveTo(ball.trail[0].x, ball.trail[0].y);
+        for (let i = 1; i < ball.trail.length; i++) {
+          ctx.lineTo(ball.trail[i].x, ball.trail[i].y);
+        }
+        ctx.strokeStyle = config.color;
+        ctx.lineWidth = ball.r * 1.35;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.globalAlpha = 0.08;
+        ctx.stroke();
+
+        // Draw overlapping glowing circles
         for (let i = 0; i < ball.trail.length; i++) {
-          const pt = ball.trail[i], progress = i / ball.trail.length;
-          ctx.globalAlpha = progress * 0.12; ctx.fillStyle = config.color;
-          ctx.beginPath(); ctx.arc(pt.x, pt.y, ball.r * (0.4 + 0.6 * progress), 0, Math.PI * 2); ctx.fill();
+          const pt = ball.trail[i];
+          const progress = i / ball.trail.length;
+          ctx.shadowColor = config.stroke || config.color;
+          ctx.shadowBlur = 7 * progress;
+          ctx.globalAlpha = progress * 0.18;
+          ctx.fillStyle = config.color;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, ball.r * (0.35 + 0.65 * progress), 0, Math.PI * 2);
+          ctx.fill();
         }
       }
       ctx.restore();
@@ -10250,16 +10975,16 @@ export default function App() {
           ball.chaosControlledUntil = game.simTime + (bal.controlHold || 220) + (bal.controlDuration || 1200);
           ball.chaosDraggedUntil = game.simTime + 360;
           ball.webHitFlashUntil = game.simTime + 160;
-          ball.webHitFlashColor = circle.color || "#fdba74";
+          ball.webHitFlashColor = "#fef08a";
           ball.spinAngle = (ball.spinAngle || 0) + 0.85;
           circle.consumed = true;
           game.screenShake = Math.max(game.screenShake, 8);
-          spawnSparks(ball.x, ball.y, circle.color || "#fdba74", 14);
+          spawnSparks(ball.x, ball.y, "#fde047", 14);
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: ball.x, y: ball.y - ball.r - 18, vy: -55,
-            text: "CHAOS GRAB",
-            color: circle.color || "#fdba74", life: 0.7, maxLife: 0.7
+            text: "WARP MAGIC",
+            color: "#fde047", life: 0.7, maxLife: 0.7
           });
           playSound("shieldBlock", 0.75, circle.axis === "vertical" ? 180 : -160);
         });
@@ -10524,29 +11249,65 @@ export default function App() {
     const drawVenomPools = () => {
       if (!game.venomPools) return;
       game.venomPools.forEach((pool) => {
-        ctx.save();
-        ctx.strokeStyle = "rgba(209, 213, 219, 0.4)"; // light gray/silver color for spider web
-        ctx.lineWidth = 1.5;
-        
-        // 1. Draw radial spokes
-        const numSpokes = 8;
-        for (let i = 0; i < numSpokes; i++) {
-          const angle = (i * Math.PI * 2) / numSpokes;
+        if (pool.isSymbiote) {
+          ctx.save();
+          // Draw dark pulsing slime pool
+          const pulse = 0.9 + Math.sin(game.simTime * 0.008 + pool.createdTime * 0.01) * 0.1;
+          const age = game.simTime - pool.createdTime;
+          const lifeRatio = 1 - age / pool.duration;
+          const alpha = Math.max(0, Math.min(0.85, lifeRatio * 1.5));
+          
+          // Radial gradient for symbiote slime
+          const grad = ctx.createRadialGradient(pool.x, pool.y, 2, pool.x, pool.y, pool.r * pulse);
+          grad.addColorStop(0, `rgba(15, 23, 42, ${alpha * 0.95})`);     // slate-900
+          grad.addColorStop(0.5, `rgba(2, 6, 23, ${alpha * 0.85})`);      // slate-950
+          grad.addColorStop(0.85, `rgba(74, 4, 78, ${alpha * 0.45})`);   // dark purple/fuchsia border
+          grad.addColorStop(1, `rgba(0, 0, 0, 0)`);
+          
+          ctx.fillStyle = grad;
           ctx.beginPath();
-          ctx.moveTo(pool.x, pool.y);
-          ctx.lineTo(pool.x + Math.cos(angle) * pool.r, pool.y + Math.sin(angle) * pool.r);
-          ctx.stroke();
+          ctx.arc(pool.x, pool.y, pool.r * pulse, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw a few dark wiggling web threads inside
+          ctx.strokeStyle = `rgba(241, 245, 249, ${alpha * 0.35})`; // white-ish webs
+          ctx.lineWidth = 1.2;
+          const numSpokes = 8;
+          for (let i = 0; i < numSpokes; i++) {
+            const angle = (i * Math.PI * 2) / numSpokes + Math.sin(game.simTime * 0.01 + i) * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(pool.x, pool.y);
+            const midX = pool.x + Math.cos(angle) * pool.r * 0.5 + Math.sin(game.simTime * 0.03) * 3;
+            const midY = pool.y + Math.sin(angle) * pool.r * 0.5 + Math.cos(game.simTime * 0.03) * 3;
+            ctx.quadraticCurveTo(midX, midY, pool.x + Math.cos(angle) * pool.r * pulse, pool.y + Math.sin(angle) * pool.r * pulse);
+            ctx.stroke();
+          }
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.strokeStyle = "rgba(209, 213, 219, 0.4)"; // light gray/silver color for spider web
+          ctx.lineWidth = 1.5;
+          
+          // 1. Draw radial spokes
+          const numSpokes = 8;
+          for (let i = 0; i < numSpokes; i++) {
+            const angle = (i * Math.PI * 2) / numSpokes;
+            ctx.beginPath();
+            ctx.moveTo(pool.x, pool.y);
+            ctx.lineTo(pool.x + Math.cos(angle) * pool.r, pool.y + Math.sin(angle) * pool.r);
+            ctx.stroke();
+          }
+          
+          // 2. Draw concentric rings
+          const numRings = 3;
+          for (let r = 1; r <= numRings; r++) {
+            const ringRad = (pool.r * r) / numRings;
+            ctx.beginPath();
+            ctx.arc(pool.x, pool.y, ringRad, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
         }
-        
-        // 2. Draw concentric rings
-        const numRings = 3;
-        for (let r = 1; r <= numRings; r++) {
-          const ringRad = (pool.r * r) / numRings;
-          ctx.beginPath();
-          ctx.arc(pool.x, pool.y, ringRad, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        ctx.restore();
       });
     };
 
@@ -10713,22 +11474,60 @@ export default function App() {
         const lifeAlpha = clamp(circle.life / baseLife, 0, 1);
         const pulse = 0.5 + Math.sin(game.simTime * 0.011 + circle.createdTime * 0.01) * 0.5;
         const flash = game.simTime < (circle.flashUntil || 0);
+        
         ctx.save();
         ctx.translate(circle.x, circle.y);
         ctx.globalAlpha = Math.min(1, 0.38 + lifeAlpha * 0.5 + (flash ? 0.22 : 0));
-        ctx.fillStyle = circle.axis === "vertical" ? "rgba(16, 185, 129, 0.22)" : "rgba(245, 158, 11, 0.22)";
+        const isVertical = circle.axis === "vertical";
+        
+        // 1. Fill: Glowing orange/light orange
+        ctx.fillStyle = isVertical ? "rgba(253, 186, 116, 0.15)" : "rgba(249, 115, 22, 0.15)";
         ctx.beginPath(); ctx.arc(0, 0, circle.r, 0, Math.PI * 2); ctx.fill();
 
-        ctx.strokeStyle = circle.color || "#f59e0b";
-        ctx.lineWidth = flash ? 5 : 3;
+        // 2. Outer dash ring with glow
+        ctx.strokeStyle = isVertical ? "#fed7aa" : "#fdba74";
+        ctx.lineWidth = flash ? 5.5 : 3.5;
+        ctx.shadowColor = isVertical ? "#f97316" : "#ea580c";
+        ctx.shadowBlur = 10;
         ctx.setLineDash([8, 7]);
-        ctx.lineDashOffset = circle.axis === "vertical" ? -game.simTime * 0.045 : game.simTime * 0.045;
-        ctx.beginPath(); ctx.arc(0, 0, circle.r + pulse * 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineDashOffset = isVertical ? -game.simTime * 0.045 : game.simTime * 0.045;
+        ctx.beginPath(); ctx.arc(0, 0, circle.r + pulse * 2.5, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]);
+        ctx.shadowBlur = 0; // reset glow
 
-        ctx.fillStyle = circle.color || "#f59e0b";
-        ctx.strokeStyle = "#020617";
-        ctx.lineWidth = 2;
+        // 3. Runic pentagram lines
+        ctx.strokeStyle = isVertical ? "rgba(254, 215, 170, 0.45)" : "rgba(253, 186, 116, 0.45)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const angle1 = (i * Math.PI * 2) / 5;
+          const angle2 = ((i + 2) * Math.PI * 2) / 5;
+          ctx.moveTo(Math.cos(angle1) * circle.r * 0.85, Math.sin(angle1) * circle.r * 0.85);
+          ctx.lineTo(Math.cos(angle2) * circle.r * 0.85, Math.sin(angle2) * circle.r * 0.85);
+        }
+        ctx.stroke();
+        
+        // 4. Inner runic concentric circle
+        ctx.strokeStyle = isVertical ? "rgba(254, 215, 170, 0.55)" : "rgba(253, 186, 116, 0.55)";
+        ctx.beginPath();
+        ctx.arc(0, 0, circle.r * 0.55, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 5. Outer rotating runic tick marks
+        ctx.strokeStyle = isVertical ? "rgba(253, 186, 116, 0.75)" : "rgba(249, 115, 22, 0.75)";
+        ctx.lineWidth = 1.8;
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI * 2) / 8 + game.simTime * 0.004;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * circle.r * 0.88, Math.sin(a) * circle.r * 0.88);
+          ctx.lineTo(Math.cos(a) * circle.r * 1.04, Math.sin(a) * circle.r * 1.04);
+          ctx.stroke();
+        }
+
+        // 6. Directional slam arrows
+        ctx.fillStyle = isVertical ? "#fdba74" : "#f97316";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
         const arrowSize = 10 + pulse * 2;
         const drawArrow = (x, y, angle) => {
           ctx.save();
@@ -10744,6 +11543,7 @@ export default function App() {
           ctx.stroke();
           ctx.restore();
         };
+        
         if (circle.axis === "vertical") {
           drawArrow(0, -circle.r * 0.45, -Math.PI / 2);
           drawArrow(0, circle.r * 0.45, Math.PI / 2);
@@ -10985,9 +11785,9 @@ export default function App() {
           game.balls.forEach((ball) => {
             const isPulling = ball.type === "spider" && ball.webState === "pulling";
             const isChargingHammer = ball.type === "hammer" && ball.hammerState === "charging";
-            const isBlackSpiderDashing = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "dashing";
-            const isBlackSpiderPullingSelf = ball.type === "blackSpider" && ball.blackSpiderAnchorState === "pulling";
-            const isBlackSpiderPulled = game.balls.some(b => b.type === "blackSpider" && b.blackSpiderMarkedTargetId === ball.id && b.blackSpiderAnchorState === "pulling");
+            const isBlackSpiderDashing = false;
+            const isBlackSpiderPullingSelf = false;
+            const isBlackSpiderPulled = game.balls.some(b => b.type === "blackSpider" && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
@@ -11091,7 +11891,7 @@ export default function App() {
                   game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 8, vy: -45, text: `BURN -${burnDamage}`, color: "#fb923c", life: 0.55, maxLife: 0.55 });
                 }
                 const isGumPulled = ball.jokerPulledUntil && game.simTime < ball.jokerPulledUntil;
-                const isBlackSpiderPulled = ball.blackSpiderPulledUntil && game.simTime < ball.blackSpiderPulledUntil;
+                const isBlackSpiderPulled = game.balls.some(b => b.type === "blackSpider" && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
                 if (ball.type === "knife" && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled) {
                   const bal = game.balance.knife;
                   if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
@@ -11153,7 +11953,8 @@ export default function App() {
                   }
                 }
                 const isParalyzed = ball.paralyzedUntil && game.simTime < ball.paralyzedUntil;
-                if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled) {
+                const skillsLocked = ball.skillLockedUntil && game.simTime < ball.skillLockedUntil;
+                if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !skillsLocked) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
@@ -11176,6 +11977,7 @@ export default function App() {
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
+                  if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
                   if (ball.type === "constellation") updateConstellation(ball, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
@@ -11186,6 +11988,7 @@ export default function App() {
           updateBullets(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
           updateMines(stepDt, game.balls);
+          updateFireCars(stepDt, game.balls);
           pruneShadowMinions();
           updateExplosions(stepDt);
           updateParticles(stepDt);
@@ -11240,15 +12043,17 @@ export default function App() {
       ctx.clip();
 
       if (game.screenShake > 0.1) {
-        const sx = (Math.random() - 0.5) * game.screenShake;
-        const sy = (Math.random() - 0.5) * game.screenShake;
+        const sx = (Math.random() - 0.5) * game.screenShake * 1.8;
+        const sy = (Math.random() - 0.5) * game.screenShake * 1.8;
         ctx.translate(sx, sy);
-        game.screenShake *= Math.pow(0.85, dt * 60);
+        game.screenShake *= Math.pow(0.88, dt * 60);
       }
 
       game.balls.forEach(drawBallTrail);
+      drawFireRoads();
       drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
+      drawFireCarEntities();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
 
@@ -11523,11 +12328,14 @@ export default function App() {
             <>
               {renderSlider("Active Cooldown", "constellation", "cooldown", 1000, 15000, 100, "ms")}
               {renderSlider("Pattern Duration", "constellation", "activePatternDuration", 1000, 10000, 100, "ms")}
-              {renderSlider("1 Star: Circle Damage", "constellation", "circleDamage", 1, 20, 1)}
-              {renderSlider("1 Star: Circle Radius", "constellation", "circleRadius", 30, 200, 5, "px")}
-              {renderSlider("2 Stars: Fence Damage", "constellation", "fenceDamage", 1, 40, 1)}
-              {renderSlider("3 Stars: Barrier Damage", "constellation", "barrierDamage", 1, 30, 1)}
-              {renderSlider("4 Stars: Prison Damage", "constellation", "prisonDamage", 1, 20, 1)}
+              {renderSlider("3 Sides: Edge Damage", "constellation", "triangleDamage", 1, 30, 1)}
+              {renderSlider("3 Sides: Knockback", "constellation", "triangleKnockback", 100, 900, 20)}
+              {renderSlider("4 Sides: Edge Damage", "constellation", "squareEdgeDamage", 1, 20, 1)}
+              {renderSlider("4 Sides: Tick Damage", "constellation", "squareTickDamage", 1, 20, 1)}
+              {renderSlider("4 Sides: Knockback", "constellation", "squareKnockback", 100, 900, 20)}
+              {renderSlider("5 Sides: Edge Damage", "constellation", "pentagonEdgeDamage", 1, 20, 1)}
+              {renderSlider("5 Sides: Tick Damage", "constellation", "pentagonTickDamage", 1, 20, 1)}
+              {renderSlider("5 Sides: Pull Force", "constellation", "pentagonPullStrength", 50, 600, 10)}
               {renderSlider("Ultimate Duration", "constellation", "ultDuration", 1000, 15000, 500, "ms")}
             </>
           )}
