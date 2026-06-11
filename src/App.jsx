@@ -166,15 +166,6 @@ const BALL_TYPES = {
     radius: 31,
     description: "Throws a trident that pins enemies to walls, sticks on miss, then recalls.",
   },
-  spirit: {
-    id: "spirit",
-    name: "Spirit Blaster Ball",
-    shortName: "SPRT",
-    color: "#f97316",
-    stroke: "#38bdf8",
-    radius: 31,
-    description: "Charges Ki through wall bounces. Fires a giant energy beam when full.",
-  },
   shadow: {
     id: "shadow",
     name: "Shadow Summoner Ball",
@@ -183,15 +174,6 @@ const BALL_TYPES = {
     stroke: "#a78bfa",
     radius: 31,
     description: "Slashes nearby enemies and summons tiny shadow minions that swarm opponents.",
-  },
-  chainsaw: {
-    id: "chainsaw",
-    name: "Chainsawer Ball",
-    shortName: "SAW",
-    color: "#f97316",
-    stroke: "#1f2937",
-    radius: 31,
-    description: "Chainsaws emerge from the sides and deal damage while rolling.",
   },
   mirror: {
     id: "mirror",
@@ -211,23 +193,23 @@ const BALL_TYPES = {
     radius: 31,
     description: "Trickster brawler with elastic Bungee Lines. Sets up ricochet angles to hook enemies and drag them through wall corners.",
   },
-  prismer: {
-    id: "prismer",
-    name: "Prismer Ball",
-    shortName: "PRSM",
-    color: "#312e81",
-    stroke: "#22d3ee",
-    radius: 31,
-    description: "Prismatic beam warrior. Charges a devastating optic blast that ricochets off walls. Recoil repositions on fire.",
-  },
-  opticBall: {
-    id: "opticBall",
-    name: "Optic Ball",
-    shortName: "OPTC",
+  gazerBall: {
+    id: "gazerBall",
+    name: "Gazer Ball",
+    shortName: "GAZR",
     color: "#dc2626",
     stroke: "#ef4444",
     radius: 31,
-    description: "Legendary beam warrior. Builds Focus stacks for powered shots. Fires devastating red optic blasts that ricochet. Omega Surge unleashes hell.",
+    description: "Legendary beam warrior. Builds Focus stacks for powered shots. Fires devastating red gaze blasts that ricochet. Omega Surge unleashes hell.",
+  },
+  constellation: {
+    id: "constellation",
+    name: "Constellation Ball",
+    shortName: "CSTL",
+    color: "#1e1b4b",
+    stroke: "#e0f2fe",
+    radius: 31,
+    description: "Cosmic weaver. Bounces place stars. Active skill connects stars into active shapes (Circle, Line, Triangle, Square) with powerful effects.",
   },
 };
 
@@ -269,7 +251,7 @@ const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
   gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
-  laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 10, pulseSpeed: 620, pulseStunDuration: 950 },
+  laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 10, pulseSpeed: 620, pulseStunDuration: 950, recoilForce: 180 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
   spider: { fangDamage: 2, webSpeed: 580, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
@@ -283,9 +265,7 @@ const BALANCE = {
   psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
   chaos: { circleRadius: 48, launchSpeed: 620, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000, trapCount: 3 },
   trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 760, recallSpeed: 720, cooldown: 6800, stuckDuration: 800, diveDamage: 6, diveCooldown: 8400, diveTrackDuration: 1150, divePauseDuration: 520, diveSpeed: 720, diveBurstRadius: 44, diveSlowDuration: 1600, diveSlowMultiplier: 0.35 },
-  spirit: { chargeRequired: 5, beamDamage: 6, tickCooldown: 180, beamDuration: 900, beamWidth: 42, cooldown: 1800, knockback: 420 },
   shadow: { slashDamage: 2, slashRange: 35, slashCooldown: 450, comboRange: 36, comboSecondDamage: 2, summonCooldown: 4600, maxMinions: 3, minionHealth: 4, minionDamage: 1, minionSpeed: 33, minionLife: 6200, minionHitCooldown: 1100, commandDuration: 700, markDuration: 1100, switchCooldown: 6000, switchRange: 145, switchDamage: 3 },
-  chainsaw: { spinDamage: 3, hitCooldown: 260, sawReach: 34, spinDuration: 1600, cooldown: 2600, knockback: 220 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
   joker: { throwSpeed: 580, cooldown: 6000, secCooldown: 8000, tipRadius: 9, maxBounces: 15, threadLife: 4000 },
   blackSpider: { cooldown: 8000, secCooldown: 10000, markDuration: 5000, breakDistance: 480, speedPenalty: 0.15, dashSpeed: 900, pullSpeed: 1200, baseDamage: 5, baseSlamDamage: 12, maxSlamDamage: 26, cornerFrictionDamage: 3, cornerStaggerDuration: 200, tensionSnapLowDmg: 6, tensionSnapHighDmg: 14,
@@ -294,8 +274,8 @@ const BALANCE = {
     // Tendril Trap
     trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
   },
-  prismer: { chargeDuration: 450, cooldown: 7500, beamDamage: 40, beamKnockback: 900, beamWidth: 48, stunDuration: 300, recoilForce: 580, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [32, 24, 18, 12], ricochetKb: [700, 550, 400, 250], postFireSlowDuration: 400 },
-  opticBall: { chargeDuration: 450, cooldown: 8000, beamDamage: 40, beamKnockback: 900, beamWidth: 48, stunDuration: 300, recoilForce: 600, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [32, 24, 18, 12], ricochetKb: [700, 550, 400, 250], focusInterval: 1000, maxFocusStacks: 5, focusBonus: 0.05, ultDuration: 5000, ultWidthMult: 2, ultMaxBounces: 8, ultCDRMult: 0.5, postFireSlowDuration: 400 },
+  gazerBall: { chargeDuration: 450, cooldown: 1800, beamDamage: 1, beamKnockback: 550, beamWidth: 2, stunDuration: 300, recoilForce: 700, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [10, 8, 6, 4], ricochetKb: [400, 300, 200, 100], focusInterval: 1000, maxFocusStacks: 5, focusBonus: 0.05, ultDuration: 5000, ultWidthMult: 2, ultMaxBounces: 8, ultCDRMult: 0.5, postFireSlowDuration: 400 },
+  constellation: { cooldown: 5000, activePatternDuration: 4000, circleDamage: 3, circleRadius: 95, fenceDamage: 14, barrierDamage: 10, prisonDamage: 4, postFireSlowDuration: 300, ultDuration: 5000 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -330,7 +310,6 @@ const interruptSkills = (ball) => {
   if (ball.hammerState) ball.hammerState = "spinning";
   if (ball.hammerStateUntil) ball.hammerStateUntil = 0;
   if (ball.dragonBreathUntil) ball.dragonBreathUntil = 0;
-  if (ball.chainsawSpinUntil) ball.chainsawSpinUntil = 0;
   if (ball.knifeBladeState && ball.knifeBladeState !== "rotating") ball.knifeBladeState = "rotating";
   if (ball.tridentDiveState && ball.tridentDiveState !== "idle") ball.tridentDiveState = "idle";
   if (ball.type === "shield" && ball.shieldState === "held") {
@@ -348,6 +327,42 @@ const interruptSkills = (ball) => {
   }
 };
 
+const isGrabInvulnerable = (ball, currentTime) => {
+  if (!ball) return false;
+  if (ball.type === "wrecker" && ball.wreckerState === "leaping") return true;
+  if (ball.type === "dragon" && ball.dragonState === "dashing") return true;
+  if (ball.type === "shield" && ball.shieldBashUntil && currentTime < ball.shieldBashUntil) return true;
+  if (ball.type === "hammer" && (ball.hammerState === "charging" || ball.hammerState === "launching")) return true;
+  return false;
+};
+
+const cancelActiveMovementStates = (ball) => {
+  if (!ball) return;
+  if (ball.wreckerState === "leaping") {
+    ball.wreckerState = "idle";
+    ball.wreckerStateUntil = 0;
+  }
+  if (ball.shieldBashUntil) {
+    ball.shieldBashUntil = 0;
+  }
+  if (ball.hammerState === "launching" || ball.hammerState === "charging") {
+    ball.hammerState = "spinning";
+    ball.hammerStateUntil = 0;
+  }
+  if (ball.dragonState === "dashing") {
+    ball.dragonState = "idle";
+    ball.dragonBreathUntil = 0;
+  }
+  if (ball.tridentDiveState && ball.tridentDiveState !== "idle") {
+    ball.tridentDiveState = "idle";
+    ball.tridentDiveHitDone = false;
+  }
+  if (ball.armState === "elbow_dropping") {
+    ball.armState = "idle";
+    ball.armStateUntil = 0;
+  }
+};
+
 const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (!ball) return false;
   if (ball.type === "vampire" && ball.latchedTo && ball.latchUntil > currentTime) return true;
@@ -355,6 +370,7 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (ball.type === "arm" && ball.armState === "elbow_dropping" && ball.armStateUntil > currentTime) return true;
   if (ball.type === "hammer" && ball.hammerState === "charging") return true;
   if (ball.jokerPulledUntil && ball.jokerPulledUntil > currentTime) return true;
+  if (ball.tridentPinnedUntil && ball.tridentPinnedUntil > currentTime) return true;
   if (ball.type === "blackSpider" && ball.blackSpiderMarkedTargetId) return true;
 
   return balls.some((other) => {
@@ -363,6 +379,7 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
     if (other.type === "spider" && other.webTargetId === ball.id && (other.webState === "pulling" || other.webState === "webBouncing")) return true;
     if (other.type === "arm" && other.armGrabTargetId === ball.id && other.armState === "elbow_dropping" && other.armStateUntil > currentTime) return true;
     if (other.type === "joker" && other.jokerPullTargetId === ball.id && other.jokerPullUntil > currentTime) return true;
+    if (other.tridentTargetId === ball.id && (other.tridentState === "thrown" || other.tridentState === "stuck")) return true;
     if (other.type === "blackSpider" && other.blackSpiderMarkedTargetId === ball.id) return true;
     return false;
   });
@@ -371,7 +388,8 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
 const canStartSkillConnection = (actor, target, balls, currentTime) => (
   !isBallConnected(actor, balls, currentTime) && 
   !isBallConnected(target, balls, currentTime) &&
-  (!target.attachmentResistanceUntil || target.attachmentResistanceUntil <= currentTime)
+  (!target.attachmentResistanceUntil || target.attachmentResistanceUntil <= currentTime) &&
+  !isGrabInvulnerable(target, currentTime)
 );
 
 const linePointDist = (px, py, x1, y1, x2, y2) => {
@@ -586,27 +604,24 @@ export default function App() {
       venomWallBounces: 0,
       venomLashFlashUntil: 0,
       venomSpeedBoostUntil: 0,
-      // Prismer Specific
-      prismerState: "idle",
-      prismerChargeTimer: 0,
-      prismerBeamAngle: 0,
-      prismerBeamFlashUntil: 0,
-      prismerCooldownUntil: 0,
-      prismerChargingUntil: 0,
-      prismerRecoilUntil: 0,
-      // Optic Ball Specific
-      opticState: "idle",
-      opticChargeTimer: 0,
-      opticBeamAngle: 0,
-      opticBeamFlashUntil: 0,
-      opticCooldownUntil: 0,
-      opticRecoilUntil: 0,
-      opticFocusStacks: 0,
-      opticLastFiredAt: 0,
-      opticNextFocusAt: 0,
-      opticUltActive: false,
-      opticUltUntil: 0,
-      opticBeamPath: [],
+      // Gazer Ball Specific
+      gazerState: "idle",
+      gazerChargeTimer: 0,
+      gazerBeamAngle: 0,
+      gazerBeamFlashUntil: 0,
+      gazerCooldownUntil: 0,
+      gazerRecoilUntil: 0,
+      gazerFocusStacks: 0,
+      gazerLastFiredAt: 0,
+      gazerNextFocusAt: 0,
+      gazerUltActive: false,
+      gazerUltUntil: 0,
+      gazerBeamPath: [],
+      // Constellation Specific
+      constellationStars: [],
+      constellationUltActive: false,
+      constellationUltUntil: 0,
+      constellationShieldedUntil: 0,
       // Vampire Specific
       hasStuck: false,
       // Spore Specific
@@ -620,12 +635,8 @@ export default function App() {
       // Trident Specific
       tridentState: "held", tridentX: 0, tridentY: 0, tridentVx: 0, tridentVy: 0, tridentAngle: side === "left" ? 0 : Math.PI, tridentTargetId: null, tridentStuckUntil: 0,
       tridentDiveState: "idle", tridentDiveX: 0, tridentDiveY: 0, tridentDiveUntil: 0, tridentDiveStartAt: 0, tridentNextDiveAt: 0, tridentDiveAngle: side === "left" ? 0 : Math.PI, tridentDiveHitDone: false,
-      // Spirit Specific
-      kiCharge: 0, spiritBeamUntil: 0, spiritBeamAngle: side === "left" ? 0 : Math.PI, spiritNextTickAt: 0, spiritCooldownUntil: 0, spiritFlashUntil: 0,
       // Shadow Specific
       shadowMinions: [], shadowNextSummonAt: 0, shadowNextSlashAt: 0, shadowNextSwitchAt: 0, shadowSlashUntil: 0, shadowSlashAngle: side === "left" ? 0 : Math.PI, shadowCommandUntil: 0, shadowComboSecondAt: 0, shadowComboTargetId: null,
-      // Chainsaw Specific
-      chainsawSpinUntil: 0, chainsawNextSpinAt: 0, chainsawNextHitAt: 0, chainsawAngle: 0,
       // Mirror Specific
       mirrorNextHitAt: 0, mirrorFlashUntil: 0, mirrorNextSwitchAt: type === "mirror" ? (balanceSettings.mirror?.switchCooldown ?? BALANCE.mirror.switchCooldown) : 0, mirrorSwitchFlashUntil: 0,
 
@@ -1488,19 +1499,33 @@ export default function App() {
             if (ball.type === "laser") {
               const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
 
-              if (ball.laserState === "idle" && ball.nextShotAt <= simTime) {
-                ball.laserState = "charging"; ball.laserStateUntil = simTime + balance.laser.chargeTime;
+              if (ball.laserState === "idle") {
                 ball.laserTargetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                if (ball.nextShotAt <= simTime) {
+                  ball.laserState = "charging"; ball.laserStateUntil = simTime + balance.laser.chargeTime;
+                  ball.laserTargetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                }
               } else if (ball.laserState === "charging") {
                 const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                ball.laserTargetAngle = targetAngle;
+                let angleDiff = targetAngle - (ball.laserTargetAngle ?? targetAngle);
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                ball.laserTargetAngle = (ball.laserTargetAngle ?? targetAngle) + angleDiff * 0.035;
                 if (simTime >= ball.laserStateUntil) {
                   ball.laserState = "firing"; ball.laserStateUntil = simTime + balance.laser.fireDuration;
                   ball.laserNextTickAt = simTime;
                 }
               } else if (ball.laserState === "firing") {
                 const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                ball.laserTargetAngle = targetAngle;
+                let angleDiff = targetAngle - (ball.laserTargetAngle ?? targetAngle);
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                ball.laserTargetAngle = (ball.laserTargetAngle ?? targetAngle) + angleDiff * 0.035;
+                const recoilAngle = Math.atan2(ball.y - enemy.y, ball.x - enemy.x);
+                const recoilF = balance.laser.recoilForce || 180;
+                ball.vx += Math.cos(recoilAngle) * recoilF * dt;
+                ball.vy += Math.sin(recoilAngle) * recoilF * dt;
+
                 const mX = ball.x + Math.cos(ball.laserTargetAngle) * ball.r;
                 const mY = ball.y + Math.sin(ball.laserTargetAngle) * ball.r;
                 const eX = mX + Math.cos(ball.laserTargetAngle) * 1500;
@@ -2622,6 +2647,7 @@ export default function App() {
     window.addEventListener("resize", resizeCanvas);
 
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
+      if (defender.constellationShieldedUntil && currentTime < defender.constellationShieldedUntil) return;
       if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
       if (isWreckerJumpInvulnerable(defender)) return;
       if (game.damageCooldowns[cooldownKey] > currentTime) return;
@@ -2648,8 +2674,6 @@ export default function App() {
         flashColor = "#ff781f"; // Dragon orange
       } else if (keyLower.includes("shadow") || keyLower.includes("minion") || keyLower.includes("burst")) {
         flashColor = "#8b5cf6"; // Shadow purple
-      } else if (keyLower.includes("spirit")) {
-        flashColor = "#38bdf8"; // Spirit sky blue
       } else if (keyLower.includes("trident") || keyLower.includes("dive")) {
         flashColor = "#38bdf8"; // Trident sky blue
       } else if (keyLower.includes("hammer")) {
@@ -2660,8 +2684,6 @@ export default function App() {
         flashColor = "#86efac"; // Sporer light green
       } else if (keyLower.includes("wrecker")) {
         flashColor = "#22c55e"; // Wrecker green
-      } else if (keyLower.includes("chainsaw")) {
-        flashColor = "#f97316"; // Chainsaw orange
       } else if (keyLower.includes("mirror")) {
         flashColor = "#67e8f9"; // Mirror cyan
 
@@ -2966,6 +2988,36 @@ export default function App() {
           }
           spawnSparks(ball.x, ball.y, "#22c55e", Math.min(16, 5 + (ball.rageStacks || 0)));
         }
+        if (ball.type === "constellation") {
+          game.constellationStars = game.constellationStars || [];
+          const addStar = (offsetX = 0, offsetY = 0) => {
+            const myStars = game.constellationStars.filter(s => s.ownerId === ball.id);
+            if (myStars.length >= 4) {
+              myStars.sort((a, b) => a.createdAt - b.createdAt);
+              const oldest = myStars[0];
+              game.constellationStars = game.constellationStars.filter(s => s.id !== oldest.id);
+            }
+            game.constellationStars.push({
+              id: Math.random().toString(),
+              ownerId: ball.id,
+              x: clamp(ball.x + offsetX, pad + 10, game.width - pad - 10),
+              y: clamp(ball.y + offsetY, pad + 10, game.height - pad - 10),
+              createdAt: game.simTime,
+            });
+          };
+
+          if (ball.constellationUltActive && game.simTime < ball.constellationUltUntil) {
+            addStar(0, 0);
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 25 + Math.random() * 15;
+            addStar(Math.cos(angle) * dist, Math.sin(angle) * dist);
+            spawnSparks(ball.x, ball.y, "#facc15", 16);
+          } else {
+            addStar(0, 0);
+            spawnSparks(ball.x, ball.y, "#facc15", 8);
+          }
+          playSound("wallBounce", 0.8, 140);
+        }
         // Symbiote Lash – count wall bounces for Black Spider
         if (ball.type === "blackSpider") {
           ball.venomWallBounces = (ball.venomWallBounces || 0) + 1;
@@ -2986,22 +3038,6 @@ export default function App() {
               duration: bsBal.trapDuration || 6000,
               triggered: false,
             });
-          }
-        }
-        if (ball.type === "spirit") {
-          const spiritBal = game.balance.spirit || BALANCE.spirit;
-          if (game.simTime >= (ball.spiritCooldownUntil || 0) && !(ball.spiritBeamUntil && game.simTime < ball.spiritBeamUntil)) {
-            const before = ball.kiCharge || 0;
-            ball.kiCharge = Math.min(spiritBal.chargeRequired, before + 1);
-            ball.spiritFlashUntil = game.simTime + 260;
-            spawnSparks(ball.x, ball.y, "#38bdf8", 4 + ball.kiCharge);
-            if (before < spiritBal.chargeRequired && ball.kiCharge >= spiritBal.chargeRequired) {
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({
-                x: ball.x, y: ball.y - ball.r - 22, vy: -45,
-                text: "KI FULL", color: "#38bdf8", life: 0.8, maxLife: 0.8
-              });
-            }
           }
         }
         if (ball.armThrowWallUntil && game.simTime <= ball.armThrowWallUntil) {
@@ -3823,44 +3859,44 @@ export default function App() {
       playSound("gunShot");
     };
 
-    const updateLaser = (laserBall, target, currentTime) => {
+    const updateLaser = (laserBall, target, currentTime, stepDt) => {
       const bal = game.balance;
 
-
-
-      if (laserBall.laserState === "idle" && laserBall.nextShotAt <= currentTime) {
-        if ((laserBall.laserShotCount || 0) >= 3) {
-          const pulseAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-          const pulseX = laserBall.x + Math.cos(pulseAngle) * (laserBall.r + 12);
-          const pulseY = laserBall.y + Math.sin(pulseAngle) * (laserBall.r + 12);
-          game.bullets.push({
-            ownerId: laserBall.id,
-            targetSide: target.side,
-            x: pulseX,
-            y: pulseY,
-            vx: Math.cos(pulseAngle) * bal.laser.pulseSpeed,
-            vy: Math.sin(pulseAngle) * bal.laser.pulseSpeed,
-            r: 12,
-            damage: bal.laser.pulseDamage,
-            life: 3.0,
-            kind: "laserPulse",
-            stunDuration: bal.laser.pulseStunDuration,
-            bouncesLeft: 4,
-            piercesDefense: true,
-            cannotReflect: true,
-          });
-          laserBall.laserShotCount = 0;
-          laserBall.nextShotAt = currentTime + bal.laser.cooldown;
-          laserBall.laserTargetAngle = pulseAngle;
-          game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({
-            x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
-            text: "CANNON SHOT", color: "#facc15", life: 0.8, maxLife: 0.8
-          });
-          spawnSparks(pulseX, pulseY, "#facc15", 14);
-          playSound("laserFire");
-          return;
-        }
+      if (laserBall.laserState === "idle") {
+        laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+        if (laserBall.nextShotAt <= currentTime) {
+          if ((laserBall.laserShotCount || 0) >= 3) {
+            const pulseAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+            const pulseX = laserBall.x + Math.cos(pulseAngle) * (laserBall.r + 12);
+            const pulseY = laserBall.y + Math.sin(pulseAngle) * (laserBall.r + 12);
+            game.bullets.push({
+              ownerId: laserBall.id,
+              targetSide: target.side,
+              x: pulseX,
+              y: pulseY,
+              vx: Math.cos(pulseAngle) * bal.laser.pulseSpeed,
+              vy: Math.sin(pulseAngle) * bal.laser.pulseSpeed,
+              r: 12,
+              damage: bal.laser.pulseDamage,
+              life: 3.0,
+              kind: "laserPulse",
+              stunDuration: bal.laser.pulseStunDuration,
+              bouncesLeft: 4,
+              piercesDefense: true,
+              cannotReflect: true,
+            });
+            laserBall.laserShotCount = 0;
+            laserBall.nextShotAt = currentTime + bal.laser.cooldown;
+            laserBall.laserTargetAngle = pulseAngle;
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
+              text: "CANNON SHOT", color: "#facc15", life: 0.8, maxLife: 0.8
+            });
+            spawnSparks(pulseX, pulseY, "#facc15", 14);
+            playSound("laserFire");
+            return;
+          }
           laserBall.laserState = "charging";
           laserBall.laserStateUntil = currentTime + bal.laser.chargeTime;
           laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
@@ -3868,10 +3904,14 @@ export default function App() {
           laserBall.laserShieldBlockCount = 0;
           laserBall.laserReflect = null;
           playSound("laserCharge");
+        }
       } else if (laserBall.laserState === "charging") {
         laserBall.laserReflect = null;
         const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-        laserBall.laserTargetAngle = targetAngle;
+        let angleDiff = targetAngle - (laserBall.laserTargetAngle ?? targetAngle);
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        laserBall.laserTargetAngle = (laserBall.laserTargetAngle ?? targetAngle) + angleDiff * 0.035;
 
         if (canSpawnParticle() && Math.random() < 0.3) {
           const a = Math.random() * Math.PI * 2, dst = laserBall.r + 20 + Math.random() * 20;
@@ -3891,6 +3931,11 @@ export default function App() {
           game.screenShake = Math.max(game.screenShake, 5);
         }
       } else if (laserBall.laserState === "firing") {
+        const recoilAngle = Math.atan2(laserBall.y - target.y, laserBall.x - target.x);
+        const recoilF = bal.laser.recoilForce || 180;
+        laserBall.vx += Math.cos(recoilAngle) * recoilF * stepDt;
+        laserBall.vy += Math.sin(recoilAngle) * recoilF * stepDt;
+
         const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
         let angleDiff = targetAngle - (laserBall.laserFireAngle ?? laserBall.laserTargetAngle);
         while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
@@ -4187,28 +4232,28 @@ export default function App() {
         }
       }
     };
-    const updateOpticBall = (ball, target, currentTime, stepDt) => {
-      const bal = game.balance.opticBall || BALANCE.opticBall;
+    const updateGazerBall = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.gazerBall || BALANCE.gazerBall;
 
       // --- Ultimate expiry ---
-      if (ball.opticUltActive && currentTime >= ball.opticUltUntil) {
-        ball.opticUltActive = false;
+      if (ball.gazerUltActive && currentTime >= ball.gazerUltUntil) {
+        ball.gazerUltActive = false;
         spawnSparks(ball.x, ball.y, "#ef4444", 16);
         game.floatingTexts = game.floatingTexts || [];
         game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -45, text: "SURGE ENDED", color: "#f87171", life: 0.7, maxLife: 0.7 });
       }
 
-      const effectiveCooldown = ball.opticUltActive ? (bal.cooldown * (bal.ultCDRMult || 0.5)) : bal.cooldown;
-      const effectiveMaxBounces = ball.opticUltActive ? (bal.ultMaxBounces || 8) : (bal.maxBounces || 4);
-      const effectiveWidth = ball.opticUltActive ? (bal.beamWidth * (bal.ultWidthMult || 2)) : bal.beamWidth;
+      const effectiveCooldown = ball.gazerUltActive ? (bal.cooldown * (bal.ultCDRMult || 0.5)) : bal.cooldown;
+      const effectiveMaxBounces = ball.gazerUltActive ? (bal.ultMaxBounces || 8) : (bal.maxBounces || 4);
+      const effectiveWidth = ball.gazerUltActive ? (bal.beamWidth * (bal.ultWidthMult || 2)) : bal.beamWidth;
 
       // --- Energy Focus passive: gain 1 stack per focusInterval ms without firing ---
-      if (ball.opticState === "idle" || ball.opticState === "cooldown") {
-        if ((ball.opticFocusStacks || 0) < (bal.maxFocusStacks || 5)) {
-          if (currentTime >= (ball.opticNextFocusAt || 0)) {
-            ball.opticFocusStacks = (ball.opticFocusStacks || 0) + 1;
-            ball.opticNextFocusAt = currentTime + (bal.focusInterval || 1000);
-            if (ball.opticFocusStacks >= (bal.maxFocusStacks || 5)) {
+      if (ball.gazerState === "idle" || ball.gazerState === "cooldown") {
+        if ((ball.gazerFocusStacks || 0) < (bal.maxFocusStacks || 5)) {
+          if (currentTime >= (ball.gazerNextFocusAt || 0)) {
+            ball.gazerFocusStacks = (ball.gazerFocusStacks || 0) + 1;
+            ball.gazerNextFocusAt = currentTime + (bal.focusInterval || 1000);
+            if (ball.gazerFocusStacks >= (bal.maxFocusStacks || 5)) {
               game.floatingTexts = game.floatingTexts || [];
               game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -40, text: "FOCUS MAX!", color: "#fbbf24", life: 0.75, maxLife: 0.75 });
             }
@@ -4217,26 +4262,30 @@ export default function App() {
       }
 
       // --- Charging ---
-      if (ball.opticState === "charging") {
-        ball.opticChargeTimer += stepDt * 1000;
-        ball.opticBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      if (ball.gazerState === "charging") {
+        ball.gazerChargeTimer += stepDt * 1000;
+        const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        let angleDiff = targetAngle - (ball.gazerBeamAngle ?? targetAngle);
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        ball.gazerBeamAngle = (ball.gazerBeamAngle ?? targetAngle) + angleDiff * 0.04;
 
-        if (ball.opticChargeTimer >= bal.chargeDuration) {
+        if (ball.gazerChargeTimer >= bal.chargeDuration) {
           // FIRE
-          ball.opticState = "firing";
-          ball.opticChargeTimer = 0;
+          ball.gazerState = "firing";
+          ball.gazerChargeTimer = 0;
 
-          const stacks = ball.opticFocusStacks || 0;
+          const stacks = ball.gazerFocusStacks || 0;
           const stackMult = 1 + stacks * (bal.focusBonus || 0.05);
-          const finalDamage = bal.beamDamage * stackMult;
+          const finalDamage = bal.beamDamage;
           const finalWidth = effectiveWidth * stackMult;
 
           // Reset focus stacks on fire
-          ball.opticFocusStacks = 0;
-          ball.opticNextFocusAt = currentTime + (bal.focusInterval || 1000);
-          ball.opticLastFiredAt = currentTime;
+          ball.gazerFocusStacks = 0;
+          ball.gazerNextFocusAt = currentTime + (bal.focusInterval || 1000);
+          ball.gazerLastFiredAt = currentTime;
 
-          const angle = ball.opticBeamAngle;
+          const angle = ball.gazerBeamAngle;
           const dx = Math.cos(angle);
           const dy = Math.sin(angle);
           
@@ -4296,8 +4345,37 @@ export default function App() {
               }
             }
 
+            // Shield block intersection along the 1600px line segment
+            const segLen = 1600;
+            const ex = cx + cdx * segLen;
+            const ey = cy + cdy * segLen;
+            const shieldBlock = getShieldBeamBlock(target.type === "shield" ? target : null, cx, cy, ex, ey, finalWidth);
+            let tShield = Infinity;
+            if (shieldBlock) {
+              tShield = Math.hypot(shieldBlock.x - cx, shieldBlock.y - cy);
+            }
+
             // Check which one is closer
-            if (tTarget < tWall && tTarget < 1600) {
+            if (tShield < tTarget && tShield < tWall && tShield < segLen) {
+              const hitX = shieldBlock.x;
+              const hitY = shieldBlock.y;
+              path.push({ x: hitX, y: hitY });
+
+              // Shield block sparks and hits
+              spawnShieldSparks(hitX, hitY, shieldBlock.angle);
+              registerShieldGuardHit(target, shieldBlock.angle, currentTime);
+              playSound("wallBounce", 0.85, 95);
+              spawnSparks(hitX, hitY, "#ef4444", 10);
+
+              // Reflect off shield angle
+              const reflectedAngle = 2 * shieldBlock.angle - Math.PI - Math.atan2(cdy, cdx);
+              cdx = Math.cos(reflectedAngle);
+              cdy = Math.sin(reflectedAngle);
+
+              cx = hitX;
+              cy = hitY;
+              bounces++;
+            } else if (tTarget < tWall && tTarget < segLen) {
               const hitX = cx + cdx * tTarget;
               const hitY = cy + cdy * tTarget;
               path.push({ x: hitX, y: hitY });
@@ -4309,11 +4387,10 @@ export default function App() {
                 const tv = Math.hypot(target.vx, target.vy);
                 const approachDot = tv > 0 ? -(target.vx * cdx + target.vy * cdy) / tv : 0;
                 const approachFactor = Math.max(0, approachDot);
-                const momentumBonus = Math.min(15, approachFactor * tv * 0.35);
-                const totalDamage = finalDamage + momentumBonus;
+                const totalDamage = finalDamage;
                 const totalKb = bal.beamKnockback + approachFactor * tv * 0.6;
 
-                applyDamage(target, totalDamage, `${ball.id}-optic-beam`, currentTime, 300);
+                applyDamage(target, totalDamage, `${ball.id}-gazer-beam`, currentTime, 300);
                 if (!hasStringBounceGuard(target)) {
                   target.vx += cdx * totalKb;
                   target.vy += cdy * totalKb;
@@ -4332,13 +4409,13 @@ export default function App() {
                 game.floatingTexts = game.floatingTexts || [];
                 game.floatingTexts.push({
                   x: target.x, y: target.y - target.r - 28, vy: -62,
-                  text: `OPTIC BLAST! -${Math.round(totalDamage)}`, color: "#ef4444", life: 0.95, maxLife: 0.95
+                  text: `GAZER BLAST! -${Math.round(totalDamage)}`, color: "#ef4444", life: 0.95, maxLife: 0.95
                 });
 
                 // Check ultimate trigger
-                if (!ball.opticUltActive && ball.health <= 40 && currentTime > (ball.opticUltUntil || 0)) {
-                  ball.opticUltActive = true;
-                  ball.opticUltUntil = currentTime + (bal.ultDuration || 5000);
+                if (!ball.gazerUltActive && ball.health <= 40 && currentTime > (ball.gazerUltUntil || 0)) {
+                  ball.gazerUltActive = true;
+                  ball.gazerUltUntil = currentTime + (bal.ultDuration || 5000);
                   game.screenShake = Math.max(game.screenShake, 18);
                   spawnSparks(ball.x, ball.y, "#fbbf24", 30);
                   playSound("laserFire", 1.0, 80);
@@ -4365,7 +4442,7 @@ export default function App() {
               cx = hitX;
               cy = hitY;
               bounces++;
-            } else if (tWall < 1600) {
+            } else if (tWall < segLen) {
               const hitX = cx + cdx * tWall;
               const hitY = cy + cdy * tWall;
               path.push({ x: hitX, y: hitY });
@@ -4382,22 +4459,22 @@ export default function App() {
               spawnSparks(hitX, hitY, "#ef4444", 8);
               playSound("wallBounce", 0.65, 100);
             } else {
-              path.push({ x: cx + cdx * 1600, y: cy + cdy * 1600 });
+              path.push({ x: cx + cdx * segLen, y: cy + cdy * segLen });
               break;
             }
           }
 
-          ball.opticBeamPath = path;
+          ball.gazerBeamPath = path;
 
           // Recoil
           if (!hasStringBounceGuard(ball)) {
             ball.vx -= dx * (bal.recoilForce || 600);
             ball.vy -= dy * (bal.recoilForce || 600);
           }
-          ball.opticBeamFlashUntil = currentTime + 240;
-          ball.opticRecoilUntil = currentTime + (bal.postFireSlowDuration || 400);
-          ball.opticCooldownUntil = currentTime + effectiveCooldown;
-          ball.opticState = "cooldown";
+          ball.gazerBeamFlashUntil = currentTime + 240;
+          ball.gazerRecoilUntil = currentTime + (bal.postFireSlowDuration || 400);
+          ball.gazerCooldownUntil = currentTime + effectiveCooldown;
+          ball.gazerState = "cooldown";
 
           if (ball.side === "left") game.stats.left.totalShots++;
           else game.stats.right.totalShots++;
@@ -4405,247 +4482,260 @@ export default function App() {
         return;
       }
 
-      if (ball.opticState === "cooldown") {
-        if (currentTime >= ball.opticCooldownUntil) ball.opticState = "idle";
+      if (ball.gazerState === "cooldown") {
+        if (currentTime >= ball.gazerCooldownUntil) ball.gazerState = "idle";
         return;
       }
 
       // Idle -> begin charge
-      if (ball.opticState === "idle" && currentTime >= (ball.opticCooldownUntil || 0)) {
-        ball.opticState = "charging";
-        ball.opticChargeTimer = 0;
-        ball.opticBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      if (ball.gazerState === "idle" && currentTime >= (ball.gazerCooldownUntil || 0)) {
+        ball.gazerState = "charging";
+        ball.gazerChargeTimer = 0;
+        ball.gazerBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
         playSound("laserCharge", 0.85, 160);
       }
     };
 
-    const updateOpticRicochets = (dt) => {
-      if (!game.opticRicochets) return;
-      const pad = 18;
-      game.opticRicochets = game.opticRicochets.filter((r) => {
-        if (game.simTime >= r.spawnTime + r.life) return false;
-        r.trail = r.trail || [];
-        r.trail.push({ x: r.x, y: r.y });
-        if (r.trail.length > 12) r.trail.shift();
 
-        r.x += r.vx * dt;
-        r.y += r.vy * dt;
+    const isPointInTriangle = (px, py, ax, ay, bx, by, cx, cy) => {
+      const v0x = cx - ax, v0y = cy - ay;
+      const v1x = bx - ax, v1y = by - ay;
+      const v2x = px - ax, v2y = py - ay;
 
-        let bounced = false;
-        if (r.x - 9 < pad) { r.x = pad + 9; r.vx = Math.abs(r.vx); bounced = true; }
-        if (r.x + 9 > game.width - pad) { r.x = game.width - pad - 9; r.vx = -Math.abs(r.vx); bounced = true; }
-        if (r.y - 9 < pad) { r.y = pad + 9; r.vy = Math.abs(r.vy); bounced = true; }
-        if (r.y + 9 > game.height - pad) { r.y = game.height - pad - 9; r.vy = -Math.abs(r.vy); bounced = true; }
+      const dot00 = v0x * v0x + v0y * v0y;
+      const dot01 = v0x * v1x + v0y * v1y;
+      const dot02 = v0x * v2x + v0y * v2y;
+      const dot11 = v1x * v1x + v1y * v1y;
+      const dot12 = v1x * v2x + v1y * v2y;
 
-        if (bounced) {
-          r.bounces++;
-          spawnSparks(r.x, r.y, "#f87171", 10);
-          playSound("wallBounce", 0.55, 105);
-          if (r.bounces >= (r.maxBounces || 4)) return false;
-        }
+      const denom = dot00 * dot11 - dot01 * dot01;
+      if (Math.abs(denom) < 1e-6) return false;
+      const invDenom = 1 / denom;
+      const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+      const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
-        const target = game.balls.find(b => b.side !== r.ownerSide);
-        if (target) {
-          const dist = Math.hypot(r.x - target.x, r.y - target.y);
-          if (dist < target.r + 10) {
-            const dmg = (r.ricochetDmg || [32,24,18,12])[Math.min(r.bounces, 3)];
-            const kb = (r.ricochetKb || [700,550,400,250])[Math.min(r.bounces, 3)];
-            applyDamage(target, dmg, `${r.ownerId}-optic-ricochet-${r.bounces}`, game.simTime, 300);
-            const angle = Math.atan2(r.vy, r.vx);
-            if (!hasStringBounceGuard(target)) {
-              target.vx += Math.cos(angle) * kb;
-              target.vy += Math.sin(angle) * kb;
-            }
-            const ownerStats = r.ownerSide === "left" ? game.stats.left : game.stats.right;
-            ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(dmg));
-            ownerStats.hitsLanded++;
-            spawnSparks(target.x, target.y, "#fca5a5", 16);
-            game.screenShake = Math.max(game.screenShake, 9);
-            playSound("laserFire", 0.6, 115);
-            game.floatingTexts = game.floatingTexts || [];
-            game.floatingTexts.push({
-              x: target.x, y: target.y - target.r - 20, vy: -50,
-              text: `RICOCHET! -${dmg}`, color: "#f87171", life: 0.7, maxLife: 0.7
-            });
-            return false;
-          }
-        }
-        return true;
-      });
+      return (u >= 0) && (v >= 0) && (u + v < 1);
     };
 
-    const updatePrismer = (ball, target, currentTime, stepDt) => {
-      const bal = game.balance.prismer || BALANCE.prismer;
+    const updateConstellation = (ball, currentTime) => {
+      const bal = game.balance.constellation || BALANCE.constellation;
 
-      // Post-fire slow
-      if (ball.prismerRecoilUntil && currentTime < ball.prismerRecoilUntil) {
-        // slow is applied via slowMult in the movement section
-      }
-
-      // Charging phase
-      if (ball.prismerState === "charging") {
-        ball.prismerChargeTimer += stepDt * 1000;
-        // Lock beam angle toward target during charge
-        ball.prismerBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-        if (ball.prismerChargeTimer >= bal.chargeDuration) {
-          // FIRE
-          ball.prismerState = "firing";
-          ball.prismerChargeTimer = 0;
-
-          const angle = ball.prismerBeamAngle;
-          const dx = Math.cos(angle);
-          const dy = Math.sin(angle);
-
-          // Hitscan: check if beam intersects target
-          const sx = ball.x + dx * ball.r;
-          const sy = ball.y + dy * ball.r;
-          const ex = sx + dx * 1500;
-          const ey = sy + dy * 1500;
-          const hitDist = linePointDist(target.x, target.y, sx, sy, ex, ey);
-          const ahead = (target.x - sx) * dx + (target.y - sy) * dy;
-
-          if (ahead > 0 && hitDist < target.r + bal.beamWidth / 2) {
-            // Direct hit
-            const tv = Math.hypot(target.vx, target.vy);
-            const approachDot = -(target.vx * dx + target.vy * dy) / Math.max(1, tv);
-            const approachFactor = Math.max(0, approachDot);
-            const momentumBonus = Math.min(15, approachFactor * tv * 0.35);
-            const finalDamage = bal.beamDamage + momentumBonus;
-            const finalKb = bal.beamKnockback + approachFactor * tv * 0.6;
-
-            applyDamage(target, finalDamage, `${ball.id}-prismer-beam`, currentTime, 300);
-            if (!hasStringBounceGuard(target)) {
-              target.vx += dx * finalKb;
-              target.vy += dy * finalKb;
-            }
-            target.webHitFlashUntil = currentTime + (bal.stunDuration || 300);
-            if (ball.side === "left") {
-              game.stats.left.damageDealt += Math.max(MIN_DAMAGE, Math.round(finalDamage));
-              game.stats.left.hitsLanded++;
-            } else {
-              game.stats.right.damageDealt += Math.max(MIN_DAMAGE, Math.round(finalDamage));
-              game.stats.right.hitsLanded++;
-            }
-            game.screenShake = Math.max(game.screenShake, 20);
-            spawnSparks(target.x, target.y, "#22d3ee", 20);
-            spawnDust(target.x, target.y, 10);
-            playSound("laserFire", 1.0, 160);
-            game.floatingTexts = game.floatingTexts || [];
-            game.floatingTexts.push({
-              x: target.x, y: target.y - target.r - 26, vy: -60,
-              text: `OPTIC BLAST! -${Math.round(finalDamage)}`, color: "#22d3ee", life: 0.9, maxLife: 0.9
-            });
-          } else {
-            // Miss → spawn ricochet
-            if (!game.prismerRicochets) game.prismerRicochets = [];
-            game.prismerRicochets.push({
-              ownerId: ball.id,
-              ownerSide: ball.side,
-              x: sx,
-              y: sy,
-              vx: dx * bal.ricochetSpeed,
-              vy: dy * bal.ricochetSpeed,
-              bounces: 0,
-              spawnTime: currentTime,
-              life: bal.ricochetLife,
-              trail: [],
-            });
-            playSound("wallBounce", 0.9, 100);
-          }
-
-          // Recoil self
-          if (!hasStringBounceGuard(ball)) {
-            ball.vx -= dx * bal.recoilForce;
-            ball.vy -= dy * bal.recoilForce;
-          }
-          ball.prismerBeamFlashUntil = currentTime + 220;
-          ball.prismerRecoilUntil = currentTime + (bal.postFireSlowDuration || 400);
-          ball.prismerCooldownUntil = currentTime + bal.cooldown;
-          ball.prismerState = "cooldown";
-
-          if (ball.side === "left") game.stats.left.totalShots++;
-          else game.stats.right.totalShots++;
-        }
-        return;
-      }
-
-      if (ball.prismerState === "cooldown") {
-        if (currentTime >= ball.prismerCooldownUntil) {
-          ball.prismerState = "idle";
-        }
-        return;
-      }
-
-      // Idle: begin charge when cooldown done
-      if (ball.prismerState === "idle" && currentTime >= (ball.prismerCooldownUntil || 0)) {
-        ball.prismerState = "charging";
-        ball.prismerChargeTimer = 0;
-        ball.prismerBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-        playSound("laserCharge", 0.8, 180);
+      // 1. Ultimate trigger at <= 40 HP (once per battle)
+      if (!ball.constellationUltActive && ball.health <= 40 && currentTime > (ball.constellationUltUntil || 0)) {
+        ball.constellationUltActive = true;
+        ball.constellationUltUntil = currentTime + bal.ultDuration;
+        game.screenShake = Math.max(game.screenShake, 18);
+        spawnSparks(ball.x, ball.y, "#facc15", 30);
+        playSound("laserFire", 1.0, 70);
         game.floatingTexts = game.floatingTexts || [];
         game.floatingTexts.push({
-          x: ball.x, y: ball.y - ball.r - 20, vy: -40,
-          text: "CHARGING...", color: "#a5f3fc", life: 0.5, maxLife: 0.5
+          x: ball.x, y: ball.y - ball.r - 28, vy: -60,
+          text: "COSMIC ALIGNMENT!", color: "#facc15", life: 1.1, maxLife: 1.1
         });
+      }
+
+      // Check ultimate end
+      if (ball.constellationUltActive && currentTime >= ball.constellationUltUntil) {
+        ball.constellationUltActive = false;
+        spawnSparks(ball.x, ball.y, "#38bdf8", 12);
+      }
+
+      // 2. Casting skill on cooldown
+      const effectiveCooldown = ball.constellationUltActive ? (bal.cooldown * 0.5) : bal.cooldown;
+      if (currentTime >= (ball.nextShotAt || 0)) {
+        game.constellationStars = game.constellationStars || [];
+        // Get stars owned by this ball
+        const myStars = game.constellationStars.filter(s => s.ownerId === ball.id);
+        
+        if (myStars.length > 0) {
+          // Consume used stars from the global list, prioritizing the last 4 placed
+          myStars.sort((a, b) => a.createdAt - b.createdAt);
+          const usedStars = myStars.slice(-4);
+          
+          // Remove usedStars from game.constellationStars
+          const usedIds = new Set(usedStars.map(s => s.id));
+          game.constellationStars = game.constellationStars.filter(s => !usedIds.has(s.id));
+
+          // Identify shape
+          let shapeType = "circle";
+          let label = "Circle Aura";
+          if (usedStars.length === 2) { shapeType = "line"; label = "Laser Fence"; }
+          else if (usedStars.length === 3) { shapeType = "triangle"; label = "Cosmic Shield"; }
+          else if (usedStars.length === 4) { shapeType = "square"; label = "Star Prison"; }
+
+          game.activeConstellations = game.activeConstellations || [];
+          game.activeConstellations.push({
+            id: Math.random().toString(),
+            ownerId: ball.id,
+            ownerSide: ball.side,
+            type: shapeType,
+            stars: usedStars.map(s => ({ x: s.x, y: s.y })),
+            spawnTime: currentTime,
+            duration: bal.activePatternDuration || 4000,
+            nextTickAt: currentTime,
+          });
+
+          // Visual and audio feedback
+          game.screenShake = Math.max(game.screenShake, 14);
+          playSound("laserFire", 0.9, 130);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 20, vy: -50,
+            text: label.toUpperCase(), color: "#e0f2fe", life: 0.8, maxLife: 0.8
+          });
+
+          ball.nextShotAt = currentTime + effectiveCooldown;
+        }
       }
     };
 
-    const updatePrismerRicochets = (dt) => {
-      if (!game.prismerRicochets) return;
-      const pad = 18;
-      game.prismerRicochets = game.prismerRicochets.filter((r) => {
-        if (game.simTime >= r.spawnTime + r.life) return false;
+    const updateActiveConstellations = (currentTime) => {
+      if (!game.activeConstellations) return;
+      const bal = game.balance.constellation || BALANCE.constellation;
 
-        // Store trail
-        r.trail = r.trail || [];
-        r.trail.push({ x: r.x, y: r.y });
-        if (r.trail.length > 10) r.trail.shift();
-
-        r.x += r.vx * dt;
-        r.y += r.vy * dt;
-
-        // Wall bounce
-        let bounced = false;
-        if (r.x - 8 < pad) { r.x = pad + 8; r.vx = Math.abs(r.vx); bounced = true; }
-        if (r.x + 8 > game.width - pad) { r.x = game.width - pad - 8; r.vx = -Math.abs(r.vx); bounced = true; }
-        if (r.y - 8 < pad) { r.y = pad + 8; r.vy = Math.abs(r.vy); bounced = true; }
-        if (r.y + 8 > game.height - pad) { r.y = game.height - pad - 8; r.vy = -Math.abs(r.vy); bounced = true; }
-
-        if (bounced) {
-          r.bounces++;
-          spawnSparks(r.x, r.y, "#22d3ee", 8);
-          playSound("wallBounce", 0.6, 110);
-          if (r.bounces >= 4) return false;
+      game.activeConstellations = game.activeConstellations.filter(c => {
+        if (currentTime >= c.spawnTime + c.duration) {
+          return false; // expires
         }
 
-        // Check target hit
-        const target = game.balls.find(b => b.side !== r.ownerSide);
-        if (target) {
-          const dist = Math.hypot(r.x - target.x, r.y - target.y);
-          if (dist < target.r + 10) {
-            const bal = BALANCE.prismer;
-            const dmg = (bal.ricochetDmg || [32,24,18,12])[Math.min(r.bounces, 3)];
-            const kb = (bal.ricochetKb || [700,550,400,250])[Math.min(r.bounces, 3)];
-            applyDamage(target, dmg, `${r.ownerId}-prismer-ricochet-${r.bounces}`, game.simTime, 300);
-            const angle = Math.atan2(r.vy, r.vx);
-            if (!hasStringBounceGuard(target)) {
-              target.vx += Math.cos(angle) * kb;
-              target.vy += Math.sin(angle) * kb;
+        const enemy = game.balls.find(b => b.side !== c.ownerSide);
+        const owner = game.balls.find(b => b.side === c.ownerSide);
+
+        if (c.type === "circle") {
+          // Circle Aura (1 star)
+          const star = c.stars[0];
+          const radius = bal.circleRadius || 90;
+          if (enemy) {
+            const dist = Math.hypot(enemy.x - star.x, enemy.y - star.y);
+            if (dist < radius + enemy.r) {
+              if (currentTime >= (c.nextTickAt || 0)) {
+                applyDamage(enemy, bal.circleDamage || 2, `${c.id}-circle-damage`, currentTime, 200);
+              }
             }
-            const ownerStats = r.ownerSide === "left" ? game.stats.left : game.stats.right;
-            ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(dmg));
-            ownerStats.hitsLanded++;
-            spawnSparks(target.x, target.y, "#a5f3fc", 14);
-            game.screenShake = Math.max(game.screenShake, 8);
-            playSound("laserFire", 0.65, 120);
-            game.floatingTexts = game.floatingTexts || [];
-            game.floatingTexts.push({
-              x: target.x, y: target.y - target.r - 20, vy: -50,
-              text: `RICOCHET! -${dmg}`, color: "#a5f3fc", life: 0.7, maxLife: 0.7
+          }
+          if (currentTime >= (c.nextTickAt || 0)) {
+            c.nextTickAt = currentTime + 200;
+          }
+        } 
+        else if (c.type === "line" && enemy) {
+          // Laser Fence (2 stars)
+          const p1 = c.stars[0], p2 = c.stars[1];
+          const dist = linePointDist(enemy.x, enemy.y, p1.x, p1.y, p2.x, p2.y);
+          if (dist < enemy.r + 5) {
+            const damageKey = `${c.id}-line-damage`;
+            if (!(game.damageCooldowns[damageKey] > currentTime)) {
+              applyDamage(enemy, bal.fenceDamage || 12, damageKey, currentTime, 1000);
+              // Knockback: push away from the line
+              const dx = p2.x - p1.x;
+              const dy = p2.y - p1.y;
+              const len = Math.hypot(dx, dy) || 1;
+              const nx = -dy / len;
+              const ny = dx / len;
+              const side = Math.sign((enemy.x - p1.x) * nx + (enemy.y - p1.y) * ny) || 1;
+              if (!hasStringBounceGuard(enemy)) {
+                enemy.vx += nx * side * 450;
+                enemy.vy += ny * side * 450;
+              }
+              spawnSparks(enemy.x, enemy.y, "#e0f2fe", 12);
+              playSound("wallBounce", 1.0, 90);
+            }
+          }
+        } 
+        else if (c.type === "triangle") {
+          // Cosmic Shield (3 stars)
+          const p1 = c.stars[0], p2 = c.stars[1], p3 = c.stars[2];
+
+          // 1. Owner invulnerability check
+          if (owner) {
+            const inside = isPointInTriangle(owner.x, owner.y, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+            if (inside) {
+              owner.constellationShieldedUntil = currentTime + 100;
+            }
+          }
+
+          // 2. Enemy barrier check
+          if (enemy) {
+            const segments = [[p1, p2], [p2, p3], [p3, p1]];
+            segments.forEach(([s1, s2]) => {
+              const dist = linePointDist(enemy.x, enemy.y, s1.x, s1.y, s2.x, s2.y);
+              if (dist < enemy.r + 5) {
+                const damageKey = `${c.id}-triangle-damage`;
+                if (!(game.damageCooldowns[damageKey] > currentTime)) {
+                  applyDamage(enemy, bal.barrierDamage || 8, damageKey, currentTime, 1000);
+                  const dx = s2.x - s1.x;
+                  const dy = s2.y - s1.y;
+                  const len = Math.hypot(dx, dy) || 1;
+                  const nx = -dy / len;
+                  const ny = dx / len;
+                  const side = Math.sign((enemy.x - s1.x) * nx + (enemy.y - s1.y) * ny) || 1;
+                  if (!hasStringBounceGuard(enemy)) {
+                    enemy.vx += nx * side * 380;
+                    enemy.vy += ny * side * 380;
+                  }
+                  spawnSparks(enemy.x, enemy.y, "#facc15", 10);
+                  playSound("wallBounce", 0.9, 100);
+                }
+              }
             });
-            return false;
+          }
+        } 
+        else if (c.type === "square" && enemy) {
+          // Star Prison (4 stars)
+          const p1 = c.stars[0], p2 = c.stars[1], p3 = c.stars[2], p4 = c.stars[3];
+
+          // Sort vertices angularly
+          const cx = (p1.x + p2.x + p3.x + p4.x) / 4;
+          const cy = (p1.y + p2.y + p3.y + p4.y) / 4;
+          const q = [p1, p2, p3, p4].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+
+          // Check if enemy inside
+          const inside = isPointInTriangle(enemy.x, enemy.y, q[0].x, q[0].y, q[1].x, q[1].y, q[2].x, q[2].y) ||
+                         isPointInTriangle(enemy.x, enemy.y, q[0].x, q[0].y, q[2].x, q[2].y, q[3].x, q[3].y);
+
+          if (inside) {
+            // Apply tick damage
+            if (currentTime >= (c.nextTickAt || 0)) {
+              applyDamage(enemy, bal.prisonDamage || 3, `${c.id}-prison-damage`, currentTime, 300);
+            }
+
+            // Trap enemy inside: reflect velocity inward
+            const edges = [[q[0], q[1]], [q[1], q[2]], [q[2], q[3]], [q[3], q[0]]];
+            edges.forEach(([s1, s2]) => {
+              const d = linePointDist(enemy.x, enemy.y, s1.x, s1.y, s2.x, s2.y);
+              if (d < enemy.r + 5) {
+                const dx = s2.x - s1.x;
+                const dy = s2.y - s1.y;
+                const lenSq = dx * dx + dy * dy;
+                let rx = s1.x, ry = s1.y;
+                if (lenSq > 0) {
+                  const param = clamp(((enemy.x - s1.x) * dx + (enemy.y - s1.y) * dy) / lenSq, 0, 1);
+                  rx = s1.x + param * dx;
+                  ry = s1.y + param * dy;
+                }
+                
+                let nx = cx - rx;
+                let ny = cy - ry;
+                const len = Math.hypot(nx, ny);
+                if (len > 0) { nx /= len; ny /= len; }
+
+                const dot = enemy.vx * nx + enemy.vy * ny;
+                if (dot < 0) {
+                  const bounceD = 1.05;
+                  enemy.vx = (enemy.vx - 2 * dot * nx) * bounceD;
+                  enemy.vy = (enemy.vy - 2 * dot * ny) * bounceD;
+                  enemy.x = rx + nx * (enemy.r + 8);
+                  enemy.y = ry + ny * (enemy.r + 8);
+                  spawnSparks(enemy.x, enemy.y, "#c084fc", 8);
+                  playSound("wallBounce", 0.75, 120);
+                }
+              }
+            });
+          }
+          if (currentTime >= (c.nextTickAt || 0)) {
+            c.nextTickAt = currentTime + 300;
           }
         }
+
         return true;
       });
     };
@@ -5163,7 +5253,7 @@ export default function App() {
       const activeThread = game.jokerThreads.find((thread) => thread.ownerId === ball.id && thread.state !== "done");
 
       // 1. Signature Ability: Bungee Gum Reel
-      if (!activeThread && currentTime >= (ball.jokerNextThreadAt || 0)) {
+      if (!activeThread && currentTime >= (ball.jokerNextThreadAt || 0) && canStartSkillConnection(ball, target, game.balls, currentTime)) {
         const aimAngle = Math.atan2(target.y - ball.y, target.x - ball.x) + (Math.random() - 0.5) * 0.35;
         const sx = ball.x + Math.cos(aimAngle) * (ball.r + 8);
         const sy = ball.y + Math.sin(aimAngle) * (ball.r + 8);
@@ -5541,7 +5631,7 @@ export default function App() {
       heldPose.angle = aimAngle;
       const diveState = ball.tridentDiveState || "idle";
       const targetDistance = Math.hypot(target.x - ball.x, target.y - ball.y);
-      const throwReady = currentTime >= (ball.nextShotAt || 0) && targetDistance < 430;
+      const throwReady = currentTime >= (ball.nextShotAt || 0) && targetDistance < 430 && canStartSkillConnection(ball, target, game.balls, currentTime);
       const startDive = diveState === "idle" && (ball.tridentState === "held" || !ball.tridentState) && !throwReady && currentTime >= (ball.tridentNextDiveAt || 0) && targetDistance < 440;
       if (startDive) {
         ball.tridentDiveState = "tracking";
@@ -5679,7 +5769,7 @@ export default function App() {
         ball.tridentAngle = Math.atan2(ball.tridentVy, ball.tridentVx);
 
         const hooked = game.balls.find((other) => other.id === ball.tridentTargetId);
-        if (!hooked && Math.hypot(ball.tridentX - target.x, ball.tridentY - target.y) < target.r + 18) {
+        if (!hooked && Math.hypot(ball.tridentX - target.x, ball.tridentY - target.y) < target.r + 18 && canStartSkillConnection(ball, target, game.balls, currentTime)) {
           ball.tridentTargetId = target.id;
           target.tridentPinnedUntil = currentTime + bal.stuckDuration + 600;
           target.tridentPinOwnerId = ball.id;
@@ -5765,77 +5855,6 @@ export default function App() {
         ball.tridentAngle = angle;
         ball.tridentX += Math.cos(angle) * bal.recallSpeed * stepDt;
         ball.tridentY += Math.sin(angle) * bal.recallSpeed * stepDt;
-      }
-    };
-
-    const updateSpirit = (ball, target, currentTime) => {
-      const bal = game.balance.spirit || BALANCE.spirit;
-
-      if (ball.spiritBeamUntil && currentTime < ball.spiritBeamUntil) {
-        const sx = ball.x + Math.cos(ball.spiritBeamAngle) * ball.r;
-        const sy = ball.y + Math.sin(ball.spiritBeamAngle) * ball.r;
-        const ex = sx + Math.cos(ball.spiritBeamAngle) * 1500;
-        const ey = sy + Math.sin(ball.spiritBeamAngle) * 1500;
-        if (currentTime >= (ball.spiritNextTickAt || 0)) {
-          ball.spiritNextTickAt = currentTime + bal.tickCooldown;
-          const hitDist = linePointDist(target.x, target.y, sx, sy, ex, ey);
-          const ahead = (target.x - sx) * Math.cos(ball.spiritBeamAngle) + (target.y - sy) * Math.sin(ball.spiritBeamAngle);
-          if (ahead > 0 && hitDist < target.r + bal.beamWidth / 2) {
-            applyDamage(target, bal.beamDamage, `${ball.id}-spirit-beam`, currentTime, bal.tickCooldown - 5);
-            if (!hasStringBounceGuard(target)) {
-              target.vx += Math.cos(ball.spiritBeamAngle) * bal.knockback;
-              target.vy += Math.sin(ball.spiritBeamAngle) * bal.knockback;
-            }
-            if (ball.side === "left") {
-              game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.beamDamage);
-              game.stats.left.hitsLanded++;
-            } else {
-              game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.beamDamage);
-              game.stats.right.hitsLanded++;
-            }
-            target.webHitFlashUntil = currentTime + 160;
-            spawnSparks(target.x, target.y, "#fde047", 8);
-          }
-        }
-        if (canSpawnParticle() && Math.random() < 0.45) {
-          const dist = 20 + Math.random() * 320;
-          const side = (Math.random() - 0.5) * bal.beamWidth;
-          const px = sx + Math.cos(ball.spiritBeamAngle) * dist + Math.cos(ball.spiritBeamAngle + Math.PI / 2) * side;
-          const py = sy + Math.sin(ball.spiritBeamAngle) * dist + Math.sin(ball.spiritBeamAngle + Math.PI / 2) * side;
-          game.particles.push({
-            x: px, y: py,
-            vx: Math.cos(ball.spiritBeamAngle) * 45,
-            vy: Math.sin(ball.spiritBeamAngle) * 45,
-            color: Math.random() < 0.6 ? "#38bdf8" : "#fde047",
-            radius: 1.6,
-            life: 0.18,
-            maxLife: 0.18
-          });
-        }
-        return;
-      }
-
-      if (ball.spiritBeamUntil && currentTime >= ball.spiritBeamUntil) {
-        ball.spiritBeamUntil = 0;
-        ball.spiritCooldownUntil = currentTime + bal.cooldown;
-      }
-
-      if ((ball.kiCharge || 0) >= bal.chargeRequired && currentTime >= (ball.spiritCooldownUntil || 0)) {
-        ball.kiCharge = 0;
-        ball.spiritBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-        ball.spiritBeamUntil = currentTime + bal.beamDuration;
-        ball.spiritNextTickAt = currentTime;
-        ball.spiritFlashUntil = currentTime + bal.beamDuration;
-        game.screenShake = Math.max(game.screenShake, 9);
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: ball.x, y: ball.y - ball.r - 24, vy: -48,
-          text: "SPIRIT BEAM", color: "#fde047", life: 0.9, maxLife: 0.9
-        });
-        if (ball.side === "left") game.stats.left.totalShots++;
-        else game.stats.right.totalShots++;
-        spawnSparks(ball.x, ball.y, "#38bdf8", 18);
-        playSound("laserFire", 0.9, 220);
       }
     };
 
@@ -6088,47 +6107,6 @@ export default function App() {
       ball.shadowMinions = ball.shadowMinions.filter((minion) => minion.health > 0);
     };
 
-    const updateChainsaw = (ball, target, currentTime, stepDt) => {
-      const bal = game.balance.chainsaw || BALANCE.chainsaw;
-      const speed = Math.hypot(ball.vx, ball.vy);
-      ball.chainsawAngle = (ball.chainsawAngle || 0) + stepDt * (10 + speed * 0.035);
-
-      if (currentTime >= (ball.chainsawNextSpinAt || 0)) {
-        ball.chainsawSpinUntil = currentTime + bal.spinDuration;
-        ball.chainsawNextSpinAt = currentTime + bal.cooldown;
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: ball.x, y: ball.y - ball.r - 20, vy: -45,
-          text: "CHAINSAW SPIN", color: "#f97316", life: 0.75, maxLife: 0.75
-        });
-        if (ball.side === "left") game.stats.left.totalShots++;
-        else game.stats.right.totalShots++;
-        playSound("hammerHit", 0.55, -240);
-      }
-
-      if (!(ball.chainsawSpinUntil && currentTime < ball.chainsawSpinUntil)) return;
-
-      const sawRange = ball.r + bal.sawReach;
-      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-      if (dist < target.r + sawRange && currentTime >= (ball.chainsawNextHitAt || 0)) {
-        ball.chainsawNextHitAt = currentTime + bal.hitCooldown;
-        applyDamage(target, bal.spinDamage, `${ball.id}-chainsaw-spin`, currentTime, bal.hitCooldown - 10);
-        const hitAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-        if (!hasStringBounceGuard(target)) {
-          target.vx += Math.cos(hitAngle) * bal.knockback;
-          target.vy += Math.sin(hitAngle) * bal.knockback;
-        }
-        if (ball.side === "left") {
-          game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.spinDamage);
-          game.stats.left.hitsLanded++;
-        } else {
-          game.stats.right.damageDealt += Math.max(MIN_DAMAGE, bal.spinDamage);
-          game.stats.right.hitsLanded++;
-        }
-        target.webHitFlashUntil = currentTime + 150;
-        spawnSparks(target.x, target.y, "#f97316", 10);
-      }
-    };
 
     const getMirrorClone = (ball) => ({
       x: game.width - ball.x,
@@ -8530,126 +8508,6 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawSpiritBall = (ball) => {
-      const config = BALL_TYPES.spirit;
-      const bal = game.balance.spirit || BALANCE.spirit;
-      const pulse = 0.5 + Math.sin(game.simTime * 0.012) * 0.5;
-      const chargeRatio = clamp((ball.kiCharge || 0) / Math.max(1, bal.chargeRequired), 0, 1);
-      const beamActive = ball.spiritBeamUntil && game.simTime < ball.spiritBeamUntil;
-
-      if (beamActive) {
-        const sx = ball.x + Math.cos(ball.spiritBeamAngle) * ball.r;
-        const sy = ball.y + Math.sin(ball.spiritBeamAngle) * ball.r;
-        const ex = sx + Math.cos(ball.spiritBeamAngle) * 1500;
-        const ey = sy + Math.sin(ball.spiritBeamAngle) * 1500;
-        ctx.save();
-        ctx.lineCap = "round";
-        ctx.shadowColor = "#38bdf8";
-        ctx.shadowBlur = 28;
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.32)";
-        ctx.lineWidth = bal.beamWidth + 18 + pulse * 8;
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-        ctx.strokeStyle = "rgba(253, 224, 71, 0.55)";
-        ctx.lineWidth = bal.beamWidth + 5;
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-        ctx.strokeStyle = "#f8fafc";
-        ctx.lineWidth = Math.max(8, bal.beamWidth * 0.35);
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-        ctx.restore();
-      }
-
-      ctx.save();
-      ctx.translate(ball.x, ball.y);
-      ctx.shadowColor = beamActive ? "#fde047" : "#38bdf8";
-      ctx.shadowBlur = 8 + chargeRatio * 18 + (beamActive ? 12 : 0);
-
-      // Monkey tail accessory behind the body.
-      ctx.save();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#7c2d12";
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.72, ball.r * 0.18);
-      ctx.quadraticCurveTo(-ball.r * 1.35, ball.r * 0.25, -ball.r * 1.18, -ball.r * 0.48);
-      ctx.quadraticCurveTo(-ball.r * 0.95, -ball.r * 1.08, -ball.r * 0.45, -ball.r * 0.84);
-      ctx.stroke();
-      ctx.strokeStyle = "#c2410c";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.72, ball.r * 0.18);
-      ctx.quadraticCurveTo(-ball.r * 1.35, ball.r * 0.25, -ball.r * 1.18, -ball.r * 0.48);
-      ctx.quadraticCurveTo(-ball.r * 0.95, -ball.r * 1.08, -ball.r * 0.45, -ball.r * 0.84);
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r + chargeRatio * 5, 0, Math.PI * 2);
-      const auraGrad = ctx.createRadialGradient(0, 0, ball.r * 0.2, 0, 0, ball.r + 18);
-      auraGrad.addColorStop(0, "rgba(253, 224, 71, 0.22)");
-      auraGrad.addColorStop(0.45, "rgba(56, 189, 248, 0.18)");
-      auraGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
-      ctx.fillStyle = auraGrad;
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
-      bodyGrad.addColorStop(0, "#fed7aa");
-      bodyGrad.addColorStop(0.45, config.color);
-      bodyGrad.addColorStop(1, "#9a3412");
-      ctx.fillStyle = bodyGrad;
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = config.stroke;
-      ctx.stroke();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r - 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.fillStyle = "#facc15";
-      ctx.fillRect(-ball.r, -ball.r, ball.r * 2, ball.r * 0.18);
-      ctx.fillStyle = "#2563eb";
-      ctx.fillRect(-ball.r, ball.r * 0.28, ball.r * 2, ball.r * 0.32);
-      ctx.fillStyle = "#1d4ed8";
-      ctx.fillRect(-ball.r, -ball.r * 0.16, ball.r * 0.42, ball.r * 0.28);
-      ctx.fillRect(ball.r * 0.58, -ball.r * 0.16, ball.r * 0.42, ball.r * 0.28);
-      ctx.fillStyle = "#fde047";
-      ctx.fillRect(-ball.r * 0.45, ball.r * 0.28, ball.r * 0.9, 4);
-      ctx.restore();
-
-      ctx.fillStyle = "#111827";
-      for (let i = 0; i < 5; i++) {
-        const x = (i - 2) * ball.r * 0.17;
-        const h = ball.r * (0.42 + (i % 2) * 0.14);
-        ctx.beginPath();
-        ctx.moveTo(x, -ball.r * 0.94);
-        ctx.lineTo(x - ball.r * 0.16, -ball.r * 0.46);
-        ctx.lineTo(x + ball.r * 0.18, -ball.r * 0.5);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      const pipCount = Math.max(1, bal.chargeRequired);
-      for (let i = 0; i < pipCount; i++) {
-        const a = -Math.PI / 2 + (i / pipCount) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.arc(Math.cos(a) * (ball.r + 8), Math.sin(a) * (ball.r + 8), 2.6, 0, Math.PI * 2);
-        ctx.fillStyle = i < (ball.kiCharge || 0) ? "#fde047" : "rgba(226, 232, 240, 0.35)";
-        ctx.fill();
-      }
-
-      if (chargeRatio >= 1 && !beamActive) {
-        ctx.fillStyle = "#fde047";
-        ctx.font = "bold 8px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("FULL", 0, ball.r + 17);
-      }
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
-
     const drawShadowBall = (ball) => {
       const config = BALL_TYPES.shadow;
       const bal = game.balance.shadow || BALANCE.shadow;
@@ -8777,114 +8635,6 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawChainsawBall = (ball) => {
-      const config = BALL_TYPES.chainsaw;
-      const bal = game.balance.chainsaw || BALANCE.chainsaw;
-      const active = ball.chainsawSpinUntil && game.simTime < ball.chainsawSpinUntil;
-      const spin = ball.chainsawAngle || 0;
-      const sawReach = active ? bal.sawReach : bal.sawReach * 0.48;
-
-      const drawSideSaw = (side) => {
-        ctx.save();
-        ctx.rotate(side === "left" ? Math.PI : 0);
-        const baseX = ball.r - 2;
-        const tipX = ball.r + sawReach;
-        ctx.shadowColor = active ? "#f97316" : "rgba(15, 23, 42, 0.45)";
-        ctx.shadowBlur = active ? 12 : 2;
-        ctx.strokeStyle = "#374151";
-        ctx.lineWidth = 10;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(baseX, 0);
-        ctx.lineTo(tipX, 0);
-        ctx.stroke();
-        ctx.strokeStyle = "#e5e7eb";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(baseX + 2, 0);
-        ctx.lineTo(tipX - 2, 0);
-        ctx.stroke();
-
-        ctx.fillStyle = active ? "#f97316" : "#9ca3af";
-        const toothCount = 8;
-        for (let i = 0; i < toothCount; i++) {
-          const t = i / Math.max(1, toothCount - 1);
-          const x = baseX + 6 + t * Math.max(1, sawReach - 10);
-          const flip = (i + Math.floor(spin * 4)) % 2 === 0 ? 1 : -1;
-          ctx.beginPath();
-          ctx.moveTo(x - 3, flip * 5);
-          ctx.lineTo(x + 3, flip * 5);
-          ctx.lineTo(x, flip * 12);
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.restore();
-      };
-
-      ctx.save();
-      ctx.translate(ball.x, ball.y);
-      drawSideSaw("left");
-      drawSideSaw("right");
-
-      if (active) {
-        ctx.save();
-        ctx.globalAlpha = 0.45 + Math.sin(game.simTime * 0.025) * 0.15;
-        ctx.strokeStyle = "#f97316";
-        ctx.lineWidth = 3;
-        ctx.setLineDash([8, 6]);
-        ctx.lineDashOffset = -game.simTime * 0.08;
-        ctx.beginPath();
-        ctx.arc(0, 0, ball.r + bal.sawReach, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
-
-      ctx.shadowColor = active ? "#f97316" : "#fb923c";
-      ctx.shadowBlur = active ? 16 : 8;
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const grad = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.35, 4, 0, 0, ball.r);
-      grad.addColorStop(0, "#fed7aa");
-      grad.addColorStop(0.45, config.color);
-      grad.addColorStop(1, "#7c2d12");
-      ctx.fillStyle = grad;
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = config.stroke;
-      ctx.stroke();
-
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "#111827";
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.25, -ball.r * 0.9);
-      ctx.lineTo(-ball.r * 0.05, -ball.r * 0.42);
-      ctx.lineTo(-ball.r * 0.44, -ball.r * 0.48);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(ball.r * 0.25, -ball.r * 0.9);
-      ctx.lineTo(ball.r * 0.05, -ball.r * 0.42);
-      ctx.lineTo(ball.r * 0.44, -ball.r * 0.48);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = "#fef2f2";
-      ctx.beginPath(); ctx.arc(-8, -3, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(8, -3, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#dc2626";
-      ctx.beginPath(); ctx.arc(-8, -3, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(8, -3, 2, 0, Math.PI * 2); ctx.fill();
-
-      ctx.strokeStyle = "#111827";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 9, 9, 0.1, Math.PI - 0.1);
-      ctx.stroke();
-      ctx.restore();
-      drawHealthInsideBall(ball);
-    };
-
     const drawMirrorBody = (x, y, r, alpha, flash = false) => {
       const config = BALL_TYPES.mirror;
       ctx.save();
@@ -8975,135 +8725,40 @@ export default function App() {
 
 
 
-    const drawPrismerRicochets = () => {
-      if (!game.prismerRicochets) return;
-      game.prismerRicochets.forEach((r) => {
-        // Draw trail
-        if (r.trail && r.trail.length > 1) {
-          for (let i = 1; i < r.trail.length; i++) {
-            const alpha = (i / r.trail.length) * 0.55;
-            const hue = (200 + i * 15) % 360;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.strokeStyle = `hsl(${hue}, 90%, 70%)`;
-            ctx.lineWidth = 4;
-            ctx.lineCap = "round";
-            ctx.beginPath();
-            ctx.moveTo(r.trail[i-1].x, r.trail[i-1].y);
-            ctx.lineTo(r.trail[i].x, r.trail[i].y);
-            ctx.stroke();
-            ctx.restore();
-          }
-        }
-        // Draw projectile body
-        ctx.save();
-        ctx.shadowColor = "#22d3ee";
-        ctx.shadowBlur = 14;
-        ctx.fillStyle = "#22d3ee";
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#f0f9ff";
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
-    };
 
-    const drawOpticRicochets = () => {
-      if (!game.opticRicochets) return;
-      game.opticRicochets.forEach((r) => {
-        // Spectral red trail
-        if (r.trail && r.trail.length > 1) {
-          for (let i = 1; i < r.trail.length; i++) {
-            const alpha = (i / r.trail.length) * 0.6;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.strokeStyle = i % 2 === 0 ? "#ef4444" : "#fca5a5";
-            ctx.lineWidth = 5;
-            ctx.lineCap = "round";
-            ctx.shadowColor = "#ef4444";
-            ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.moveTo(r.trail[i-1].x, r.trail[i-1].y);
-            ctx.lineTo(r.trail[i].x, r.trail[i].y);
-            ctx.stroke();
-            ctx.restore();
-          }
-        }
-        // Projectile
-        ctx.save();
-        ctx.shadowColor = "#ef4444";
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = "#ef4444";
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, 9, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#fff5f5";
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-        // Gold ring
-        ctx.strokeStyle = "#fbbf24";
-        ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = "#fbbf24";
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, 9, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      });
-    };
+    const drawGazerBall = (ball) => {
+      const isFiring = ball.gazerBeamFlashUntil && game.simTime < ball.gazerBeamFlashUntil;
+      const isUlt = ball.gazerUltActive;
 
-    const drawOpticBall = (ball) => {
-      const bal = game.balance.opticBall || BALANCE.opticBall;
-      const isCharging = ball.opticState === "charging";
-      const chargeRatio = isCharging ? Math.min(1, ball.opticChargeTimer / (bal.chargeDuration || 450)) : 0;
-      const isFiring = ball.opticBeamFlashUntil && game.simTime < ball.opticBeamFlashUntil;
-      const isUlt = ball.opticUltActive;
-      const focusStacks = ball.opticFocusStacks || 0;
-      const maxStacks = bal.maxFocusStacks || 5;
-      const focusRatio = focusStacks / maxStacks;
-      const pulse = 0.5 + Math.sin(game.simTime * 0.014) * 0.5;
-      const fastPulse = 0.5 + Math.sin(game.simTime * 0.04) * 0.5;
-
-      // Beam flash
-      if (isFiring && ball.opticBeamPath && ball.opticBeamPath.length > 0) {
-        const path = ball.opticBeamPath;
-        const flashAlpha = Math.max(0, (ball.opticBeamFlashUntil - game.simTime) / 240);
+      // Beam flash (Drawn thinner than laser)
+      if (isFiring && ball.gazerBeamPath && ball.gazerBeamPath.length > 0) {
+        const path = ball.gazerBeamPath;
+        const flashAlpha = Math.max(0, (ball.gazerBeamFlashUntil - game.simTime) / 240);
         ctx.save();
         ctx.globalAlpha = flashAlpha;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         // Outer bloom
         ctx.shadowColor = "#ef4444";
-        ctx.shadowBlur = 40;
-        ctx.strokeStyle = "rgba(220,38,38,0.28)";
-        ctx.lineWidth = isUlt ? 192 : 96;
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = "rgba(220,38,38,0.22)";
+        ctx.lineWidth = isUlt ? 24 : 12;
         ctx.beginPath();
         ctx.moveTo(path[0].x, path[0].y);
         for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
         ctx.stroke();
         // Mid
-        ctx.strokeStyle = "rgba(248,113,113,0.6)";
-        ctx.lineWidth = isUlt ? 72 : 52;
-        ctx.shadowBlur = 24;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.stroke();
-        // Gold tint mid layer
-        ctx.strokeStyle = "rgba(251,191,36,0.25)";
-        ctx.lineWidth = isUlt ? 40 : 24;
+        ctx.strokeStyle = "rgba(248,113,113,0.5)";
+        ctx.lineWidth = isUlt ? 14 : 8;
+        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.moveTo(path[0].x, path[0].y);
         for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
         ctx.stroke();
         // Core
         ctx.strokeStyle = "#fff5f5";
-        ctx.lineWidth = isUlt ? 20 : 14;
-        ctx.shadowBlur = 14;
+        ctx.lineWidth = isUlt ? 6 : 3;
+        ctx.shadowBlur = 4;
         ctx.beginPath();
         ctx.moveTo(path[0].x, path[0].y);
         for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
@@ -9111,157 +8766,161 @@ export default function App() {
         ctx.restore();
       }
 
-      // Charge corona rays
-      if (isCharging && chargeRatio > 0.08) {
-        ctx.save();
-        for (let i = 0; i < 8; i++) {
-          const rayAngle = (i * Math.PI * 2) / 8;
-          const rayLen = chargeRatio * 30;
-          const col = i % 2 === 0 ? "#ef4444" : "#fbbf24";
-          ctx.strokeStyle = col;
-          ctx.lineWidth = 2;
-          ctx.globalAlpha = chargeRatio * 0.9;
-          ctx.shadowColor = col;
-          ctx.shadowBlur = 10;
-          ctx.beginPath();
-          ctx.moveTo(ball.x + Math.cos(rayAngle) * ball.r, ball.y + Math.sin(rayAngle) * ball.r);
-          ctx.lineTo(ball.x + Math.cos(rayAngle) * (ball.r + rayLen), ball.y + Math.sin(rayAngle) * (ball.r + rayLen));
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
+      // Draw Ball Body (2D Flat Color Design inspired by Cyc-visor warrior)
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
 
-      // Ultimate red aura
-      if (isUlt) {
-        ctx.save();
-        ctx.globalAlpha = 0.18 + fastPulse * 0.12;
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 5;
-        ctx.shadowColor = "#dc2626";
-        ctx.shadowBlur = 22;
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r + 12 + fastPulse * 6, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
+      // Rotate body to face the opponent
+      const target = game.balls.find(o => o.side !== ball.side);
+      const facingAngle = target ? Math.atan2(target.y - ball.y, target.x - ball.x) : (ball.side === "left" ? 0 : Math.PI);
+      ctx.rotate(facingAngle);
 
-      // Focus stack outer rings
-      if (focusStacks > 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.3 + focusRatio * 0.4;
-        ctx.strokeStyle = "#fbbf24";
-        ctx.lineWidth = 2;
-        ctx.shadowColor = "#fbbf24";
-        ctx.shadowBlur = 8;
-        ctx.setLineDash([4, (8 - focusStacks)]);
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r + 5, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
+      // --- Body (Deep Navy Flat Color) ---
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = "#0f172a"; // Deep navy
+      ctx.fill();
+
+      // --- Gold Horizontal Band ---
+      ctx.fillStyle = "#ca8a04"; // Rich flat gold
+      ctx.fillRect(-ball.r, -ball.r * 0.15, ball.r * 2, ball.r * 0.3);
+
+      // --- Red Visor Slit (Only on the right side of the central dial) ---
+      const visorGlowColor = isUlt ? "#fbbf24" : "#ef4444";
+      const visorCoreColor = isUlt ? "#ffffff" : "#fca5a5";
+      ctx.fillStyle = visorGlowColor;
+      ctx.fillRect(0, -ball.r * 0.12, ball.r * 0.9, ball.r * 0.24);
+      ctx.fillStyle = visorCoreColor;
+      ctx.fillRect(ball.r * 0.15, -ball.r * 0.06, ball.r * 0.7, ball.r * 0.12);
+
+      // --- Gold Visor Frame/Shade (Bordering the visor slit) ---
+      ctx.strokeStyle = "#a16207"; // Darker gold for borders
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 0.15);
+      ctx.lineTo(ball.r * 0.9, -ball.r * 0.15);
+      ctx.moveTo(0, ball.r * 0.15);
+      ctx.lineTo(ball.r * 0.9, ball.r * 0.15);
+      ctx.stroke();
+
+      // --- Central Circular Dial/Lens ---
+      // Outer dial circle
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = "#ca8a04";
+      ctx.fill();
+      ctx.strokeStyle = "#854d0e";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      
+      // Inner circle details
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = "#b45309";
+      ctx.fill();
+      ctx.strokeStyle = "#d97706";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Small central emitter dot
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.1, 0, Math.PI * 2);
+      ctx.fillStyle = visorCoreColor;
+      ctx.fill();
+
+      // --- Outer Stroke / Aura ---
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.strokeStyle = isUlt ? "#fbbf24" : "#ef4444";
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+
+
+    const drawConstellationBall = (ball) => {
+      const isUlt = ball.constellationUltActive;
+      const shielded = ball.constellationShieldedUntil && game.simTime < ball.constellationShieldedUntil;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.015) * 0.5;
 
       ctx.save();
       ctx.translate(ball.x, ball.y);
 
-      // Outer energy aura
-      const auraSize = ball.r + (isCharging ? chargeRatio * 10 : 0) + (isUlt ? 8 : 0);
-      ctx.beginPath();
-      ctx.arc(0, 0, auraSize + 10, 0, Math.PI * 2);
-      const auraGrad = ctx.createRadialGradient(0, 0, ball.r * 0.5, 0, 0, auraSize + 14);
-      auraGrad.addColorStop(0, `rgba(220,38,38,${0.1 + chargeRatio * 0.2 + (isUlt ? 0.12 : 0)})`);
-      auraGrad.addColorStop(1, "rgba(220,38,38,0)");
-      ctx.fillStyle = auraGrad;
-      ctx.fill();
-
-      // Body gradient
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.25, -ball.r * 0.25, 3, 0, 0, ball.r);
-      bodyGrad.addColorStop(0, isCharging ? "#ef4444" : "#dc2626");
-      bodyGrad.addColorStop(0.5, "#991b1b");
-      bodyGrad.addColorStop(1, "#450a0a");
-      ctx.fillStyle = bodyGrad;
-      ctx.fill();
-
-      // Highlight (upper-left gleam)
-      ctx.save();
-      ctx.globalAlpha = 0.12;
-      const highlightGrad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.35, 1, -ball.r * 0.15, -ball.r * 0.2, ball.r * 0.55);
-      highlightGrad.addColorStop(0, "#ffffff");
-      highlightGrad.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = highlightGrad;
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Vertical gold stripe
-      ctx.save();
-      ctx.strokeStyle = "#ca8a04";
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = "#fbbf24";
-      ctx.shadowBlur = 4;
-      ctx.beginPath();
-      ctx.moveTo(0, -ball.r * 0.92);
-      ctx.lineTo(0, ball.r * 0.92);
-      ctx.stroke();
-      ctx.restore();
-
-      // Visor — horizontal glowing slit
-      const visorBrightness = isCharging ? chargeRatio : (isFiring ? 1.0 : 0.25 + pulse * 0.18 + focusRatio * 0.45);
-      const visorStrobeOn = focusStacks >= maxStacks && fastPulse > 0.5;
-      ctx.save();
-      ctx.shadowColor = visorStrobeOn ? "#fbbf24" : "#ef4444";
-      ctx.shadowBlur = 6 + visorBrightness * 28 + (isUlt ? 14 : 0);
-      // Gold frame top bar
-      ctx.fillStyle = "#ca8a04";
-      ctx.fillRect(-ball.r * 0.82, -ball.r * 0.14, ball.r * 1.64, ball.r * 0.04);
-      // Gold frame bottom bar
-      ctx.fillRect(-ball.r * 0.82, ball.r * 0.10, ball.r * 1.64, ball.r * 0.04);
-      // Visor fill gradient
-      const visorGrad = ctx.createLinearGradient(-ball.r * 0.82, 0, ball.r * 0.82, 0);
-      visorGrad.addColorStop(0, `rgba(${visorStrobeOn ? "251,191,36" : "220,38,38"},${visorBrightness * 0.75})`);
-      visorGrad.addColorStop(0.5, `rgba(255,245,245,${0.5 + visorBrightness * 0.5})`);
-      visorGrad.addColorStop(1, `rgba(${visorStrobeOn ? "251,191,36" : "220,38,38"},${visorBrightness * 0.75})`);
-      ctx.fillStyle = visorGrad;
-      ctx.fillRect(-ball.r * 0.82, -ball.r * 0.10, ball.r * 1.64, ball.r * 0.20);
-      // Scan line during charge
-      if (isCharging) {
-        const scanX = -ball.r * 0.78 + chargeRatio * ball.r * 1.56;
-        ctx.strokeStyle = "rgba(255,255,255,0.95)";
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = 8;
+      // 1. Ultimate cosmic aura
+      if (isUlt) {
+        ctx.save();
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 18 + pulse * 10;
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.4)";
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.moveTo(scanX, -ball.r * 0.12);
-        ctx.lineTo(scanX, ball.r * 0.12);
+        ctx.arc(0, 0, ball.r + 10, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
       }
-      ctx.restore();
 
-      // Side emitter nodes
-      const emitterPulse = 0.7 + pulse * 0.3;
-      ctx.save();
-      ctx.shadowColor = "#ef4444";
-      ctx.shadowBlur = 8 + visorBrightness * 10;
-      [[-ball.r * 0.96, 0], [ball.r * 0.96, 0]].forEach(([ex, ey]) => {
-        ctx.fillStyle = `rgba(252,165,165,${emitterPulse * (0.5 + visorBrightness * 0.5)})`;
+      // 2. Invulnerability Golden Shield Bubble
+      if (shielded) {
+        ctx.save();
+        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.8)";
+        ctx.lineWidth = 4 + pulse * 2;
+        ctx.fillStyle = "rgba(251, 191, 36, 0.15)";
         ctx.beginPath();
-        ctx.arc(ex, ey, 4.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, ball.r + 8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#dc2626";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(ex, ey, 4.5, 0, Math.PI * 2);
         ctx.stroke();
-      });
+        ctx.restore();
+      }
+
+      // 3. Ball Body (Deep space navy)
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = "#1e1b4b";
+      ctx.fill();
+
+      // 4. Starlight visor / grid
+      ctx.strokeStyle = isUlt ? "#facc15" : "rgba(224, 242, 254, 0.3)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.8, -ball.r * 0.2);
+      ctx.lineTo(ball.r * 0.8, -ball.r * 0.2);
+      ctx.moveTo(-ball.r * 0.8, ball.r * 0.2);
+      ctx.lineTo(ball.r * 0.8, ball.r * 0.2);
+      ctx.moveTo(-ball.r * 0.2, -ball.r * 0.8);
+      ctx.lineTo(-ball.r * 0.2, ball.r * 0.8);
+      ctx.moveTo(ball.r * 0.2, -ball.r * 0.8);
+      ctx.lineTo(ball.r * 0.2, ball.r * 0.8);
+      ctx.stroke();
+
+      // Visor Center piece (Glowing diamond star)
+      ctx.save();
+      ctx.shadowColor = isUlt ? "#facc15" : "#e0f2fe";
+      ctx.shadowBlur = 8 + pulse * 6;
+      ctx.fillStyle = isUlt ? "#facc15" : "#e0f2fe";
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.lineTo(6, 0);
+      ctx.lineTo(0, 10);
+      ctx.lineTo(-6, 0);
+      ctx.closePath();
+      ctx.fill();
       ctx.restore();
 
-      // Outer stroke
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = isUlt ? "#fbbf24" : "#ef4444";
-      ctx.shadowColor = isUlt ? "#fbbf24" : "#ef4444";
-      ctx.shadowBlur = 6 + visorBrightness * 14 + (isUlt ? 12 : 0);
+      // Faint orbiting orbits
+      ctx.strokeStyle = "rgba(224, 242, 254, 0.15)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Outer Stroke
+      ctx.strokeStyle = isUlt ? "#facc15" : "#e0f2fe";
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.stroke();
@@ -9270,147 +8929,211 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawPrismerBall = (ball) => {
-      const bal = game.balance.prismer || BALANCE.prismer;
-      const isCharging = ball.prismerState === "charging";
-      const chargeRatio = isCharging ? Math.min(1, ball.prismerChargeTimer / (bal.chargeDuration || 450)) : 0;
-      const isFiring = ball.prismerBeamFlashUntil && game.simTime < ball.prismerBeamFlashUntil;
-      const pulse = 0.5 + Math.sin(game.simTime * 0.014) * 0.5;
+    const drawConstellationStars = () => {
+      if (!game.constellationStars) return;
 
-      // Draw beam flash on fire
-      if (isFiring) {
-        const angle = ball.prismerBeamAngle;
-        const sx = ball.x + Math.cos(angle) * ball.r;
-        const sy = ball.y + Math.sin(angle) * ball.r;
-        const ex = sx + Math.cos(angle) * 1600;
-        const ey = sy + Math.sin(angle) * 1600;
-        const flashAlpha = Math.max(0, (ball.prismerBeamFlashUntil - game.simTime) / 220);
-        ctx.save();
-        ctx.globalAlpha = flashAlpha;
-        ctx.lineCap = "round";
-        // Outer bloom
-        ctx.shadowColor = "#22d3ee";
-        ctx.shadowBlur = 36;
-        ctx.strokeStyle = "rgba(34, 211, 238, 0.3)";
-        ctx.lineWidth = 96;
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-        // Mid aura
-        ctx.strokeStyle = "rgba(103, 232, 249, 0.6)";
-        ctx.lineWidth = 48;
-        ctx.shadowBlur = 24;
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-        // Core
-        ctx.strokeStyle = "#f0f9ff";
-        ctx.lineWidth = 16;
-        ctx.shadowBlur = 12;
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-        ctx.restore();
-      }
+      const pulse = 0.5 + Math.sin(game.simTime * 0.015) * 0.5;
 
-      // Draw charge corona rays
-      if (isCharging && chargeRatio > 0.1) {
-        ctx.save();
-        for (let i = 0; i < 8; i++) {
-          const rayAngle = (i * Math.PI * 2) / 8;
-          const rayLen = chargeRatio * 28;
-          const hue = (180 + i * 20 + game.simTime * 0.05) % 360;
-          ctx.strokeStyle = `hsl(${hue}, 90%, 70%)`;
-          ctx.lineWidth = 2;
-          ctx.globalAlpha = chargeRatio * 0.85;
-          ctx.shadowColor = `hsl(${hue}, 90%, 70%)`;
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.moveTo(ball.x + Math.cos(rayAngle) * ball.r, ball.y + Math.sin(rayAngle) * ball.r);
-          ctx.lineTo(ball.x + Math.cos(rayAngle) * (ball.r + rayLen), ball.y + Math.sin(rayAngle) * (ball.r + rayLen));
-          ctx.stroke();
+      const groups = {};
+      game.constellationStars.forEach(s => {
+        groups[s.ownerId] = groups[s.ownerId] || [];
+        groups[s.ownerId].push(s);
+      });
+
+      Object.keys(groups).forEach(ownerId => {
+        const stars = groups[ownerId];
+        stars.sort((a, b) => a.createdAt - b.createdAt);
+        const last4 = stars.slice(-4);
+
+        if (last4.length >= 2) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(224, 242, 254, 0.35)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
+
+          if (last4.length === 2) {
+            ctx.beginPath();
+            ctx.moveTo(last4[0].x, last4[0].y);
+            ctx.lineTo(last4[1].x, last4[1].y);
+            ctx.stroke();
+          } 
+          else if (last4.length === 3) {
+            ctx.beginPath();
+            ctx.moveTo(last4[0].x, last4[0].y);
+            ctx.lineTo(last4[1].x, last4[1].y);
+            ctx.lineTo(last4[2].x, last4[2].y);
+            ctx.closePath();
+            ctx.stroke();
+          } 
+          else if (last4.length === 4) {
+            const cx = (last4[0].x + last4[1].x + last4[2].x + last4[3].x) / 4;
+            const cy = (last4[0].y + last4[1].y + last4[2].y + last4[3].y) / 4;
+            const sorted = [...last4].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+
+            ctx.beginPath();
+            ctx.moveTo(sorted[0].x, sorted[0].y);
+            for (let i = 1; i < 4; i++) ctx.lineTo(sorted[i].x, sorted[i].y);
+            ctx.closePath();
+            ctx.stroke();
+          }
+          ctx.restore();
         }
+      });
+
+      game.constellationStars.forEach(s => {
+        ctx.save();
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 8 + pulse * 6;
+        ctx.fillStyle = "#facc15";
+
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - 7);
+        ctx.lineTo(s.x + 3, s.y - 2);
+        ctx.lineTo(s.x + 7, s.y);
+        ctx.lineTo(s.x + 3, s.y + 2);
+        ctx.lineTo(s.x, s.y + 7);
+        ctx.lineTo(s.x - 3, s.y + 2);
+        ctx.lineTo(s.x - 7, s.y);
+        ctx.lineTo(s.x - 3, s.y - 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
-      }
+      });
+    };
 
-      ctx.save();
-      ctx.translate(ball.x, ball.y);
+    const drawActiveConstellations = () => {
+      if (!game.activeConstellations) return;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.02) * 0.5;
+      const bal = game.balance.constellation || BALANCE.constellation;
 
-      // Outer energy aura
-      const auraR = ball.r + (isCharging ? chargeRatio * 10 : 0) + (isFiring ? 8 : 0);
-      ctx.beginPath();
-      ctx.arc(0, 0, auraR + 8, 0, Math.PI * 2);
-      const auraGrad = ctx.createRadialGradient(0, 0, ball.r * 0.4, 0, 0, auraR + 12);
-      auraGrad.addColorStop(0, `rgba(34, 211, 238, ${0.12 + chargeRatio * 0.25})`);
-      auraGrad.addColorStop(1, "rgba(34, 211, 238, 0)");
-      ctx.fillStyle = auraGrad;
-      ctx.fill();
+      game.activeConstellations.forEach(c => {
+        const elapsed = game.simTime - c.spawnTime;
+        const remaining = c.duration - elapsed;
+        const alpha = clamp(remaining / 500, 0, 1);
 
-      // Body
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.28, -ball.r * 0.28, 3, 0, 0, ball.r);
-      bodyGrad.addColorStop(0, isCharging ? "#4338ca" : "#3730a3");
-      bodyGrad.addColorStop(0.5, "#1e1b4b");
-      bodyGrad.addColorStop(1, "#0a0a1a");
-      ctx.fillStyle = bodyGrad;
-      ctx.fill();
+        ctx.save();
+        ctx.globalAlpha = alpha;
 
-      // Crystalline hex lattice overlay
-      ctx.save();
-      ctx.strokeStyle = `rgba(165, 243, 252, ${0.15 + chargeRatio * 0.2})`;
-      ctx.lineWidth = 0.8;
-      for (let i = 0; i < 6; i++) {
-        const a1 = (i * Math.PI) / 3;
-        const a2 = ((i + 1) * Math.PI) / 3;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(a1) * ball.r * 0.55, Math.sin(a1) * ball.r * 0.55);
-        ctx.lineTo(Math.cos(a2) * ball.r * 0.55, Math.sin(a2) * ball.r * 0.55);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(a1) * ball.r * 0.9, Math.sin(a1) * ball.r * 0.9);
-        ctx.stroke();
-      }
-      ctx.restore();
+        if (c.type === "circle") {
+          const star = c.stars[0];
+          const radius = bal.circleRadius || 90;
 
-      // Visor - horizontal bar
-      const visorGlow = isCharging ? chargeRatio : (isFiring ? 1.0 : 0.3 + pulse * 0.2);
-      ctx.save();
-      ctx.shadowColor = "#22d3ee";
-      ctx.shadowBlur = 6 + visorGlow * 22;
-      // Visor background
-      ctx.fillStyle = `rgba(34, 211, 238, ${0.15 + visorGlow * 0.25})`;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, ball.r * 0.88, ball.r * 0.18, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Visor core gradient
-      const visorGrad = ctx.createLinearGradient(-ball.r * 0.88, 0, ball.r * 0.88, 0);
-      visorGrad.addColorStop(0, `rgba(34, 211, 238, ${visorGlow * 0.7})`);
-      visorGrad.addColorStop(0.5, `rgba(240, 249, 255, ${0.5 + visorGlow * 0.5})`);
-      visorGrad.addColorStop(1, `rgba(34, 211, 238, ${visorGlow * 0.7})`);
-      ctx.fillStyle = visorGrad;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, ball.r * 0.82, ball.r * 0.11, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Scan line pulse when charging
-      if (isCharging) {
-        const scanX = -ball.r * 0.75 + chargeRatio * ball.r * 1.5;
-        ctx.strokeStyle = "rgba(255,255,255,0.9)";
-        ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        ctx.moveTo(scanX, -ball.r * 0.12);
-        ctx.lineTo(scanX, ball.r * 0.12);
-        ctx.stroke();
-      }
-      ctx.restore();
+          ctx.save();
+          ctx.shadowColor = "#38bdf8";
+          ctx.shadowBlur = 14 + pulse * 6;
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.7)";
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
 
-      // Outer stroke
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = isCharging ? `rgba(34, 211, 238, ${0.5 + chargeRatio * 0.5})` : "#22d3ee";
-      ctx.shadowColor = "#22d3ee";
-      ctx.shadowBlur = 4 + visorGlow * 10;
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.stroke();
+          ctx.fillStyle = "rgba(56, 189, 248, 0.08)";
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, radius, 0, Math.PI * 2);
+          ctx.fill();
 
-      ctx.restore();
-      drawHealthInsideBall(ball);
+          const waveRadius = ((game.simTime % 1000) / 1000) * radius;
+          ctx.strokeStyle = `rgba(56, 189, 248, ${0.4 * (1 - waveRadius / radius)})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, waveRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        } 
+        else if (c.type === "line") {
+          const p1 = c.stars[0], p2 = c.stars[1];
+
+          ctx.save();
+          ctx.shadowColor = "#38bdf8";
+          ctx.shadowBlur = 12 + pulse * 6;
+          ctx.lineCap = "round";
+
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+          ctx.lineWidth = 14;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+
+          ctx.restore();
+        } 
+        else if (c.type === "triangle") {
+          const p1 = c.stars[0], p2 = c.stars[1], p3 = c.stars[2];
+
+          ctx.fillStyle = "rgba(250, 204, 21, 0.08)";
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.lineTo(p3.x, p3.y);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.save();
+          ctx.shadowColor = "#facc15";
+          ctx.shadowBlur = 12 + pulse * 4;
+          ctx.strokeStyle = "rgba(250, 204, 21, 0.85)";
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.lineTo(p3.x, p3.y);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.restore();
+        } 
+        else if (c.type === "square") {
+          const p1 = c.stars[0], p2 = c.stars[1], p3 = c.stars[2], p4 = c.stars[3];
+          const cx = (p1.x + p2.x + p3.x + p4.x) / 4;
+          const cy = (p1.y + p2.y + p3.y + p4.y) / 4;
+          const q = [p1, p2, p3, p4].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+
+          ctx.fillStyle = "rgba(192, 132, 252, 0.06)";
+          ctx.beginPath();
+          ctx.moveTo(q[0].x, q[0].y);
+          for (let i = 1; i < 4; i++) ctx.lineTo(q[i].x, q[i].y);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.save();
+          ctx.shadowColor = "#c084fc";
+          ctx.shadowBlur = 14 + pulse * 6;
+          ctx.strokeStyle = "rgba(192, 132, 252, 0.85)";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(q[0].x, q[0].y);
+          for (let i = 1; i < 4; i++) ctx.lineTo(q[i].x, q[i].y);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.strokeStyle = "rgba(192, 132, 252, 0.15)";
+          ctx.lineWidth = 1.5;
+          ctx.save();
+          ctx.clip();
+          ctx.beginPath();
+          for (let gx = -160; gx <= 160; gx += 20) {
+            ctx.moveTo(cx + gx, cy - 200);
+            ctx.lineTo(cx + gx, cy + 200);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.restore();
+      });
     };
 
     const drawJokerBall = (ball) => {
@@ -9639,15 +9362,13 @@ export default function App() {
       else if (ball.type === "psychicer") drawPsychicerBall(ball);
       else if (ball.type === "chaos") drawChaosBall(ball);
       else if (ball.type === "trident") drawTridentBall(ball);
-      else if (ball.type === "spirit") drawSpiritBall(ball);
       else if (ball.type === "shadow") drawShadowBall(ball);
-      else if (ball.type === "chainsaw") drawChainsawBall(ball);
       else if (ball.type === "mirror") drawMirrorBall(ball);
 
       else if (ball.type === "joker") drawJokerBall(ball);
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
-      else if (ball.type === "prismer") drawPrismerBall(ball);
-      else if (ball.type === "opticBall") drawOpticBall(ball);
+      else if (ball.type === "gazerBall") drawGazerBall(ball);
+      else if (ball.type === "constellation") drawConstellationBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -10355,10 +10076,11 @@ export default function App() {
       const bal = game.balance.chaos || BALANCE.chaos;
       game.balls.forEach((ball) => {
         if (!ball.chaosControlledUntil || game.simTime >= ball.chaosControlledUntil || ball.chaosSlamDone) return;
+        cancelActiveMovementStates(ball);
         const speed = bal.launchSpeed || 620;
         if (game.simTime < (ball.chaosControlHoldUntil || 0)) {
-          ball.vx *= 0.08;
-          ball.vy *= 0.08;
+          ball.vx = 0;
+          ball.vy = 0;
           ball.chaosDraggedUntil = game.simTime + 180;
           return;
         }
@@ -10411,6 +10133,7 @@ export default function App() {
 
           circle.triggeredAtByBall[ball.id] = game.simTime + (bal.triggerCooldown || 1000);
           circle.flashUntil = game.simTime + 300;
+          cancelActiveMovementStates(ball);
           ball.chaosControlAxis = circle.axis;
           ball.chaosControllerId = circle.ownerId;
           ball.chaosControllerSide = circle.ownerSide;
@@ -11111,10 +10834,8 @@ export default function App() {
 
             if (ball.dragonScorchedUntil && game.simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
             if (ball.shadowSlowedUntil && game.simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
-            if (ball.type === "prismer" && ball.prismerState === "charging") slowMult *= 0.4;
-            if (ball.type === "prismer" && ball.prismerRecoilUntil && game.simTime < ball.prismerRecoilUntil) slowMult *= 0.55;
-            if (ball.type === "opticBall" && ball.opticState === "charging") slowMult *= 0.4;
-            if (ball.type === "opticBall" && ball.opticRecoilUntil && game.simTime < ball.opticRecoilUntil) slowMult *= 0.55;
+            if (ball.type === "gazerBall" && ball.gazerState === "charging") slowMult *= 0.4;
+            if (ball.type === "gazerBall" && ball.gazerRecoilUntil && game.simTime < ball.gazerRecoilUntil) slowMult *= 0.55;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
@@ -11264,7 +10985,7 @@ export default function App() {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
-                  if (ball.type === "laser") updateLaser(ball, target, game.simTime);
+                  if (ball.type === "laser") updateLaser(ball, target, game.simTime, stepDt);
                   
                   // New Weapon Ticks
                   if (ball.type === "spider") updateSpider(ball, target, game.simTime, stepDt);
@@ -11278,14 +10999,12 @@ export default function App() {
                   if (ball.type === "chaos") updateChaos(ball, target, game.simTime);
 
                   if (ball.type === "trident") updateTrident(ball, target, game.simTime, stepDt);
-                  if (ball.type === "spirit") updateSpirit(ball, target, game.simTime);
                   if (ball.type === "shadow") updateShadow(ball, target, game.simTime, stepDt);
-                  if (ball.type === "chainsaw") updateChainsaw(ball, target, game.simTime, stepDt);
                   if (ball.type === "mirror") updateMirror(ball, target, game.simTime);
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
-                  if (ball.type === "prismer") updatePrismer(ball, target, game.simTime, stepDt);
-                  if (ball.type === "opticBall") updateOpticBall(ball, target, game.simTime, stepDt);
+                  if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
+                  if (ball.type === "constellation") updateConstellation(ball, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
@@ -11303,9 +11022,9 @@ export default function App() {
           updateStrings(stepDt);
           updateVenomPools(stepDt);
           updateVenomTraps(stepDt);
-          updatePrismerRicochets(stepDt);
           updatePsychicCircles(stepDt);
           updateChaosCircles(stepDt);
+          updateActiveConstellations(game.simTime);
           updateJokerThreads(stepDt);
         }
       } else if (combatActive) {
@@ -11327,10 +11046,6 @@ export default function App() {
             ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
           }
           if (ball.type === "knife") ball.spinAngle += 0.02;
-          if (ball.type === "spirit") {
-            const target = ball.side === "left" ? right : left;
-            ball.spiritBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-          }
         });
         resolveBallCollision(left, right);
         updateParticles(dt);
@@ -11358,7 +11073,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawPrismerRicochets(); drawPsychicCircles(); drawChaosCircles();
+      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
@@ -11630,6 +11345,35 @@ export default function App() {
               {renderSlider("Gum String Lifetime", "joker", "threadLife", 1000, 12000, 250, "ms")}
             </>
           )}
+          {type === "constellation" && (
+            <>
+              {renderSlider("Active Cooldown", "constellation", "cooldown", 1000, 15000, 100, "ms")}
+              {renderSlider("Pattern Duration", "constellation", "activePatternDuration", 1000, 10000, 100, "ms")}
+              {renderSlider("1 Star: Circle Damage", "constellation", "circleDamage", 1, 20, 1)}
+              {renderSlider("1 Star: Circle Radius", "constellation", "circleRadius", 30, 200, 5, "px")}
+              {renderSlider("2 Stars: Fence Damage", "constellation", "fenceDamage", 1, 40, 1)}
+              {renderSlider("3 Stars: Barrier Damage", "constellation", "barrierDamage", 1, 30, 1)}
+              {renderSlider("4 Stars: Prison Damage", "constellation", "prisonDamage", 1, 20, 1)}
+              {renderSlider("Ultimate Duration", "constellation", "ultDuration", 1000, 15000, 500, "ms")}
+            </>
+          )}
+          {type === "gazerBall" && (
+            <>
+              {renderSlider("Charge Duration", "gazerBall", "chargeDuration", 100, 2000, 50, "ms")}
+              {renderSlider("Beam Cooldown", "gazerBall", "cooldown", 1000, 15000, 100, "ms")}
+              {renderSlider("Beam Damage", "gazerBall", "beamDamage", 1, 60)}
+              {renderSlider("Beam Knockback", "gazerBall", "beamKnockback", 100, 1500, 20)}
+              {renderSlider("Beam Width", "gazerBall", "beamWidth", 2, 80, 1, "px")}
+              {renderSlider("Recoil Force", "gazerBall", "recoilForce", 50, 1200, 20)}
+              {renderSlider("Focus Interval", "gazerBall", "focusInterval", 200, 4000, 50, "ms")}
+              {renderSlider("Max Focus Stacks", "gazerBall", "maxFocusStacks", 1, 10, 1)}
+              {renderSlider("Focus Bonus", "gazerBall", "focusBonus", 0.01, 0.2, 0.01, "x")}
+              {renderSlider("Ult Duration", "gazerBall", "ultDuration", 1000, 15000, 500, "ms")}
+              {renderSlider("Ult Width Mult", "gazerBall", "ultWidthMult", 1.1, 4, 0.1, "x")}
+              {renderSlider("Ult Max Bounces", "gazerBall", "ultMaxBounces", 1, 15, 1)}
+              {renderSlider("Ult CDR Mult", "gazerBall", "ultCDRMult", 0.1, 0.9, 0.05, "x")}
+            </>
+          )}
           {type === "trident" && (
             <>
               {renderSlider("Throw Damage", "trident", "throwDamage", 1, 25)}
@@ -11646,17 +11390,6 @@ export default function App() {
               {renderSlider("Bite Hit Radius", "trident", "diveBurstRadius", 20, 70, 5, "px")}
               {renderSlider("Dive Slow Duration", "trident", "diveSlowDuration", 300, 4000, 50, "ms")}
               {renderSlider("Dive Slow Multiplier", "trident", "diveSlowMultiplier", 0.1, 1, 0.05, "x")}
-            </>
-          )}
-          {type === "spirit" && (
-            <>
-              {renderSlider("Charge Required", "spirit", "chargeRequired", 2, 10, 1)}
-              {renderSlider("Beam Damage", "spirit", "beamDamage", 1, 20)}
-              {renderSlider("Tick Cooldown", "spirit", "tickCooldown", 80, 600, 10, "ms")}
-              {renderSlider("Beam Duration", "spirit", "beamDuration", 300, 2500, 50, "ms")}
-              {renderSlider("Beam Width", "spirit", "beamWidth", 16, 90, 2, "px")}
-              {renderSlider("Recovery Cooldown", "spirit", "cooldown", 500, 6000, 100, "ms")}
-              {renderSlider("Beam Knockback", "spirit", "knockback", 100, 900, 20)}
             </>
           )}
           {type === "shadow" && (
@@ -11678,16 +11411,6 @@ export default function App() {
               {renderSlider("Switch Cooldown", "shadow", "switchCooldown", 2000, 12000, 100, "ms")}
               {renderSlider("Switch Range", "shadow", "switchRange", 60, 240, 5, "px")}
               {renderSlider("Switch Knife Damage", "shadow", "switchDamage", 1, 12)}
-            </>
-          )}
-          {type === "chainsaw" && (
-            <>
-              {renderSlider("Spin Damage", "chainsaw", "spinDamage", 1, 20)}
-              {renderSlider("Hit Cooldown", "chainsaw", "hitCooldown", 100, 1000, 10, "ms")}
-              {renderSlider("Saw Reach", "chainsaw", "sawReach", 15, 80, 1, "px")}
-              {renderSlider("Spin Duration", "chainsaw", "spinDuration", 400, 4000, 50, "ms")}
-              {renderSlider("Spin Cooldown", "chainsaw", "cooldown", 500, 8000, 100, "ms")}
-              {renderSlider("Knockback", "chainsaw", "knockback", 50, 700, 10)}
             </>
           )}
           {type === "mirror" && (
