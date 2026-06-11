@@ -285,7 +285,7 @@ const BALANCE = {
   },
   gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
   constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
-  fireSkull: { cooldown: 8000, carDamage: 18, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 300, carPasses: 5, maxRoadLife: 8000 },
+  fireSkull: { cooldown: 8000, carDamage: 5, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 300, carPasses: 5, maxRoadLife: 8000 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -7698,6 +7698,31 @@ export default function App() {
       } else {
         // Draw the thrown flying shield
         ctx.save();
+        const speed = Math.hypot(ball.shieldVx || 0, ball.shieldVy || 0);
+        const trailLen = clamp(speed * 0.055, 18, 54);
+        const trailAngle = Math.atan2(ball.shieldVy || 0, ball.shieldVx || 0);
+        ctx.translate(ball.shieldX, ball.shieldY);
+        ctx.rotate(trailAngle);
+        const trailGrad = ctx.createLinearGradient(0, 0, -trailLen, 0);
+        trailGrad.addColorStop(0, "rgba(255,255,255,0.55)");
+        trailGrad.addColorStop(0.45, "rgba(96,165,250,0.34)");
+        trailGrad.addColorStop(1, "rgba(239,68,68,0)");
+        ctx.strokeStyle = trailGrad;
+        ctx.lineWidth = 12;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-trailLen, 0);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.45)";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-trailLen * 0.72, 0);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
         ctx.translate(ball.shieldX, ball.shieldY);
         ctx.rotate(ball.shieldSpinAngle || 0);
 
@@ -9532,62 +9557,76 @@ export default function App() {
 
     // ─── Fire Skull Ball ──────────────────────────────────────────────────────
     const drawFireSkullBall = (ball) => {
-      const pulse = 0.5 + Math.sin(game.simTime * 0.018) * 0.5;
       ctx.save();
       ctx.translate(ball.x, ball.y);
 
-      ctx.save();
-      ctx.globalAlpha = 0.16 + pulse * 0.05;
-      ctx.fillStyle = "#fbbf24";
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r + 7 + pulse * 1.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.25, -ball.r * 0.3, 2, 0, 0, ball.r);
-      bodyGrad.addColorStop(0, "#fff7c2");
-      bodyGrad.addColorStop(0.45, "#fde68a");
-      bodyGrad.addColorStop(0.78, "#fbbf24");
-      bodyGrad.addColorStop(1, "#f59e0b");
-      ctx.fillStyle = bodyGrad;
+      const badgeGrad = ctx.createLinearGradient(-ball.r, -ball.r, ball.r, ball.r);
+      badgeGrad.addColorStop(0, "#ef4444");
+      badgeGrad.addColorStop(0.55, "#f97316");
+      badgeGrad.addColorStop(1, "#facc15");
+      ctx.fillStyle = badgeGrad;
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = ball.fsRoadActive ? "#f97316" : "#facc15";
-      ctx.lineWidth = 2.5;
+      const redGlow = ctx.createRadialGradient(0, 0, ball.r * 0.1, 0, 0, ball.r * 0.9);
+      redGlow.addColorStop(0, "#111111");
+      redGlow.addColorStop(0.72, "#050505");
+      redGlow.addColorStop(1, "#000000");
+      ctx.fillStyle = redGlow;
       ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.arc(0, 0, ball.r * 0.9, 0, Math.PI * 2);
+      ctx.fill();
 
       const skullScale = ball.r / 30;
       ctx.save();
-      ctx.fillStyle = "#252d36";
+
+      const skullGrad = ctx.createRadialGradient(-ball.r * 0.18, -ball.r * 0.18, 1, 0, 0, ball.r * 0.95);
+      skullGrad.addColorStop(0, "#ffffff");
+      skullGrad.addColorStop(1, "#f3f4f6");
+      ctx.fillStyle = skullGrad;
       ctx.beginPath();
-      ctx.arc(0, 2 * skullScale, 17 * skullScale, Math.PI * 0.96, Math.PI * 0.04, false);
-      ctx.lineTo(11 * skullScale, 24 * skullScale);
-      ctx.lineTo(6 * skullScale, 24 * skullScale);
-      ctx.lineTo(4 * skullScale, 14 * skullScale);
-      ctx.lineTo(1 * skullScale, 24 * skullScale);
-      ctx.lineTo(-1 * skullScale, 24 * skullScale);
-      ctx.lineTo(-4 * skullScale, 14 * skullScale);
-      ctx.lineTo(-6 * skullScale, 24 * skullScale);
-      ctx.lineTo(-11 * skullScale, 24 * skullScale);
-      ctx.lineTo(-17 * skullScale, 7 * skullScale);
+      ctx.moveTo(0, -18 * skullScale);
+      ctx.quadraticCurveTo(-16 * skullScale, -18 * skullScale, -24 * skullScale, -4 * skullScale);
+      ctx.quadraticCurveTo(-28 * skullScale, 7 * skullScale, -24 * skullScale, 16 * skullScale);
+      ctx.quadraticCurveTo(-27 * skullScale, 19 * skullScale, -23 * skullScale, 24 * skullScale);
+      ctx.quadraticCurveTo(-18 * skullScale, 27 * skullScale, -14 * skullScale, 23 * skullScale);
+      ctx.lineTo(-17 * skullScale, 40 * skullScale);
+      ctx.quadraticCurveTo(-18 * skullScale, 43 * skullScale, -14 * skullScale, 44 * skullScale);
+      ctx.lineTo(-8 * skullScale, 45 * skullScale);
+      ctx.quadraticCurveTo(-4 * skullScale, 45 * skullScale, -4 * skullScale, 41 * skullScale);
+      ctx.lineTo(-2 * skullScale, 30 * skullScale);
+      ctx.quadraticCurveTo(0, 29 * skullScale, 2 * skullScale, 30 * skullScale);
+      ctx.lineTo(4 * skullScale, 41 * skullScale);
+      ctx.quadraticCurveTo(4 * skullScale, 45 * skullScale, 8 * skullScale, 45 * skullScale);
+      ctx.lineTo(14 * skullScale, 44 * skullScale);
+      ctx.quadraticCurveTo(18 * skullScale, 43 * skullScale, 17 * skullScale, 40 * skullScale);
+      ctx.lineTo(14 * skullScale, 23 * skullScale);
+      ctx.quadraticCurveTo(18 * skullScale, 27 * skullScale, 23 * skullScale, 24 * skullScale);
+      ctx.quadraticCurveTo(27 * skullScale, 19 * skullScale, 24 * skullScale, 16 * skullScale);
+      ctx.quadraticCurveTo(28 * skullScale, 7 * skullScale, 24 * skullScale, -4 * skullScale);
+      ctx.quadraticCurveTo(16 * skullScale, -18 * skullScale, 0, -18 * skullScale);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = "#fff3a3";
+      ctx.fillStyle = "#7f0000";
       ctx.beginPath();
-      ctx.ellipse(-7.5 * skullScale, 6 * skullScale, 5 * skullScale, 6.5 * skullScale, -0.45, 0, Math.PI * 2);
+      ctx.ellipse(-10.5 * skullScale, 10.5 * skullScale, 8.4 * skullScale, 9.9 * skullScale, -0.49, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.ellipse(7.5 * skullScale, 6 * skullScale, 5 * skullScale, 6.5 * skullScale, 0.45, 0, Math.PI * 2);
+      ctx.ellipse(10.5 * skullScale, 10.5 * skullScale, 9.9 * skullScale, 8.4 * skullScale, -0.49, 0, Math.PI * 2);
       ctx.fill();
+
       ctx.beginPath();
-      ctx.moveTo(0, 12 * skullScale);
-      ctx.lineTo(3 * skullScale, 17 * skullScale);
-      ctx.quadraticCurveTo(0, 19.5 * skullScale, -3 * skullScale, 17 * skullScale);
+      ctx.moveTo(0, 15 * skullScale);
+      ctx.quadraticCurveTo(1 * skullScale, 15 * skullScale, 2 * skullScale, 17 * skullScale);
+      ctx.lineTo(5 * skullScale, 24 * skullScale);
+      ctx.quadraticCurveTo(6 * skullScale, 27 * skullScale, 3.5 * skullScale, 26 * skullScale);
+      ctx.lineTo(0, 24 * skullScale);
+      ctx.lineTo(-3.5 * skullScale, 26 * skullScale);
+      ctx.quadraticCurveTo(-6 * skullScale, 27 * skullScale, -5 * skullScale, 24 * skullScale);
+      ctx.lineTo(-2 * skullScale, 17 * skullScale);
+      ctx.quadraticCurveTo(-1 * skullScale, 15 * skullScale, 0, 15 * skullScale);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
@@ -9729,133 +9768,166 @@ export default function App() {
         ctx.roundRect(-hw * 0.86, -hh * 0.62, hw * 1.72, hh * 1.24, hh * 0.26);
         ctx.fill();
 
-        ctx.strokeStyle = "rgba(249, 115, 22, 0.6)";
-        ctx.lineWidth = 2.2;
+        const glossGrad = ctx.createLinearGradient(-hw, -hh, hw, hh);
+        glossGrad.addColorStop(0, "#070707");
+        glossGrad.addColorStop(0.45, "#1a1a1a");
+        glossGrad.addColorStop(1, "#000000");
+        ctx.fillStyle = glossGrad;
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.88, -hh * 0.56);
-        ctx.lineTo(-hw * 0.36, -hh * 0.72);
-        ctx.moveTo(-hw * 0.88, hh * 0.56);
-        ctx.lineTo(-hw * 0.36, hh * 0.72);
-        ctx.moveTo(hw * 0.36, -hh * 0.72);
-        ctx.lineTo(hw * 0.88, -hh * 0.56);
-        ctx.moveTo(hw * 0.36, hh * 0.72);
-        ctx.lineTo(hw * 0.88, hh * 0.56);
-        ctx.stroke();
+        ctx.moveTo(-hw * 0.54, -hh * 1.04);
+        ctx.quadraticCurveTo(-hw * 0.2, -hh * 1.12, hw * 0.54, -hh * 1.04);
+        ctx.quadraticCurveTo(hw * 0.7, -hh * 0.96, hw * 0.68, -hh * 0.54);
+        ctx.quadraticCurveTo(hw * 0.66, 0, hw * 0.78, hh * 0.98);
+        ctx.quadraticCurveTo(hw * 0.82, hh * 1.2, hw * 0.56, hh * 1.28);
+        ctx.quadraticCurveTo(hw * 0.18, hh * 1.4, -hw * 0.18, hh * 1.4);
+        ctx.quadraticCurveTo(-hw * 0.56, hh * 1.32, -hw * 0.78, hh * 0.98);
+        ctx.quadraticCurveTo(-hw * 0.66, 0, -hw * 0.68, -hh * 0.54);
+        ctx.quadraticCurveTo(-hw * 0.7, -hh * 0.96, -hw * 0.54, -hh * 1.04);
+        ctx.closePath();
+        ctx.fill();
 
-        ctx.fillStyle = "rgba(194, 65, 12, 0.88)";
-        ctx.fillRect(-hw * 0.16, -hh * 0.8, hw * 0.08, hh * 1.6);
-        ctx.fillRect(hw * 0.08, -hh * 0.8, hw * 0.08, hh * 1.6);
-        ctx.fillStyle = "rgba(251, 191, 36, 0.6)";
-        ctx.fillRect(-hw * 0.035, -hh * 0.8, hw * 0.07, hh * 1.6);
-
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.2)";
-        ctx.lineWidth = 1.2;
+        ctx.fillStyle = "#30302d";
+        ctx.strokeStyle = "#111111";
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.52, -hh * 0.44);
-        ctx.lineTo(hw * 0.52, -hh * 0.44);
-        ctx.moveTo(-hw * 0.5, hh * 0.44);
-        ctx.lineTo(hw * 0.5, hh * 0.44);
+        ctx.moveTo(-hw * 0.46, -hh * 1.0);
+        ctx.quadraticCurveTo(0, -hh * 1.08, hw * 0.46, -hh * 1.0);
+        ctx.lineTo(hw * 0.44, -hh * 0.68);
+        ctx.quadraticCurveTo(0, -hh * 0.74, -hw * 0.44, -hh * 0.68);
+        ctx.closePath();
+        ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = carWindow;
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.34, -hh * 0.58);
-        ctx.lineTo(hw * 0.34, -hh * 0.58);
-        ctx.lineTo(hw * 0.44, -hh * 0.22);
-        ctx.lineTo(-hw * 0.44, -hh * 0.22);
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.3, hh * 0.52);
-        ctx.lineTo(hw * 0.3, hh * 0.52);
-        ctx.lineTo(hw * 0.38, hh * 0.2);
-        ctx.lineTo(-hw * 0.38, hh * 0.2);
+        ctx.moveTo(-hw * 0.54, -hh * 0.58);
+        ctx.quadraticCurveTo(0, -hh * 0.72, hw * 0.54, -hh * 0.58);
+        ctx.lineTo(hw * 0.46, -hh * 0.34);
+        ctx.quadraticCurveTo(0, -hh * 0.42, -hw * 0.46, -hh * 0.34);
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = "rgba(17, 19, 21, 0.92)";
         ctx.beginPath();
-        ctx.roundRect(-hw * 0.48, -hh * 0.18, hw * 0.96, hh * 0.38, hh * 0.12);
-        ctx.fill();
-
-        ctx.save();
-        ctx.shadowColor = "rgba(251, 191, 36, 0.4)";
-        ctx.shadowBlur = 8 + pulse * 2;
-        ctx.fillStyle = "#fef08a";
-        ctx.beginPath();
-        ctx.arc(0, hh * 0.02, hh * 0.18, Math.PI, 0);
-        ctx.lineTo(hh * 0.14, hh * 0.2);
-        ctx.lineTo(hh * 0.08, hh * 0.34);
-        ctx.lineTo(hh * 0.02, hh * 0.18);
-        ctx.lineTo(-hh * 0.02, hh * 0.18);
-        ctx.lineTo(-hh * 0.08, hh * 0.34);
-        ctx.lineTo(-hh * 0.14, hh * 0.2);
+        ctx.moveTo(-hw * 0.46, hh * 0.58);
+        ctx.quadraticCurveTo(0, hh * 0.72, hw * 0.46, hh * 0.58);
+        ctx.lineTo(hw * 0.56, hh * 0.92);
+        ctx.quadraticCurveTo(0, hh * 1.04, -hw * 0.56, hh * 0.92);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = "#111315";
+
+        ctx.fillStyle = "#191919";
+        ctx.strokeStyle = "#050505";
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(-hh * 0.07, hh * 0.02, hh * 0.04, 0, Math.PI * 2);
-        ctx.arc(hh * 0.07, hh * 0.02, hh * 0.04, 0, Math.PI * 2);
+        ctx.roundRect(-hw * 0.34, -hh * 0.06, hw * 0.68, hh * 0.28, 5);
         ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#111111";
         ctx.beginPath();
-        ctx.moveTo(0, hh * 0.08);
-        ctx.lineTo(hh * 0.04, hh * 0.16);
-        ctx.lineTo(-hh * 0.04, hh * 0.16);
+        ctx.moveTo(-hw * 0.38, hh * 0.3);
+        ctx.quadraticCurveTo(0, hh * 0.42, hw * 0.38, hh * 0.3);
+        ctx.lineTo(hw * 0.46, hh * 0.58);
+        ctx.quadraticCurveTo(0, hh * 0.68, -hw * 0.46, hh * 0.58);
         ctx.closePath();
         ctx.fill();
-        ctx.restore();
+        ctx.stroke();
 
-        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-        [-0.18, 0.18].forEach(offX => {
-          ctx.beginPath();
-          ctx.roundRect(hw * offX - hw * 0.08, -hh * 0.7, hw * 0.16, hh * 0.08, 3);
-          ctx.fill();
-        });
-
-        ctx.fillStyle = "#0f1419";
+        const stripeGrad = ctx.createLinearGradient(0, -hh * 1.1, 0, hh * 1.4);
+        stripeGrad.addColorStop(0, "#ff5a45");
+        stripeGrad.addColorStop(0.55, "#f22214");
+        stripeGrad.addColorStop(1, "#b90c05");
+        ctx.fillStyle = stripeGrad;
+        ctx.fillRect(-hw * 0.14, -hh * 0.96, hw * 0.12, hh * 0.44);
+        ctx.fillRect(hw * 0.02, -hh * 0.96, hw * 0.12, hh * 0.44);
+        ctx.fillRect(-hw * 0.14, -hh * 0.44, hw * 0.12, hh * 0.5);
+        ctx.fillRect(hw * 0.02, -hh * 0.44, hw * 0.12, hh * 0.5);
+        ctx.fillRect(-hw * 0.14, hh * 0.22, hw * 0.12, hh * 0.18);
+        ctx.fillRect(hw * 0.02, hh * 0.22, hw * 0.12, hh * 0.18);
         ctx.beginPath();
-        ctx.ellipse(-hw * 0.74, -hh * 0.08, hw * 0.06, hh * 0.11, -0.3, 0, Math.PI * 2);
-        ctx.ellipse(-hw * 0.74, hh * 0.08, hw * 0.06, hh * 0.11, 0.3, 0, Math.PI * 2);
-        ctx.ellipse(hw * 0.74, -hh * 0.08, hw * 0.06, hh * 0.11, 0.3, 0, Math.PI * 2);
-        ctx.ellipse(hw * 0.74, hh * 0.08, hw * 0.06, hh * 0.11, -0.3, 0, Math.PI * 2);
+        ctx.moveTo(-hw * 0.15, hh * 0.82);
+        ctx.lineTo(-hw * 0.02, hh * 0.82);
+        ctx.lineTo(-hw * 0.04, hh * 1.28);
+        ctx.quadraticCurveTo(-hw * 0.12, hh * 1.28, -hw * 0.18, hh * 1.24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(hw * 0.02, hh * 0.82);
+        ctx.lineTo(hw * 0.16, hh * 0.82);
+        ctx.lineTo(hw * 0.14, hh * 1.24);
+        ctx.quadraticCurveTo(hw * 0.08, hh * 1.28, hw * 0.02, hh * 1.28);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.strokeStyle = "rgba(251, 191, 36, 0.7)";
-        ctx.lineWidth = 2.6;
-        [-1, 1].forEach(side => {
-          ctx.beginPath();
-          ctx.moveTo(-hw * 0.66, hh * 0.54 * side);
-          ctx.quadraticCurveTo(-hw * 0.2, hh * 0.82 * side, hw * 0.3, hh * 0.68 * side);
-          ctx.quadraticCurveTo(hw * 0.54, hh * 0.58 * side, hw * 0.78, hh * 0.44 * side);
-          ctx.stroke();
-        });
+        ctx.fillStyle = "#151515";
+        ctx.fillRect(-hw * 0.01, -hh * 0.96, hw * 0.03, hh * 2.22);
 
-        [
-          [-hw * 0.56, -hh * 0.7],
-          [hw * 0.56, -hh * 0.7],
-          [-hw * 0.56, hh * 0.7],
-          [hw * 0.56, hh * 0.7]
-        ].forEach(([wx, wy], idx) => {
-          ctx.save();
-          ctx.globalAlpha = 0.16 + pulse * 0.06;
-          ctx.fillStyle = idx < 2 ? "rgba(148, 163, 184, 0.45)" : "rgba(120, 113, 108, 0.45)";
-          ctx.beginPath();
-          ctx.ellipse(wx - hw * 0.16, wy, hw * 0.22, hh * 0.18, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+        ctx.strokeStyle = "#333333";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.64, -hh * 0.62);
+        ctx.quadraticCurveTo(-hw * 0.74, 0, -hw * 0.74, hh * 0.98);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hw * 0.64, -hh * 0.62);
+        ctx.quadraticCurveTo(hw * 0.74, 0, hw * 0.74, hh * 0.98);
+        ctx.stroke();
 
-          ctx.save();
-          ctx.shadowColor = "rgba(249, 115, 22, 0.28)";
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = carWheel;
-          ctx.beginPath();
-          ctx.roundRect(wx - hw * 0.16, wy - hh * 0.13, hw * 0.32, hh * 0.26, 4);
-          ctx.fill();
-          ctx.fillStyle = carTrimBright;
-          ctx.globalAlpha = 0.32;
-          ctx.fillRect(wx - hw * 0.12, wy - hh * 0.03, hw * 0.24, hh * 0.06);
-          ctx.restore();
-        });
+        ctx.fillStyle = "#060606";
+        ctx.strokeStyle = "#333333";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.08, hh * 0.98);
+        ctx.lineTo(hw * 0.08, hh * 0.98);
+        ctx.lineTo(hw * 0.04, hh * 1.14);
+        ctx.quadraticCurveTo(0, hh * 1.18, -hw * 0.04, hh * 1.14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#202020";
+        ctx.strokeStyle = "#555555";
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.64, hh * 0.78);
+        ctx.lineTo(-hw * 0.42, hh * 0.68);
+        ctx.lineTo(-hw * 0.46, hh * 0.96);
+        ctx.lineTo(-hw * 0.62, hh * 0.9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hw * 0.64, hh * 0.78);
+        ctx.lineTo(hw * 0.42, hh * 0.68);
+        ctx.lineTo(hw * 0.46, hh * 0.96);
+        ctx.lineTo(hw * 0.62, hh * 0.9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#050505";
+        ctx.beginPath();
+        ctx.ellipse(-hw * 0.77, hh * 0.48, hw * 0.06, hh * 0.05, 0, 0, Math.PI * 2);
+        ctx.ellipse(hw * 0.77, hh * 0.48, hw * 0.06, hh * 0.05, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.62, -hh * 0.92);
+        ctx.quadraticCurveTo(-hw * 0.72, -hh * 0.14, -hw * 0.72, hh * 0.76);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        ctx.moveTo(hw * 0.54, -hh * 0.92);
+        ctx.quadraticCurveTo(hw * 0.66, -hh * 0.14, hw * 0.7, hh * 0.8);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.38, hh * 0.38);
+        ctx.quadraticCurveTo(0, hh * 0.48, hw * 0.38, hh * 0.38);
+        ctx.stroke();
 
         ctx.restore();
 
