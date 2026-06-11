@@ -273,6 +273,8 @@ const BALANCE = {
     lashBounceThreshold: 4, lashDamage: 5, lashPullForce: 320, lashStunDuration: 180,
     // Tendril Trap
     trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
+    // Web Weave (wall-bounce strands)
+    webStrandDamage: 4, maxWebStrands: 20, webStrandWidth: 5,
   },
   gazerBall: { chargeDuration: 450, cooldown: 1800, beamDamage: 1, beamKnockback: 550, beamWidth: 2, stunDuration: 300, recoilForce: 700, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [10, 8, 6, 4], ricochetKb: [400, 300, 200, 100], focusInterval: 1000, maxFocusStacks: 5, focusBonus: 0.05, ultDuration: 5000, ultWidthMult: 2, ultMaxBounces: 8, ultCDRMult: 0.5, postFireSlowDuration: 400 },
   constellation: { cooldown: 5000, activePatternDuration: 4000, circleDamage: 3, circleRadius: 95, fenceDamage: 14, barrierDamage: 10, prisonDamage: 4, postFireSlowDuration: 300, ultDuration: 5000 },
@@ -697,6 +699,7 @@ export default function App() {
     chaosCircles: [],
     jokerThreads: [],
     venomPools: [],
+    webStrands: [],
     screenShake: 0,
     deathEffectStarted: false,
     deathSlowMoUntil: 0,
@@ -769,6 +772,7 @@ export default function App() {
       chaosCircles: [],
       jokerThreads: [],
       venomPools: [],
+      webStrands: [],
       screenShake: 0,
       deathEffectStarted: false,
       deathSlowMoUntil: 0,
@@ -3039,6 +3043,31 @@ export default function App() {
               triggered: false,
             });
           }
+        }
+        // Web Weave – plant a permanent strand from wall contact point to ball center
+        if (ball.type === "blackSpider" && (gameStarted || game.combatStarted) && game.simTime >= OPENING_SKILL_DELAY) {
+          const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
+          game.webStrands = game.webStrands || [];
+          game.webStrands.push({
+            id: `ws-${ball.id}-${game.simTime}`,
+            ownerId: ball.id,
+            ownerSide: ball.side,
+            x1: bx,        // wall contact point
+            y1: by,
+            x2: ball.x,    // ball center at bounce time
+            y2: ball.y,
+            createdTime: game.simTime,
+          });
+          // Cap total strands per owner
+          const maxStrands = bsBal.maxWebStrands || 20;
+          const myStrands = game.webStrands.filter(s => s.ownerId === ball.id);
+          if (myStrands.length > maxStrands) {
+            const oldest = myStrands.sort((a, b) => a.createdTime - b.createdTime)[0];
+            game.webStrands = game.webStrands.filter(s => s.id !== oldest.id);
+          }
+          // Spawn ambient particles at the strand anchor
+          spawnSparks(bx, by, "#1e293b", 6);
+          playSound("webShoot", 0.45, 60);
         }
         if (ball.armThrowWallUntil && game.simTime <= ball.armThrowWallUntil) {
           applyDamage(ball, ARM_THROW_WALL_DAMAGE, `${ball.armThrowWallSourceId || ball.id}-arm-throw-wall`, game.simTime, 500);
@@ -6427,6 +6456,64 @@ export default function App() {
         });
 
         return !trap.triggered;
+      });
+    };
+    // Web Weave – permanent strands left by Black Spider on every wall bounce
+    const updateWebStrands = () => {
+      if (!game.webStrands || !game.webStrands.length) return;
+      const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
+      const strandDamage = bsBal.webStrandDamage || 4;
+      const hitPad = 10; // how close to the strand line counts as a hit
+
+      game.webStrands.forEach((strand) => {
+        game.balls.forEach((ball) => {
+          if (ball.side === strand.ownerSide) return;
+
+          const dist = linePointDist(ball.x, ball.y, strand.x1, strand.y1, strand.x2, strand.y2);
+          if (dist < ball.r + hitPad) {
+            // Use insideIds to trigger damage only on fresh contact (not while staying inside)
+            if (!strand.insideIds) strand.insideIds = {};
+            if (strand.insideIds[ball.id]) return;
+            strand.insideIds[ball.id] = true;
+
+            applyDamage(ball, strandDamage, `${ball.id}-webstrand-${strand.id}`, game.simTime, 800);
+
+            // Find closest point on strand for effect position
+            const A = ball.x - strand.x1, B = ball.y - strand.y1;
+            const C = strand.x2 - strand.x1, D = strand.y2 - strand.y1;
+            const dot = A * C + B * D, lenSq = C * C + D * D;
+            const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
+            const hitX = strand.x1 + param * C;
+            const hitY = strand.y1 + param * D;
+
+            spawnSparks(hitX, hitY, "#1e293b", 14);
+            spawnSparks(hitX, hitY, "#94a3b8", 8);
+            game.screenShake = Math.max(game.screenShake, 6);
+            playSound("webHit", 0.65, 75);
+
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -55,
+              text: "WEB STRAND", color: "#94a3b8", life: 0.75, maxLife: 0.75
+            });
+
+            if (canSpawnParticle()) {
+              for (let i = 0; i < 6; i++) {
+                game.particles.push({
+                  x: hitX + (Math.random() - 0.5) * 18,
+                  y: hitY + (Math.random() - 0.5) * 18,
+                  vx: (Math.random() - 0.5) * 55,
+                  vy: -20 - Math.random() * 40,
+                  color: i % 2 === 0 ? "#0f172a" : "#475569",
+                  radius: 2.5 + Math.random() * 2.5,
+                  life: 0.4, maxLife: 0.4,
+                });
+              }
+            }
+          } else if (strand.insideIds) {
+            delete strand.insideIds[ball.id];
+          }
+        });
       });
     };
 
@@ -10511,6 +10598,70 @@ export default function App() {
         ctx.restore();
       });
     };
+    // Draw Web Weave strands – Black Spider's permanent wall-bounce threads
+    const drawWebStrands = () => {
+      if (!game.webStrands || !game.webStrands.length) return;
+      const now = game.simTime;
+      game.webStrands.forEach((strand) => {
+        const age = now - strand.createdTime;
+        const pulse = 0.75 + Math.sin(now * 0.005 + strand.createdTime * 0.017) * 0.22;
+
+        ctx.save();
+
+        // Outer dark glow
+        ctx.strokeStyle = "rgba(2, 6, 23, 0.55)";
+        ctx.lineWidth = 14;
+        ctx.shadowColor = "#0f172a";
+        ctx.shadowBlur = 18;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(strand.x1, strand.y1);
+        ctx.lineTo(strand.x2, strand.y2);
+        ctx.stroke();
+
+        // Mid glow – slate silver
+        ctx.strokeStyle = `rgba(100, 116, 139, ${0.45 * pulse})`;
+        ctx.lineWidth = 5;
+        ctx.shadowColor = "#475569";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(strand.x1, strand.y1);
+        ctx.lineTo(strand.x2, strand.y2);
+        ctx.stroke();
+
+        // Core bright thread
+        ctx.strokeStyle = `rgba(226, 232, 240, ${0.85 * pulse})`;
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        ctx.moveTo(strand.x1, strand.y1);
+        ctx.lineTo(strand.x2, strand.y2);
+        ctx.stroke();
+
+        // Endpoint anchor dots
+        const drawAnchor = (x, y) => {
+          ctx.save();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#0f172a";
+          ctx.strokeStyle = `rgba(148, 163, 184, ${0.9 * pulse})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          // Inner bright dot
+          ctx.fillStyle = `rgba(226, 232, 240, ${0.8 * pulse})`;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        };
+        drawAnchor(strand.x1, strand.y1);
+        drawAnchor(strand.x2, strand.y2);
+
+        ctx.restore();
+      });
+    };
 
     const drawPsychicCircles = () => {
       if (!game.psychicCircles) return;
@@ -11043,6 +11194,7 @@ export default function App() {
           updateStrings(stepDt);
           updateVenomPools(stepDt);
           updateVenomTraps(stepDt);
+          updateWebStrands();
           updatePsychicCircles(stepDt);
           updateChaosCircles(stepDt);
           updateActiveConstellations(game.simTime);
@@ -11073,6 +11225,7 @@ export default function App() {
         updateFloatingTexts(dt);
         updateCacti(dt);
         updateStrings(dt);
+        updateWebStrands();
         updatePsychicCircles(dt);
         updateChaosCircles(dt);
         updateJokerThreads(dt);
@@ -11094,7 +11247,7 @@ export default function App() {
       }
 
       game.balls.forEach(drawBallTrail);
-      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
+      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
