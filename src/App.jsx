@@ -220,6 +220,15 @@ const BALL_TYPES = {
     radius: 31,
     description: "Prismatic beam warrior. Charges a devastating optic blast that ricochets off walls. Recoil repositions on fire.",
   },
+  opticBall: {
+    id: "opticBall",
+    name: "Optic Ball",
+    shortName: "OPTC",
+    color: "#dc2626",
+    stroke: "#ef4444",
+    radius: 31,
+    description: "Legendary beam warrior. Builds Focus stacks for powered shots. Fires devastating red optic blasts that ricochet. Omega Surge unleashes hell.",
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -286,6 +295,7 @@ const BALANCE = {
     trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
   },
   prismer: { chargeDuration: 450, cooldown: 7500, beamDamage: 40, beamKnockback: 900, beamWidth: 48, stunDuration: 300, recoilForce: 580, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [32, 24, 18, 12], ricochetKb: [700, 550, 400, 250], postFireSlowDuration: 400 },
+  opticBall: { chargeDuration: 450, cooldown: 8000, beamDamage: 40, beamKnockback: 900, beamWidth: 48, stunDuration: 300, recoilForce: 600, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 4, ricochetDmg: [32, 24, 18, 12], ricochetKb: [700, 550, 400, 250], focusInterval: 1000, maxFocusStacks: 5, focusBonus: 0.05, ultDuration: 5000, ultWidthMult: 2, ultMaxBounces: 8, ultCDRMult: 0.5, postFireSlowDuration: 400 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -584,6 +594,19 @@ export default function App() {
       prismerCooldownUntil: 0,
       prismerChargingUntil: 0,
       prismerRecoilUntil: 0,
+      // Optic Ball Specific
+      opticState: "idle",
+      opticChargeTimer: 0,
+      opticBeamAngle: 0,
+      opticBeamFlashUntil: 0,
+      opticCooldownUntil: 0,
+      opticRecoilUntil: 0,
+      opticFocusStacks: 0,
+      opticLastFiredAt: 0,
+      opticNextFocusAt: 0,
+      opticUltActive: false,
+      opticUltUntil: 0,
+      opticBeamPath: [],
       // Vampire Specific
       hasStuck: false,
       // Spore Specific
@@ -4163,6 +4186,292 @@ export default function App() {
           spiderBall.webStateUntil = currentTime + bal.spider.pullDuration;
         }
       }
+    };
+    const updateOpticBall = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.opticBall || BALANCE.opticBall;
+
+      // --- Ultimate expiry ---
+      if (ball.opticUltActive && currentTime >= ball.opticUltUntil) {
+        ball.opticUltActive = false;
+        spawnSparks(ball.x, ball.y, "#ef4444", 16);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -45, text: "SURGE ENDED", color: "#f87171", life: 0.7, maxLife: 0.7 });
+      }
+
+      const effectiveCooldown = ball.opticUltActive ? (bal.cooldown * (bal.ultCDRMult || 0.5)) : bal.cooldown;
+      const effectiveMaxBounces = ball.opticUltActive ? (bal.ultMaxBounces || 8) : (bal.maxBounces || 4);
+      const effectiveWidth = ball.opticUltActive ? (bal.beamWidth * (bal.ultWidthMult || 2)) : bal.beamWidth;
+
+      // --- Energy Focus passive: gain 1 stack per focusInterval ms without firing ---
+      if (ball.opticState === "idle" || ball.opticState === "cooldown") {
+        if ((ball.opticFocusStacks || 0) < (bal.maxFocusStacks || 5)) {
+          if (currentTime >= (ball.opticNextFocusAt || 0)) {
+            ball.opticFocusStacks = (ball.opticFocusStacks || 0) + 1;
+            ball.opticNextFocusAt = currentTime + (bal.focusInterval || 1000);
+            if (ball.opticFocusStacks >= (bal.maxFocusStacks || 5)) {
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -40, text: "FOCUS MAX!", color: "#fbbf24", life: 0.75, maxLife: 0.75 });
+            }
+          }
+        }
+      }
+
+      // --- Charging ---
+      if (ball.opticState === "charging") {
+        ball.opticChargeTimer += stepDt * 1000;
+        ball.opticBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+
+        if (ball.opticChargeTimer >= bal.chargeDuration) {
+          // FIRE
+          ball.opticState = "firing";
+          ball.opticChargeTimer = 0;
+
+          const stacks = ball.opticFocusStacks || 0;
+          const stackMult = 1 + stacks * (bal.focusBonus || 0.05);
+          const finalDamage = bal.beamDamage * stackMult;
+          const finalWidth = effectiveWidth * stackMult;
+
+          // Reset focus stacks on fire
+          ball.opticFocusStacks = 0;
+          ball.opticNextFocusAt = currentTime + (bal.focusInterval || 1000);
+          ball.opticLastFiredAt = currentTime;
+
+          const angle = ball.opticBeamAngle;
+          const dx = Math.cos(angle);
+          const dy = Math.sin(angle);
+          
+          let cx = ball.x + dx * ball.r;
+          let cy = ball.y + dy * ball.r;
+          
+          const path = [{ x: cx, y: cy }];
+          let cdx = dx;
+          let cdy = dy;
+          let bounces = 0;
+          let targetHit = false;
+          const pad = 18;
+
+          while (bounces < effectiveMaxBounces) {
+            let tWall = Infinity;
+            let wallNormalX = 0, wallNormalY = 0;
+
+            const leftWall = pad;
+            const rightWall = game.width - pad;
+            const topWall = pad;
+            const bottomWall = game.height - pad;
+
+            if (cdx > 0) {
+              const t = (rightWall - cx) / cdx;
+              if (t > 0 && t < tWall) { tWall = t; wallNormalX = -1; wallNormalY = 0; }
+            } else if (cdx < 0) {
+              const t = (leftWall - cx) / cdx;
+              if (t > 0 && t < tWall) { tWall = t; wallNormalX = 1; wallNormalY = 0; }
+            }
+
+            if (cdy > 0) {
+              const t = (bottomWall - cy) / cdy;
+              if (t > 0 && t < tWall) { tWall = t; wallNormalX = 0; wallNormalY = -1; }
+            } else if (cdy < 0) {
+              const t = (topWall - cy) / cdy;
+              if (t > 0 && t < tWall) { tWall = t; wallNormalX = 0; wallNormalY = 1; }
+            }
+
+            // Target circle intersection
+            let tTarget = Infinity;
+            const ox = cx - target.x;
+            const oy = cy - target.y;
+            const A = 1;
+            const B = 2 * (ox * cdx + oy * cdy);
+            const C = ox * ox + oy * oy - target.r * target.r;
+            const disc = B * B - 4 * A * C;
+
+            if (disc >= 0) {
+              const sqrtDisc = Math.sqrt(disc);
+              const t1 = (-B - sqrtDisc) / 2;
+              const t2 = (-B + sqrtDisc) / 2;
+
+              if (t1 > 0.1 && t1 < tTarget) {
+                tTarget = t1;
+              } else if (t2 > 0.1 && t2 < tTarget) {
+                tTarget = t2;
+              }
+            }
+
+            // Check which one is closer
+            if (tTarget < tWall && tTarget < 1600) {
+              const hitX = cx + cdx * tTarget;
+              const hitY = cy + cdy * tTarget;
+              path.push({ x: hitX, y: hitY });
+
+              // Direct hit on target!
+              if (!targetHit) {
+                targetHit = true;
+                
+                const tv = Math.hypot(target.vx, target.vy);
+                const approachDot = tv > 0 ? -(target.vx * cdx + target.vy * cdy) / tv : 0;
+                const approachFactor = Math.max(0, approachDot);
+                const momentumBonus = Math.min(15, approachFactor * tv * 0.35);
+                const totalDamage = finalDamage + momentumBonus;
+                const totalKb = bal.beamKnockback + approachFactor * tv * 0.6;
+
+                applyDamage(target, totalDamage, `${ball.id}-optic-beam`, currentTime, 300);
+                if (!hasStringBounceGuard(target)) {
+                  target.vx += cdx * totalKb;
+                  target.vy += cdy * totalKb;
+                }
+                target.webHitFlashUntil = currentTime + (bal.stunDuration || 300);
+                
+                const ownerStats = ball.side === "left" ? game.stats.left : game.stats.right;
+                ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(totalDamage));
+                ownerStats.hitsLanded++;
+
+                game.screenShake = Math.max(game.screenShake, 22);
+                spawnSparks(target.x, target.y, "#ef4444", 22);
+                spawnDust(target.x, target.y, 12);
+                playSound("laserFire", 1.0, 140);
+
+                game.floatingTexts = game.floatingTexts || [];
+                game.floatingTexts.push({
+                  x: target.x, y: target.y - target.r - 28, vy: -62,
+                  text: `OPTIC BLAST! -${Math.round(totalDamage)}`, color: "#ef4444", life: 0.95, maxLife: 0.95
+                });
+
+                // Check ultimate trigger
+                if (!ball.opticUltActive && ball.health <= 40 && currentTime > (ball.opticUltUntil || 0)) {
+                  ball.opticUltActive = true;
+                  ball.opticUltUntil = currentTime + (bal.ultDuration || 5000);
+                  game.screenShake = Math.max(game.screenShake, 18);
+                  spawnSparks(ball.x, ball.y, "#fbbf24", 30);
+                  playSound("laserFire", 1.0, 80);
+                  game.floatingTexts.push({
+                    x: ball.x, y: ball.y - ball.r - 30, vy: -65,
+                    text: "OMEGA SURGE!", color: "#fbbf24", life: 1.1, maxLife: 1.1
+                  });
+                }
+              } else {
+                spawnSparks(hitX, hitY, "#fff5f5", 14);
+                playSound("wallBounce", 0.7, 120);
+              }
+
+              // Reflect off circle normal
+              let nx = hitX - target.x;
+              let ny = hitY - target.y;
+              const len = Math.hypot(nx, ny);
+              if (len > 0) { nx /= len; ny /= len; }
+
+              const dot = cdx * nx + cdy * ny;
+              cdx = cdx - 2 * dot * nx;
+              cdy = cdy - 2 * dot * ny;
+
+              cx = hitX;
+              cy = hitY;
+              bounces++;
+            } else if (tWall < 1600) {
+              const hitX = cx + cdx * tWall;
+              const hitY = cy + cdy * tWall;
+              path.push({ x: hitX, y: hitY });
+
+              // Reflect off wall normal
+              const dot = cdx * wallNormalX + cdy * wallNormalY;
+              cdx = cdx - 2 * dot * wallNormalX;
+              cdy = cdy - 2 * dot * wallNormalY;
+
+              cx = hitX;
+              cy = hitY;
+              bounces++;
+
+              spawnSparks(hitX, hitY, "#ef4444", 8);
+              playSound("wallBounce", 0.65, 100);
+            } else {
+              path.push({ x: cx + cdx * 1600, y: cy + cdy * 1600 });
+              break;
+            }
+          }
+
+          ball.opticBeamPath = path;
+
+          // Recoil
+          if (!hasStringBounceGuard(ball)) {
+            ball.vx -= dx * (bal.recoilForce || 600);
+            ball.vy -= dy * (bal.recoilForce || 600);
+          }
+          ball.opticBeamFlashUntil = currentTime + 240;
+          ball.opticRecoilUntil = currentTime + (bal.postFireSlowDuration || 400);
+          ball.opticCooldownUntil = currentTime + effectiveCooldown;
+          ball.opticState = "cooldown";
+
+          if (ball.side === "left") game.stats.left.totalShots++;
+          else game.stats.right.totalShots++;
+        }
+        return;
+      }
+
+      if (ball.opticState === "cooldown") {
+        if (currentTime >= ball.opticCooldownUntil) ball.opticState = "idle";
+        return;
+      }
+
+      // Idle -> begin charge
+      if (ball.opticState === "idle" && currentTime >= (ball.opticCooldownUntil || 0)) {
+        ball.opticState = "charging";
+        ball.opticChargeTimer = 0;
+        ball.opticBeamAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        playSound("laserCharge", 0.85, 160);
+      }
+    };
+
+    const updateOpticRicochets = (dt) => {
+      if (!game.opticRicochets) return;
+      const pad = 18;
+      game.opticRicochets = game.opticRicochets.filter((r) => {
+        if (game.simTime >= r.spawnTime + r.life) return false;
+        r.trail = r.trail || [];
+        r.trail.push({ x: r.x, y: r.y });
+        if (r.trail.length > 12) r.trail.shift();
+
+        r.x += r.vx * dt;
+        r.y += r.vy * dt;
+
+        let bounced = false;
+        if (r.x - 9 < pad) { r.x = pad + 9; r.vx = Math.abs(r.vx); bounced = true; }
+        if (r.x + 9 > game.width - pad) { r.x = game.width - pad - 9; r.vx = -Math.abs(r.vx); bounced = true; }
+        if (r.y - 9 < pad) { r.y = pad + 9; r.vy = Math.abs(r.vy); bounced = true; }
+        if (r.y + 9 > game.height - pad) { r.y = game.height - pad - 9; r.vy = -Math.abs(r.vy); bounced = true; }
+
+        if (bounced) {
+          r.bounces++;
+          spawnSparks(r.x, r.y, "#f87171", 10);
+          playSound("wallBounce", 0.55, 105);
+          if (r.bounces >= (r.maxBounces || 4)) return false;
+        }
+
+        const target = game.balls.find(b => b.side !== r.ownerSide);
+        if (target) {
+          const dist = Math.hypot(r.x - target.x, r.y - target.y);
+          if (dist < target.r + 10) {
+            const dmg = (r.ricochetDmg || [32,24,18,12])[Math.min(r.bounces, 3)];
+            const kb = (r.ricochetKb || [700,550,400,250])[Math.min(r.bounces, 3)];
+            applyDamage(target, dmg, `${r.ownerId}-optic-ricochet-${r.bounces}`, game.simTime, 300);
+            const angle = Math.atan2(r.vy, r.vx);
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(angle) * kb;
+              target.vy += Math.sin(angle) * kb;
+            }
+            const ownerStats = r.ownerSide === "left" ? game.stats.left : game.stats.right;
+            ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(dmg));
+            ownerStats.hitsLanded++;
+            spawnSparks(target.x, target.y, "#fca5a5", 16);
+            game.screenShake = Math.max(game.screenShake, 9);
+            playSound("laserFire", 0.6, 115);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x, y: target.y - target.r - 20, vy: -50,
+              text: `RICOCHET! -${dmg}`, color: "#f87171", life: 0.7, maxLife: 0.7
+            });
+            return false;
+          }
+        }
+        return true;
+      });
     };
 
     const updatePrismer = (ball, target, currentTime, stepDt) => {
@@ -8702,6 +9011,265 @@ export default function App() {
       });
     };
 
+    const drawOpticRicochets = () => {
+      if (!game.opticRicochets) return;
+      game.opticRicochets.forEach((r) => {
+        // Spectral red trail
+        if (r.trail && r.trail.length > 1) {
+          for (let i = 1; i < r.trail.length; i++) {
+            const alpha = (i / r.trail.length) * 0.6;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = i % 2 === 0 ? "#ef4444" : "#fca5a5";
+            ctx.lineWidth = 5;
+            ctx.lineCap = "round";
+            ctx.shadowColor = "#ef4444";
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.moveTo(r.trail[i-1].x, r.trail[i-1].y);
+            ctx.lineTo(r.trail[i].x, r.trail[i].y);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        // Projectile
+        ctx.save();
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff5f5";
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        // Gold ring
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "#fbbf24";
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 9, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+    };
+
+    const drawOpticBall = (ball) => {
+      const bal = game.balance.opticBall || BALANCE.opticBall;
+      const isCharging = ball.opticState === "charging";
+      const chargeRatio = isCharging ? Math.min(1, ball.opticChargeTimer / (bal.chargeDuration || 450)) : 0;
+      const isFiring = ball.opticBeamFlashUntil && game.simTime < ball.opticBeamFlashUntil;
+      const isUlt = ball.opticUltActive;
+      const focusStacks = ball.opticFocusStacks || 0;
+      const maxStacks = bal.maxFocusStacks || 5;
+      const focusRatio = focusStacks / maxStacks;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.014) * 0.5;
+      const fastPulse = 0.5 + Math.sin(game.simTime * 0.04) * 0.5;
+
+      // Beam flash
+      if (isFiring && ball.opticBeamPath && ball.opticBeamPath.length > 0) {
+        const path = ball.opticBeamPath;
+        const flashAlpha = Math.max(0, (ball.opticBeamFlashUntil - game.simTime) / 240);
+        ctx.save();
+        ctx.globalAlpha = flashAlpha;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        // Outer bloom
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 40;
+        ctx.strokeStyle = "rgba(220,38,38,0.28)";
+        ctx.lineWidth = isUlt ? 192 : 96;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+        // Mid
+        ctx.strokeStyle = "rgba(248,113,113,0.6)";
+        ctx.lineWidth = isUlt ? 72 : 52;
+        ctx.shadowBlur = 24;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+        // Gold tint mid layer
+        ctx.strokeStyle = "rgba(251,191,36,0.25)";
+        ctx.lineWidth = isUlt ? 40 : 24;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+        // Core
+        ctx.strokeStyle = "#fff5f5";
+        ctx.lineWidth = isUlt ? 20 : 14;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Charge corona rays
+      if (isCharging && chargeRatio > 0.08) {
+        ctx.save();
+        for (let i = 0; i < 8; i++) {
+          const rayAngle = (i * Math.PI * 2) / 8;
+          const rayLen = chargeRatio * 30;
+          const col = i % 2 === 0 ? "#ef4444" : "#fbbf24";
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = chargeRatio * 0.9;
+          ctx.shadowColor = col;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.moveTo(ball.x + Math.cos(rayAngle) * ball.r, ball.y + Math.sin(rayAngle) * ball.r);
+          ctx.lineTo(ball.x + Math.cos(rayAngle) * (ball.r + rayLen), ball.y + Math.sin(rayAngle) * (ball.r + rayLen));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Ultimate red aura
+      if (isUlt) {
+        ctx.save();
+        ctx.globalAlpha = 0.18 + fastPulse * 0.12;
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 5;
+        ctx.shadowColor = "#dc2626";
+        ctx.shadowBlur = 22;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 12 + fastPulse * 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Focus stack outer rings
+      if (focusStacks > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.3 + focusRatio * 0.4;
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 8;
+        ctx.setLineDash([4, (8 - focusStacks)]);
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      // Outer energy aura
+      const auraSize = ball.r + (isCharging ? chargeRatio * 10 : 0) + (isUlt ? 8 : 0);
+      ctx.beginPath();
+      ctx.arc(0, 0, auraSize + 10, 0, Math.PI * 2);
+      const auraGrad = ctx.createRadialGradient(0, 0, ball.r * 0.5, 0, 0, auraSize + 14);
+      auraGrad.addColorStop(0, `rgba(220,38,38,${0.1 + chargeRatio * 0.2 + (isUlt ? 0.12 : 0)})`);
+      auraGrad.addColorStop(1, "rgba(220,38,38,0)");
+      ctx.fillStyle = auraGrad;
+      ctx.fill();
+
+      // Body gradient
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.25, -ball.r * 0.25, 3, 0, 0, ball.r);
+      bodyGrad.addColorStop(0, isCharging ? "#ef4444" : "#dc2626");
+      bodyGrad.addColorStop(0.5, "#991b1b");
+      bodyGrad.addColorStop(1, "#450a0a");
+      ctx.fillStyle = bodyGrad;
+      ctx.fill();
+
+      // Highlight (upper-left gleam)
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      const highlightGrad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.35, 1, -ball.r * 0.15, -ball.r * 0.2, ball.r * 0.55);
+      highlightGrad.addColorStop(0, "#ffffff");
+      highlightGrad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = highlightGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Vertical gold stripe
+      ctx.save();
+      ctx.strokeStyle = "#ca8a04";
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = "#fbbf24";
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 0.92);
+      ctx.lineTo(0, ball.r * 0.92);
+      ctx.stroke();
+      ctx.restore();
+
+      // Visor — horizontal glowing slit
+      const visorBrightness = isCharging ? chargeRatio : (isFiring ? 1.0 : 0.25 + pulse * 0.18 + focusRatio * 0.45);
+      const visorStrobeOn = focusStacks >= maxStacks && fastPulse > 0.5;
+      ctx.save();
+      ctx.shadowColor = visorStrobeOn ? "#fbbf24" : "#ef4444";
+      ctx.shadowBlur = 6 + visorBrightness * 28 + (isUlt ? 14 : 0);
+      // Gold frame top bar
+      ctx.fillStyle = "#ca8a04";
+      ctx.fillRect(-ball.r * 0.82, -ball.r * 0.14, ball.r * 1.64, ball.r * 0.04);
+      // Gold frame bottom bar
+      ctx.fillRect(-ball.r * 0.82, ball.r * 0.10, ball.r * 1.64, ball.r * 0.04);
+      // Visor fill gradient
+      const visorGrad = ctx.createLinearGradient(-ball.r * 0.82, 0, ball.r * 0.82, 0);
+      visorGrad.addColorStop(0, `rgba(${visorStrobeOn ? "251,191,36" : "220,38,38"},${visorBrightness * 0.75})`);
+      visorGrad.addColorStop(0.5, `rgba(255,245,245,${0.5 + visorBrightness * 0.5})`);
+      visorGrad.addColorStop(1, `rgba(${visorStrobeOn ? "251,191,36" : "220,38,38"},${visorBrightness * 0.75})`);
+      ctx.fillStyle = visorGrad;
+      ctx.fillRect(-ball.r * 0.82, -ball.r * 0.10, ball.r * 1.64, ball.r * 0.20);
+      // Scan line during charge
+      if (isCharging) {
+        const scanX = -ball.r * 0.78 + chargeRatio * ball.r * 1.56;
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(scanX, -ball.r * 0.12);
+        ctx.lineTo(scanX, ball.r * 0.12);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Side emitter nodes
+      const emitterPulse = 0.7 + pulse * 0.3;
+      ctx.save();
+      ctx.shadowColor = "#ef4444";
+      ctx.shadowBlur = 8 + visorBrightness * 10;
+      [[-ball.r * 0.96, 0], [ball.r * 0.96, 0]].forEach(([ex, ey]) => {
+        ctx.fillStyle = `rgba(252,165,165,${emitterPulse * (0.5 + visorBrightness * 0.5)})`;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#dc2626";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 4.5, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      // Outer stroke
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = isUlt ? "#fbbf24" : "#ef4444";
+      ctx.shadowColor = isUlt ? "#fbbf24" : "#ef4444";
+      ctx.shadowBlur = 6 + visorBrightness * 14 + (isUlt ? 12 : 0);
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawPrismerBall = (ball) => {
       const bal = game.balance.prismer || BALANCE.prismer;
       const isCharging = ball.prismerState === "charging";
@@ -9079,6 +9647,7 @@ export default function App() {
       else if (ball.type === "joker") drawJokerBall(ball);
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
       else if (ball.type === "prismer") drawPrismerBall(ball);
+      else if (ball.type === "opticBall") drawOpticBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -10544,6 +11113,8 @@ export default function App() {
             if (ball.shadowSlowedUntil && game.simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
             if (ball.type === "prismer" && ball.prismerState === "charging") slowMult *= 0.4;
             if (ball.type === "prismer" && ball.prismerRecoilUntil && game.simTime < ball.prismerRecoilUntil) slowMult *= 0.55;
+            if (ball.type === "opticBall" && ball.opticState === "charging") slowMult *= 0.4;
+            if (ball.type === "opticBall" && ball.opticRecoilUntil && game.simTime < ball.opticRecoilUntil) slowMult *= 0.55;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
@@ -10714,6 +11285,7 @@ export default function App() {
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   if (ball.type === "prismer") updatePrismer(ball, target, game.simTime, stepDt);
+                  if (ball.type === "opticBall") updateOpticBall(ball, target, game.simTime, stepDt);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                 }
