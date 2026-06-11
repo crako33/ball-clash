@@ -4297,6 +4297,7 @@ export default function App() {
           let cdy = dy;
           let bounces = 0;
           let targetHit = false;
+          let shieldHit = false;
           const pad = 18;
 
           while (bounces < effectiveMaxBounces) {
@@ -4364,8 +4365,27 @@ export default function App() {
               // Shield block sparks and hits
               spawnShieldSparks(hitX, hitY, shieldBlock.angle);
               registerShieldGuardHit(target, shieldBlock.angle, currentTime);
-              playSound("wallBounce", 0.85, 95);
+              playSound("shieldBlock", 0.85, 95);
               spawnSparks(hitX, hitY, "#ef4444", 10);
+              game.screenShake = Math.max(game.screenShake, 10);
+
+              // Recoil: push gazer ball away from shield hit point
+              const recoilAngle = Math.atan2(ball.y - hitY, ball.x - hitX);
+              if (!hasStringBounceGuard(ball)) {
+                ball.vx += Math.cos(recoilAngle) * (bal.recoilForce || 600);
+                ball.vy += Math.sin(recoilAngle) * (bal.recoilForce || 600);
+              }
+              // Push shield holder back from impact
+              if (!hasStringBounceGuard(target)) {
+                target.vx -= Math.cos(recoilAngle) * 160;
+                target.vy -= Math.sin(recoilAngle) * 160;
+              }
+
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: hitX, y: hitY - 18, vy: -50,
+                text: "BLOCKED!", color: "#3b82f6", life: 0.7, maxLife: 0.7
+              });
 
               // Reflect off shield angle
               const reflectedAngle = 2 * shieldBlock.angle - Math.PI - Math.atan2(cdy, cdx);
@@ -4374,6 +4394,7 @@ export default function App() {
 
               cx = hitX;
               cy = hitY;
+              shieldHit = true;
               bounces++;
             } else if (tTarget < tWall && tTarget < segLen) {
               const hitX = cx + cdx * tTarget;
@@ -4466,8 +4487,8 @@ export default function App() {
 
           ball.gazerBeamPath = path;
 
-          // Recoil
-          if (!hasStringBounceGuard(ball)) {
+          // Recoil (muzzle kick — skip if shield already applied a directional recoil)
+          if (!shieldHit && !hasStringBounceGuard(ball)) {
             ball.vx -= dx * (bal.recoilForce || 600);
             ball.vy -= dy * (bal.recoilForce || 600);
           }
