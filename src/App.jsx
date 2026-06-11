@@ -175,6 +175,15 @@ const BALL_TYPES = {
     radius: 31,
     description: "Slashes nearby enemies and summons tiny shadow minions that swarm opponents.",
   },
+  feralClaw: {
+    id: "feralClaw",
+    name: "Feral Claw Ball",
+    shortName: "CLAW",
+    color: "#eab308",
+    stroke: "#1f2937",
+    radius: 31,
+    description: "Relentless claw brawler. Alternates twin slashes, pounces from mid-range, and regenerates after escaping pressure.",
+  },
   mirror: {
     id: "mirror",
     name: "Mirrorer Ball",
@@ -275,6 +284,7 @@ const BALANCE = {
   chaos: { circleRadius: 48, launchSpeed: 950, slamDamage: 6, controlHold: 220, controlDuration: 1200, radiusBounce: 140, cooldown: 5600, circleLife: 6800, triggerCooldown: 1000, trapCount: 3 },
   trident: { throwDamage: 4, wallDamage: 5, throwSpeed: 760, recallSpeed: 720, cooldown: 6800, stuckDuration: 800, diveDamage: 6, diveCooldown: 8400, diveTrackDuration: 1150, divePauseDuration: 520, diveSpeed: 720, diveBurstRadius: 44, diveSlowDuration: 1600, diveSlowMultiplier: 0.35 },
   shadow: { slashDamage: 2, slashRange: 35, slashCooldown: 450, comboRange: 36, comboSecondDamage: 2, summonCooldown: 4600, maxMinions: 3, minionHealth: 4, minionDamage: 1, minionSpeed: 33, minionLife: 6200, minionHitCooldown: 1100, commandDuration: 700, markDuration: 1100, switchCooldown: 6000, switchRange: 145, switchDamage: 3 },
+  feralClaw: { slashDamage: 3, slashRange: 30, slashCooldown: 720, slashKnockback: 210, slashWindup: 90, slashDuration: 310, slashLunge: 155, slashRecoil: 105, pounceDamage: 7, pounceCooldown: 5200, pounceSpeed: 650, pounceDuration: 480, pounceWindup: 220, pounceOvershoot: 190, pounceMinRange: 115, pounceMaxRange: 285, regenDelay: 2800, regenAmount: 1, regenInterval: 1000, lowHealthThreshold: 45, lowHealthCooldownMult: 0.78, lowHealthRegenMult: 0.72, rageJitter: 36, ultimateThreshold: 28, ultimateDuration: 4800, ultimateCooldownMult: 0.48, ultimateSpeedMult: 1.08, ultimateDamageMult: 1.1 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
   joker: { throwSpeed: 580, cooldown: 6000, secCooldown: 8000, tipRadius: 9, maxBounces: 15, threadLife: 4000 },
   blackSpider: { cooldown: 7000, secCooldown: 10000, pullSpeed: 1200,
@@ -285,7 +295,7 @@ const BALANCE = {
   },
   gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
   constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
-  fireSkull: { cooldown: 8000, carDamage: 5, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 300, carPasses: 5, maxRoadLife: 8000 },
+  fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -366,6 +376,13 @@ const cancelActiveMovementStates = (ball) => {
   if (ball.tridentDiveState && ball.tridentDiveState !== "idle") {
     ball.tridentDiveState = "idle";
     ball.tridentDiveHitDone = false;
+  }
+  if (ball.type === "feralClaw" && ball.feralPounceUntil) {
+    ball.feralPounceUntil = 0;
+    ball.feralPounceHit = false;
+    ball.feralPounceState = "idle";
+    ball.feralPounceWindupUntil = 0;
+    ball.feralPounceSettleUntil = 0;
   }
   if (ball.armState === "elbow_dropping") {
     ball.armState = "idle";
@@ -651,6 +668,7 @@ export default function App() {
       fsLastWallY: null,
       fsRoadActive: false,
       fsRoadSegments: [],
+      fsRoadStartWallPoint: null,
       fsNextRoadAt: 0,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
@@ -665,6 +683,11 @@ export default function App() {
       tridentDiveState: "idle", tridentDiveX: 0, tridentDiveY: 0, tridentDiveUntil: 0, tridentDiveStartAt: 0, tridentNextDiveAt: 0, tridentDiveAngle: side === "left" ? 0 : Math.PI, tridentDiveHitDone: false,
       // Shadow Specific
       shadowMinions: [], shadowNextSummonAt: 0, shadowNextSlashAt: 0, shadowNextSwitchAt: 0, shadowSlashUntil: 0, shadowSlashAngle: side === "left" ? 0 : Math.PI, shadowCommandUntil: 0, shadowComboSecondAt: 0, shadowComboTargetId: null,
+      // Feral Claw Specific
+      feralNextSlashAt: 0, feralSlashStartAt: 0, feralSlashUntil: 0, feralSlashHitAt: 0, feralSlashHitDone: false, feralSlashAngle: side === "left" ? 0 : Math.PI, feralSlashSide: 1, feralSlashRecoilUntil: 0,
+      feralNextPounceAt: type === "feralClaw" ? 1800 : 0, feralPounceState: "idle", feralPounceStartAt: 0, feralPounceWindupUntil: 0, feralPounceUntil: 0, feralPounceSettleUntil: 0, feralPounceAngle: side === "left" ? 0 : Math.PI, feralPounceHit: false, feralRushTrail: [], feralLastTrailAt: 0,
+      feralUltimateTriggered: false, feralUltimateUntil: 0,
+      feralNextRegenAt: 0, feralRegenFlashUntil: 0, lastDamageTakenAt: 0,
       // Mirror Specific
       mirrorNextHitAt: 0, mirrorFlashUntil: 0, mirrorNextSwitchAt: type === "mirror" ? (balanceSettings.mirror?.switchCooldown ?? BALANCE.mirror.switchCooldown) : 0, mirrorSwitchFlashUntil: 0,
 
@@ -1281,7 +1304,8 @@ export default function App() {
               }
             }
 
-            if (ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) {
+            if ((ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) ||
+                (ball.type === "feralClaw" && simTime < (ball.feralPounceUntil || 0))) {
               // bypass base speed limits
             } else {
               const isWrecker = ball.type === "wrecker";
@@ -1347,6 +1371,7 @@ export default function App() {
               if (damageCooldowns[cooldownKey] > simTime) return;
               let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
               defender.health = Math.max(0, defender.health - finalAmount);
+              defender.lastDamageTakenAt = simTime;
               damageCooldowns[cooldownKey] = simTime + cd;
             };
 
@@ -1481,6 +1506,61 @@ export default function App() {
                   if (Math.hypot(ball.knifeBladeX - enemy.x, ball.knifeBladeY - enemy.y) < enemy.r + 16) {
                     localApplyDamage(enemy, bal.secDamage, `${ball.id}-knife-sec`, 300);
                   }
+                }
+              }
+              if (ball.type === "feralClaw") {
+                const bal = balance.feralClaw;
+                const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                const targetDist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                const lowHealth = ball.health <= bal.lowHealthThreshold;
+                if (!ball.feralUltimateTriggered && ball.health <= bal.ultimateThreshold) {
+                  ball.feralUltimateTriggered = true;
+                  ball.feralUltimateUntil = simTime + bal.ultimateDuration;
+                  ball.feralNextSlashAt = simTime;
+                  ball.feralNextPounceAt = simTime + 180;
+                }
+                const ultimateActive = simTime < (ball.feralUltimateUntil || 0);
+                const cooldownMult = (lowHealth ? bal.lowHealthCooldownMult : 1) * (ultimateActive ? bal.ultimateCooldownMult : 1);
+                const regenMult = lowHealth ? bal.lowHealthRegenMult : 1;
+                const damageMult = ultimateActive ? bal.ultimateDamageMult : 1;
+                const speedMult = ultimateActive ? bal.ultimateSpeedMult : 1;
+
+                if (ball.health < MAX_HEALTH && simTime - (ball.lastDamageTakenAt || 0) >= bal.regenDelay && simTime >= (ball.feralNextRegenAt || 0)) {
+                  ball.health = Math.min(MAX_HEALTH, ball.health + bal.regenAmount);
+                  ball.feralNextRegenAt = simTime + bal.regenInterval * regenMult;
+                }
+
+                if (simTime < (ball.feralPounceUntil || 0)) {
+                  ball.vx = Math.cos(ball.feralPounceAngle) * bal.pounceSpeed * speedMult;
+                  ball.vy = Math.sin(ball.feralPounceAngle) * bal.pounceSpeed * speedMult;
+                  if (!ball.feralPounceHit && targetDist <= ball.r + enemy.r + 8) {
+                    ball.feralPounceHit = true;
+                    ball.feralPounceUntil = simTime;
+                    localApplyDamage(enemy, bal.pounceDamage * damageMult, `${ball.id}-feral-pounce`, bal.pounceCooldown - 50);
+                    enemy.vx += Math.cos(ball.feralPounceAngle) * bal.slashKnockback * 1.8;
+                    enemy.vy += Math.sin(ball.feralPounceAngle) * bal.slashKnockback * 1.8;
+                    if (ultimateActive) {
+                      ball.vx -= Math.cos(ball.feralPounceAngle) * bal.slashRecoil * 1.4;
+                      ball.vy -= Math.sin(ball.feralPounceAngle) * bal.slashRecoil * 1.4;
+                    }
+                  }
+                } else if (targetDist >= bal.pounceMinRange && targetDist <= bal.pounceMaxRange && simTime >= (ball.feralNextPounceAt || 0)) {
+                  ball.feralPounceAngle = targetAngle;
+                  ball.feralPounceUntil = simTime + bal.pounceDuration;
+                  ball.feralNextPounceAt = simTime + bal.pounceCooldown * cooldownMult;
+                  ball.feralPounceHit = false;
+                  ball.vx = Math.cos(targetAngle) * bal.pounceSpeed * speedMult;
+                  ball.vy = Math.sin(targetAngle) * bal.pounceSpeed * speedMult;
+                } else if (targetDist <= ball.r + enemy.r + bal.slashRange && simTime >= (ball.feralNextSlashAt || 0)) {
+                  ball.feralSlashSide = -(ball.feralSlashSide || 1);
+                  ball.feralSlashAngle = targetAngle;
+                  ball.feralSlashUntil = simTime + 230;
+                  ball.feralNextSlashAt = simTime + bal.slashCooldown * cooldownMult;
+                  localApplyDamage(enemy, bal.slashDamage * damageMult, `${ball.id}-feral-claw-${ball.feralSlashSide}`, bal.slashCooldown * 0.7);
+                  enemy.vx += Math.cos(targetAngle) * bal.slashKnockback;
+                  enemy.vy += Math.sin(targetAngle) * bal.slashKnockback;
+                  ball.vx -= Math.cos(targetAngle) * bal.slashRecoil;
+                  ball.vy -= Math.sin(targetAngle) * bal.slashRecoil;
                 }
               }
               if (ball.type === "gun") {
@@ -2716,6 +2796,7 @@ export default function App() {
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
 
       defender.health = clamp(defender.health - finalAmount, 0, MAX_HEALTH);
+      defender.lastDamageTakenAt = currentTime;
       game.damageCooldowns[cooldownKey] = currentTime + cooldown;
       game.screenShake = Math.max(game.screenShake || 0, Math.min(22, 6 + finalAmount * 1.5));
       defender.webHitFlashUntil = currentTime + 120;
@@ -2747,6 +2828,8 @@ export default function App() {
         flashColor = "#22c55e"; // Wrecker green
       } else if (keyLower.includes("mirror")) {
         flashColor = "#67e8f9"; // Mirror cyan
+      } else if (keyLower.includes("feral") || keyLower.includes("claw") || keyLower.includes("pounce")) {
+        flashColor = "#facc15";
 
       }
       defender.webHitFlashColor = flashColor;
@@ -3083,12 +3166,17 @@ export default function App() {
           const fsBal = game.balance.fireSkull || BALANCE.fireSkull;
           const carIsRunning = (game.fireCars || []).some((car) => car.ownerId === ball.id);
           if (!carIsRunning && game.simTime >= (ball.fsNextRoadAt || 0)) {
+            const wallPoint = {
+              x: sideHit === "left" ? 0 : sideHit === "right" ? game.width : bx,
+              y: sideHit === "top" ? 0 : sideHit === "bottom" ? game.height : by,
+            };
             if (!ball.fsRoadActive) {
             // First wall bounce: mark start
             ball.fsLastWallX = bx;
             ball.fsLastWallY = by;
             ball.fsRoadActive = true;
             ball.fsRoadSegments = [{ x: bx, y: by }];
+            ball.fsRoadStartWallPoint = wallPoint;
             playSound("repulsorCharge");
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({
@@ -3102,11 +3190,14 @@ export default function App() {
             const segmentCount = ball.fsRoadSegments ? ball.fsRoadSegments.length : 0;
             if (segmentCount > 0) {
               const roadPath = [...ball.fsRoadSegments, { x: bx, y: by }];
+              const renderRoadPath = roadPath.map((point) => ({ ...point }));
+              renderRoadPath[0] = ball.fsRoadStartWallPoint || renderRoadPath[0];
+              renderRoadPath[renderRoadPath.length - 1] = wallPoint;
               const totalDist = roadPath.slice(1).reduce((sum, point, index) => {
                 const previous = roadPath[index];
                 return sum + Math.hypot(point.x - previous.x, point.y - previous.y);
               }, 0);
-              const minRoadLength = fsBal.minRoadLength || 300;
+              const minRoadLength = Math.max(520, fsBal.minRoadLength || 520);
               if (totalDist >= minRoadLength) {
                 const startPoint = roadPath[0];
                 game.fireCars = game.fireCars || [];
@@ -3119,6 +3210,7 @@ export default function App() {
                   endX: roadPath[roadPath.length - 1].x,
                   endY: roadPath[roadPath.length - 1].y,
                   path: roadPath,
+                  renderPath: renderRoadPath,
                   pathLength: totalDist,
                   distanceTravelled: 0,
                   pass: 1,
@@ -3130,7 +3222,7 @@ export default function App() {
                   radius: fsBal.carRadius || 40,
                   progress: 0,
                   speed: fsBal.carSpeed || 950,
-                  damage: fsBal.carDamage || 18,
+                  damage: Math.max(8, fsBal.carDamage || 8),
                   createdTime: game.simTime,
                 });
                 playSound("megaLeap"); // Roaring engine sound substitute
@@ -3147,6 +3239,7 @@ export default function App() {
                 ball.fsLastWallY = null;
                 ball.fsRoadActive = false;
                 ball.fsRoadSegments = [];
+                ball.fsRoadStartWallPoint = null;
               } else {
                 ball.fsRoadSegments.push({ x: bx, y: by });
                 game.floatingTexts = game.floatingTexts || [];
@@ -3296,6 +3389,7 @@ export default function App() {
         a.fsLastWallY = null;
         a.fsRoadActive = false;
         a.fsRoadSegments = [];
+        a.fsRoadStartWallPoint = null;
         spawnSparks(a.x, a.y, "#475569", 12);
         game.floatingTexts = game.floatingTexts || [];
         game.floatingTexts.push({
@@ -3308,6 +3402,7 @@ export default function App() {
         b.fsLastWallY = null;
         b.fsRoadActive = false;
         b.fsRoadSegments = [];
+        b.fsRoadStartWallPoint = null;
         spawnSparks(b.x, b.y, "#475569", 12);
         game.floatingTexts = game.floatingTexts || [];
         game.floatingTexts.push({
@@ -6200,6 +6295,178 @@ export default function App() {
       }
     };
 
+    const updateFeralClaw = (ball, target, currentTime) => {
+      const bal = game.balance.feralClaw || BALANCE.feralClaw;
+      const lowHealth = ball.health <= (bal.lowHealthThreshold || 45);
+      if (!ball.feralUltimateTriggered && ball.health <= (bal.ultimateThreshold || 28)) {
+        ball.feralUltimateTriggered = true;
+        ball.feralUltimateUntil = currentTime + (bal.ultimateDuration || 4800);
+        ball.feralNextSlashAt = currentTime;
+        ball.feralNextPounceAt = currentTime + 180;
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 22, vy: -38,
+          text: "FERAL FRENZY", color: "#fb923c", life: 1, maxLife: 1
+        });
+        game.screenShake = Math.max(game.screenShake, 8);
+        spawnSparks(ball.x, ball.y, "#fb923c", 18);
+        playSound("knifeHit", 0.9, 55);
+      }
+
+      const ultimateActive = currentTime < (ball.feralUltimateUntil || 0);
+      const cooldownMult = (lowHealth ? (bal.lowHealthCooldownMult || 0.78) : 1) * (ultimateActive ? (bal.ultimateCooldownMult || 0.48) : 1);
+      const regenMult = lowHealth ? (bal.lowHealthRegenMult || 0.72) : 1;
+      const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      const targetDist = Math.hypot(target.x - ball.x, target.y - ball.y);
+      const damageMult = ultimateActive ? (bal.ultimateDamageMult || 1.1) : 1;
+      const speedMult = ultimateActive ? (bal.ultimateSpeedMult || 1.08) : 1;
+
+      if ((lowHealth || ultimateActive) && ball.feralPounceState === "idle" && !(ball.feralSlashUntil && currentTime < ball.feralSlashUntil)) {
+        const speed = Math.hypot(ball.vx, ball.vy);
+        if (speed > 20) {
+          const heading = Math.atan2(ball.vy, ball.vx);
+          const twitch = (Math.sin(currentTime * 0.031 + ball.id.length) + Math.sin(currentTime * 0.013)) * (bal.rageJitter || 36) * 0.00022;
+          ball.vx = Math.cos(heading + twitch) * speed;
+          ball.vy = Math.sin(heading + twitch) * speed;
+        }
+      }
+
+      if (ball.health < MAX_HEALTH && currentTime - (ball.lastDamageTakenAt || 0) >= bal.regenDelay) {
+        if (currentTime >= (ball.feralNextRegenAt || 0)) {
+          const healed = Math.min(bal.regenAmount, MAX_HEALTH - ball.health);
+          ball.health += healed;
+          ball.feralNextRegenAt = currentTime + bal.regenInterval * regenMult;
+          ball.feralRegenFlashUntil = currentTime + 280;
+          const ownerStats = ball.side === "left" ? game.stats.left : game.stats.right;
+          ownerStats.healed += healed;
+          spawnSparks(ball.x, ball.y, "#86efac", 5);
+        }
+      } else {
+        ball.feralNextRegenAt = Math.max(ball.feralNextRegenAt || 0, currentTime + 120);
+      }
+
+      ball.feralRushTrail = (ball.feralRushTrail || []).filter((point) => currentTime - point.time < 420);
+
+      if (ball.feralPounceState === "windup") {
+        ball.feralPounceAngle = targetAngle;
+        ball.vx = ball.vx * 0.76 - Math.cos(targetAngle) * 10;
+        ball.vy = ball.vy * 0.76 - Math.sin(targetAngle) * 10;
+        if (currentTime >= (ball.feralPounceWindupUntil || 0)) {
+          ball.feralPounceState = "launch";
+          ball.feralPounceStartAt = currentTime;
+          ball.feralPounceUntil = currentTime + bal.pounceDuration;
+          playSound("webShoot", 0.8, 65);
+        }
+        return;
+      }
+
+      if (ball.feralPounceState === "launch" && currentTime < (ball.feralPounceUntil || 0)) {
+        const rushProgress = clamp((currentTime - ball.feralPounceStartAt) / Math.max(1, bal.pounceDuration), 0, 1);
+        const wobble = Math.sin(rushProgress * Math.PI * 5) * 0.045;
+        const rushAngle = ball.feralPounceAngle + wobble;
+        const rushSpeed = bal.pounceSpeed * speedMult * (1.12 - rushProgress * 0.12);
+        ball.vx = Math.cos(rushAngle) * rushSpeed;
+        ball.vy = Math.sin(rushAngle) * rushSpeed;
+        if (currentTime - (ball.feralLastTrailAt || 0) >= 24) {
+          ball.feralRushTrail.push({ x: ball.x, y: ball.y, angle: rushAngle, time: currentTime });
+          ball.feralLastTrailAt = currentTime;
+        }
+        if (!ball.feralPounceHit && targetDist <= ball.r + target.r + 8) {
+          ball.feralPounceHit = true;
+          ball.feralPounceState = "settle";
+          ball.feralPounceSettleUntil = currentTime + (ultimateActive ? bal.pounceOvershoot * 0.58 : bal.pounceOvershoot);
+          applyDamage(target, bal.pounceDamage * damageMult, `${ball.id}-feral-pounce`, currentTime, bal.pounceCooldown - 50);
+          if (!hasStringBounceGuard(target)) {
+            target.vx += Math.cos(ball.feralPounceAngle) * bal.slashKnockback * 1.8;
+            target.vy += Math.sin(ball.feralPounceAngle) * bal.slashKnockback * 1.8;
+          }
+          if (ultimateActive) {
+            const reboundAngle = ball.feralPounceAngle + Math.PI + Math.sin(currentTime * 0.019) * 0.65;
+            ball.vx = Math.cos(reboundAngle) * bal.slashRecoil * 1.45;
+            ball.vy = Math.sin(reboundAngle) * bal.slashRecoil * 1.45;
+            ball.feralNextSlashAt = currentTime + 70;
+            ball.feralNextPounceAt = Math.min(ball.feralNextPounceAt, currentTime + bal.pounceCooldown * cooldownMult);
+          } else {
+            ball.vx = Math.cos(ball.feralPounceAngle) * bal.pounceSpeed * 0.42;
+            ball.vy = Math.sin(ball.feralPounceAngle) * bal.pounceSpeed * 0.42;
+          }
+          const ownerStats = ball.side === "left" ? game.stats.left : game.stats.right;
+          ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(bal.pounceDamage * damageMult));
+          ownerStats.hitsLanded++;
+          game.screenShake = Math.max(game.screenShake, 10);
+          spawnSparks(target.x, target.y, "#facc15", 14);
+          playSound("knifeHit", 1, 110);
+        }
+        return;
+      }
+
+      if (ball.feralPounceState === "launch") {
+        ball.feralPounceState = "settle";
+        ball.feralPounceSettleUntil = currentTime + bal.pounceOvershoot;
+        ball.vx *= 0.48;
+        ball.vy *= 0.48;
+      }
+
+      if (ball.feralPounceState === "settle") {
+        ball.vx *= 0.91;
+        ball.vy *= 0.91;
+        if (currentTime < (ball.feralPounceSettleUntil || 0)) return;
+        ball.feralPounceState = "idle";
+      }
+
+      if (targetDist >= bal.pounceMinRange && targetDist <= bal.pounceMaxRange && currentTime >= (ball.feralNextPounceAt || 0)) {
+        ball.feralPounceAngle = targetAngle;
+        ball.feralPounceState = "windup";
+        ball.feralPounceStartAt = currentTime;
+        ball.feralPounceWindupUntil = currentTime + bal.pounceWindup;
+        ball.feralNextPounceAt = currentTime + bal.pounceCooldown * cooldownMult;
+        ball.feralPounceHit = false;
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 18, vy: -42,
+          text: "CLAW RUSH", color: "#facc15", life: 0.62, maxLife: 0.62
+        });
+        return;
+      }
+
+      if (ball.feralSlashUntil && currentTime < ball.feralSlashUntil) {
+        const slashProgress = clamp((currentTime - ball.feralSlashStartAt) / Math.max(1, bal.slashDuration), 0, 1);
+        if (slashProgress < 0.68) {
+          const lunge = bal.slashLunge * Math.sin((slashProgress / 0.68) * Math.PI);
+          ball.vx += Math.cos(ball.feralSlashAngle) * lunge * 0.075;
+          ball.vy += Math.sin(ball.feralSlashAngle) * lunge * 0.075;
+        }
+        if (!ball.feralSlashHitDone && currentTime >= ball.feralSlashHitAt) {
+          ball.feralSlashHitDone = true;
+          if (targetDist <= ball.r + target.r + bal.slashRange + 16) {
+            applyDamage(target, bal.slashDamage * damageMult, `${ball.id}-feral-claw-${ball.feralSlashSide}`, currentTime, bal.slashCooldown * 0.7);
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(ball.feralSlashAngle) * bal.slashKnockback;
+              target.vy += Math.sin(ball.feralSlashAngle) * bal.slashKnockback;
+            }
+            ball.vx -= Math.cos(ball.feralSlashAngle) * bal.slashRecoil;
+            ball.vy -= Math.sin(ball.feralSlashAngle) * bal.slashRecoil;
+            ball.feralSlashRecoilUntil = currentTime + 120;
+            const ownerStats = ball.side === "left" ? game.stats.left : game.stats.right;
+            ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(bal.slashDamage * damageMult));
+            ownerStats.hitsLanded++;
+            spawnSparks(target.x, target.y, ultimateActive ? "#fb923c" : "#e5e7eb", ultimateActive ? 13 : 8);
+            playSound("knifeHit", 0.85, ball.feralSlashSide > 0 ? 95 : 125);
+          }
+        }
+        return;
+      }
+
+      const slashReach = ball.r + target.r + bal.slashRange;
+      if (targetDist <= slashReach && currentTime >= (ball.feralNextSlashAt || 0)) {
+        ball.feralSlashSide = -(ball.feralSlashSide || 1);
+        ball.feralSlashAngle = targetAngle;
+        ball.feralSlashStartAt = currentTime;
+        ball.feralSlashUntil = currentTime + bal.slashDuration;
+        ball.feralSlashHitAt = currentTime + bal.slashWindup;
+        ball.feralSlashHitDone = false;
+        ball.feralNextSlashAt = currentTime + bal.slashCooldown * cooldownMult;
+      }
+    };
+
     const updateShadow = (ball, target, currentTime, stepDt) => {
       const bal = game.balance.shadow || BALANCE.shadow;
       ball.shadowMinions = (ball.shadowMinions || []).filter((minion) => minion.health > 0 && currentTime < minion.createdTime + bal.minionLife).slice(0, bal.maxMinions);
@@ -6636,7 +6903,7 @@ export default function App() {
           const carHitRadius = car.radius * ((game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32);
           if (d < ball.r + carHitRadius) {
             applyDamage(ball, car.damage, `${car.id}-pass-${car.pass}-hit-${ball.id}`, game.simTime, 400);
-            const recoilForce = 980;
+            const recoilForce = Math.max(1280, (game.balance.fireSkull?.carKnockback) || BALANCE.fireSkull.carKnockback || 1280);
             ball.vx += Math.cos(car.angle) * recoilForce;
             ball.vy += Math.sin(car.angle) * recoilForce;
             ball.skillLockedUntil = Math.max(ball.skillLockedUntil || 0, game.simTime + 1400);
@@ -9138,6 +9405,170 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawFeralClawBall = (ball) => {
+      const config = BALL_TYPES.feralClaw;
+      const bal = game.balance.feralClaw || BALANCE.feralClaw;
+      const now = game.simTime;
+      const slashActive = ball.feralSlashUntil && now < ball.feralSlashUntil;
+      const slashProgress = slashActive ? clamp((now - ball.feralSlashStartAt) / Math.max(1, bal.slashDuration), 0, 1) : 0;
+      const windup = ball.feralPounceState === "windup";
+      const rushing = ball.feralPounceState === "launch";
+      const settling = ball.feralPounceState === "settle";
+      const ultimateActive = now < (ball.feralUltimateUntil || 0);
+      const raging = ball.health <= bal.lowHealthThreshold || ultimateActive;
+      const regenerating = ball.feralRegenFlashUntil && now < ball.feralRegenFlashUntil;
+      const facing = (windup || rushing || settling) ? ball.feralPounceAngle : (ball.feralSlashAngle || ball.angle || 0);
+
+      if ((ball.feralRushTrail || []).length > 1) {
+        ctx.save();
+        ctx.lineCap = "round";
+        [-8, 0, 8].forEach((offset, trailIndex) => {
+          ctx.beginPath();
+          ball.feralRushTrail.forEach((point, index) => {
+            const px = point.x + Math.cos(point.angle + Math.PI / 2) * offset;
+            const py = point.y + Math.sin(point.angle + Math.PI / 2) * offset;
+            if (index === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.globalAlpha = 0.18 + trailIndex * 0.035;
+          ctx.strokeStyle = trailIndex === 1 && ultimateActive ? "#fb923c" : "#e5e7eb";
+          ctx.lineWidth = 2.2;
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      let lean = 0;
+      let scaleX = 1;
+      let scaleY = 1;
+      if (windup) {
+        const windupProgress = clamp((now - ball.feralPounceStartAt) / Math.max(1, bal.pounceWindup), 0, 1);
+        lean = -5 * windupProgress;
+        scaleX = 0.78 + windupProgress * 0.04;
+        scaleY = 1.16 - windupProgress * 0.04;
+      } else if (rushing) {
+        scaleX = 1.16;
+        scaleY = 0.9;
+        lean = 7;
+      } else if (settling) {
+        scaleX = 1.04;
+        scaleY = 0.97;
+        lean = 4;
+      } else if (slashActive) {
+        const attackCurve = Math.sin(slashProgress * Math.PI);
+        lean = attackCurve * 9 - Math.max(0, slashProgress - 0.72) * 15;
+        scaleX = 1 + attackCurve * 0.08;
+        scaleY = 1 - attackCurve * 0.05;
+      }
+
+      const rageX = raging ? Math.sin(now * 0.071) * (ultimateActive ? 2.8 : 1.3) : 0;
+      const rageY = raging ? Math.sin(now * 0.047 + 1.4) * (ultimateActive ? 2.2 : 1) : 0;
+      const rageTurn = raging ? Math.sin(now * 0.039) * (ultimateActive ? 0.055 : 0.025) : 0;
+
+      ctx.save();
+      ctx.translate(ball.x + rageX, ball.y + rageY);
+      ctx.rotate(facing + rageTurn);
+      ctx.translate(lean, 0);
+      ctx.scale(scaleX, scaleY);
+
+      if (raging) {
+        const irregularPulse = 0.55 + Math.sin(now * 0.019) * 0.18 + Math.sin(now * 0.043 + 1.2) * 0.16;
+        ctx.save();
+        ctx.globalAlpha = ultimateActive ? 0.42 : 0.22;
+        ctx.strokeStyle = ultimateActive ? "#fb923c" : "#facc15";
+        ctx.lineWidth = ultimateActive ? 5 : 3;
+        ctx.setLineDash([8 + irregularPulse * 8, 5, 3, 7]);
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + 8 + irregularPulse * 5, now * 0.002, Math.PI * 1.45 + now * 0.002);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + 13 - irregularPulse * 3, Math.PI * 0.7 - now * 0.0017, Math.PI * 2.05 - now * 0.0017);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (regenerating) {
+        ctx.shadowColor = "#86efac";
+        ctx.shadowBlur = 16;
+      }
+
+      ctx.fillStyle = config.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = ultimateActive ? "#fb923c" : config.stroke;
+      ctx.lineWidth = ultimateActive ? 5 : 4;
+      ctx.stroke();
+
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.92, -ball.r * 0.55);
+      ctx.lineTo(-ball.r * 0.46, -ball.r * 0.92);
+      ctx.lineTo(-ball.r * 0.28, -ball.r * 0.42);
+      ctx.lineTo(0, -ball.r * 0.62);
+      ctx.lineTo(ball.r * 0.28, -ball.r * 0.42);
+      ctx.lineTo(ball.r * 0.46, -ball.r * 0.92);
+      ctx.lineTo(ball.r * 0.92, -ball.r * 0.55);
+      ctx.lineTo(ball.r * 0.66, ball.r * 0.48);
+      ctx.lineTo(0, ball.r * 0.72);
+      ctx.lineTo(-ball.r * 0.66, ball.r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = ultimateActive ? "#fb923c" : "#facc15";
+      [-1, 1].forEach((side) => {
+        ctx.beginPath();
+        ctx.moveTo(side * ball.r * 0.7, -ball.r * 0.1);
+        ctx.lineTo(side * ball.r * 0.16, -ball.r * 0.34);
+        ctx.lineTo(side * ball.r * 0.28, ball.r * 0.08);
+        ctx.lineTo(side * ball.r * 0.68, ball.r * 0.15);
+        ctx.closePath();
+        ctx.fill();
+      });
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath();
+      ctx.ellipse(-ball.r * 0.4, -ball.r * 0.04, ball.r * 0.16, ball.r * 0.08, -0.2, 0, Math.PI * 2);
+      ctx.ellipse(ball.r * 0.4, -ball.r * 0.04, ball.r * 0.16, ball.r * 0.08, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      const burst = slashActive ? Math.sin(clamp(slashProgress * 1.45, 0, 1) * Math.PI * 0.75) : 0;
+      const twitch = raging ? (Math.sin(now * 0.061) + Math.sin(now * 0.027 + 2)) * ball.r * 0.07 : 0;
+      const clawReach = ball.r * (0.8 + burst * 1.15 + (ultimateActive ? 0.18 : 0));
+      const clawSide = slashActive ? (ball.feralSlashSide || 1) : 1;
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = "round";
+      ctx.shadowColor = ultimateActive ? "#fb923c" : "#f8fafc";
+      ctx.shadowBlur = slashActive ? 9 : 2;
+      [-0.18, 0, 0.18].forEach((spread, index) => {
+        const y = clawSide * ball.r * (0.25 + spread);
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.65, y);
+        ctx.quadraticCurveTo(ball.r + clawReach * 0.48, y + twitch * (index - 1), ball.r + clawReach, y + spread * ball.r * 0.8);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      if (slashActive) {
+        const trailAlpha = Math.sin(slashProgress * Math.PI) * 0.58;
+        const trailCount = ultimateActive ? 5 : 2;
+        ctx.save();
+        ctx.strokeStyle = ultimateActive ? "#fb923c" : "#f8fafc";
+        ctx.lineWidth = ultimateActive ? 3.5 : 3;
+        ctx.lineCap = "round";
+        for (let i = 0; i < trailCount; i++) {
+          const chaos = ultimateActive ? Math.sin(now * 0.017 + i * 2.1) * 0.28 : i * 0.13;
+          ctx.globalAlpha = trailAlpha * (1 - i / (trailCount + 2));
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.r + 23 + i * 6, facing - 0.95 + chaos, facing + 0.72 + chaos);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      drawHealthInsideBall(ball);
+    };
+
     const drawShadowBall = (ball) => {
       const config = BALL_TYPES.shadow;
       const bal = game.balance.shadow || BALANCE.shadow;
@@ -9650,6 +10081,7 @@ export default function App() {
         const fsBal = game.balance.fireSkull || BALANCE.fireSkull;
         const roadW = fsBal.roadWidth || 28;
         const time = game.simTime;
+        const startPoint = ball.fsRoadStartWallPoint || segs[0];
 
         // Animated dashed lava road — multiple layers
         for (let layer = 0; layer < 3; layer++) {
@@ -9672,7 +10104,7 @@ export default function App() {
             ctx.setLineDash([]);
           }
           ctx.beginPath();
-          ctx.moveTo(segs[0].x, segs[0].y);
+          ctx.moveTo(startPoint.x, startPoint.y);
           for (let i = 1; i < segs.length; i++) ctx.lineTo(segs[i].x, segs[i].y);
           ctx.lineTo(ball.x, ball.y);
           ctx.stroke();
@@ -9685,7 +10117,7 @@ export default function App() {
         ctx.shadowBlur = 20;
         ctx.fillStyle = "#fef3c7";
         ctx.beginPath();
-        ctx.arc(segs[0].x, segs[0].y, 7 + Math.sin(time * 0.02) * 2, 0, Math.PI * 2);
+        ctx.arc(startPoint.x, startPoint.y, 7 + Math.sin(time * 0.02) * 2, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
@@ -9700,15 +10132,16 @@ export default function App() {
       const pulse = 0.5 + Math.sin(time * 0.025) * 0.5;
 
       game.fireCars.forEach(car => {
-        if (car.path?.length > 1) {
+        const visualPath = car.renderPath || car.path;
+        if (visualPath?.length > 1) {
           ctx.save();
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
           ctx.strokeStyle = "rgba(251, 191, 36, 0.38)";
           ctx.lineWidth = (game.balance.fireSkull?.roadWidth || BALANCE.fireSkull.roadWidth) * 0.8;
           ctx.beginPath();
-          ctx.moveTo(car.path[0].x, car.path[0].y);
-          for (let i = 1; i < car.path.length; i++) ctx.lineTo(car.path[i].x, car.path[i].y);
+          ctx.moveTo(visualPath[0].x, visualPath[0].y);
+          for (let i = 1; i < visualPath.length; i++) ctx.lineTo(visualPath[i].x, visualPath[i].y);
           ctx.stroke();
           ctx.restore();
         }
@@ -9719,8 +10152,8 @@ export default function App() {
         if (dist <= 0) return;
         const angle = car.angle ?? Math.atan2(dy, dx);
         const carVisualScale = (game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32;
-        const hw = car.radius * 1.45 * carVisualScale;
-        const hh = car.radius * 0.75 * Math.max(1.08, carVisualScale * 0.95);
+        const hw = car.radius * 1.72 * carVisualScale;
+        const hh = car.radius * 0.62 * Math.max(1.08, carVisualScale * 0.95);
         const carBody = "#111315";
         const carBodyShade = "#23272d";
         const carWindow = "#3b4550";
@@ -9744,91 +10177,85 @@ export default function App() {
         ctx.stroke();
         ctx.restore();
 
-        // Car body — wide glowing rectangle
+        // Long top-down muscle-car body.
         ctx.save();
         ctx.shadowColor = "rgba(249, 115, 22, 0.22)";
         ctx.shadowBlur = 10 + pulse * 4;
-        ctx.fillStyle = carBody;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 1.18, 0);
-        ctx.quadraticCurveTo(-hw * 1.14, -hh * 0.74, -hw * 0.78, -hh * 0.86);
-        ctx.lineTo(hw * 0.72, -hh * 0.86);
-        ctx.quadraticCurveTo(hw * 1.12, -hh * 0.76, hw * 1.18, 0);
-        ctx.quadraticCurveTo(hw * 1.12, hh * 0.76, hw * 0.72, hh * 0.86);
-        ctx.lineTo(-hw * 0.78, hh * 0.86);
-        ctx.quadraticCurveTo(-hw * 1.14, hh * 0.74, -hw * 1.18, 0);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.fillStyle = carBodyShade;
-        ctx.beginPath();
-        ctx.roundRect(-hw * 0.86, -hh * 0.62, hw * 1.72, hh * 1.24, hh * 0.26);
-        ctx.fill();
-
         const glossGrad = ctx.createLinearGradient(-hw, -hh, hw, hh);
         glossGrad.addColorStop(0, "#070707");
         glossGrad.addColorStop(0.45, "#1a1a1a");
         glossGrad.addColorStop(1, "#000000");
         ctx.fillStyle = glossGrad;
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.54, -hh * 1.04);
-        ctx.quadraticCurveTo(-hw * 0.2, -hh * 1.12, hw * 0.54, -hh * 1.04);
-        ctx.quadraticCurveTo(hw * 0.7, -hh * 0.96, hw * 0.68, -hh * 0.54);
-        ctx.quadraticCurveTo(hw * 0.66, 0, hw * 0.78, hh * 0.98);
-        ctx.quadraticCurveTo(hw * 0.82, hh * 1.2, hw * 0.56, hh * 1.28);
-        ctx.quadraticCurveTo(hw * 0.18, hh * 1.4, -hw * 0.18, hh * 1.4);
-        ctx.quadraticCurveTo(-hw * 0.56, hh * 1.32, -hw * 0.78, hh * 0.98);
-        ctx.quadraticCurveTo(-hw * 0.66, 0, -hw * 0.68, -hh * 0.54);
-        ctx.quadraticCurveTo(-hw * 0.7, -hh * 0.96, -hw * 0.54, -hh * 1.04);
+        ctx.moveTo(-hw * 1.08, -hh * 0.58);
+        ctx.lineTo(-hw * 0.94, -hh * 0.88);
+        ctx.lineTo(hw * 0.68, -hh * 0.96);
+        ctx.lineTo(hw * 0.98, -hh * 0.78);
+        ctx.lineTo(hw * 1.13, -hh * 0.45);
+        ctx.lineTo(hw * 1.13, hh * 0.45);
+        ctx.lineTo(hw * 0.98, hh * 0.78);
+        ctx.lineTo(hw * 0.68, hh * 0.96);
+        ctx.lineTo(-hw * 0.94, hh * 0.88);
+        ctx.lineTo(-hw * 1.08, hh * 0.58);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Four wheels sit outside the body so the silhouette reads as a car.
+        ctx.fillStyle = carWheel;
+        [[-0.68, -1], [0.68, -1], [-0.68, 1], [0.68, 1]].forEach(([x, side]) => {
+          ctx.beginPath();
+          ctx.roundRect(hw * x - hw * 0.15, side * hh * 0.91 - hh * 0.16, hw * 0.3, hh * 0.32, 4);
+          ctx.fill();
+        });
+
+        // Rear deck, cabin, windshield, and long hood.
+        ctx.fillStyle = carBodyShade;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.96, -hh * 0.68);
+        ctx.lineTo(-hw * 0.43, -hh * 0.72);
+        ctx.lineTo(-hw * 0.35, hh * 0.72);
+        ctx.lineTo(-hw * 0.96, hh * 0.68);
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = "#30302d";
-        ctx.strokeStyle = "#111111";
-        ctx.lineWidth = 1.4;
+        ctx.fillStyle = "#24272b";
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.46, -hh * 1.0);
-        ctx.quadraticCurveTo(0, -hh * 1.08, hw * 0.46, -hh * 1.0);
-        ctx.lineTo(hw * 0.44, -hh * 0.68);
-        ctx.quadraticCurveTo(0, -hh * 0.74, -hw * 0.44, -hh * 0.68);
+        ctx.moveTo(-hw * 0.39, -hh * 0.73);
+        ctx.lineTo(hw * 0.34, -hh * 0.76);
+        ctx.lineTo(hw * 0.48, -hh * 0.55);
+        ctx.lineTo(hw * 0.43, hh * 0.55);
+        ctx.lineTo(hw * 0.29, hh * 0.76);
+        ctx.lineTo(-hw * 0.39, hh * 0.73);
         ctx.closePath();
         ctx.fill();
-        ctx.stroke();
 
         ctx.fillStyle = carWindow;
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.54, -hh * 0.58);
-        ctx.quadraticCurveTo(0, -hh * 0.72, hw * 0.54, -hh * 0.58);
-        ctx.lineTo(hw * 0.46, -hh * 0.34);
-        ctx.quadraticCurveTo(0, -hh * 0.42, -hw * 0.46, -hh * 0.34);
+        ctx.moveTo(-hw * 0.31, -hh * 0.58);
+        ctx.lineTo(-hw * 0.11, -hh * 0.62);
+        ctx.lineTo(-hw * 0.11, hh * 0.62);
+        ctx.lineTo(-hw * 0.31, hh * 0.58);
         ctx.closePath();
         ctx.fill();
-
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.46, hh * 0.58);
-        ctx.quadraticCurveTo(0, hh * 0.72, hw * 0.46, hh * 0.58);
-        ctx.lineTo(hw * 0.56, hh * 0.92);
-        ctx.quadraticCurveTo(0, hh * 1.04, -hw * 0.56, hh * 0.92);
+        ctx.moveTo(hw * 0.04, -hh * 0.62);
+        ctx.lineTo(hw * 0.31, -hh * 0.55);
+        ctx.lineTo(hw * 0.39, hh * 0.55);
+        ctx.lineTo(hw * 0.04, hh * 0.62);
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = "#191919";
-        ctx.strokeStyle = "#050505";
+        ctx.fillStyle = "#0b0c0e";
+        ctx.strokeStyle = "#30343a";
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.roundRect(-hw * 0.34, -hh * 0.06, hw * 0.68, hh * 0.28, 5);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#111111";
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.38, hh * 0.3);
-        ctx.quadraticCurveTo(0, hh * 0.42, hw * 0.38, hh * 0.3);
-        ctx.lineTo(hw * 0.46, hh * 0.58);
-        ctx.quadraticCurveTo(0, hh * 0.68, -hw * 0.46, hh * 0.58);
+        ctx.moveTo(hw * 0.47, -hh * 0.68);
+        ctx.lineTo(hw * 1.02, -hh * 0.56);
+        ctx.lineTo(hw * 1.07, hh * 0.56);
+        ctx.lineTo(hw * 0.47, hh * 0.68);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -9838,95 +10265,52 @@ export default function App() {
         stripeGrad.addColorStop(0.55, "#f22214");
         stripeGrad.addColorStop(1, "#b90c05");
         ctx.fillStyle = stripeGrad;
-        ctx.fillRect(-hw * 0.14, -hh * 0.96, hw * 0.12, hh * 0.44);
-        ctx.fillRect(hw * 0.02, -hh * 0.96, hw * 0.12, hh * 0.44);
-        ctx.fillRect(-hw * 0.14, -hh * 0.44, hw * 0.12, hh * 0.5);
-        ctx.fillRect(hw * 0.02, -hh * 0.44, hw * 0.12, hh * 0.5);
-        ctx.fillRect(-hw * 0.14, hh * 0.22, hw * 0.12, hh * 0.18);
-        ctx.fillRect(hw * 0.02, hh * 0.22, hw * 0.12, hh * 0.18);
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.15, hh * 0.82);
-        ctx.lineTo(-hw * 0.02, hh * 0.82);
-        ctx.lineTo(-hw * 0.04, hh * 1.28);
-        ctx.quadraticCurveTo(-hw * 0.12, hh * 1.28, -hw * 0.18, hh * 1.24);
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(hw * 0.02, hh * 0.82);
-        ctx.lineTo(hw * 0.16, hh * 0.82);
-        ctx.lineTo(hw * 0.14, hh * 1.24);
-        ctx.quadraticCurveTo(hw * 0.08, hh * 1.28, hw * 0.02, hh * 1.28);
-        ctx.closePath();
-        ctx.fill();
+        ctx.fillRect(-hw * 1.02, -hh * 0.18, hw * 2.05, hh * 0.13);
+        ctx.fillRect(-hw * 1.02, hh * 0.05, hw * 2.05, hh * 0.13);
 
-        ctx.fillStyle = "#151515";
-        ctx.fillRect(-hw * 0.01, -hh * 0.96, hw * 0.03, hh * 2.22);
-
-        ctx.strokeStyle = "#333333";
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.64, -hh * 0.62);
-        ctx.quadraticCurveTo(-hw * 0.74, 0, -hw * 0.74, hh * 0.98);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(hw * 0.64, -hh * 0.62);
-        ctx.quadraticCurveTo(hw * 0.74, 0, hw * 0.74, hh * 0.98);
-        ctx.stroke();
-
-        ctx.fillStyle = "#060606";
-        ctx.strokeStyle = "#333333";
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.08, hh * 0.98);
-        ctx.lineTo(hw * 0.08, hh * 0.98);
-        ctx.lineTo(hw * 0.04, hh * 1.14);
-        ctx.quadraticCurveTo(0, hh * 1.18, -hw * 0.04, hh * 1.14);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#202020";
-        ctx.strokeStyle = "#555555";
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.64, hh * 0.78);
-        ctx.lineTo(-hw * 0.42, hh * 0.68);
-        ctx.lineTo(-hw * 0.46, hh * 0.96);
-        ctx.lineTo(-hw * 0.62, hh * 0.9);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(hw * 0.64, hh * 0.78);
-        ctx.lineTo(hw * 0.42, hh * 0.68);
-        ctx.lineTo(hw * 0.46, hh * 0.96);
-        ctx.lineTo(hw * 0.62, hh * 0.9);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
+        // Hood scoop and vents.
         ctx.fillStyle = "#050505";
         ctx.beginPath();
-        ctx.ellipse(-hw * 0.77, hh * 0.48, hw * 0.06, hh * 0.05, 0, 0, Math.PI * 2);
-        ctx.ellipse(hw * 0.77, hh * 0.48, hw * 0.06, hh * 0.05, 0, 0, Math.PI * 2);
+        ctx.moveTo(hw * 0.65, -hh * 0.19);
+        ctx.lineTo(hw * 0.92, -hh * 0.14);
+        ctx.lineTo(hw * 0.92, hh * 0.14);
+        ctx.lineTo(hw * 0.65, hh * 0.19);
+        ctx.closePath();
         ctx.fill();
+        [-1, 1].forEach((side) => {
+          ctx.strokeStyle = "#34383d";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(hw * 0.62, side * hh * 0.45);
+          ctx.lineTo(hw * 0.91, side * hh * 0.38);
+          ctx.stroke();
+        });
 
-        ctx.strokeStyle = "rgba(255,255,255,0.12)";
-        ctx.lineWidth = 3.2;
+        // Mirrors, headlights, and tail lights.
+        ctx.fillStyle = "#090a0c";
         ctx.beginPath();
-        ctx.moveTo(-hw * 0.62, -hh * 0.92);
-        ctx.quadraticCurveTo(-hw * 0.72, -hh * 0.14, -hw * 0.72, hh * 0.76);
+        ctx.ellipse(hw * 0.12, -hh * 1.02, hw * 0.08, hh * 0.09, 0, 0, Math.PI * 2);
+        ctx.ellipse(hw * 0.12, hh * 1.02, hw * 0.08, hh * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fbbf24";
+        ctx.globalAlpha = 0.82;
+        ctx.fillRect(hw * 1.01, -hh * 0.54, hw * 0.08, hh * 0.22);
+        ctx.fillRect(hw * 1.01, hh * 0.32, hw * 0.08, hh * 0.22);
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(-hw * 1.05, -hh * 0.52, hw * 0.06, hh * 0.2);
+        ctx.fillRect(-hw * 1.05, hh * 0.32, hw * 0.06, hh * 0.2);
+        ctx.globalAlpha = 1;
+
+        ctx.strokeStyle = "rgba(255,255,255,0.14)";
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.92, -hh * 0.69);
+        ctx.quadraticCurveTo(0, -hh * 0.84, hw * 0.91, -hh * 0.67);
         ctx.stroke();
-        ctx.strokeStyle = "rgba(255,255,255,0.1)";
-        ctx.lineWidth = 2.8;
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
         ctx.beginPath();
-        ctx.moveTo(hw * 0.54, -hh * 0.92);
-        ctx.quadraticCurveTo(hw * 0.66, -hh * 0.14, hw * 0.7, hh * 0.8);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(255,255,255,0.18)";
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.38, hh * 0.38);
-        ctx.quadraticCurveTo(0, hh * 0.48, hw * 0.38, hh * 0.38);
+        ctx.moveTo(-hw * 0.78, hh * 0.7);
+        ctx.quadraticCurveTo(hw * 0.15, hh * 0.83, hw * 0.9, hh * 0.63);
         ctx.stroke();
 
         ctx.restore();
@@ -10357,6 +10741,7 @@ export default function App() {
       else if (ball.type === "chaos") drawChaosBall(ball);
       else if (ball.type === "trident") drawTridentBall(ball);
       else if (ball.type === "shadow") drawShadowBall(ball);
+      else if (ball.type === "feralClaw") drawFeralClawBall(ball);
       else if (ball.type === "mirror") drawMirrorBall(ball);
 
       else if (ball.type === "joker") drawJokerBall(ball);
@@ -11893,7 +12278,8 @@ export default function App() {
               if (ball.trail.length > MAX_TRAIL_POINTS) ball.trail.shift();
             }
 
-            if (ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) {
+            if ((ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) ||
+                (ball.type === "feralClaw" && (ball.feralPounceState === "launch" || ball.feralPounceState === "settle"))) {
               // bypass base speed limits
             } else {
               const isWrecker = ball.type === "wrecker";
@@ -12045,6 +12431,7 @@ export default function App() {
 
                   if (ball.type === "trident") updateTrident(ball, target, game.simTime, stepDt);
                   if (ball.type === "shadow") updateShadow(ball, target, game.simTime, stepDt);
+                  if (ball.type === "feralClaw") updateFeralClaw(ball, target, game.simTime);
                   if (ball.type === "mirror") updateMirror(ball, target, game.simTime);
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
@@ -12465,6 +12852,28 @@ export default function App() {
               {renderSlider("Switch Cooldown", "shadow", "switchCooldown", 2000, 12000, 100, "ms")}
               {renderSlider("Switch Range", "shadow", "switchRange", 60, 240, 5, "px")}
               {renderSlider("Switch Knife Damage", "shadow", "switchDamage", 1, 12)}
+            </>
+          )}
+          {type === "feralClaw" && (
+            <>
+              {renderSlider("Claw Damage", "feralClaw", "slashDamage", 1, 15)}
+              {renderSlider("Claw Reach", "feralClaw", "slashRange", 10, 90, 5, "px")}
+              {renderSlider("Claw Cooldown", "feralClaw", "slashCooldown", 200, 1800, 20, "ms")}
+              {renderSlider("Claw Knockback", "feralClaw", "slashKnockback", 50, 600, 10)}
+              {renderSlider("Claw Windup", "feralClaw", "slashWindup", 40, 250, 10, "ms")}
+              {renderSlider("Claw Recoil", "feralClaw", "slashRecoil", 20, 300, 5)}
+              {renderSlider("Pounce Damage", "feralClaw", "pounceDamage", 1, 25)}
+              {renderSlider("Pounce Cooldown", "feralClaw", "pounceCooldown", 1500, 10000, 100, "ms")}
+              {renderSlider("Pounce Speed", "feralClaw", "pounceSpeed", 300, 1000, 20, "px/s")}
+              {renderSlider("Pounce Duration", "feralClaw", "pounceDuration", 200, 1000, 20, "ms")}
+              {renderSlider("Rush Windup", "feralClaw", "pounceWindup", 80, 500, 10, "ms")}
+              {renderSlider("Rush Overshoot", "feralClaw", "pounceOvershoot", 50, 450, 10, "ms")}
+              {renderSlider("Regen Delay", "feralClaw", "regenDelay", 1000, 7000, 100, "ms")}
+              {renderSlider("Regen Amount", "feralClaw", "regenAmount", 1, 5, 1)}
+              {renderSlider("Regen Interval", "feralClaw", "regenInterval", 300, 2500, 50, "ms")}
+              {renderSlider("Feral Threshold", "feralClaw", "lowHealthThreshold", 20, 80, 5, "HP")}
+              {renderSlider("Frenzy Threshold", "feralClaw", "ultimateThreshold", 10, 60, 2, "HP")}
+              {renderSlider("Frenzy Duration", "feralClaw", "ultimateDuration", 2000, 8000, 100, "ms")}
             </>
           )}
           {type === "mirror" && (
