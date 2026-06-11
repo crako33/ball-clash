@@ -229,17 +229,57 @@ const BALL_TYPES = {
     radius: 31,
     description: "Draws a burning road across wall bounces, then drives a blazing car along it five times.",
   },
+  eightBall: {
+    id: "eightBall",
+    name: "Eight Ball",
+    shortName: "8BALL",
+    color: "#050505",
+    stroke: "#f8fafc",
+    radius: 31,
+    description: "Summons a cue from outside the arena and breaks forward. Every powered collision deals damage and builds speed and knockback.",
+  },
 };
 
 const getHpBarColor = (type) => {
   if (type === "arm") return "#8b0000";
   if (type === "gun") return "#ffffff";
+  if (type === "eightBall") return "#f8fafc";
   return BALL_TYPES[type]?.color || "#4ade80";
 };
 
 const GRID_SIZE = 7;
 const TILE_SIZE = 64;
 const ARENA_SIZE = GRID_SIZE * TILE_SIZE;
+
+const getEightBallCueAngle = (ball, target, bankShot, width = ARENA_SIZE, height = ARENA_SIZE) => {
+  if (!bankShot) return Math.atan2(target.y - ball.y, target.x - ball.x);
+
+  const pad = 18 + ball.r;
+  const walls = [
+    { axis: "x", value: pad, mirroredX: pad * 2 - target.x, mirroredY: target.y },
+    { axis: "x", value: width - pad, mirroredX: (width - pad) * 2 - target.x, mirroredY: target.y },
+    { axis: "y", value: pad, mirroredX: target.x, mirroredY: pad * 2 - target.y },
+    { axis: "y", value: height - pad, mirroredX: target.x, mirroredY: (height - pad) * 2 - target.y },
+  ];
+
+  const candidates = walls.map((wall) => {
+    const rayDx = wall.mirroredX - ball.x;
+    const rayDy = wall.mirroredY - ball.y;
+    const denominator = wall.axis === "x" ? rayDx : rayDy;
+    if (Math.abs(denominator) < 0.001) return null;
+    const t = (wall.value - (wall.axis === "x" ? ball.x : ball.y)) / denominator;
+    if (t <= 0 || t >= 1) return null;
+    const hitX = ball.x + rayDx * t;
+    const hitY = ball.y + rayDy * t;
+    if (hitX < pad || hitX > width - pad || hitY < pad || hitY > height - pad) return null;
+    const routeLength = Math.hypot(hitX - ball.x, hitY - ball.y) + Math.hypot(target.x - hitX, target.y - hitY);
+    return { angle: Math.atan2(hitY - ball.y, hitX - ball.x), routeLength };
+  }).filter(Boolean);
+
+  if (!candidates.length) return Math.atan2(target.y - ball.y, target.x - ball.x);
+  candidates.sort((a, b) => a.routeLength - b.routeLength);
+  return candidates[0].angle;
+};
 const OPENING_SKILL_DELAY = 2000;
 const MIN_DAMAGE = 1;
 const SHIELD_GUARD_HITS = 5;
@@ -296,6 +336,7 @@ const BALANCE = {
   gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
   constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
   fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
+  eightBall: { cooldown: 6200, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, hitDamage: 5, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -322,6 +363,7 @@ const loadSavedBalanceSettings = () => {
 
 const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
 const isWreckerJumpInvulnerable = (ball) => (ball?.type === "wrecker" && ball.wreckerState === "leaping") || (ball?.type === "dragon" && ball.dragonState === "dashing");
+const isEightBallBreakInvulnerable = (ball, currentTime) => ball?.type === "eightBall" && currentTime < (ball.eightPoweredUntil || 0);
 
 const interruptSkills = (ball) => {
   if (!ball) return;
@@ -670,6 +712,10 @@ export default function App() {
       fsRoadSegments: [],
       fsRoadStartWallPoint: null,
       fsNextRoadAt: 0,
+      // Eight Ball Specific
+      eightCueState: "idle", eightCueStartAt: 0, eightCueStrikeAt: 0, eightCueContactAt: 0, eightCueAngle: side === "left" ? 0 : Math.PI,
+      eightNextCueAt: type === "eightBall" ? 1800 : 0, eightPoweredUntil: 0, eightPowerStacks: 0, eightNextHitAt: 0, eightStrikeFlashUntil: 0,
+      eightRollX: 0, eightRollY: 0, eightCueCount: 0, eightCueBankShot: false, eightInvulnerableHealth: null,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
       nextPsychicAt: 0,
@@ -1305,7 +1351,8 @@ export default function App() {
             }
 
             if ((ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) ||
-                (ball.type === "feralClaw" && simTime < (ball.feralPounceUntil || 0))) {
+                (ball.type === "feralClaw" && simTime < (ball.feralPounceUntil || 0)) ||
+                (ball.type === "eightBall" && simTime < (ball.eightPoweredUntil || 0))) {
               // bypass base speed limits
             } else {
               const isWrecker = ball.type === "wrecker";
@@ -1349,6 +1396,8 @@ export default function App() {
               const dpTanB = rightBall.vx * tx + rightBall.vy * ty;
               const dpNormA = leftBall.vx * nx + leftBall.vy * ny;
               const dpNormB = rightBall.vx * nx + rightBall.vy * ny;
+              var eightIncomingLeft = { vx: leftBall.vx, vy: leftBall.vy };
+              var eightIncomingRight = { vx: rightBall.vx, vy: rightBall.vy };
 
               if (aAnchored) {
                 rightBall.vx = tx * dpTanB - nx * dpNormB;
@@ -1368,6 +1417,7 @@ export default function App() {
             const localApplyDamage = (defender, amount, cooldownKey, cd = 360) => {
               if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
               if (isWreckerJumpInvulnerable(defender)) return;
+              if (isEightBallBreakInvulnerable(defender, simTime)) return;
               if (damageCooldowns[cooldownKey] > simTime) return;
               let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
               defender.health = Math.max(0, defender.health - finalAmount);
@@ -1376,6 +1426,35 @@ export default function App() {
             };
 
           if (collided && simTime >= OPENING_SKILL_DELAY) {
+            const applyLocalEightImpact = (attacker, defender, hitNx, hitNy, incomingVelocity) => {
+              if (attacker.type !== "eightBall" || simTime >= (attacker.eightPoweredUntil || 0)) return;
+              const bal = balance.eightBall;
+              if (simTime < (attacker.eightNextHitAt || 0)) return;
+              attacker.eightNextHitAt = simTime + bal.hitCooldown;
+              attacker.eightPowerStacks = Math.min(bal.maxPowerStacks, (attacker.eightPowerStacks || 0) + 1);
+              localApplyDamage(defender, bal.hitDamage, `${attacker.id}-eight-impact`, bal.hitCooldown);
+              const recoil = bal.recoilBase + (attacker.eightPowerStacks - 1) * bal.recoilGainPerHit;
+              defender.vx += hitNx * recoil;
+              defender.vy += hitNy * recoil;
+              const incomingSpeed = Math.hypot(incomingVelocity.vx, incomingVelocity.vy);
+              const normalDot = incomingVelocity.vx * hitNx + incomingVelocity.vy * hitNy;
+              let reflectedVx = incomingVelocity.vx - 2 * normalDot * hitNx;
+              let reflectedVy = incomingVelocity.vy - 2 * normalDot * hitNy;
+              let reflectedSpeed = Math.hypot(reflectedVx, reflectedVy);
+              if (reflectedSpeed < 10 || normalDot <= 0) {
+                reflectedVx = -hitNx;
+                reflectedVy = -hitNy;
+                reflectedSpeed = 1;
+              }
+              const speed = Math.min(bal.maxPoweredSpeed, Math.max(bal.launchSpeed, incomingSpeed) + bal.speedGainPerHit);
+              attacker.vx = (reflectedVx / reflectedSpeed) * speed;
+              attacker.vy = (reflectedVy / reflectedSpeed) * speed;
+            };
+            const collisionNx = dist > 0 ? dx / dist : 1;
+            const collisionNy = dist > 0 ? dy / dist : 0;
+            applyLocalEightImpact(leftBall, rightBall, collisionNx, collisionNy, eightIncomingLeft || { vx: leftBall.vx, vy: leftBall.vy });
+            applyLocalEightImpact(rightBall, leftBall, -collisionNx, -collisionNy, eightIncomingRight || { vx: rightBall.vx, vy: rightBall.vy });
+
             if (leftBall.type === "spore" && leftBall.hydraGlowStacks > 0) {
               localApplyDamage(rightBall, leftBall.hydraGlowStacks * balance.spore.cactusDamage, `${leftBall.id}-hydra-glow-hit`, 250);
               leftBall.hydraGlowStacks = 0;
@@ -1561,6 +1640,43 @@ export default function App() {
                   enemy.vy += Math.sin(targetAngle) * bal.slashKnockback;
                   ball.vx -= Math.cos(targetAngle) * bal.slashRecoil;
                   ball.vy -= Math.sin(targetAngle) * bal.slashRecoil;
+                }
+              }
+              if (ball.type === "eightBall") {
+                const bal = balance.eightBall;
+                if (ball.eightPoweredUntil && simTime >= ball.eightPoweredUntil) {
+                  ball.eightPoweredUntil = 0;
+                  ball.eightPowerStacks = 0;
+                  ball.eightCueState = "idle";
+                  ball.eightInvulnerableHealth = null;
+                  ball.eightNextCueAt = simTime + bal.cooldown;
+                }
+                if (ball.eightCueState === "pullback") {
+                  ball.vx *= 0.74;
+                  ball.vy *= 0.74;
+                  ball.eightCueAngle = getEightBallCueAngle(ball, enemy, ball.eightCueBankShot);
+                  if (simTime >= ball.eightCueStrikeAt) {
+                    ball.eightCueState = "striking";
+                    ball.eightCueContactAt = simTime + bal.cueStrikeDuration;
+                  }
+                } else if (ball.eightCueState === "striking") {
+                  ball.vx = 0;
+                  ball.vy = 0;
+                  if (simTime >= ball.eightCueContactAt) {
+                    ball.eightCueState = "powered";
+                    ball.eightPoweredUntil = simTime + bal.poweredDuration;
+                    ball.eightPowerStacks = 0;
+                    ball.eightInvulnerableHealth = ball.health;
+                    ball.vx = Math.cos(ball.eightCueAngle) * bal.launchSpeed;
+                    ball.vy = Math.sin(ball.eightCueAngle) * bal.launchSpeed;
+                  }
+                } else if (simTime >= (ball.eightNextCueAt || 0) && simTime >= (ball.eightPoweredUntil || 0)) {
+                  ball.eightCueCount = (ball.eightCueCount || 0) + 1;
+                  ball.eightCueBankShot = ball.eightCueCount % 2 === 0;
+                  ball.eightCueState = "pullback";
+                  ball.eightCueStartAt = simTime;
+                  ball.eightCueStrikeAt = simTime + bal.cueWindup;
+                  ball.eightCueAngle = getEightBallCueAngle(ball, enemy, ball.eightCueBankShot);
                 }
               }
               if (ball.type === "gun") {
@@ -2749,6 +2865,13 @@ export default function App() {
               }
             });
           });
+
+          balls.forEach((ball) => {
+            if (!isEightBallBreakInvulnerable(ball, simTime)) return;
+            const protectedHealth = ball.eightInvulnerableHealth ?? ball.health;
+            ball.health = Math.max(ball.health, protectedHealth);
+            ball.eightInvulnerableHealth = ball.health;
+          });
         }
 
         if (leftBall.health <= 0 && rightBall.health > 0) { rightWins++; rightRemainingHpTotal += rightBall.health; }
@@ -2791,6 +2914,7 @@ export default function App() {
       if (defender.constellationShieldedUntil && currentTime < defender.constellationShieldedUntil) return;
       if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
       if (isWreckerJumpInvulnerable(defender)) return;
+      if (isEightBallBreakInvulnerable(defender, currentTime)) return;
       if (game.damageCooldowns[cooldownKey] > currentTime) return;
       
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
@@ -3225,7 +3349,7 @@ export default function App() {
                   damage: Math.max(8, fsBal.carDamage || 8),
                   createdTime: game.simTime,
                 });
-                playSound("megaLeap"); // Roaring engine sound substitute
+                playSound("carRev", 1, 300);
                 game.screenShake = Math.max(game.screenShake || 0, 18);
                 game.floatingTexts = game.floatingTexts || [];
                 game.floatingTexts.push({
@@ -3430,6 +3554,8 @@ export default function App() {
       const tx = -ny, ty = nx;
       const dpTanA = a.vx * tx + a.vy * ty, dpTanB = b.vx * tx + b.vy * ty;
       const dpNormA = a.vx * nx + a.vy * ny, dpNormB = b.vx * nx + b.vy * ny;
+      const incomingA = { vx: a.vx, vy: a.vy };
+      const incomingB = { vx: b.vx, vy: b.vy };
       
       if (aAnchored) {
         b.vx = tx * dpTanB - nx * dpNormB;
@@ -3443,6 +3569,51 @@ export default function App() {
         a.vx = tx * dpTanA + nx * mA; a.vy = ty * dpTanA + ny * mA;
         b.vx = tx * dpTanB + nx * mB; b.vy = ty * dpTanB + ny * mB;
       }
+
+      const applyEightBallImpact = (attacker, defender, hitNx, hitNy, incomingVelocity) => {
+        if (attacker.type !== "eightBall" || game.simTime >= (attacker.eightPoweredUntil || 0)) return;
+        const bal = game.balance.eightBall || BALANCE.eightBall;
+        if (game.simTime < (attacker.eightNextHitAt || 0)) return;
+
+        attacker.eightNextHitAt = game.simTime + bal.hitCooldown;
+        attacker.eightPowerStacks = Math.min(bal.maxPowerStacks, (attacker.eightPowerStacks || 0) + 1);
+        const stack = attacker.eightPowerStacks;
+        applyDamage(defender, bal.hitDamage, `${attacker.id}-eight-impact-${stack}`, game.simTime, bal.hitCooldown);
+
+        const recoil = bal.recoilBase + (stack - 1) * bal.recoilGainPerHit;
+        if (!hasStringBounceGuard(defender)) {
+          defender.vx += hitNx * recoil;
+          defender.vy += hitNy * recoil;
+        }
+
+        const incomingSpeed = Math.hypot(incomingVelocity.vx, incomingVelocity.vy);
+        const normalDot = incomingVelocity.vx * hitNx + incomingVelocity.vy * hitNy;
+        let reflectedVx = incomingVelocity.vx - 2 * normalDot * hitNx;
+        let reflectedVy = incomingVelocity.vy - 2 * normalDot * hitNy;
+        let reflectedSpeed = Math.hypot(reflectedVx, reflectedVy);
+        if (reflectedSpeed < 10 || normalDot <= 0) {
+          reflectedVx = -hitNx;
+          reflectedVy = -hitNy;
+          reflectedSpeed = 1;
+        }
+        const boostedSpeed = Math.min(bal.maxPoweredSpeed, Math.max(bal.launchSpeed, incomingSpeed) + bal.speedGainPerHit);
+        attacker.vx = (reflectedVx / reflectedSpeed) * boostedSpeed;
+        attacker.vy = (reflectedVy / reflectedSpeed) * boostedSpeed;
+
+        const ownerStats = attacker.side === "left" ? game.stats.left : game.stats.right;
+        ownerStats.damageDealt += Math.max(MIN_DAMAGE, Math.round(bal.hitDamage));
+        ownerStats.hitsLanded++;
+        game.screenShake = Math.max(game.screenShake || 0, 5 + stack);
+        spawnSparks(defender.x, defender.y, stack >= bal.maxPowerStacks ? "#fbbf24" : "#f8fafc", 7 + stack);
+        playSound("cueImpact", 0.72 + stack * 0.04, 100);
+        game.floatingTexts.push({
+          x: attacker.x, y: attacker.y - attacker.r - 16, vy: -34,
+          text: `POWER ${stack}`, color: stack >= bal.maxPowerStacks ? "#fbbf24" : "#e2e8f0", life: 0.5, maxLife: 0.5
+        });
+      };
+
+      applyEightBallImpact(a, b, nx, ny, incomingA);
+      applyEightBallImpact(b, a, -nx, -ny, incomingB);
       return true;
     };
 
@@ -5053,6 +5224,68 @@ export default function App() {
             maxLife: 0.6
           });
         }
+      }
+    };
+
+    const updateEightBall = (ball, target, currentTime) => {
+      const bal = game.balance.eightBall || BALANCE.eightBall;
+
+      if (ball.eightPoweredUntil && currentTime >= ball.eightPoweredUntil) {
+        ball.eightPoweredUntil = 0;
+        ball.eightPowerStacks = 0;
+        ball.eightCueState = "idle";
+        ball.eightInvulnerableHealth = null;
+        ball.eightNextCueAt = currentTime + bal.cooldown;
+      }
+
+      if (ball.eightCueState === "pullback") {
+        ball.vx *= 0.74;
+        ball.vy *= 0.74;
+        ball.eightCueAngle = getEightBallCueAngle(ball, target, ball.eightCueBankShot, game.width, game.height);
+        if (currentTime >= ball.eightCueStrikeAt) {
+          ball.eightCueState = "striking";
+          ball.eightCueContactAt = currentTime + bal.cueStrikeDuration;
+        }
+        return;
+      }
+
+      if (ball.eightCueState === "striking") {
+        ball.vx = 0;
+        ball.vy = 0;
+        if (currentTime >= ball.eightCueContactAt) {
+          ball.eightCueState = "powered";
+          ball.eightPoweredUntil = currentTime + bal.poweredDuration;
+          ball.eightPowerStacks = 0;
+          ball.eightInvulnerableHealth = ball.health;
+          ball.eightStrikeFlashUntil = currentTime + 220;
+          ball.vx = Math.cos(ball.eightCueAngle) * bal.launchSpeed;
+          ball.vy = Math.sin(ball.eightCueAngle) * bal.launchSpeed;
+          game.screenShake = Math.max(game.screenShake || 0, 7);
+          spawnSparks(ball.x, ball.y, "#f8fafc", 12);
+          playSound("cueStrike", 0.95, 180);
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 20, vy: -42,
+            text: "BREAK!", color: "#f8fafc", life: 0.65, maxLife: 0.65
+          });
+        }
+        return;
+      }
+
+      if (currentTime < (ball.eightPoweredUntil || 0)) return;
+
+      if (currentTime >= (ball.eightNextCueAt || 0)) {
+        ball.eightCueCount = (ball.eightCueCount || 0) + 1;
+        ball.eightCueBankShot = ball.eightCueCount % 2 === 0;
+        ball.eightCueState = "pullback";
+        ball.eightCueStartAt = currentTime;
+        ball.eightCueStrikeAt = currentTime + bal.cueWindup;
+        ball.eightCueAngle = getEightBallCueAngle(ball, target, ball.eightCueBankShot, game.width, game.height);
+        playSound("cueReady", 0.7, 300);
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 20, vy: -34,
+          text: ball.eightCueBankShot ? "BANK SHOT" : "DIRECT SHOT",
+          color: ball.eightCueBankShot ? "#67e8f9" : "#f8fafc", life: 0.6, maxLife: 0.6
+        });
       }
     };
 
@@ -6845,7 +7078,7 @@ export default function App() {
         while (car.distanceTravelled >= totalDist && car.pass < car.maxPasses) {
           car.distanceTravelled -= totalDist;
           car.pass += 1;
-          playSound("megaLeap", 0.65, 120);
+          playSound("carRev", 0.62, 320);
         }
         if (car.distanceTravelled >= totalDist) {
           const owner = balls.find((ball) => ball.id === car.ownerId);
@@ -9835,7 +10068,7 @@ export default function App() {
       // --- Body (Deep Navy Flat Color) ---
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = "#0f172a"; // Deep navy
+      ctx.fillStyle = "#153665"; // Visible dark blue
       ctx.fill();
 
       // --- Gold Horizontal Band ---
@@ -9893,6 +10126,202 @@ export default function App() {
       ctx.stroke();
 
       ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawEightBall = (ball) => {
+      const bal = game.balance.eightBall || BALANCE.eightBall;
+      const pulling = ball.eightCueState === "pullback" && game.simTime < ball.eightCueStrikeAt;
+      const striking = ball.eightCueState === "striking" && game.simTime < ball.eightCueContactAt;
+      const powered = game.simTime < (ball.eightPoweredUntil || 0);
+      const strikeFlash = game.simTime < (ball.eightStrikeFlashUntil || 0);
+      const angle = ball.eightCueAngle || 0;
+
+      if (pulling || striking) {
+        // Preview the break direction using the same center limits as wall physics.
+        const guidePoints = [{ x: ball.x, y: ball.y }];
+        const arenaPad = 18 + ball.r;
+        const minX = arenaPad;
+        const maxX = game.width - arenaPad;
+        const minY = arenaPad;
+        const maxY = game.height - arenaPad;
+        let guideX = ball.x;
+        let guideY = ball.y;
+        let guideDx = Math.cos(angle);
+        let guideDy = Math.sin(angle);
+        let remainingGuideLength = Math.max(game.width, game.height) * 1.35;
+
+        for (let bounce = 0; bounce < 2 && remainingGuideLength > 0; bounce++) {
+          const xDistance = Math.abs(guideDx) > 0.0001
+            ? ((guideDx > 0 ? maxX : minX) - guideX) / guideDx
+            : Infinity;
+          const yDistance = Math.abs(guideDy) > 0.0001
+            ? ((guideDy > 0 ? maxY : minY) - guideY) / guideDy
+            : Infinity;
+          const segmentDistance = Math.min(xDistance, yDistance, remainingGuideLength);
+          guideX += guideDx * segmentDistance;
+          guideY += guideDy * segmentDistance;
+          guidePoints.push({ x: guideX, y: guideY });
+          remainingGuideLength -= segmentDistance;
+          if (segmentDistance === xDistance) guideDx *= -1;
+          if (segmentDistance === yDistance) guideDy *= -1;
+          guideX += guideDx * 0.1;
+          guideY += guideDy * 0.1;
+        }
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.setLineDash([9, 8]);
+        ctx.lineDashOffset = -game.simTime * 0.025;
+        ctx.strokeStyle = striking ? "rgba(103,232,249,0.82)" : "rgba(226,232,240,0.58)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(guidePoints[0].x, guidePoints[0].y);
+        for (let i = 1; i < guidePoints.length; i++) ctx.lineTo(guidePoints[i].x, guidePoints[i].y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        guidePoints.slice(1).forEach((point, index) => {
+          ctx.globalAlpha = index === guidePoints.length - 2 ? 0.75 : 0.45;
+          ctx.strokeStyle = index === 0 ? "#f8fafc" : "#67e8f9";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, index === 0 ? 5 : 3.5, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        ctx.restore();
+
+        const backX = -Math.cos(angle);
+        const backY = -Math.sin(angle);
+        const distances = [];
+        if (Math.abs(backX) > 0.001) distances.push(((backX > 0 ? game.width : 0) - ball.x) / backX);
+        if (Math.abs(backY) > 0.001) distances.push(((backY > 0 ? game.height : 0) - ball.y) / backY);
+        const wallDistance = Math.min(...distances.filter((value) => value > 0));
+        const pullProgress = pulling ? clamp((game.simTime - ball.eightCueStartAt) / Math.max(1, bal.cueWindup), 0, 1) : 1;
+        const strikeProgress = striking ? clamp((game.simTime - ball.eightCueStrikeAt) / Math.max(1, bal.cueStrikeDuration), 0, 1) : 0;
+        const easedPull = 1 - Math.pow(1 - pullProgress, 2);
+        const easedStrike = strikeProgress * strikeProgress * strikeProgress;
+        const restingGap = 18;
+        const fullPullGap = restingGap + bal.cuePullback;
+        const gap = striking
+          ? fullPullGap + (1 - fullPullGap) * easedStrike
+          : restingGap + bal.cuePullback * easedPull;
+        const tipX = ball.x + backX * (ball.r + gap);
+        const tipY = ball.y + backY * (ball.r + gap);
+        const wallX = ball.x + backX * wallDistance;
+        const wallY = ball.y + backY * wallDistance;
+        const buttX = wallX + backX * 52;
+        const buttY = wallY + backY * 52;
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "rgba(0,0,0,0.32)";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(buttX + 3, buttY + 4);
+        ctx.lineTo(tipX + 3, tipY + 4);
+        ctx.stroke();
+        const cueGradient = ctx.createLinearGradient(buttX, buttY, tipX, tipY);
+        cueGradient.addColorStop(0, "#3f1d0b");
+        cueGradient.addColorStop(0.16, "#7c2d12");
+        cueGradient.addColorStop(0.72, "#d6a05f");
+        cueGradient.addColorStop(1, "#f5deb3");
+        ctx.strokeStyle = cueGradient;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(buttX, buttY);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+        ctx.strokeStyle = "#67e8f9";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(tipX + Math.cos(angle) * 7, tipY + Math.sin(angle) * 7);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (powered) {
+        const stack = ball.eightPowerStacks || 0;
+        ctx.save();
+        ctx.globalAlpha = 0.18 + stack * 0.045;
+        ctx.strokeStyle = stack >= bal.maxPowerStacks ? "#fbbf24" : "#e2e8f0";
+        ctx.lineWidth = 3 + stack * 0.4;
+        ctx.setLineDash([8, 6]);
+        ctx.lineDashOffset = -game.simTime * 0.08;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 7 + stack * 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.5 + Math.sin(game.simTime * 0.02) * 0.12;
+        ctx.strokeStyle = "#67e8f9";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      const bodyGradient = ctx.createRadialGradient(-ball.r * 0.35, -ball.r * 0.42, 2, 0, 0, ball.r * 1.15);
+      bodyGradient.addColorStop(0, "#4b5563");
+      bodyGradient.addColorStop(0.18, "#17191d");
+      bodyGradient.addColorStop(0.7, "#050505");
+      bodyGradient.addColorStop(1, "#000000");
+      ctx.fillStyle = bodyGradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = strikeFlash ? "#67e8f9" : "#a3a3a3";
+      ctx.lineWidth = strikeFlash ? 4 : 2.5;
+      ctx.stroke();
+
+      // Project the numbered patch around the rolling sphere.
+      const rollX = ball.eightRollX || 0;
+      const rollY = ball.eightRollY || 0;
+      const patchNormalX = Math.sin(rollY) * Math.cos(rollX);
+      const patchNormalY = -Math.sin(rollX);
+      const patchNormalZ = Math.cos(rollY) * Math.cos(rollX);
+      if (patchNormalZ > 0.12) {
+        const visibility = clamp((patchNormalZ - 0.12) / 0.88, 0, 1);
+        const patchTravel = ball.r * (0.58 + visibility * 0.04);
+        const patchX = patchNormalX * patchTravel;
+        const patchY = patchNormalY * patchTravel;
+        const patchWidth = ball.r * (0.27 + visibility * 0.21);
+        const patchHeight = ball.r * (0.36 + visibility * 0.12);
+        const radialAngle = Math.atan2(patchY, patchX);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r - 1, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.translate(patchX, patchY);
+        ctx.rotate(radialAngle);
+        ctx.globalAlpha = 0.35 + visibility * 0.65;
+        ctx.fillStyle = "#f8fafc";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, patchWidth, patchHeight, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#d4d4d8";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        if (visibility > 0.22) {
+          ctx.fillStyle = "#050505";
+          ctx.font = `bold ${Math.round(ball.r * (0.42 + visibility * 0.3))}px Arial`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("8", 0, 1);
+        }
+        ctx.restore();
+      }
+
+      ctx.fillStyle = "rgba(255,255,255,0.32)";
+      ctx.beginPath();
+      ctx.ellipse(-ball.r * 0.34, -ball.r * 0.42, ball.r * 0.16, ball.r * 0.1, -0.65, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
       drawHealthInsideBall(ball);
     };
 
@@ -10152,24 +10581,23 @@ export default function App() {
         if (dist <= 0) return;
         const angle = car.angle ?? Math.atan2(dy, dx);
         const carVisualScale = (game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32;
-        const hw = car.radius * 1.72 * carVisualScale;
-        const hh = car.radius * 0.62 * Math.max(1.08, carVisualScale * 0.95);
-        const carBody = "#111315";
-        const carBodyShade = "#23272d";
-        const carWindow = "#3b4550";
-        const carTrim = "#f97316";
-        const carTrimBright = "#fbbf24";
-        const carWheel = "#1f242b";
+        const hw = car.radius * 1.88 * carVisualScale;
+        const hh = car.radius * 0.48 * Math.max(1.08, carVisualScale * 0.95);
+        const bikeBlack = "#090b0d";
+        const bikeGraphite = "#24282d";
+        const bikeChrome = "#9ca3af";
+        const bikeRed = "#ef2b18";
+        const bikeOrange = "#f97316";
 
         ctx.save();
         ctx.translate(car.x, car.y);
         ctx.rotate(angle);
 
-        // Road heat trail behind
+        // Road heat trail behind.
         ctx.save();
         ctx.globalAlpha = 0.22;
         ctx.strokeStyle = "rgba(251,191,36,0.38)";
-        ctx.lineWidth = car.radius * 1.05 * carVisualScale;
+        ctx.lineWidth = car.radius * 0.72 * carVisualScale;
         ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(-(car.radius * 3.5 * carVisualScale), 0);
@@ -10177,160 +10605,201 @@ export default function App() {
         ctx.stroke();
         ctx.restore();
 
-        // Long top-down muscle-car body.
+        // Top-down chopper motorcycle.
         ctx.save();
         ctx.shadowColor = "rgba(249, 115, 22, 0.22)";
         ctx.shadowBlur = 10 + pulse * 4;
-        const glossGrad = ctx.createLinearGradient(-hw, -hh, hw, hh);
-        glossGrad.addColorStop(0, "#070707");
-        glossGrad.addColorStop(0.45, "#1a1a1a");
-        glossGrad.addColorStop(1, "#000000");
-        ctx.fillStyle = glossGrad;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 1.08, -hh * 0.58);
-        ctx.lineTo(-hw * 0.94, -hh * 0.88);
-        ctx.lineTo(hw * 0.68, -hh * 0.96);
-        ctx.lineTo(hw * 0.98, -hh * 0.78);
-        ctx.lineTo(hw * 1.13, -hh * 0.45);
-        ctx.lineTo(hw * 1.13, hh * 0.45);
-        ctx.lineTo(hw * 0.98, hh * 0.78);
-        ctx.lineTo(hw * 0.68, hh * 0.96);
-        ctx.lineTo(-hw * 0.94, hh * 0.88);
-        ctx.lineTo(-hw * 1.08, hh * 0.58);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Four wheels sit outside the body so the silhouette reads as a car.
-        ctx.fillStyle = carWheel;
-        [[-0.68, -1], [0.68, -1], [-0.68, 1], [0.68, 1]].forEach(([x, side]) => {
-          ctx.beginPath();
-          ctx.roundRect(hw * x - hw * 0.15, side * hh * 0.91 - hh * 0.16, hw * 0.3, hh * 0.32, 4);
-          ctx.fill();
-        });
-
-        // Rear deck, cabin, windshield, and long hood.
-        ctx.fillStyle = carBodyShade;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.96, -hh * 0.68);
-        ctx.lineTo(-hw * 0.43, -hh * 0.72);
-        ctx.lineTo(-hw * 0.35, hh * 0.72);
-        ctx.lineTo(-hw * 0.96, hh * 0.68);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = "#24272b";
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.39, -hh * 0.73);
-        ctx.lineTo(hw * 0.34, -hh * 0.76);
-        ctx.lineTo(hw * 0.48, -hh * 0.55);
-        ctx.lineTo(hw * 0.43, hh * 0.55);
-        ctx.lineTo(hw * 0.29, hh * 0.76);
-        ctx.lineTo(-hw * 0.39, hh * 0.73);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = carWindow;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.31, -hh * 0.58);
-        ctx.lineTo(-hw * 0.11, -hh * 0.62);
-        ctx.lineTo(-hw * 0.11, hh * 0.62);
-        ctx.lineTo(-hw * 0.31, hh * 0.58);
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(hw * 0.04, -hh * 0.62);
-        ctx.lineTo(hw * 0.31, -hh * 0.55);
-        ctx.lineTo(hw * 0.39, hh * 0.55);
-        ctx.lineTo(hw * 0.04, hh * 0.62);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = "#0b0c0e";
-        ctx.strokeStyle = "#30343a";
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.moveTo(hw * 0.47, -hh * 0.68);
-        ctx.lineTo(hw * 1.02, -hh * 0.56);
-        ctx.lineTo(hw * 1.07, hh * 0.56);
-        ctx.lineTo(hw * 0.47, hh * 0.68);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        const stripeGrad = ctx.createLinearGradient(0, -hh * 1.1, 0, hh * 1.4);
-        stripeGrad.addColorStop(0, "#ff5a45");
-        stripeGrad.addColorStop(0.55, "#f22214");
-        stripeGrad.addColorStop(1, "#b90c05");
-        ctx.fillStyle = stripeGrad;
-        ctx.fillRect(-hw * 1.02, -hh * 0.18, hw * 2.05, hh * 0.13);
-        ctx.fillRect(-hw * 1.02, hh * 0.05, hw * 2.05, hh * 0.13);
-
-        // Hood scoop and vents.
-        ctx.fillStyle = "#050505";
-        ctx.beginPath();
-        ctx.moveTo(hw * 0.65, -hh * 0.19);
-        ctx.lineTo(hw * 0.92, -hh * 0.14);
-        ctx.lineTo(hw * 0.92, hh * 0.14);
-        ctx.lineTo(hw * 0.65, hh * 0.19);
-        ctx.closePath();
-        ctx.fill();
-        [-1, 1].forEach((side) => {
-          ctx.strokeStyle = "#34383d";
+        // Inline rear and front wheels.
+        const drawWheel = (x, length, width) => {
+          ctx.fillStyle = "#050607";
+          ctx.strokeStyle = "#343a40";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(hw * 0.62, side * hh * 0.45);
-          ctx.lineTo(hw * 0.91, side * hh * 0.38);
+          ctx.roundRect(x - length / 2, -width / 2, length, width, width * 0.45);
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = "#9ca3af";
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(x, -width * 0.38);
+          ctx.lineTo(x, width * 0.38);
+          ctx.stroke();
+        };
+        drawWheel(-hw * 0.76, hw * 0.42, hh * 1.2);
+        drawWheel(hw * 0.84, hw * 0.38, hh * 1.08);
+
+        // Long chrome fork and compact black frame.
+        ctx.strokeStyle = bikeChrome;
+        ctx.lineWidth = 3;
+        [-1, 1].forEach((side) => {
+          ctx.beginPath();
+          ctx.moveTo(hw * 0.17, side * hh * 0.34);
+          ctx.lineTo(hw * 0.82, side * hh * 0.37);
+          ctx.stroke();
+        });
+        ctx.strokeStyle = bikeGraphite;
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.63, 0);
+        ctx.lineTo(-hw * 0.12, -hh * 0.48);
+        ctx.lineTo(hw * 0.26, 0);
+        ctx.lineTo(-hw * 0.12, hh * 0.48);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Rear fender wraps over the fat wheel.
+        ctx.strokeStyle = bikeRed;
+        ctx.lineWidth = hh * 0.34;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.94, 0);
+        ctx.lineTo(-hw * 0.58, 0);
+        ctx.stroke();
+        ctx.strokeStyle = "#ff6a2a";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.97, 0);
+        ctx.lineTo(-hw * 0.55, 0);
+        ctx.stroke();
+
+        // Low seat.
+        ctx.fillStyle = "#111315";
+        ctx.strokeStyle = "#353a40";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(-hw * 0.33, 0, hw * 0.22, hh * 0.48, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Exposed V-twin engine.
+        ctx.fillStyle = "#59616a";
+        ctx.strokeStyle = "#111315";
+        ctx.lineWidth = 2;
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          ctx.translate(-hw * 0.03, side * hh * 0.25);
+          ctx.rotate(side * 0.48);
+          ctx.fillRect(-hw * 0.13, -hh * 0.2, hw * 0.27, hh * 0.4);
+          for (let fin = -2; fin <= 2; fin++) {
+            ctx.beginPath();
+            ctx.moveTo(-hw * 0.11, fin * hh * 0.07);
+            ctx.lineTo(hw * 0.11, fin * hh * 0.07);
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+
+        // Red teardrop fuel tank with a hot center stripe.
+        const tankGrad = ctx.createLinearGradient(-hw * 0.05, -hh, hw * 0.35, hh);
+        tankGrad.addColorStop(0, "#7f160d");
+        tankGrad.addColorStop(0.55, bikeRed);
+        tankGrad.addColorStop(1, "#a3180d");
+        ctx.fillStyle = tankGrad;
+        ctx.strokeStyle = "#ff8a3d";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.04, -hh * 0.56);
+        ctx.quadraticCurveTo(hw * 0.32, -hh * 0.66, hw * 0.4, 0);
+        ctx.quadraticCurveTo(hw * 0.32, hh * 0.66, -hw * 0.04, hh * 0.56);
+        ctx.quadraticCurveTo(-hw * 0.15, 0, -hw * 0.04, -hh * 0.56);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#fbbf24";
+        ctx.fillRect(hw * 0.04, -hh * 0.08, hw * 0.28, hh * 0.16);
+
+        // Steering clamp, swept handlebar, grips, and anchored mirrors.
+        const barX = hw * 0.41;
+        const gripX = hw * 0.52;
+        const gripY = hh * 1.3;
+        ctx.strokeStyle = bikeChrome;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(hw * 0.29, -hh * 0.2);
+        ctx.lineTo(barX, -hh * 0.38);
+        ctx.quadraticCurveTo(gripX, -hh * 0.72, gripX, -gripY);
+        ctx.moveTo(hw * 0.29, hh * 0.2);
+        ctx.lineTo(barX, hh * 0.38);
+        ctx.quadraticCurveTo(gripX, hh * 0.72, gripX, gripY);
+        ctx.stroke();
+
+        ctx.fillStyle = "#111315";
+        ctx.beginPath();
+        ctx.roundRect(gripX - hw * 0.05, -gripY - hh * 0.34, hw * 0.1, hh * 0.38, 3);
+        ctx.roundRect(gripX - hw * 0.05, gripY - hh * 0.04, hw * 0.1, hh * 0.38, 3);
+        ctx.fill();
+
+        ctx.strokeStyle = "#6b7280";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(gripX, -gripY - hh * 0.18);
+        ctx.lineTo(hw * 0.62, -hh * 1.63);
+        ctx.moveTo(gripX, gripY + hh * 0.18);
+        ctx.lineTo(hw * 0.62, hh * 1.63);
+        ctx.stroke();
+        ctx.fillStyle = "#111315";
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(hw * 0.64, -hh * 1.68, hw * 0.06, hh * 0.15, -0.16, 0, Math.PI * 2);
+        ctx.ellipse(hw * 0.64, hh * 1.68, hw * 0.06, hh * 0.15, 0.16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#30353a";
+        ctx.beginPath();
+        ctx.arc(hw * 0.29, 0, hh * 0.17, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Headlight and front fender.
+        ctx.strokeStyle = bikeRed;
+        ctx.lineWidth = hh * 0.22;
+        ctx.beginPath();
+        ctx.moveTo(hw * 0.69, 0);
+        ctx.lineTo(hw * 0.96, 0);
+        ctx.stroke();
+        ctx.fillStyle = "#fde68a";
+        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(hw * 0.55, 0, hh * 0.24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Twin chrome exhaust pipes run low along the right side.
+        ctx.strokeStyle = "#b8c0c8";
+        ctx.lineWidth = 3.5;
+        [0.52, 0.72].forEach((offset) => {
+          ctx.beginPath();
+          ctx.moveTo(hw * 0.03, hh * offset);
+          ctx.quadraticCurveTo(-hw * 0.28, hh * (offset + 0.18), -hw * 0.72, hh * (offset + 0.12));
           ctx.stroke();
         });
 
-        // Mirrors, headlights, and tail lights.
-        ctx.fillStyle = "#090a0c";
-        ctx.beginPath();
-        ctx.ellipse(hw * 0.12, -hh * 1.02, hw * 0.08, hh * 0.09, 0, 0, Math.PI * 2);
-        ctx.ellipse(hw * 0.12, hh * 1.02, hw * 0.08, hh * 0.09, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#fbbf24";
-        ctx.globalAlpha = 0.82;
-        ctx.fillRect(hw * 1.01, -hh * 0.54, hw * 0.08, hh * 0.22);
-        ctx.fillRect(hw * 1.01, hh * 0.32, hw * 0.08, hh * 0.22);
-        ctx.fillStyle = "#ef4444";
-        ctx.fillRect(-hw * 1.05, -hh * 0.52, hw * 0.06, hh * 0.2);
-        ctx.fillRect(-hw * 1.05, hh * 0.32, hw * 0.06, hh * 0.2);
-        ctx.globalAlpha = 1;
-
-        ctx.strokeStyle = "rgba(255,255,255,0.14)";
-        ctx.lineWidth = 2.6;
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.92, -hh * 0.69);
-        ctx.quadraticCurveTo(0, -hh * 0.84, hw * 0.91, -hh * 0.67);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(255,255,255,0.08)";
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.78, hh * 0.7);
-        ctx.quadraticCurveTo(hw * 0.15, hh * 0.83, hw * 0.9, hh * 0.63);
-        ctx.stroke();
+        // Small fiery skull badge on the tank.
+        ctx.fillStyle = "#f8fafc";
+        ctx.font = `${Math.max(12, hh * 0.72)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("☠", hw * 0.18, 0);
 
         ctx.restore();
 
-        // Flame exhaust jets (2 trails out the back)
-        [-hh * 0.55, hh * 0.55].forEach(offY => {
-          for (let j = 0; j < 3; j++) {
-            const flameLen = (20 + j * 14) * (0.7 + pulse * 0.5);
-            ctx.save();
-            ctx.globalAlpha = (0.52 - j * 0.16) * (0.8 + Math.random() * 0.18);
-            ctx.strokeStyle = j === 0 ? "#fff3a3" : j === 1 ? "#fbbf24" : "#f59e0b";
-            ctx.lineWidth = 4.5 - j;
-            ctx.lineCap = "round";
-            ctx.beginPath();
-            ctx.moveTo(-hw, offY);
-            ctx.lineTo(-hw - flameLen, offY + (Math.random() - 0.5) * 10);
-            ctx.stroke();
-            ctx.restore();
-          }
-        });
+        // Single turbulent flame plume behind the rear wheel.
+        for (let j = 0; j < 3; j++) {
+          const flameLen = (24 + j * 16) * (0.72 + pulse * 0.55);
+          ctx.save();
+          ctx.globalAlpha = (0.58 - j * 0.16) * (0.82 + Math.random() * 0.16);
+          ctx.strokeStyle = j === 0 ? "#fff3a3" : j === 1 ? "#fbbf24" : bikeOrange;
+          ctx.lineWidth = 6 - j * 1.4;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(-hw * 0.98, hh * 0.72);
+          ctx.lineTo(-hw * 0.98 - flameLen, hh * 0.72 + (Math.random() - 0.5) * 9);
+          ctx.stroke();
+          ctx.restore();
+        }
 
         ctx.restore();
       });
@@ -10749,6 +11218,7 @@ export default function App() {
       else if (ball.type === "gazerBall") drawGazerBall(ball);
       else if (ball.type === "constellation") drawConstellationBall(ball);
       else if (ball.type === "fireSkull") drawFireSkullBall(ball);
+      else if (ball.type === "eightBall") drawEightBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -12269,7 +12739,13 @@ export default function App() {
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
             if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
+              const previousX = ball.x;
+              const previousY = ball.y;
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
+              if (ball.type === "eightBall") {
+                ball.eightRollX = (ball.eightRollX || 0) + (ball.y - previousY) / Math.max(1, ball.r);
+                ball.eightRollY = (ball.eightRollY || 0) - (ball.x - previousX) / Math.max(1, ball.r);
+              }
               handleWallBounce(ball);
             }
             if (s === steps - 1) {
@@ -12279,7 +12755,8 @@ export default function App() {
             }
 
             if ((ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) ||
-                (ball.type === "feralClaw" && (ball.feralPounceState === "launch" || ball.feralPounceState === "settle"))) {
+                (ball.type === "feralClaw" && (ball.feralPounceState === "launch" || ball.feralPounceState === "settle")) ||
+                (ball.type === "eightBall" && game.simTime < (ball.eightPoweredUntil || 0))) {
               // bypass base speed limits
             } else {
               const isWrecker = ball.type === "wrecker";
@@ -12437,6 +12914,7 @@ export default function App() {
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
                   if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
+                  if (ball.type === "eightBall") updateEightBall(ball, target, game.simTime);
                   if (ball.type === "constellation") updateConstellation(ball, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
@@ -12461,6 +12939,12 @@ export default function App() {
           updateChaosCircles(stepDt);
           updateActiveConstellations(game.simTime);
           updateJokerThreads(stepDt);
+          game.balls.forEach((ball) => {
+            if (!isEightBallBreakInvulnerable(ball, game.simTime)) return;
+            const protectedHealth = ball.eightInvulnerableHealth ?? ball.health;
+            ball.health = Math.max(ball.health, protectedHealth);
+            ball.eightInvulnerableHealth = ball.health;
+          });
         }
       } else if (combatActive) {
         const slowMoActive = game.deathSlowMoUntil && time < game.deathSlowMoUntil;
@@ -12470,7 +12954,13 @@ export default function App() {
         updateJokerThreads(effectDt);
       } else if (!combatActive) {
         game.balls.forEach((ball) => {
+          const previousX = ball.x;
+          const previousY = ball.y;
           ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+          if (ball.type === "eightBall") {
+            ball.eightRollX = (ball.eightRollX || 0) + (ball.y - previousY) / Math.max(1, ball.r);
+            ball.eightRollY = (ball.eightRollY || 0) - (ball.x - previousX) / Math.max(1, ball.r);
+          }
           handleWallBounce(ball);
           if (!ball.trail) ball.trail = [];
           ball.trail.push({ x: ball.x, y: ball.y });
@@ -12813,6 +13303,22 @@ export default function App() {
               {renderSlider("Ult Width Mult", "gazerBall", "ultWidthMult", 1.1, 4, 0.1, "x")}
               {renderSlider("Ult Max Bounces", "gazerBall", "ultMaxBounces", 1, 15, 1)}
               {renderSlider("Ult CDR Mult", "gazerBall", "ultCDRMult", 0.1, 0.9, 0.05, "x")}
+            </>
+          )}
+          {type === "eightBall" && (
+            <>
+              {renderSlider("Cue Cooldown", "eightBall", "cooldown", 2000, 12000, 100, "ms")}
+              {renderSlider("Cue Windup", "eightBall", "cueWindup", 300, 1800, 50, "ms")}
+              {renderSlider("Cue Pullback", "eightBall", "cuePullback", 30, 140, 5, "px")}
+              {renderSlider("Strike Speed", "eightBall", "cueStrikeDuration", 70, 350, 10, "ms")}
+              {renderSlider("Power Duration", "eightBall", "poweredDuration", 1500, 8000, 100, "ms")}
+              {renderSlider("Break Speed", "eightBall", "launchSpeed", 300, 900, 20, "px/s")}
+              {renderSlider("Impact Damage", "eightBall", "hitDamage", 1, 15)}
+              {renderSlider("Speed Per Hit", "eightBall", "speedGainPerHit", 20, 180, 5, "px/s")}
+              {renderSlider("Base Recoil", "eightBall", "recoilBase", 100, 800, 20)}
+              {renderSlider("Recoil Per Hit", "eightBall", "recoilGainPerHit", 20, 180, 5)}
+              {renderSlider("Max Power Stacks", "eightBall", "maxPowerStacks", 1, 10, 1)}
+              {renderSlider("Max Powered Speed", "eightBall", "maxPoweredSpeed", 500, 1400, 20, "px/s")}
             </>
           )}
           {type === "trident" && (

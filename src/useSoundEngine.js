@@ -256,6 +256,31 @@ export function useSoundEngine() {
       osc(ctx, dest, "triangle", 130, 0.5, t, 0.25, 50);
     },
 
+    // Fire Driver
+    carRev: (ctx, dest, t) => {
+      osc(ctx, dest, "sawtooth", 48, 0.3, t, 0.72, 118);
+      osc(ctx, dest, "square", 72, 0.1, t + 0.03, 0.66, 168);
+      osc(ctx, dest, "sine", 38, 0.38, t, 0.78, 76);
+      noise(ctx, dest, 0.14, t, 0.72, 260, 0.7);
+      osc(ctx, dest, "sawtooth", 125, 0.12, t + 0.44, 0.3, 185);
+    },
+
+    // Eight Ball
+    cueReady: (ctx, dest, t) => {
+      osc(ctx, dest, "triangle", 180, 0.12, t, 0.28, 260);
+      noise(ctx, dest, 0.08, t, 0.22, 900, 1.8);
+    },
+    cueStrike: (ctx, dest, t) => {
+      noise(ctx, dest, 0.45, t, 0.09, 1700, 1.4);
+      osc(ctx, dest, "triangle", 520, 0.3, t, 0.12, 170);
+      osc(ctx, dest, "sine", 115, 0.32, t, 0.24, 55);
+    },
+    cueImpact: (ctx, dest, t) => {
+      noise(ctx, dest, 0.34, t, 0.1, 1200, 1.1);
+      osc(ctx, dest, "triangle", 360, 0.24, t, 0.12, 105);
+      osc(ctx, dest, "sine", 92, 0.27, t, 0.18, 42);
+    },
+
     // Chess Ball
     chessMove: (ctx, dest, t) => {
       noise(ctx, dest, 0.25, t, 0.22, 500, 0.8);
