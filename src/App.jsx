@@ -5741,6 +5741,8 @@ export default function App() {
             vx: 0,
             vy: 0,
             r: ball.r,
+            originalRadius: ball.r,
+            mass: 1,
             health: 100,
             color: "#f8fafc",
             stroke: "#94a3b8",
