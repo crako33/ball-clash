@@ -3298,7 +3298,15 @@ export default function App() {
     setProxyReady(false);
     const canvas = canvasRef.current;
     let ctx = canvas ? canvas.getContext("2d") : null;
-    let game = gameRef.current;
+    let game = new Proxy({}, {
+      get: (target, prop) => gameRef.current[prop],
+      set: (target, prop, value) => {
+        gameRef.current[prop] = value;
+        return true;
+      },
+      ownKeys: (target) => Reflect.ownKeys(gameRef.current),
+      getOwnPropertyDescriptor: (target, prop) => Reflect.getOwnPropertyDescriptor(gameRef.current, prop)
+    });
 
     const resizeCanvas = () => {
       if (!canvas || !ctx) return;
