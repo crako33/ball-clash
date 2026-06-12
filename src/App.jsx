@@ -848,12 +848,12 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
     const mockBall = {
       id: "mock-" + type,
       type: type,
-      x: 32, // centered in 64x64 canvas
-      y: 32,
+      x: 48, // centered in 96x96 canvas
+      y: 48,
       r: ballRadius,
       health: 100,
-      angle: -Math.PI / 4,
-      spinAngle: -Math.PI / 4,
+      angle: 0, // facing right (1st player start)
+      spinAngle: 0,
       side: "left",
       
       // Default properties to prevent any issues with specific rendering types
@@ -880,6 +880,7 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
       
       // Gazer
       gazerAuraActive: false,
+      laserTargetAngle: 0,
       
       // Constellation
       constellationStarsCollected: 0,
@@ -898,20 +899,20 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
       simTime: 0,
       balance: BALANCE,
       balls: [mockBall],
-      width: 64,
-      height: 64,
+      width: 96,
+      height: 96,
       jokerThreads: []
     };
 
     if (drawBallProxyRef && drawBallProxyRef.current) {
       ctx.save();
-      // Scale down to fit nicely in 64x64 canvas
-      const targetRadius = 18;
+      // Scale down to fit nicely in 96x96 canvas
+      const targetRadius = 28;
       const scale = targetRadius / ballRadius;
       
-      ctx.translate(32, 32);
+      ctx.translate(48, 48);
       ctx.scale(scale, scale);
-      ctx.translate(-32, -32);
+      ctx.translate(-48, -48);
       
       drawBallProxyRef.current(ctx, mockGame, mockBall, 0);
       
@@ -920,10 +921,10 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
       // Fallback: draw a basic circle
       ctx.save();
       ctx.beginPath();
-      ctx.arc(32, 32, 20, 0, Math.PI * 2);
+      ctx.arc(48, 48, 28, 0, Math.PI * 2);
       ctx.fillStyle = color || "#cbd5e1";
       ctx.fill();
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.strokeStyle = stroke || "#94a3b8";
       ctx.stroke();
       ctx.restore();
@@ -933,9 +934,9 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
   return (
     <canvas 
       ref={canvasRef} 
-      width={64} 
-      height={64} 
-      className="w-16 h-16 block shrink-0 select-none rounded-full bg-slate-950/80 border border-slate-800/60 shadow-inner overflow-hidden"
+      width={96} 
+      height={96} 
+      className="w-24 h-24 block shrink-0 select-none rounded-2xl bg-slate-950/80 border border-slate-800/60 shadow-inner overflow-hidden"
     />
   );
 };
@@ -961,6 +962,7 @@ export default function App() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [activeTab, setActiveTab] = useState("simulator");
   const [proxyReady, setProxyReady] = useState(false);
+  const [copiedBallId, setCopiedBallId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedArchetype, setSelectedArchetype] = useState("All");
   const [expandedBallId, setExpandedBallId] = useState(null);
@@ -14195,6 +14197,53 @@ export default function App() {
     );
   };
 
+  const copyCharacterDescription = (ball) => {
+    const textToCopy = `[CHARACTER_NAME]
+${ball.name}
+
+[VISUAL_THEME]
+${ball.visualTheme || "N/A"}
+
+[COLOR_PALETTE]
+${ball.colorPalette || "N/A"}
+
+[FACIAL_AGE]
+${ball.facialAge || "N/A"}
+
+[PERSONALITY]
+${ball.personality || "N/A"}
+
+[PRIMARY_WEAPON]
+${ball.primaryWeapon || "N/A"}
+
+[SIGNATURE_ABILITY]
+${ball.signatureAbility || "N/A"}
+
+[COMPANION]
+${ball.companion || "None"}
+
+[SPECIAL_VISUAL_EFFECTS]
+${ball.specialVisualEffects || "N/A"}
+
+[ANIME_STYLE]
+${ball.animeStyle || "N/A"}
+
+[GAME_STYLE]
+${ball.gameStyle || "N/A"}
+
+[DESCRIPTION]
+${ball.description}`;
+
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        setCopiedBallId(ball.id);
+        setTimeout(() => setCopiedBallId(null), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err);
+      });
+  };
+
   const renderDictionaryContent = () => {
     const filteredBalls = Object.values(BALL_TYPES).filter((ball) => {
       const matchesSearch = 
@@ -14270,12 +14319,38 @@ export default function App() {
             return (
               <Card 
                 key={ball.id} 
-                className="overflow-hidden rounded-2xl border-slate-900 bg-slate-900/20 hover:bg-slate-900/30 backdrop-blur-md shadow-xl transition-all duration-300 group hover:border-slate-800/60"
+                className="relative overflow-hidden rounded-2xl border-slate-900 bg-slate-900/20 hover:bg-slate-900/30 backdrop-blur-md shadow-xl transition-all duration-300 group hover:border-slate-800/60"
                 style={{
                   boxShadow: `0 10px 30px -15px rgba(0, 0, 0, 0.7), 0 0 15px -3px ${ball.color}10`
                 }}
               >
                 <CardContent className="p-5 space-y-4">
+                  {/* Copy Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyCharacterDescription(ball);
+                    }}
+                    className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-400 hover:text-sky-400 transition-all shadow-md group/copy flex items-center gap-1.5"
+                    title="Copy Character Profile"
+                  >
+                    {copiedBallId === ball.id ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 text-green-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-[10px] font-bold text-green-400 animate-pulse">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        <span className="text-[10px] font-semibold text-slate-450 group-hover/copy:text-sky-400">Copy</span>
+                      </>
+                    )}
+                  </button>
+
                   {/* Card Header (Ball Visual & Basic info) */}
                   <div className="flex items-center gap-4">
                     {/* Visual representation of the ball */}
@@ -14287,7 +14362,7 @@ export default function App() {
                       proxyReady={proxyReady} 
                     />
 
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 pr-16">
                       <div className="flex items-center gap-2">
                         <h3 className="font-extrabold text-lg text-slate-100 truncate">{ball.name}</h3>
                         <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-slate-800 bg-slate-900 text-slate-300">
