@@ -622,7 +622,7 @@ const BALANCE = {
   gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
   constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
   fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
-  eightBall: { cooldown: 6200, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, hitDamage: 5, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
+  eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -632,6 +632,11 @@ const mergeBalanceSettings = (base, saved = {}) => {
   const merged = {};
   Object.entries(base).forEach(([type, settings]) => {
     merged[type] = { ...settings, ...(saved[type] || {}) };
+    if (type === "eightBall") {
+      merged[type].cooldown = 6800;
+      merged[type].hitDamage = 2;
+      merged[type].cueDamage = 2;
+    }
   });
   return merged;
 };
@@ -3926,11 +3931,20 @@ export default function App() {
     };
 
     const resolveBallCollision = (a, b) => {
+      if (a.pendingRemoval || b.pendingRemoval) return false;
+      if (a.type === "cueBall" || b.type === "cueBall") {
+        const cueBall = a.type === "cueBall" ? a : b;
+        const otherBall = a.type === "cueBall" ? b : a;
+        const isOwnerEightBall = otherBall.type === "eightBall" && otherBall.id === cueBall.ownerId;
+        const isOpponent = otherBall.type !== "cueBall" && otherBall.side !== cueBall.side;
+        if (!isOwnerEightBall && !isOpponent) return false;
+      }
+
       const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy), minDist = a.r + b.r;
       if (dist === 0 || dist >= minDist) return false;
 
       // Disrupt Fire Skull road if it hits opponent
-      if (a.type === "fireSkull" && a.fsRoadActive) {
+      if (a.type === "fireSkull" && a.fsRoadActive && b.type !== "cueBall") {
         a.fsLastWallX = null;
         a.fsLastWallY = null;
         a.fsRoadActive = false;
@@ -3943,7 +3957,7 @@ export default function App() {
           text: "ROAD DISRUPTED!", color: "#94a3b8", life: 0.75, maxLife: 0.75
         });
       }
-      if (b.type === "fireSkull" && b.fsRoadActive) {
+      if (b.type === "fireSkull" && b.fsRoadActive && a.type !== "cueBall") {
         b.fsLastWallX = null;
         b.fsLastWallY = null;
         b.fsRoadActive = false;
@@ -3957,7 +3971,7 @@ export default function App() {
         });
       }
 
-      if (a.type === "vampire" || b.type === "vampire") return true;
+      if ((a.type === "vampire" || b.type === "vampire") && a.type !== "cueBall" && b.type !== "cueBall") return true;
 
       const nx = dx / dist, ny = dy / dist, overlap = minDist - dist;
       
@@ -3997,8 +4011,10 @@ export default function App() {
         const cueBall = a.type === "cueBall" ? a : b;
         const otherBall = a.type === "cueBall" ? b : a;
         
-        if (otherBall.type === "eightBall" && otherBall.side === cueBall.side) {
+        if (otherBall.type === "eightBall" && otherBall.id === cueBall.ownerId &&
+            otherBall.eightCueInFlight && !cueBall.hasHitEightBall) {
           cueBall.hasHitEightBall = true;
+          otherBall.eightCueInFlight = false;
 
           const bal = game.balance.eightBall || BALANCE.eightBall;
           otherBall.eightCueState = "powered";
@@ -4007,33 +4023,41 @@ export default function App() {
           otherBall.eightInvulnerableHealth = otherBall.health;
           otherBall.eightStrikeFlashUntil = game.simTime + 220;
 
-          const strikeSpeed = Math.hypot(cueBall.vx, cueBall.vy);
+          const cueIncomingVelocity = a.type === "cueBall" ? incomingA : incomingB;
+          const strikeSpeed = Math.hypot(cueIncomingVelocity.vx, cueIncomingVelocity.vy);
           const pushAngle = Math.atan2(otherBall.y - cueBall.y, otherBall.x - cueBall.x);
           otherBall.vx = Math.cos(pushAngle) * Math.max(bal.launchSpeed, strikeSpeed * 0.95);
           otherBall.vy = Math.sin(pushAngle) * Math.max(bal.launchSpeed, strikeSpeed * 0.95);
-
           spawnSparks(cueBall.x, cueBall.y, "#f8fafc", 15);
           playSound("cueImpact", 1.1, 140);
         } else if (otherBall.side !== cueBall.side && otherBall.type !== "cueBall") {
-          if (cueBall.hasHitEightBall) {
-            const bal = game.balance.eightBall || BALANCE.eightBall;
-            if (game.simTime >= (cueBall.lastHitOpponentAt || 0) + bal.hitCooldown) {
-              cueBall.lastHitOpponentAt = game.simTime;
-              applyDamage(otherBall, bal.hitDamage * 2.5, `${cueBall.id}-cue-impact`, game.simTime, bal.hitCooldown);
-              spawnSparks(otherBall.x, otherBall.y, "#67e8f9", 12);
-              
-              const ownerStats = cueBall.side === "left" ? game.stats.left : game.stats.right;
-              if (ownerStats) {
-                ownerStats.damageDealt += Math.round(bal.hitDamage * 2.5);
-                ownerStats.hitsLanded++;
-              }
+          const bal = game.balance.eightBall || BALANCE.eightBall;
+          const damage = bal.cueDamage ?? 2;
+          const hitCooldown = bal.cueHitCooldown ?? 600;
+          const healthBefore = otherBall.health;
+          applyDamage(
+            otherBall,
+            damage,
+            `${cueBall.ownerId}-cue-ball-${otherBall.id}`,
+            game.simTime,
+            hitCooldown
+          );
+
+          if (otherBall.health < healthBefore) {
+            const ownerStats = cueBall.side === "left" ? game.stats.left : game.stats.right;
+            if (ownerStats) {
+              ownerStats.damageDealt += healthBefore - otherBall.health;
+              ownerStats.hitsLanded++;
             }
+            spawnSparks(otherBall.x, otherBall.y, "#e2e8f0", 7);
           }
         }
       }
 
       const applyEightBallImpact = (attacker, defender, hitNx, hitNy, incomingVelocity) => {
         if (attacker.type !== "eightBall" || game.simTime >= (attacker.eightPoweredUntil || 0)) return;
+        if (defender.type === "cueBall") return;
+        if (defender.side === attacker.side) return;
         const bal = game.balance.eightBall || BALANCE.eightBall;
         if (game.simTime < (attacker.eightNextHitAt || 0)) return;
 
@@ -5692,10 +5716,10 @@ export default function App() {
     const updateEightBall = (ball, target, currentTime) => {
       const bal = game.balance.eightBall || BALANCE.eightBall;
 
-      // Cue Ball safety timeout clean up if it misses the Eight Ball
-      if (ball.eightCueBall && !ball.eightPoweredUntil && currentTime >= (ball.eightCueSpawnedAt || 0) + bal.poweredDuration) {
-        game.balls = game.balls.filter(b => b.id !== ball.eightCueBall.id);
-        ball.eightCueBall = null;
+      // End a missed shot without removing the reusable cue ball from the arena.
+      if (ball.eightCueBall && ball.eightCueInFlight && !ball.eightPoweredUntil &&
+          currentTime >= (ball.eightCueSpawnedAt || 0) + bal.poweredDuration) {
+        ball.eightCueInFlight = false;
         ball.eightCueState = "idle";
         ball.eightNextCueAt = currentTime + bal.cooldown;
       }
@@ -5706,10 +5730,6 @@ export default function App() {
         ball.eightCueState = "idle";
         ball.eightInvulnerableHealth = null;
         ball.eightNextCueAt = currentTime + bal.cooldown;
-        if (ball.eightCueBall) {
-          game.balls = game.balls.filter(b => b.id !== ball.eightCueBall.id);
-          ball.eightCueBall = null;
-        }
       }
 
       if (ball.eightCueState === "pullback") {
@@ -5761,14 +5781,11 @@ export default function App() {
           cueBall.vy = 0;
         }
 
-        const targetTypes = ["eightBall", "opponent", "bank"];
-        const targetType = targetTypes[(ball.eightCueCount || 0) % 3];
-        if (targetType === "eightBall") {
+        const bankShot = Boolean(ball.eightCueBankShot);
+        if (!bankShot) {
           ball.eightCueAngle = Math.atan2(ball.y - cueBall.y, ball.x - cueBall.x);
-        } else if (targetType === "opponent") {
-          ball.eightCueAngle = Math.atan2(target.y - cueBall.y, target.x - cueBall.x);
-        } else if (targetType === "bank") {
-          ball.eightCueAngle = getEightBallCueAngle(cueBall, target, true, game.width, game.height);
+        } else {
+          ball.eightCueAngle = getEightBallCueAngle(cueBall, ball, true, game.width, game.height);
         }
 
         if (currentTime >= ball.eightCueStrikeAt) {
@@ -5790,15 +5807,15 @@ export default function App() {
             const speed = bal.launchSpeed * 2.8;
             ball.eightCueBall.vx = Math.cos(ball.eightCueAngle) * speed;
             ball.eightCueBall.vy = Math.sin(ball.eightCueAngle) * speed;
+            ball.eightCueInFlight = true;
+            ball.eightCueSpawnedAt = currentTime;
           }
 
           game.screenShake = Math.max(game.screenShake || 0, 7);
           spawnSparks(ball.eightCueBall ? ball.eightCueBall.x : ball.x, ball.eightCueBall ? ball.eightCueBall.y : ball.y, "#f8fafc", 12);
           playSound("cueStrike", 0.95, 180);
 
-          const targetTypes = ["eightBall", "opponent", "bank"];
-          const targetType = targetTypes[(ball.eightCueCount || 0) % 3];
-          const text = targetType === "eightBall" ? "TRICK BREAK!" : targetType === "opponent" ? "DIRECT BREAK!" : "BANK BREAK!";
+          const text = ball.eightCueBankShot ? "BANK BREAK!" : "DIRECT BREAK!";
           game.floatingTexts.push({
             x: ball.x, y: ball.y - ball.r - 20, vy: -42,
             text, color: "#f8fafc", life: 0.65, maxLife: 0.65
@@ -5814,6 +5831,8 @@ export default function App() {
 
       if (currentTime >= (ball.eightNextCueAt || 0)) {
         ball.eightCueCount = (ball.eightCueCount || 0) + 1;
+        ball.eightCueBankShot = ball.eightCueCount % 2 === 0;
+        if (ball.eightCueBall) ball.eightCueBall.hasHitEightBall = false;
         ball.eightCueState = "pullback";
         ball.eightCueStartAt = currentTime;
         ball.eightCueStrikeAt = currentTime + bal.cueWindup;
@@ -10746,6 +10765,111 @@ export default function App() {
         const wallY = activeSource.y + backY * wallDistance;
         const buttX = wallX + backX * 52;
         const buttY = wallY + backY * 52;
+        const handDistanceBehindTip = 92;
+        const handX = tipX + backX * handDistanceBehindTip;
+        const handY = tipY + backY * handDistanceBehindTip;
+
+        // A giant cosmic bridge hand rests flat on the table like a pool player.
+        ctx.save();
+        ctx.translate(handX, handY);
+        ctx.rotate(angle);
+        ctx.shadowColor = "rgba(15, 23, 42, 0.5)";
+        ctx.shadowBlur = 7;
+        ctx.shadowOffsetY = 4;
+
+        const cuffGradient = ctx.createLinearGradient(-150, 18, -24, 18);
+        cuffGradient.addColorStop(0, "#312e81");
+        cuffGradient.addColorStop(0.55, "#6d28d9");
+        cuffGradient.addColorStop(1, "#a855f7");
+        ctx.fillStyle = cuffGradient;
+        ctx.strokeStyle = "#c4b5fd";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-154, -10);
+        ctx.lineTo(-25, -4);
+        ctx.lineTo(-18, 38);
+        ctx.lineTo(-154, 46);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Segmented forearm armor recedes toward the arena edge.
+        [-126, -94, -62].forEach((bandX, index) => {
+          ctx.fillStyle = index % 2 === 0 ? "#312e81" : "#4c1d95";
+          ctx.strokeStyle = "#a78bfa";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(bandX, -8 + index, 23, 50 - index * 2, 7);
+          ctx.fill();
+          ctx.stroke();
+        });
+
+        const handGradient = ctx.createLinearGradient(-24, -8, 50, 43);
+        handGradient.addColorStop(0, "#581c87");
+        handGradient.addColorStop(0.48, "#9333ea");
+        handGradient.addColorStop(1, "#c084fc");
+        ctx.fillStyle = handGradient;
+        ctx.strokeStyle = "#e9d5ff";
+        ctx.lineWidth = 2.2;
+
+        // Back of the hand, offset below the cue so the shaft rides along its top edge.
+        ctx.beginPath();
+        ctx.moveTo(-28, -4);
+        ctx.quadraticCurveTo(-4, -13, 22, -3);
+        ctx.quadraticCurveTo(36, 7, 31, 25);
+        ctx.quadraticCurveTo(25, 43, 2, 47);
+        ctx.quadraticCurveTo(-20, 45, -29, 33);
+        ctx.quadraticCurveTo(-36, 15, -28, -4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Middle, ring, and little fingers spread and stay planted on the table.
+        const fingers = [
+          { x: 18, y: 17, w: 43, h: 11, rot: 0.07 },
+          { x: 15, y: 30, w: 39, h: 11, rot: 0.19 },
+          { x: 8, y: 42, w: 31, h: 10, rot: 0.34 }
+        ];
+        fingers.forEach((finger) => {
+          ctx.save();
+          ctx.translate(finger.x, finger.y);
+          ctx.rotate(finger.rot);
+          ctx.beginPath();
+          ctx.roundRect(0, -finger.h / 2, finger.w, finger.h, finger.h / 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(88, 28, 135, 0.7)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(finger.w * 0.58, -finger.h * 0.32);
+          ctx.lineTo(finger.w * 0.58, finger.h * 0.32);
+          ctx.stroke();
+          ctx.restore();
+          ctx.strokeStyle = "#e9d5ff";
+          ctx.lineWidth = 2.2;
+        });
+
+        // Cosmic armor plate on the back of the hand.
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = "#6d28d9";
+        ctx.strokeStyle = "#f0abfc";
+        ctx.beginPath();
+        ctx.moveTo(-20, 3);
+        ctx.lineTo(4, -2);
+        ctx.lineTo(20, 19);
+        ctx.lineTo(3, 40);
+        ctx.lineTo(-20, 34);
+        ctx.lineTo(-10, 19);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#67e8f9";
+        ctx.beginPath();
+        ctx.arc(-2, 19, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
         ctx.save();
         ctx.lineCap = "round";
@@ -10772,6 +10896,52 @@ export default function App() {
         ctx.moveTo(tipX, tipY);
         ctx.lineTo(tipX + Math.cos(angle) * 7, tipY + Math.sin(angle) * 7);
         ctx.stroke();
+        ctx.restore();
+
+        // Index and thumb frame the cue from opposite sides, forming a pool bridge.
+        ctx.save();
+        ctx.translate(handX, handY);
+        ctx.rotate(angle);
+        ctx.shadowColor = "rgba(15, 23, 42, 0.4)";
+        ctx.shadowBlur = 3;
+        ctx.fillStyle = "#a855f7";
+        ctx.strokeStyle = "#e9d5ff";
+        ctx.lineWidth = 2;
+
+        // Pointing index finger lies straight beside the cue, aimed at the ball.
+        ctx.beginPath();
+        ctx.roundRect(-2, 5, 57, 10, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        // Knuckle connection makes the index read as part of the back of the hand.
+        ctx.beginPath();
+        ctx.roundRect(-17, 2, 26, 18, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Thumb rises diagonally from the palm and stops below the shaft.
+        ctx.save();
+        ctx.translate(-7, 24);
+        ctx.rotate(-0.74);
+        ctx.beginPath();
+        ctx.roundRect(0, -5.5, 35, 11, 5.5);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Small dark groove shows the cue passing between thumb and index.
+        ctx.strokeStyle = "rgba(30, 27, 75, 0.9)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(12, 3);
+        ctx.lineTo(31, 3);
+        ctx.stroke();
+
+        ctx.fillStyle = "#67e8f9";
+        ctx.beginPath();
+        ctx.arc(6, 22, 2.6, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 
@@ -10861,45 +11031,56 @@ export default function App() {
 
     const drawCueBall = (ball) => {
       ctx.save();
-      ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetX = 2;
-      ctx.shadowOffsetY = 3;
-
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = "#f8fafc";
+      ctx.fillStyle = "#ffffff";
       ctx.fill();
 
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = Math.max(4, ball.r * 0.14);
+      ctx.strokeStyle = "#0f172a";
       ctx.stroke();
 
-      const glossGrad = ctx.createRadialGradient(
-        ball.x - ball.r * 0.35, ball.y - ball.r * 0.35, ball.r * 0.05,
-        ball.x - ball.r * 0.2, ball.y - ball.r * 0.2, ball.r * 0.75
-      );
-      glossGrad.addColorStop(0, "rgba(255, 255, 255, 0.85)");
-      glossGrad.addColorStop(0.3, "rgba(255, 255, 255, 0.25)");
-      glossGrad.addColorStop(0.85, "rgba(241, 245, 249, 0)");
-      glossGrad.addColorStop(1, "rgba(203, 213, 225, 0.15)");
-      
       ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.r - 1, 0, Math.PI * 2);
-      ctx.fillStyle = glossGrad;
-      ctx.fill();
-      
-      if (ball.hasHitEightBall) {
-        ctx.globalAlpha = 0.5 + Math.sin(game.simTime * 0.025) * 0.25;
-        ctx.strokeStyle = "#22d3ee";
-        ctx.lineWidth = 2.5;
+      ctx.arc(ball.x, ball.y, ball.r - Math.max(2.5, ball.r * 0.08), 0, Math.PI * 2);
+      ctx.lineWidth = Math.max(1.5, ball.r * 0.045);
+      ctx.strokeStyle = "#94a3b8";
+      ctx.stroke();
+
+      // A tournament-style dotted cue ball makes its physical roll easy to read.
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r - 2, 0, Math.PI * 2);
+      ctx.clip();
+      const rollX = ball.cueRollX || 0;
+      const rollY = ball.cueRollY || 0;
+      const trackingDots = [[0, 0]];
+      trackingDots.forEach(([latBase, lonBase]) => {
+        const lat = latBase + rollX;
+        const lon = lonBase + rollY;
+        const depth = Math.cos(lat) * Math.cos(lon);
+        if (depth <= 0.03) return;
+        const dotX = ball.x + Math.sin(lon) * Math.cos(lat) * ball.r * 0.72;
+        const dotY = ball.y + Math.sin(lat) * ball.r * 0.72;
         ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r + 3, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+        ctx.arc(dotX, dotY, ball.r * (0.055 + depth * 0.065), 0, Math.PI * 2);
+        ctx.fillStyle = "#dc2626";
+        ctx.fill();
+      });
+      ctx.restore();
+
+      // One hard-edged highlight keeps it readable without a smoky glow.
+      ctx.beginPath();
+      ctx.ellipse(
+        ball.x - ball.r * 0.34,
+        ball.y - ball.r * 0.38,
+        ball.r * 0.17,
+        ball.r * 0.1,
+        -0.7,
+        0,
+        Math.PI * 2
+      );
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fill();
 
       ctx.restore();
     };
@@ -11934,6 +12115,10 @@ export default function App() {
     setProxyReady(true);
 
     const drawBallTrail = (ball) => {
+      if (ball.type === "cueBall") {
+        ball.trail = [];
+        return;
+      }
       if (!ball.trail || ball.trail.length < 2) return;
       const config = BALL_TYPES[ball.type] || { color: "#cbd5e1", stroke: "#94a3b8" };
       ctx.save();
@@ -13343,18 +13528,24 @@ export default function App() {
               if (ball.type === "eightBall") {
                 ball.eightRollX = (ball.eightRollX || 0) + (ball.y - previousY) / Math.max(1, ball.r);
                 ball.eightRollY = (ball.eightRollY || 0) - (ball.x - previousX) / Math.max(1, ball.r);
+              } else if (ball.type === "cueBall") {
+                ball.cueRollX = (ball.cueRollX || 0) + (ball.y - previousY) / Math.max(1, ball.r);
+                ball.cueRollY = (ball.cueRollY || 0) - (ball.x - previousX) / Math.max(1, ball.r);
               }
               handleWallBounce(ball);
             }
-            if (s === steps - 1) {
+            if (s === steps - 1 && ball.type !== "cueBall") {
               if (!ball.trail) ball.trail = [];
               ball.trail.push({ x: ball.x, y: ball.y });
               if (ball.trail.length > MAX_TRAIL_POINTS) ball.trail.shift();
+            } else if (ball.type === "cueBall" && ball.trail?.length) {
+              ball.trail = [];
             }
 
             if ((ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) ||
                 (ball.type === "feralClaw" && (ball.feralPounceState === "launch" || ball.feralPounceState === "settle")) ||
-                (ball.type === "eightBall" && game.simTime < (ball.eightPoweredUntil || 0))) {
+                (ball.type === "eightBall" && game.simTime < (ball.eightPoweredUntil || 0)) ||
+                ball.type === "cueBall") {
               // bypass base speed limits
             } else {
               const isWrecker = ball.type === "wrecker";
@@ -13426,6 +13617,8 @@ export default function App() {
               }
             }
           }
+
+          game.balls = game.balls.filter((ball) => !ball.pendingRemoval);
 
           game.balls.forEach((ball) => {
             const target = ball.side === "left" ? right : left;
@@ -13576,9 +13769,13 @@ export default function App() {
             ball.eightRollY = (ball.eightRollY || 0) - (ball.x - previousX) / Math.max(1, ball.r);
           }
           handleWallBounce(ball);
-          if (!ball.trail) ball.trail = [];
-          ball.trail.push({ x: ball.x, y: ball.y });
-          if (ball.trail.length > MAX_TRAIL_POINTS) ball.trail.shift();
+          if (ball.type !== "cueBall") {
+            if (!ball.trail) ball.trail = [];
+            ball.trail.push({ x: ball.x, y: ball.y });
+            if (ball.trail.length > MAX_TRAIL_POINTS) ball.trail.shift();
+          } else if (ball.trail?.length) {
+            ball.trail = [];
+          }
 
           if (ball.type === "shield") {
             const target = ball.side === "left" ? right : left;
@@ -13621,6 +13818,9 @@ export default function App() {
       drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawFireCarEntities();
+      game.balls.forEach((ball) => {
+        if (ball.type === "cueBall") drawBall(ball, game.simTime);
+      });
       drawBall(left, game.simTime); drawBall(right, game.simTime);
       ctx.restore();
 
