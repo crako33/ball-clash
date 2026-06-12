@@ -12,6 +12,17 @@ const BALL_TYPES = {
     stroke: "#15803d",
     radius: 30,
     description: "Yoda-like brawler with a green lightsaber. Secondary: Saber Throw.",
+    emoji: "⚔️",
+    visualTheme: "Cyber-Dojo / Ancient Sci-Fi Swordmaster",
+    colorPalette: "Jade Green, Forest Green, Chrome",
+    facialAge: "75 (Wise Master, kind wrinkles, glowing visor-shade eyes)",
+    personality: "Serene, disciplined, mentor-like",
+    primaryWeapon: "Green Energy Lightsaber",
+    signatureAbility: "Saber Throw (returning spin projectile)",
+    companion: "None (prefers solitude)",
+    specialVisualEffects: "Shimmering green hum ripples, trails of light slash arcs",
+    animeStyle: "Classic wandering ronin meets futuristic mech master",
+    gameStyle: "Precision-based close-range duelist with ranged recall poking",
   },
   gun: {
     id: "gun",
@@ -21,6 +32,17 @@ const BALL_TYPES = {
     stroke: "#f1f5f9",
     radius: 30,
     description: "Suit brawler with a beagle dog. Permanent rapid fire unlocks when the dog dies.",
+    emoji: "🔫",
+    visualTheme: "Noir Agent / Tactical Hitman",
+    colorPalette: "Onyx Black, Slate Gray, Pure Titanium",
+    facialAge: "Late 30s (Grizzled stubble, sharp eyes behind sunglasses)",
+    personality: "Stoic, professional, vengeful",
+    primaryWeapon: "Dual Tactical Semi-Automatic Pistols",
+    signatureAbility: "Bullet-Hell Enrage (permanent rapid fire if companion dies)",
+    companion: "Loyal Beagle Companion",
+    specialVisualEffects: "Dual muzzle flashes, spent shell casing particles, red warning indicators",
+    animeStyle: "John Wick style action anime protagonist with heavy contrast shadows",
+    gameStyle: "Mobile ranged zoner utilizing summons and bullet pressure",
   },
   vampire: {
     id: "vampire",
@@ -30,6 +52,17 @@ const BALL_TYPES = {
     stroke: "#b91c1c",
     radius: 30,
     description: "Vampiric brawler. Latch to drain health. Cape and glowing red eyes.",
+    emoji: "🧛",
+    visualTheme: "Gothic Aristocracy / Vampire Lord",
+    colorPalette: "Royal Indigo, Blood Crimson, Pale Alabaster",
+    facialAge: "Ageless (looks 25, sharp cheekbones, ruby pupils)",
+    personality: "Melancholic, predatory, dramatic",
+    primaryWeapon: "Vampiric Fangs (melee siphon)",
+    signatureAbility: "Vampiric Latch (health siphon over time)",
+    companion: "Swarm of Shadows/Bats",
+    specialVisualEffects: "Crimson mist trails, bat outlines on dash, floating red life particles",
+    animeStyle: "Dark fantasy gothic anime antagonist/anti-hero",
+    gameStyle: "Lifesteal tank and close-range sticky skirmisher",
   },
   laser: {
     id: "laser",
@@ -39,6 +72,17 @@ const BALL_TYPES = {
     stroke: "#facc15",
     radius: 30,
     description: "Iron-style repulsor brawler. Charges white beams and periodic stun pulses.",
+    emoji: "🤖",
+    visualTheme: "Stark-tech / Cybernetic Exo-Soldier",
+    colorPalette: "Crimson Red, Gold Plating, Arc White",
+    facialAge: "Mid 30s (Manicured goatee, smug smirk, digital HUD overlay)",
+    personality: "Egotistical, flashy, genius inventor",
+    primaryWeapon: "Wrist-Mounted Repulsor Core",
+    signatureAbility: "Charged Repulsor Beam & Energy Stun Pulse",
+    companion: "None",
+    specialVisualEffects: "Bright white laser beams, electrical spark arcs, expanding blue stun rings",
+    animeStyle: "High-tech sci-fi superhero anime with bright cell shading",
+    gameStyle: "Heavy artillery zoner with crowd control stun burst",
   },
   shield: {
     id: "shield",
@@ -48,6 +92,17 @@ const BALL_TYPES = {
     stroke: "#ef4444",
     radius: 32,
     description: "Throws a round shield. Secondary: Bash & Emergency Recall.",
+    emoji: "🛡️",
+    visualTheme: "Heavy Bastion / Combat Warden",
+    colorPalette: "Cobalt Blue, Hazard Red, Brushed Steel",
+    facialAge: "Early 40s (Battle-scarred brow, square jawline, resolute expression)",
+    personality: "Protective, unyielding, patriotic",
+    primaryWeapon: "Circular Vibranium Alloy Shield",
+    signatureAbility: "Shield Bash & Recall Shield (with barrier window)",
+    companion: "None",
+    specialVisualEffects: "Blue hexagonal shield forcefields, metal spark particles on block",
+    animeStyle: "Mecha armor commander / heroic guardian anime",
+    gameStyle: "High-density defensive tank with bounce shield control",
   },
   spider: {
     id: "spider",
@@ -57,6 +112,17 @@ const BALL_TYPES = {
     stroke: "#3b82f6",
     radius: 30,
     description: "Webs enemies, pulls them in. Secondary: Slow Web.",
+    emoji: "🕸️",
+    visualTheme: "Arachnid Vigilante / Web Slinger",
+    colorPalette: "Crimson Red, Electric Blue, Web White",
+    facialAge: "17 (Energetic eyes, half-masked face)",
+    personality: "Playful, acrobatic, mischievous",
+    primaryWeapon: "Dual Web Shooters",
+    signatureAbility: "Web Pull & Slow Web Field",
+    companion: "None",
+    specialVisualEffects: "Sticky web strands, expanding web netting grid, dust particles on pull",
+    animeStyle: "High-energy shonen vigilante style with bold action lines",
+    gameStyle: "Crowd control grapple-and-hook fighter",
   },
   blackSpider: {
     id: "blackSpider",
@@ -66,6 +132,17 @@ const BALL_TYPES = {
     stroke: "#f1f5f9",
     radius: 30,
     description: "Throws a web line to pull, spin, and slam enemies into corners.",
+    emoji: "🕷️",
+    visualTheme: "Symbiote Hunter / Corner Slammer",
+    colorPalette: "Deep Onyx, Chalk White, Blood Red",
+    facialAge: "Early 20s (Dark eye-paint, intense expressionless face)",
+    personality: "Brooding, calculated, intense",
+    primaryWeapon: "Heavy Symbiote Web tendrils",
+    signatureAbility: "String Pull Corner Slam (orbit and launch)",
+    companion: "None",
+    specialVisualEffects: "Wavy web lines, violent launch trails, wall smash explosion bursts",
+    animeStyle: "Gritty dark cyberpunk anti-hero with high-contrast inks",
+    gameStyle: "Momentum-based physics brawler using wall slam spikes",
   },
   bomber: {
     id: "bomber",
@@ -75,6 +152,17 @@ const BALL_TYPES = {
     stroke: "#78350f",
     radius: 29,
     description: "Lays up to 3 proximity landmines. Secondary: Homing Mine.",
+    emoji: "💣",
+    visualTheme: "Demolitions Expert / Mad Mechanic",
+    colorPalette: "Honey Yellow, Deep Bronze, Ember Red",
+    facialAge: "Late 40s (Sooty skin, crazed smile, welding goggles)",
+    personality: "Chaotic, laugh-happy, eccentric",
+    primaryWeapon: "Proximity Landmines",
+    signatureAbility: "Homing Mine (seeking target missile)",
+    companion: "None",
+    specialVisualEffects: "Flame explosions, black smoke clouds, yellow hazard warning zones",
+    animeStyle: "Retro dieselpunk scrap mechanic anime character",
+    gameStyle: "Zone denial specialist with heavy delay-action explosives",
   },
   spore: {
     id: "spore",
@@ -84,6 +172,17 @@ const BALL_TYPES = {
     stroke: "#ef4444",
     radius: 30,
     description: "Drops spores that grow wiggling hydras.",
+    emoji: "🍄",
+    visualTheme: "Mushroom Spirit / Toxic Shaman",
+    colorPalette: "Slate Purple, Moss Green, Scarlet Spores",
+    facialAge: "Ancient (appears as a pale green-haired 12-year-old child)",
+    personality: "Eerie, silent, growth-obsessed",
+    primaryWeapon: "Fungal Spores",
+    signatureAbility: "Hydra Spore Mutation (summons wiggling bite hydras)",
+    companion: "Spore Hydras (summoned)",
+    specialVisualEffects: "Green wiggling vine/hydra stems, floating red spore dust, venom drops",
+    animeStyle: "Mystical forest folklore anime / dark fairy-tale vibe",
+    gameStyle: "Spawn-based summoner that controls lanes through toxic hydras",
   },
   hammer: {
     id: "hammer",
@@ -93,6 +192,17 @@ const BALL_TYPES = {
     stroke: "#64748b",
     radius: 30,
     description: "Spins hammer then launches itself rocket-like.",
+    emoji: "🔨",
+    visualTheme: "Berserker Smith / Rocket Barbarian",
+    colorPalette: "Slate Gray, Deep Blue, Copper Trim",
+    facialAge: "Late 20s (Braided beard, dirt-smudged cheeks, fiery resolve)",
+    personality: "Bold, loud, momentum-driven",
+    primaryWeapon: "Double-Headed War Hammer",
+    signatureAbility: "Hammer Spin & Rocket Launch Thrust",
+    companion: "None",
+    specialVisualEffects: "Circular air slash sweeps, blue rocket exhaust trails, impact crack lines",
+    animeStyle: "Fantasy guild dwarf warrior / high-action brawler",
+    gameStyle: "High-velocity physical juggernaut using deflective spin armor",
   },
   stringWeb: {
     id: "stringWeb",
@@ -102,6 +212,17 @@ const BALL_TYPES = {
     stroke: "#fdf4ff",
     radius: 30,
     description: "Creates damaging laser string nets.",
+    emoji: "🧬",
+    visualTheme: "Laser Grid Hacker / Digital Weaver",
+    colorPalette: "Neon Magenta, Violet, Laser White",
+    facialAge: "Mid 20s (Cybernetic eye-implants, expressionless facade)",
+    personality: "Analytical, cold, geometric",
+    primaryWeapon: "Micro-Fiber Laser Strings",
+    signatureAbility: "Laser tripwire nets (passive slice & knockback)",
+    companion: "None",
+    specialVisualEffects: "Neon purple grids, hum line glows, slicing sparks",
+    animeStyle: "Cyberpunk network agent / digital hacker anime",
+    gameStyle: "Defensive zone builder restricting movement with damage grids",
   },
   arm: {
     id: "arm",
@@ -111,6 +232,17 @@ const BALL_TYPES = {
     stroke: "#cbd5e1",
     radius: 31,
     description: "Grabs opponent, slams them into corners. Secondary: Elbow Drop.",
+    emoji: "💪",
+    visualTheme: "Pit Fighter / Street Pugilist",
+    colorPalette: "Iron Black, Slate Gray, Crimson Bandages",
+    facialAge: "Early 30s (Strong jawline, cauliflower ears, cocky grin)",
+    personality: "Cocky, aggressive, boastful",
+    primaryWeapon: "Giant Robotic/Bio-Mechanical Arms",
+    signatureAbility: "Grab & Wall Slam / high-impact Elbow Drop",
+    companion: "None",
+    specialVisualEffects: "Flexing hand outlines, dust impact clouds, red hit shockwaves",
+    animeStyle: "Shonen tournament fighter / street combat protagonist",
+    gameStyle: "Grappler focus that disables and repositions targets",
   },
   chess: {
     id: "chess",
@@ -120,6 +252,17 @@ const BALL_TYPES = {
     stroke: "#fbbf24",
     radius: 30,
     description: "Summons random chess crown. Castles to swap positions.",
+    emoji: "👑",
+    visualTheme: "Grandmaster King / Strategic Monarch",
+    colorPalette: "Alabaster White, Gold Trim, Royal Amber",
+    facialAge: "50s (Stern face, graying hair, gold monocle)",
+    personality: "Regal, calculating, detached",
+    primaryWeapon: "Floating Chess Crown (King/Queen/Knight)",
+    signatureAbility: "Castling swap position & crown modifiers",
+    companion: "Summoned Chess Pieces (clones/shields)",
+    specialVisualEffects: "Gold checkered floor patterns, crown outline glow, chess coordinate vectors",
+    animeStyle: "High-stakes mental game anime character (like Code Geass)",
+    gameStyle: "Highly adaptive switcher that teleports and alters stat profiles",
   },
   wrecker: {
     id: "wrecker",
@@ -129,6 +272,17 @@ const BALL_TYPES = {
     stroke: "#15803d",
     radius: 36,
     description: "Hulk-like brawler. Leaps to smash, rage boosts size. Secondary: Ground Push.",
+    emoji: "🦖",
+    visualTheme: "Mutant Colossus / Kaiju Brawler",
+    colorPalette: "Radioactive Green, Dark Forest, Stone Slate",
+    facialAge: "30s (Mutated brow, heavy jaw, green glowing eyes)",
+    personality: "Short-tempered, destructive, simple-minded",
+    primaryWeapon: "Heavy Fists / Mass Scale",
+    signatureAbility: "Smash Leap & Ground Push / Size Rage",
+    companion: "None",
+    specialVisualEffects: "Ground cracks, giant impact shockwaves, expanding green outline glow",
+    animeStyle: "Monster/kaiju anime antagonist or muscle brute",
+    gameStyle: "Giant tank that thrives under low HP and knocks enemies back",
   },
   dragon: {
     id: "dragon",
@@ -138,6 +292,17 @@ const BALL_TYPES = {
     stroke: "#f97316",
     radius: 33,
     description: "Burst fire-breather. Exploding giant fireballs. Secondary: Flame Dash.",
+    emoji: "🐉",
+    visualTheme: "Fire Wyrm / Elder Dragon Avatar",
+    colorPalette: "Scales Crimson, Lava Orange, Smoke Charcoal",
+    facialAge: "Ancient (human form: 65, ash beard, burning embers for eyes)",
+    personality: "Proud, majestic, short-tempered",
+    primaryWeapon: "Draconic Flame Breath",
+    signatureAbility: "Exploding Giant Fireballs & Flame Dash path",
+    companion: "None",
+    specialVisualEffects: "Lava fireball explosions, thick gray smoke, orange flame paths",
+    animeStyle: "High-fantasy dragon god / elder warrior anime",
+    gameStyle: "High-damage projectile pyromancer with fast fire dash",
   },
   psychicer: {
     id: "psychicer",
@@ -147,6 +312,17 @@ const BALL_TYPES = {
     stroke: "#f0abfc",
     radius: 31,
     description: "Drops psychic circles. Enemies caught inside take damage on their next bounces.",
+    emoji: "🔮",
+    visualTheme: "Psychic Prodigy / Telekinetic Saint",
+    colorPalette: "Royal Violet, Astral Pink, White Aura",
+    facialAge: "Early 20s (Sleek hair, blindfolded, expression of zen)",
+    personality: "Aloof, quiet, telepathic",
+    primaryWeapon: "Telekinetic Energy",
+    signatureAbility: "Psychic Zone Circles (delayed bounce damage)",
+    companion: "None",
+    specialVisualEffects: "Floating pink telekinetic runes, expanding purple concentric rings",
+    animeStyle: "Supernatural academy esper protagonist",
+    gameStyle: "Trap zone controller who punishes opponents on their wall bounces",
   },
   chaos: {
     id: "chaos",
@@ -156,6 +332,17 @@ const BALL_TYPES = {
     stroke: "#f59e0b",
     radius: 31,
     description: "Sorcerer brawler with Eldritch shields and Time portals. Conjures magic circles that slam enemies into walls.",
+    emoji: "🌌",
+    visualTheme: "Void Warlock / Eldritch Weaver",
+    colorPalette: "Midnight Blue, Eldritch Gold, Astral Violet",
+    facialAge: "40s (Hollow cheekbones, runic tattoos, manic eyes)",
+    personality: "Unpredictable, cryptic, void-focused",
+    primaryWeapon: "Space-Time Portals",
+    signatureAbility: "Eldritch Shields / Chaos Wall Slams",
+    companion: "None",
+    specialVisualEffects: "Swirling purple void portal spheres, glowing runic circle barriers",
+    animeStyle: "Dark fantasy sorcerer / eldritch god avatar",
+    gameStyle: "Hyper-mobility wizard using portal redirection and void shields",
   },
   trident: {
     id: "trident",
@@ -165,6 +352,17 @@ const BALL_TYPES = {
     stroke: "#22c55e",
     radius: 31,
     description: "Throws a trident that pins enemies to walls, sticks on miss, then recalls.",
+    emoji: "🔱",
+    visualTheme: "Ocean Prince / Abyssal Harpooner",
+    colorPalette: "Sea Gold, Aquamarine, Ocean Pearl",
+    facialAge: "Late 20s (Sea-weathered jaw, aqua-toned hair, proud expression)",
+    personality: "Noble, fierce, ocean-bound",
+    primaryWeapon: "Sea-Gold Abyssal Trident",
+    signatureAbility: "Trident Pin (pin opponent to wall & pull)",
+    companion: "None",
+    specialVisualEffects: "Blue water splash bubbles, ocean current trails, gold spear flash",
+    animeStyle: "Sea mythology / underwater kingdom warrior anime",
+    gameStyle: "Mid-range spear-tossing zoner with high displacement pull",
   },
   shadow: {
     id: "shadow",
@@ -174,6 +372,17 @@ const BALL_TYPES = {
     stroke: "#a78bfa",
     radius: 31,
     description: "Slashes nearby enemies and summons tiny shadow minions that swarm opponents.",
+    emoji: "👤",
+    visualTheme: "Necromancer / Wraith Lord",
+    colorPalette: "Absolute Black, Eerie Violet, Soul Amber",
+    facialAge: "Ageless (Undead skull-like face under shadowy cowl)",
+    personality: "Sinister, soft-spoken, eerie",
+    primaryWeapon: "Dark Ectoplasmic Scythe",
+    signatureAbility: "Shadow Slash & Shadow Minion Horde",
+    companion: "Swarm of Shadow Minions",
+    specialVisualEffects: "Swirling black shadow trails, floating purple soul embers",
+    animeStyle: "Dark fantasy villain / underworld reaper anime character",
+    gameStyle: "Spawner-focused lane pusher who relies on minion swarms",
   },
   feralClaw: {
     id: "feralClaw",
@@ -183,6 +392,17 @@ const BALL_TYPES = {
     stroke: "#1f2937",
     radius: 31,
     description: "Relentless claw brawler. Alternates twin slashes, pounces from mid-range, and regenerates after escaping pressure.",
+    emoji: "🐆",
+    visualTheme: "Wild Beast / Jungle Hunter",
+    colorPalette: "Amber Orange, Predator Black, Claw Crimson",
+    facialAge: "20s (Wild hair, scar across nose, feral fang grin)",
+    personality: "Animalistic, highly reactive, survivor",
+    primaryWeapon: "Twin Razor-Sharp Claws",
+    signatureAbility: "Alternate Twin Slashes & Beast Pounce",
+    companion: "None",
+    specialVisualEffects: "Red claw slash crossmarks, high-speed pounce shockwaves",
+    animeStyle: "Wilderness survivalist / beast-mode action anime character",
+    gameStyle: "Aggressive skirmisher with lunging strikes and out-of-combat regeneration",
   },
   mirror: {
     id: "mirror",
@@ -192,6 +412,17 @@ const BALL_TYPES = {
     stroke: "#f8fafc",
     radius: 31,
     description: "Creates a mirrored clone across the arena center. Clone damages, main body bounces.",
+    emoji: "👥",
+    visualTheme: "Prism Illusionist / Symmetrical Doppelganger",
+    colorPalette: "Cyan Prism, Glass Blue, Silver Reflection",
+    facialAge: "Mid teens (16, completely symmetrical, expressionless face)",
+    personality: "Cryptic, synchronous, dualistic",
+    primaryWeapon: "Glass Mirror Shards",
+    signatureAbility: "Mirrored Central Clone (clones movement & damage)",
+    companion: "Mirrored Doppelganger (clone)",
+    specialVisualEffects: "Glass break particles, cyan reflection light beams, mirror-axis lines",
+    animeStyle: "Psychological mystery / mirror-magic anime character",
+    gameStyle: "Multi-lane pressure fighter that covers both sides of the arena",
   },
   joker: {
     id: "joker",
@@ -201,6 +432,17 @@ const BALL_TYPES = {
     stroke: "#f9a8d4",
     radius: 31,
     description: "Trickster brawler with elastic Bungee Lines. Sets up ricochet angles to hook enemies and drag them through wall corners.",
+    emoji: "🃏",
+    visualTheme: "Harlequin Jester / Chaos Acrobat",
+    colorPalette: "Rose Pink, Harlequin Violet, Neon Yellow",
+    facialAge: "Late 20s (Smeared clown face paint, wide maniacal grin)",
+    personality: "Sadistic, erratic, high-energy",
+    primaryWeapon: "Elastic Bungee Lines",
+    signatureAbility: "Hook & Drag Bungee Slam (corner drag)",
+    companion: "None",
+    specialVisualEffects: "Expanding elastic pink cords, confetti sparks, laughing emoji text",
+    animeStyle: "High-intensity chaotic villain / battle-jester anime character",
+    gameStyle: "Physics-defying displacement trickster that slingshots opponents",
   },
   gazerBall: {
     id: "gazerBall",
@@ -210,6 +452,17 @@ const BALL_TYPES = {
     stroke: "#ef4444",
     radius: 31,
     description: "Legendary beam warrior. Builds Focus stacks for powered shots. Fires devastating red gaze blasts that ricochet. Omega Surge unleashes hell.",
+    emoji: "👁️",
+    visualTheme: "Cosmic Beholder / Eternal Watcher",
+    colorPalette: "Deep Crimson, Eye Red, Laser White",
+    facialAge: "1000+ Years (Ancient monolith, single central tracking eye)",
+    personality: "Omniscient, stoic sentinel",
+    primaryWeapon: "Gaze Laser Ray",
+    signatureAbility: "Gaze Ricochet Blast & Omega Surge wave",
+    companion: "None",
+    specialVisualEffects: "Red beam lasers that reflect, giant full-screen red ripples, glowing runes",
+    animeStyle: "Cosmic deity / ancient artifact weapon anime",
+    gameStyle: "Focus-charging beam sniper that dominates late-round battles",
   },
   constellation: {
     id: "constellation",
@@ -219,6 +472,17 @@ const BALL_TYPES = {
     stroke: "#e0f2fe",
     radius: 31,
     description: "Cosmic weaver. Bounces place stars. Active skill connects stars into active shapes (Circle, Line, Triangle, Square) with powerful effects.",
+    emoji: "🌠",
+    visualTheme: "Star Weaver / Celestial Architect",
+    colorPalette: "Midnight Blue, Sky Blue, Star White",
+    facialAge: "Ageless (Starlit eyes, hair made of glowing nebula dust)",
+    personality: "Serene, artistic, dream-weaver",
+    primaryWeapon: "Star Vectors",
+    signatureAbility: "Active Pattern Connection (Circle/Line/Triangle/Square shield/cage)",
+    companion: "None",
+    specialVisualEffects: "Glowing blue lines, pulsing white star points, geometry outlines",
+    animeStyle: "Astrology-based magical girl / celestial mage anime",
+    gameStyle: "Spatial grid planner who weaves geometric shapes for shields or traps",
   },
   fireSkull: {
     id: "fireSkull",
@@ -228,6 +492,17 @@ const BALL_TYPES = {
     stroke: "#ef4444",
     radius: 31,
     description: "Draws a burning road across wall bounces, then drives a blazing car along it five times.",
+    emoji: "🏎️",
+    visualTheme: "Hellrider Racer / Ghost Hotrodder",
+    colorPalette: "White-Hot White, Flame Orange, Deep Charcoal",
+    facialAge: "30s (Ghostly racer, flaming skull head, leather jacket)",
+    personality: "Reckless, speed-demon, loud",
+    primaryWeapon: "Hellfire Path / Fire Road",
+    signatureAbility: "Fire Road Car Summon (zooming high-hitbox dragster)",
+    companion: "Hellfire Dragster Car (summoned)",
+    specialVisualEffects: "Flaming asphalt path, fire exhausts, tire skid sparks",
+    animeStyle: "High-octane street racer / supernatural biker anime",
+    gameStyle: "Charge builder who draws vector pathways to summon full-lane vehicles",
   },
   eightBall: {
     id: "eightBall",
@@ -237,6 +512,17 @@ const BALL_TYPES = {
     stroke: "#f8fafc",
     radius: 31,
     description: "Summons a cue from outside the arena and breaks forward. Every powered collision deals damage and builds speed and knockback.",
+    emoji: "🎱",
+    visualTheme: "Billiards Hustler / Momentum Master",
+    colorPalette: "Glossy Obsidian, Cue White, Speed Silver",
+    facialAge: "40s (Slick mustache, cool sunglasses, toothpick)",
+    personality: "Cool, calculating pool hustler",
+    primaryWeapon: "Giant Billiard Cue Stick",
+    signatureAbility: "Cue Break Strike & Speed/Knockback Momentum Stacks",
+    companion: "None",
+    specialVisualEffects: "Speed trails, chalk impact puffs, billiard trajectory lines",
+    animeStyle: "Retro cool gambling/underground sports anime character",
+    gameStyle: "Physics-driven striker that grows stronger and faster with each bounce",
   },
 };
 
@@ -565,6 +851,10 @@ export default function App() {
   const [recordingStatus, setRecordingStatus] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [activeTab, setActiveTab] = useState("simulator");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedArchetype, setSelectedArchetype] = useState("All");
+  const [expandedBallId, setExpandedBallId] = useState(null);
   
   const [gameState, setGameState] = useState({
     leftHealth: MAX_HEALTH,
@@ -13769,10 +14059,288 @@ export default function App() {
     );
   };
 
+  const renderDictionaryContent = () => {
+    const filteredBalls = Object.values(BALL_TYPES).filter((ball) => {
+      const matchesSearch = 
+        ball.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ball.shortName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ball.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (ball.personality && ball.personality.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (ball.visualTheme && ball.visualTheme.toLowerCase().includes(searchTerm.toLowerCase()));
+        
+      const matchesArchetype =
+        selectedArchetype === "All" ||
+        (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker"].includes(ball.id)) ||
+        (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall"].includes(ball.id)) ||
+        (selectedArchetype === "Summoner" && ["spore", "shadow"].includes(ball.id)) ||
+        (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull"].includes(ball.id)) ||
+        (selectedArchetype === "Utility/Defense" && ["vampire", "shield", "chess", "trident", "mirror", "joker", "eightBall"].includes(ball.id));
+
+      return matchesSearch && matchesArchetype;
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Dictionary Header */}
+        <div className="border-b border-slate-900 pb-5 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <h1 className="font-extrabold tracking-tight bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent text-3xl md:text-4xl">
+              Fighter Dictionary
+            </h1>
+            <p className="mt-1.5 text-xs text-sm text-slate-400">
+              Browse the visual themes, personalities, weapons, and styles of all 26 combatants.
+            </p>
+          </div>
+          
+          {/* Search Bar */}
+          <div className="relative w-full md:w-80">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg className="h-4 w-4 text-slate-550" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Search by name, key, trait..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-900/40 border border-slate-800/80 rounded-xl pl-9 pr-4 py-2.5 text-xs font-medium text-slate-200 placeholder-slate-550 focus:outline-none focus:border-sky-500/80 focus:ring-1 focus:ring-sky-500/30 transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2">Categories:</span>
+          {["All", "Melee", "Ranged", "Summoner", "Zone Control", "Utility/Defense"].map((archetype) => (
+            <button
+              key={archetype}
+              onClick={() => setSelectedArchetype(archetype)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
+                selectedArchetype === archetype
+                  ? "bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              }`}
+            >
+              {archetype}
+            </button>
+          ))}
+        </div>
+
+        {/* Roster Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredBalls.map((ball) => {
+            const isExpanded = expandedBallId === ball.id;
+            return (
+              <Card 
+                key={ball.id} 
+                className="overflow-hidden rounded-2xl border-slate-900 bg-slate-900/20 hover:bg-slate-900/30 backdrop-blur-md shadow-xl transition-all duration-300 group hover:border-slate-800/60"
+                style={{
+                  boxShadow: `0 10px 30px -15px rgba(0, 0, 0, 0.7), 0 0 15px -3px ${ball.color}10`
+                }}
+              >
+                <CardContent className="p-5 space-y-4">
+                  {/* Card Header (Ball Visual & Basic info) */}
+                  <div className="flex items-center gap-4">
+                    {/* Visual representation of the ball */}
+                    <div 
+                      className="w-16 h-16 rounded-full flex items-center justify-center relative select-none shrink-0 border-2"
+                      style={{
+                        backgroundColor: ball.color,
+                        borderColor: ball.stroke,
+                        boxShadow: `0 0 12px ${ball.stroke}50, inset 0 0 10px rgba(0,0,0,0.4)`
+                      }}
+                    >
+                      <div className="text-xl">{ball.emoji}</div>
+                      {/* Glow Ring reflection */}
+                      <div className="absolute inset-0.5 rounded-full border border-white/10 pointer-events-none" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-extrabold text-lg text-slate-100 truncate">{ball.name}</h3>
+                        <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-slate-800 bg-slate-900 text-slate-300">
+                          {ball.shortName}
+                        </span>
+                      </div>
+                      <p className="text-xs text-sky-400 font-semibold uppercase tracking-wider mt-0.5">
+                        {ball.visualTheme ? ball.visualTheme.split("/")[0].trim() : "Fighter"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Standard Short Description */}
+                  <p className="text-xs text-slate-400 leading-relaxed min-h-[40px]">
+                    {ball.description}
+                  </p>
+
+                  {/* Quick Select Actions */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-900/50">
+                    <button
+                      onClick={() => {
+                        selectBall(0, ball.id);
+                        setActiveTab("simulator");
+                      }}
+                      className="py-2 px-3 rounded-xl text-xs font-bold bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-300 transition-all active:scale-[0.98]"
+                    >
+                      Set as Fighter 1
+                    </button>
+                    <button
+                      onClick={() => {
+                        selectBall(1, ball.id);
+                        setActiveTab("simulator");
+                      }}
+                      className="py-2 px-3 rounded-xl text-xs font-bold bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-300 transition-all active:scale-[0.98]"
+                    >
+                      Set as Fighter 2
+                    </button>
+                  </div>
+
+                  {/* Expand button */}
+                  <button
+                    onClick={() => setExpandedBallId(isExpanded ? null : ball.id)}
+                    className="w-full py-2 rounded-xl text-[10px] uppercase tracking-wider font-extrabold text-slate-450 hover:text-slate-205 flex items-center justify-center gap-1.5 transition-all border border-slate-900 bg-slate-950/40 hover:bg-slate-950/90 shadow-inner"
+                  >
+                    {isExpanded ? (
+                      <>
+                        Close Character File
+                        <svg className="w-3.5 h-3.5 transform rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        Open Character File
+                        <svg className="w-3.5 h-3.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Collapsible Details section matching the exact fields */}
+                  {isExpanded && (
+                    <div className="pt-3 border-t border-slate-900/60 space-y-3.5 animate-fadeIn text-[11px] leading-relaxed">
+                      <div className="bg-slate-950/70 rounded-2xl p-4 space-y-4 border border-slate-900/80 shadow-2xl">
+                        
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[CHARACTER_NAME]</span>
+                          <span className="font-extrabold text-slate-100 text-sm">{ball.name}</span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[VISUAL_THEME]</span>
+                          <span className="font-medium text-slate-200">{ball.visualTheme || "N/A"}</span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[COLOR_PALETTE]</span>
+                          <span className="font-medium text-slate-200">{ball.colorPalette || "N/A"}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[FACIAL_AGE]</span>
+                            <span className="font-medium text-slate-200">{ball.facialAge || "N/A"}</span>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[PERSONALITY]</span>
+                            <span className="font-medium text-slate-200">{ball.personality || "N/A"}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[PRIMARY_WEAPON]</span>
+                          <span className="font-medium text-slate-200">{ball.primaryWeapon || "N/A"}</span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[SIGNATURE_ABILITY]</span>
+                          <span className="font-medium text-slate-200">{ball.signatureAbility || "N/A"}</span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[COMPANION]</span>
+                          <span className="font-medium text-slate-200">{ball.companion || "None"}</span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[SPECIAL_VISUAL_EFFECTS]</span>
+                          <span className="font-medium text-slate-200">{ball.specialVisualEffects || "N/A"}</span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[ANIME_STYLE]</span>
+                          <span className="font-medium text-slate-200">{ball.animeStyle || "N/A"}</span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-sky-400 font-extrabold uppercase tracking-widest">[GAME_STYLE]</span>
+                          <span className="font-medium text-slate-200">{ball.gameStyle || "N/A"}</span>
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-[1600px] space-y-6">
-        {renderAppContent()}
+    <div className="min-h-screen w-full bg-slate-950 text-slate-100 p-4 md:p-8">
+      <div className="mx-auto w-full max-w-[1600px] space-y-6">
+        
+        {/* Navigation Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-900 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+              <span className="font-extrabold text-xs text-slate-950">BF</span>
+            </div>
+            <div>
+              <h1 className="font-extrabold tracking-tight bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent text-2xl">
+                Ball Fighters
+              </h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Weapon Simulator & Dictionary</p>
+            </div>
+          </div>
+          
+          <div className="flex bg-slate-900/60 p-1 rounded-xl border border-slate-800/80 backdrop-blur text-xs">
+            <button
+              onClick={() => setActiveTab("simulator")}
+              className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 flex items-center gap-2 ${
+                activeTab === "simulator"
+                  ? "bg-gradient-to-r from-sky-500 to-indigo-500 text-slate-950 shadow-md shadow-sky-500/20"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Arena Simulator
+            </button>
+            <button
+              onClick={() => setActiveTab("dictionary")}
+              className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 flex items-center gap-2 ${
+                activeTab === "dictionary"
+                  ? "bg-gradient-to-r from-sky-500 to-indigo-500 text-slate-950 shadow-md shadow-sky-500/20"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              Fighter Dictionary
+            </button>
+          </div>
+        </div>
+
+        {activeTab === "simulator" ? renderAppContent() : renderDictionaryContent()}
+
       </div>
     </div>
   );
