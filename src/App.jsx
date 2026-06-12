@@ -1292,7 +1292,6 @@ export default function App() {
   };
 
   const beginCombatFromIntro = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (!fightIntroRef.current.active) return;
     const left = gameRef.current.balls[0];
     const right = gameRef.current.balls[1];
@@ -1324,34 +1323,6 @@ export default function App() {
     playSound("gunReload");
   };
 
-  const speakIntro = (leftName, rightName) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const text = `${leftName} Versus ${rightName}... Who would win?`;
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    let selectedVoice = null;
-    
-    const maleNames = ["david", "microsoft david", "james", "microsoft james", "daniel", "google uk english male", "male", "low"];
-    for (const name of maleNames) {
-      const found = voices.find(v => v.name.toLowerCase().includes(name));
-      if (found) {
-        selectedVoice = found;
-        break;
-      }
-    }
-    
-    if (!selectedVoice && voices.length > 0) {
-      selectedVoice = voices.find(v => v.lang.toLowerCase().startsWith("en")) || voices[0];
-    }
-    
-    if (selectedVoice) utterance.voice = selectedVoice;
-    utterance.pitch = 0.6;
-    utterance.rate = 0.82;
-    utterance.volume = 1.0;
-    window.speechSynthesis.speak(utterance);
-  };
-
   const startFight = ({ record = false } = {}) => {
     const balls = initializeFightState();
     setGameStarted(false);
@@ -1373,18 +1344,14 @@ export default function App() {
       fightSoundPlayed: false
     };
     setFightIntroActive(true);
-    speakIntro(balls[0].name, balls[1].name);
+    playAudioFile("/Balls%20Ready.%20Fight!.mp3", 1.05, 0.02);
     playSound("shieldCatch", 0.75, 80);
     if (record && !isRecording) requestAnimationFrame(() => startFightRecording());
   };
 
-  const skipFightIntro = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    beginCombatFromIntro();
-  };
+  const skipFightIntro = () => beginCombatFromIntro();
 
   const resetToSelection = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
     fightIntroRef.current = { active: false, startTime: 0, recordingRequested: false, impactSoundPlayed: false, readySoundPlayed: false, fightSoundPlayed: false };
     setFightIntroActive(false);
     stopMatchMusic();
@@ -3943,11 +3910,17 @@ export default function App() {
             }
             ball.lastBounceX = bx;
             ball.lastBounceY = by;
+          } else if (ball.type === "cueBall" || (ball.type === "eightBall" && game.simTime < (ball.eightPoweredUntil || 0))) {
+            playSound("cueImpact", 0.82, 110);
           } else {
             playSound("wallBounce", 0.8, 120);
           }
         } else {
-          playSound("wallBounce", 0.8, 120);
+          if (ball.type === "cueBall" || (ball.type === "eightBall" && game.simTime < (ball.eightPoweredUntil || 0))) {
+            playSound("cueImpact", 0.82, 110);
+          } else {
+            playSound("wallBounce", 0.8, 120);
+          }
         }
       }
     };
@@ -4017,6 +3990,32 @@ export default function App() {
         const mB = (dpNormB * (b.mass - a.mass) + 2 * a.mass * dpNormA) / (a.mass + b.mass);
         a.vx = tx * dpTanA + nx * mA; a.vy = ty * dpTanA + ny * mA;
         b.vx = tx * dpTanB + nx * mB; b.vy = ty * dpTanB + ny * mB;
+      }
+
+      // Cue Ball Collisions
+      if (a.type === "cueBall" || b.type === "cueBall") {
+        const cueBall = a.type === "cueBall" ? a : b;
+        const otherBall = a.type === "cueBall" ? b : a;
+        
+        if (otherBall.type === "eightBall" && otherBall.side === cueBall.side) {
+          cueBall.hasHitEightBall = true;
+          spawnSparks(cueBall.x, cueBall.y, "#f8fafc", 8);
+        } else if (otherBall.side !== cueBall.side && otherBall.type !== "cueBall") {
+          if (cueBall.hasHitEightBall) {
+            const bal = game.balance.eightBall || BALANCE.eightBall;
+            if (game.simTime >= (cueBall.lastHitOpponentAt || 0) + bal.hitCooldown) {
+              cueBall.lastHitOpponentAt = game.simTime;
+              applyDamage(otherBall, bal.hitDamage * 2.5, `${cueBall.id}-cue-impact`, game.simTime, bal.hitCooldown);
+              spawnSparks(otherBall.x, otherBall.y, "#67e8f9", 12);
+              
+              const ownerStats = cueBall.side === "left" ? game.stats.left : game.stats.right;
+              if (ownerStats) {
+                ownerStats.damageDealt += Math.round(bal.hitDamage * 2.5);
+                ownerStats.hitsLanded++;
+              }
+            }
+          }
+        }
       }
 
       const applyEightBallImpact = (attacker, defender, hitNx, hitNy, incomingVelocity) => {
@@ -5685,12 +5684,51 @@ export default function App() {
         ball.eightCueState = "idle";
         ball.eightInvulnerableHealth = null;
         ball.eightNextCueAt = currentTime + bal.cooldown;
+        if (ball.eightCueBall) {
+          game.balls = game.balls.filter(b => b.id !== ball.eightCueBall.id);
+          ball.eightCueBall = null;
+        }
       }
 
       if (ball.eightCueState === "pullback") {
         ball.vx *= 0.74;
         ball.vy *= 0.74;
-        ball.eightCueAngle = getEightBallCueAngle(ball, target, ball.eightCueBankShot, game.width, game.height);
+
+        if (!ball.eightCueBall) {
+          const pad = 120;
+          const cueBallX = pad + Math.random() * (game.width - pad * 2);
+          const cueBallY = pad + Math.random() * (game.height - pad * 2);
+          const cueBall = {
+            id: `${ball.id}-cueBall`,
+            type: "cueBall",
+            side: ball.side,
+            x: cueBallX,
+            y: cueBallY,
+            vx: 0,
+            vy: 0,
+            r: 20,
+            health: 100,
+            color: "#f8fafc",
+            stroke: "#94a3b8",
+            isCueBall: true,
+            ownerId: ball.id,
+            hasHitEightBall: false
+          };
+          ball.eightCueBall = cueBall;
+          game.balls.push(cueBall);
+        }
+
+        const cueBall = ball.eightCueBall;
+        const targetTypes = ["eightBall", "opponent", "bank"];
+        const targetType = targetTypes[(ball.eightCueCount || 0) % 3];
+        if (targetType === "eightBall") {
+          ball.eightCueAngle = Math.atan2(ball.y - cueBall.y, ball.x - cueBall.x);
+        } else if (targetType === "opponent") {
+          ball.eightCueAngle = Math.atan2(target.y - cueBall.y, target.x - cueBall.x);
+        } else if (targetType === "bank") {
+          ball.eightCueAngle = getEightBallCueAngle(cueBall, target, true, game.width, game.height);
+        }
+
         if (currentTime >= ball.eightCueStrikeAt) {
           ball.eightCueState = "striking";
           ball.eightCueContactAt = currentTime + bal.cueStrikeDuration;
@@ -5699,22 +5737,30 @@ export default function App() {
       }
 
       if (ball.eightCueState === "striking") {
-        ball.vx = 0;
-        ball.vy = 0;
+        ball.vx *= 0.85;
+        ball.vy *= 0.85;
         if (currentTime >= ball.eightCueContactAt) {
           ball.eightCueState = "powered";
           ball.eightPoweredUntil = currentTime + bal.poweredDuration;
           ball.eightPowerStacks = 0;
           ball.eightInvulnerableHealth = ball.health;
           ball.eightStrikeFlashUntil = currentTime + 220;
-          ball.vx = Math.cos(ball.eightCueAngle) * bal.launchSpeed;
-          ball.vy = Math.sin(ball.eightCueAngle) * bal.launchSpeed;
+
+          if (ball.eightCueBall) {
+            ball.eightCueBall.vx = Math.cos(ball.eightCueAngle) * bal.launchSpeed;
+            ball.eightCueBall.vy = Math.sin(ball.eightCueAngle) * bal.launchSpeed;
+          }
+
           game.screenShake = Math.max(game.screenShake || 0, 7);
-          spawnSparks(ball.x, ball.y, "#f8fafc", 12);
+          spawnSparks(ball.eightCueBall ? ball.eightCueBall.x : ball.x, ball.eightCueBall ? ball.eightCueBall.y : ball.y, "#f8fafc", 12);
           playSound("cueStrike", 0.95, 180);
+
+          const targetTypes = ["eightBall", "opponent", "bank"];
+          const targetType = targetTypes[(ball.eightCueCount || 0) % 3];
+          const text = targetType === "eightBall" ? "TRICK BREAK!" : targetType === "opponent" ? "DIRECT BREAK!" : "BANK BREAK!";
           game.floatingTexts.push({
             x: ball.x, y: ball.y - ball.r - 20, vy: -42,
-            text: "BREAK!", color: "#f8fafc", life: 0.65, maxLife: 0.65
+            text, color: "#f8fafc", life: 0.65, maxLife: 0.65
           });
         }
         return;
@@ -5724,17 +5770,10 @@ export default function App() {
 
       if (currentTime >= (ball.eightNextCueAt || 0)) {
         ball.eightCueCount = (ball.eightCueCount || 0) + 1;
-        ball.eightCueBankShot = ball.eightCueCount % 2 === 0;
         ball.eightCueState = "pullback";
         ball.eightCueStartAt = currentTime;
         ball.eightCueStrikeAt = currentTime + bal.cueWindup;
-        ball.eightCueAngle = getEightBallCueAngle(ball, target, ball.eightCueBankShot, game.width, game.height);
         playSound("cueReady", 0.7, 300);
-        game.floatingTexts.push({
-          x: ball.x, y: ball.y - ball.r - 20, vy: -34,
-          text: ball.eightCueBankShot ? "BANK SHOT" : "DIRECT SHOT",
-          color: ball.eightCueBankShot ? "#67e8f9" : "#f8fafc", life: 0.6, maxLife: 0.6
-        });
       }
     };
 
@@ -10585,17 +10624,19 @@ export default function App() {
       const powered = game.simTime < (ball.eightPoweredUntil || 0);
       const strikeFlash = game.simTime < (ball.eightStrikeFlashUntil || 0);
       const angle = ball.eightCueAngle || 0;
+      const cueBall = ball.eightCueBall;
+      const activeSource = cueBall || ball;
 
       if (pulling || striking) {
         // Preview the break direction using the same center limits as wall physics.
-        const guidePoints = [{ x: ball.x, y: ball.y }];
-        const arenaPad = 18 + ball.r;
+        const guidePoints = [{ x: activeSource.x, y: activeSource.y }];
+        const arenaPad = 18 + activeSource.r;
         const minX = arenaPad;
         const maxX = game.width - arenaPad;
         const minY = arenaPad;
         const maxY = game.height - arenaPad;
-        let guideX = ball.x;
-        let guideY = ball.y;
+        let guideX = activeSource.x;
+        let guideY = activeSource.y;
         let guideDx = Math.cos(angle);
         let guideDy = Math.sin(angle);
         let remainingGuideLength = Math.max(game.width, game.height) * 1.35;
@@ -10643,8 +10684,8 @@ export default function App() {
         const backX = -Math.cos(angle);
         const backY = -Math.sin(angle);
         const distances = [];
-        if (Math.abs(backX) > 0.001) distances.push(((backX > 0 ? game.width : 0) - ball.x) / backX);
-        if (Math.abs(backY) > 0.001) distances.push(((backY > 0 ? game.height : 0) - ball.y) / backY);
+        if (Math.abs(backX) > 0.001) distances.push(((backX > 0 ? game.width : 0) - activeSource.x) / backX);
+        if (Math.abs(backY) > 0.001) distances.push(((backY > 0 ? game.height : 0) - activeSource.y) / backY);
         const wallDistance = Math.min(...distances.filter((value) => value > 0));
         const pullProgress = pulling ? clamp((game.simTime - ball.eightCueStartAt) / Math.max(1, bal.cueWindup), 0, 1) : 1;
         const strikeProgress = striking ? clamp((game.simTime - ball.eightCueStrikeAt) / Math.max(1, bal.cueStrikeDuration), 0, 1) : 0;
@@ -10655,10 +10696,10 @@ export default function App() {
         const gap = striking
           ? fullPullGap + (1 - fullPullGap) * easedStrike
           : restingGap + bal.cuePullback * easedPull;
-        const tipX = ball.x + backX * (ball.r + gap);
-        const tipY = ball.y + backY * (ball.r + gap);
-        const wallX = ball.x + backX * wallDistance;
-        const wallY = ball.y + backY * wallDistance;
+        const tipX = activeSource.x + backX * (activeSource.r + gap);
+        const tipY = activeSource.y + backY * (activeSource.r + gap);
+        const wallX = activeSource.x + backX * wallDistance;
+        const wallY = activeSource.y + backY * wallDistance;
         const buttX = wallX + backX * 52;
         const buttY = wallY + backY * 52;
 
@@ -10772,6 +10813,51 @@ export default function App() {
       ctx.restore();
 
       drawHealthInsideBall(ball);
+    };
+
+    const drawCueBall = (ball) => {
+      ctx.save();
+      ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 3;
+
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = "#f8fafc";
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.stroke();
+
+      const glossGrad = ctx.createRadialGradient(
+        ball.x - ball.r * 0.35, ball.y - ball.r * 0.35, ball.r * 0.05,
+        ball.x - ball.r * 0.2, ball.y - ball.r * 0.2, ball.r * 0.75
+      );
+      glossGrad.addColorStop(0, "rgba(255, 255, 255, 0.85)");
+      glossGrad.addColorStop(0.3, "rgba(255, 255, 255, 0.25)");
+      glossGrad.addColorStop(0.85, "rgba(241, 245, 249, 0)");
+      glossGrad.addColorStop(1, "rgba(203, 213, 225, 0.15)");
+      
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r - 1, 0, Math.PI * 2);
+      ctx.fillStyle = glossGrad;
+      ctx.fill();
+      
+      if (ball.hasHitEightBall) {
+        ctx.globalAlpha = 0.5 + Math.sin(game.simTime * 0.025) * 0.25;
+        ctx.strokeStyle = "#22d3ee";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
     };
 
 
@@ -11668,6 +11754,7 @@ export default function App() {
       else if (ball.type === "constellation") drawConstellationBall(ball);
       else if (ball.type === "fireSkull") drawFireSkullBall(ball);
       else if (ball.type === "eightBall") drawEightBall(ball);
+      else if (ball.type === "cueBall") drawCueBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
         const progress = (ball.chaosDraggedUntil - game.simTime) / 360;
@@ -13242,43 +13329,59 @@ export default function App() {
             }
           });
 
-          const collided = resolveBallCollision(left, right);
-          if (collided) {
-            playSound("ballCollision", 1, 80);
-            if (game.simTime >= OPENING_SKILL_DELAY) {
-            if (left.type === "spore" && left.hydraGlowStacks > 0) {
-              const glowDamage = left.hydraGlowStacks * game.balance.spore.cactusDamage;
-              applyDamage(right, glowDamage, `${left.id}-hydra-glow-hit`, game.simTime, 250);
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({ x: right.x, y: right.y - right.r - 22, vy: -60, text: `RAGE -${glowDamage}`, color: "#fb7185", life: 0.8, maxLife: 0.8 });
-              left.hydraGlowStacks = 0;
-            }
-            if (right.type === "spore" && right.hydraGlowStacks > 0) {
-              const glowDamage = right.hydraGlowStacks * game.balance.spore.cactusDamage;
-              applyDamage(left, glowDamage, `${right.id}-hydra-glow-hit`, game.simTime, 250);
-              game.floatingTexts = game.floatingTexts || [];
-              game.floatingTexts.push({ x: left.x, y: left.y - left.r - 22, vy: -60, text: `RAGE -${glowDamage}`, color: "#fb7185", life: 0.8, maxLife: 0.8 });
-              right.hydraGlowStacks = 0;
-            }
-            
-            [left, right].forEach((b, idx) => {
-              if (b.type === "shield" && b.shieldState === "held") {
-                  const enemy = idx === 0 ? right : left;
-                  const angle = Math.atan2(enemy.y - b.y, enemy.x - b.x);
-                  let diff = Math.abs(angle - b.shieldAngle);
-                  while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
-                  if (diff < game.balance.shield.arcWidth / 2) {
-                    if (!hasStringBounceGuard(enemy)) {
-                      enemy.vx += Math.cos(angle) * game.balance.shield.knockback * 15;
-                      enemy.vy += Math.sin(angle) * game.balance.shield.knockback * 15;
-                    }
-                    spawnShieldSparks(enemy.x - Math.cos(angle) * enemy.r, enemy.y - Math.sin(angle) * enemy.r, angle);
-                    registerShieldGuardHit(b, angle, game.simTime);
+          for (let i = 0; i < game.balls.length; i++) {
+            for (let j = i + 1; j < game.balls.length; j++) {
+              const bA = game.balls[i];
+              const bB = game.balls[j];
+              const collided = resolveBallCollision(bA, bB);
+              if (collided) {
+                const isEightBallPowered = (bA.type === "eightBall" && game.simTime < (bA.eightPoweredUntil || 0)) ||
+                                           (bB.type === "eightBall" && game.simTime < (bB.eightPoweredUntil || 0));
+                const hasCueBall = bA.type === "cueBall" || bB.type === "cueBall";
+                if (isEightBallPowered || hasCueBall) {
+                  playSound("cueImpact", 0.95, 100);
+                } else {
+                  playSound("ballCollision", 1, 80);
+                }
+                
+                if (game.simTime >= OPENING_SKILL_DELAY) {
+                  if (bA.type === "spore" && bA.hydraGlowStacks > 0 && bB.id === right.id) {
+                    const glowDamage = bA.hydraGlowStacks * game.balance.spore.cactusDamage;
+                    applyDamage(bB, glowDamage, `${bA.id}-hydra-glow-hit`, game.simTime, 250);
+                    game.floatingTexts = game.floatingTexts || [];
+                    game.floatingTexts.push({ x: bB.x, y: bB.y - bB.r - 22, vy: -60, text: `RAGE -${glowDamage}`, color: "#fb7185", life: 0.8, maxLife: 0.8 });
+                    bA.hydraGlowStacks = 0;
                   }
+                  if (bB.type === "spore" && bB.hydraGlowStacks > 0 && bA.id === left.id) {
+                    const glowDamage = bB.hydraGlowStacks * game.balance.spore.cactusDamage;
+                    applyDamage(bA, glowDamage, `${bB.id}-hydra-glow-hit`, game.simTime, 250);
+                    game.floatingTexts = game.floatingTexts || [];
+                    game.floatingTexts.push({ x: bA.x, y: bA.y - bA.r - 22, vy: -60, text: `RAGE -${glowDamage}`, color: "#fb7185", life: 0.8, maxLife: 0.8 });
+                    bB.hydraGlowStacks = 0;
+                  }
+                }
+
+                if ((bA === left && bB === right) || (bA === right && bB === left)) {
+                  [left, right].forEach((b, idx) => {
+                    if (b.type === "shield" && b.shieldState === "held") {
+                      const enemy = idx === 0 ? right : left;
+                      const angle = Math.atan2(enemy.y - b.y, enemy.x - b.x);
+                      let diff = Math.abs(angle - b.shieldAngle);
+                      while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+                      if (diff < game.balance.shield.arcWidth / 2) {
+                        if (!hasStringBounceGuard(enemy)) {
+                          enemy.vx += Math.cos(angle) * game.balance.shield.knockback * 15;
+                          enemy.vy += Math.sin(angle) * game.balance.shield.knockback * 15;
+                        }
+                        spawnShieldSparks(enemy.x - Math.cos(angle) * enemy.r, enemy.y - Math.sin(angle) * enemy.r, angle);
+                        registerShieldGuardHit(b, angle, game.simTime);
+                      }
+                    }
+                  });
+                }
               }
-            });
+            }
           }
-        }
 
           game.balls.forEach((ball) => {
             const target = ball.side === "left" ? right : left;
@@ -13439,7 +13542,11 @@ export default function App() {
           }
           if (ball.type === "knife") ball.spinAngle += 0.02;
         });
-        resolveBallCollision(left, right);
+        for (let i = 0; i < game.balls.length; i++) {
+          for (let j = i + 1; j < game.balls.length; j++) {
+            resolveBallCollision(game.balls[i], game.balls[j]);
+          }
+        }
         updateParticles(dt);
         updateFloatingTexts(dt);
         updateCacti(dt);
