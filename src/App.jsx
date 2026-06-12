@@ -653,6 +653,42 @@ const loadSavedBalanceSettings = () => {
 };
 
 const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
+
+const EIGHT_BALL_SILHOUETTE_SVG = `
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#24103d"/>
+      <stop offset="55%" stop-color="#3b1761"/>
+      <stop offset="100%" stop-color="#160924"/>
+    </linearGradient>
+  </defs>
+  <path d="M312 465 C150 370 130 170 268 78 C360 24 435 96 378 168 C301 266 285 362 355 445 Z" fill="#fff" stroke="#1c0b31" stroke-width="26"/>
+  <path d="M888 465 C1050 370 1070 170 932 78 C840 24 765 96 822 168 C899 266 915 362 845 445 Z" fill="#fff" stroke="#1c0b31" stroke-width="26"/>
+  <path d="M118 1080 L250 900 L405 845 L600 885 L795 845 L950 900 L1082 1080 Z" fill="url(#purple)" stroke="#0b0611" stroke-width="18"/>
+  <path d="M438 785 L762 785 L725 955 L475 955 Z" fill="#000"/>
+  <path d="M420 920 L780 920 L840 1080 L360 1080 Z" fill="#000"/>
+  <path d="M375 280 L470 160 L600 95 L730 160 L825 280 L810 570 L730 765 L600 845 L470 765 L390 570 Z" fill="url(#purple)" stroke="#0b0611" stroke-width="18"/>
+  <path d="M445 485 L525 405 L675 405 L755 485 L740 675 L660 775 L540 775 L460 675 Z" fill="#000" stroke="#4b2476" stroke-width="14"/>
+  <path d="M485 365 L600 300 L715 365 L690 430 L510 430 Z" fill="#000"/>
+  <path d="M490 535 L565 555 L535 585 L470 565 Z" fill="#fff"/>
+  <path d="M710 535 L635 555 L665 585 L730 565 Z" fill="#fff"/>
+  <g fill="none" stroke="#6b35a0" stroke-width="12" stroke-linecap="round">
+    <path d="M470 200 L470 455"/><path d="M730 200 L730 455"/>
+    <path d="M405 330 L505 470"/><path d="M795 330 L695 470"/>
+    <path d="M470 690 L545 790"/><path d="M730 690 L655 790"/>
+    <path d="M510 810 L690 810"/><path d="M400 590 L470 590"/><path d="M730 590 L800 590"/>
+  </g>
+  <path d="M340 440 L405 395 L420 660 L350 705 Z" fill="#1a0b2c" stroke="#4b2476" stroke-width="14"/>
+  <path d="M860 440 L795 395 L780 660 L850 705 Z" fill="#1a0b2c" stroke="#4b2476" stroke-width="14"/>
+  <g fill="none" stroke="#6b35a0" stroke-width="12" stroke-linecap="round">
+    <path d="M250 920 L380 1080"/><path d="M950 920 L820 1080"/>
+    <path d="M450 940 L450 1080"/><path d="M750 940 L750 1080"/>
+    <circle cx="300" cy="1020" r="55"/><circle cx="900" cy="1020" r="55"/>
+  </g>
+</svg>`;
+
+const EIGHT_BALL_SILHOUETTE_URI = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(EIGHT_BALL_SILHOUETTE_SVG)}`;
 const isWreckerJumpInvulnerable = (ball) => (ball?.type === "wrecker" && ball.wreckerState === "leaping") || (ball?.type === "dragon" && ball.dragonState === "dashing");
 const isEightBallBreakInvulnerable = (ball, currentTime) => false;
 
@@ -952,6 +988,7 @@ export default function App() {
   const drawBallProxyRef = useRef(null);
   const animationRef = useRef(null);
   const recordingCanvasRef = useRef(null);
+  const recordingSilhouetteImageRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordingFrameRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -1494,119 +1531,215 @@ export default function App() {
     ctx.restore();
   };
 
-  const drawRecordingEightBallSilhouette = (ctx, centerX, bottomY) => {
+  const drawRecordingEightBallSilhouette = (ctx, centerX, bottomY, skillActive = false, currentTime = 0) => {
+    if (skillActive) {
+      const pulse = 0.5 + Math.sin(currentTime * 0.012) * 0.5;
+      ctx.save();
+
+      const aura = ctx.createRadialGradient(centerX, bottomY - 174, 24, centerX, bottomY - 174, 218);
+      aura.addColorStop(0, `rgba(103, 232, 249, ${0.2 + pulse * 0.12})`);
+      aura.addColorStop(0.42, `rgba(168, 85, 247, ${0.2 + pulse * 0.14})`);
+      aura.addColorStop(0.75, "rgba(219, 39, 119, 0.1)");
+      aura.addColorStop(1, "rgba(126, 34, 206, 0)");
+      ctx.fillStyle = aura;
+      ctx.fillRect(centerX - 245, bottomY - 390, 490, 390);
+
+      for (let index = 0; index < 22; index++) {
+        const phase = currentTime * (0.0007 + (index % 4) * 0.00011) + index * 2.399;
+        const orbitX = 112 + (index % 5) * 22;
+        const orbitY = 112 + (index % 4) * 25;
+        const x = centerX + Math.cos(phase) * orbitX;
+        const y = bottomY - 174 + Math.sin(phase * 1.17) * orbitY;
+        const twinkle = 0.45 + Math.sin(currentTime * 0.018 + index) * 0.28;
+        const color = index % 3 === 0 ? "#67e8f9" : index % 3 === 1 ? "#c084fc" : "#f472b6";
+        ctx.globalAlpha = Math.max(0.16, twinkle);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10 + pulse * 8;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 2.2 + (index % 3) * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 0.38 + pulse * 0.2;
+      ctx.strokeStyle = "#a855f7";
+      ctx.shadowColor = "#a855f7";
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(centerX, bottomY - 174, 178 + pulse * 8, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const silhouetteImage = recordingSilhouetteImageRef.current;
+    if (silhouetteImage?.complete && silhouetteImage.naturalWidth > 0) {
+      const width = 360;
+      const height = 324;
+      // The SVG artwork ends at y=1080; crop its empty lower 120px so the shoulders meet the HUD.
+      ctx.save();
+      if (skillActive) {
+        ctx.shadowColor = "#a855f7";
+        ctx.shadowBlur = 14 + Math.sin(currentTime * 0.012) * 5;
+      }
+      ctx.drawImage(silhouetteImage, 0, 0, 1200, 1080, centerX - width / 2, bottomY - height, width, height);
+      ctx.restore();
+      return;
+    }
+
     ctx.save();
     ctx.translate(centerX, bottomY);
+    ctx.scale(0.56, 0.56);
+    ctx.translate(0, -232);
 
-    const aura = ctx.createRadialGradient(0, -112, 12, 0, -112, 178);
-    aura.addColorStop(0, "rgba(34, 211, 238, 0.36)");
-    aura.addColorStop(0.28, "rgba(168, 85, 247, 0.42)");
-    aura.addColorStop(0.66, "rgba(219, 39, 119, 0.2)");
-    aura.addColorStop(1, "rgba(59, 130, 246, 0)");
+    // Subtle rectangular aura keeps the silhouette separate from the dark header.
+    const aura = ctx.createLinearGradient(0, -420, 0, 232);
+    aura.addColorStop(0, "rgba(126, 34, 206, 0)");
+    aura.addColorStop(0.45, "rgba(126, 34, 206, 0.16)");
+    aura.addColorStop(1, "rgba(190, 24, 93, 0.08)");
     ctx.fillStyle = aura;
+    ctx.fillRect(-400, -420, 800, 652);
+
+    ctx.lineJoin = "miter";
+    ctx.lineCap = "butt";
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "#220711";
+
+    // Long angular horns.
+    ctx.fillStyle = "#6e0018";
     ctx.beginPath();
-    ctx.arc(0, -112, 178, 0, Math.PI * 2);
+    ctx.moveTo(-212, -410);
+    ctx.lineTo(-186, -318);
+    ctx.lineTo(-244, -132);
+    ctx.lineTo(-133, -64);
+    ctx.lineTo(-180, -30);
+    ctx.lineTo(-310, -104);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(212, -410);
+    ctx.lineTo(186, -318);
+    ctx.lineTo(244, -132);
+    ctx.lineTo(133, -64);
+    ctx.lineTo(180, -30);
+    ctx.lineTo(310, -104);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Main faceted helmet.
+    ctx.fillStyle = "#8b1025";
+    ctx.beginPath();
+    ctx.moveTo(0, -294);
+    ctx.lineTo(58, -248);
+    ctx.lineTo(102, -255);
+    ctx.lineTo(122, -220);
+    ctx.lineTo(80, -4);
+    ctx.lineTo(34, 24);
+    ctx.lineTo(0, 34);
+    ctx.lineTo(-34, 24);
+    ctx.lineTo(-80, -4);
+    ctx.lineTo(-122, -220);
+    ctx.lineTo(-102, -255);
+    ctx.lineTo(-58, -248);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Flat, sharp face plate.
+    ctx.fillStyle = "#5c0015";
+    ctx.beginPath();
+    ctx.moveTo(-84, -105);
+    ctx.lineTo(84, -105);
+    ctx.lineTo(62, 10);
+    ctx.lineTo(0, 43);
+    ctx.lineTo(-62, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Hard-edged helmet center ridge and cheek panels.
+    ctx.fillStyle = "#a61731";
+    ctx.beginPath();
+    ctx.moveTo(0, -278);
+    ctx.lineTo(28, -238);
+    ctx.lineTo(18, -120);
+    ctx.lineTo(0, -89);
+    ctx.lineTo(-18, -120);
+    ctx.lineTo(-28, -238);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-103, -198);
+    ctx.lineTo(-57, -176);
+    ctx.lineTo(-67, -123);
+    ctx.lineTo(-105, -139);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(103, -198);
+    ctx.lineTo(57, -176);
+    ctx.lineTo(67, -123);
+    ctx.lineTo(105, -139);
+    ctx.closePath();
     ctx.fill();
 
-    ctx.globalAlpha = 0.7;
-    [
-      [-122, -179, 7, "#f0abfc"], [116, -149, 5, "#67e8f9"],
-      [-151, -93, 4, "#a78bfa"], [142, -72, 6, "#f472b6"],
-      [-82, -239, 3, "#67e8f9"], [83, -224, 4, "#c084fc"]
-    ].forEach(([x, y, r, color]) => {
-      ctx.fillStyle = color;
+    // Dark neck block.
+    ctx.fillStyle = "#1d1624";
+    ctx.beginPath();
+    ctx.moveTo(-65, 8);
+    ctx.lineTo(65, 8);
+    ctx.lineTo(82, 84);
+    ctx.lineTo(0, 113);
+    ctx.lineTo(-82, 84);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Extra-wide angular shoulder armor.
+    ctx.fillStyle = "#5a315f";
+    ctx.beginPath();
+    ctx.moveTo(-360, 118);
+    ctx.lineTo(-285, 82);
+    ctx.lineTo(-158, 70);
+    ctx.lineTo(-64, 58);
+    ctx.lineTo(0, 88);
+    ctx.lineTo(64, 58);
+    ctx.lineTo(158, 70);
+    ctx.lineTo(285, 82);
+    ctx.lineTo(360, 118);
+    ctx.lineTo(382, 190);
+    ctx.lineTo(220, 219);
+    ctx.lineTo(0, 232);
+    ctx.lineTo(-220, 219);
+    ctx.lineTo(-382, 190);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Straight armor panel lines emphasize width and remove any rounded feel.
+    ctx.strokeStyle = "#47254b";
+    ctx.lineWidth = 5;
+    ctx.globalAlpha = 0.9;
+    [-285, -235, -185, -135, -85, 85, 135, 185, 235, 285].forEach((x) => {
       ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(x, 82 + Math.abs(x) * 0.08);
+      ctx.lineTo(x, 212 - Math.abs(x) * 0.025);
+      ctx.stroke();
     });
+
+    // Narrow cyan eyes are the only bright facial detail.
     ctx.globalAlpha = 1;
-
-    ctx.shadowColor = "rgba(168, 85, 247, 0.75)";
-    ctx.shadowBlur = 22;
-    ctx.fillStyle = "#070a18";
-    ctx.strokeStyle = "#4c1d95";
-    ctx.lineWidth = 4;
-
-    // Broad cosmic shoulders and armored torso.
-    ctx.beginPath();
-    ctx.moveTo(-146, 0);
-    ctx.quadraticCurveTo(-137, -66, -76, -86);
-    ctx.lineTo(-48, -103);
-    ctx.quadraticCurveTo(-33, -117, -30, -141);
-    ctx.lineTo(30, -141);
-    ctx.quadraticCurveTo(33, -117, 48, -103);
-    ctx.lineTo(76, -86);
-    ctx.quadraticCurveTo(137, -66, 146, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Helmet and face.
-    ctx.beginPath();
-    ctx.moveTo(-42, -207);
-    ctx.quadraticCurveTo(-36, -240, 0, -246);
-    ctx.quadraticCurveTo(36, -240, 42, -207);
-    ctx.lineTo(34, -151);
-    ctx.quadraticCurveTo(0, -132, -34, -151);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Tall side horns inspired by the supplied silhouette.
-    ctx.beginPath();
-    ctx.moveTo(-38, -222);
-    ctx.lineTo(-72, -244);
-    ctx.lineTo(-99, -282);
-    ctx.lineTo(-78, -295);
-    ctx.lineTo(-49, -256);
-    ctx.lineTo(-27, -246);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(38, -222);
-    ctx.lineTo(72, -244);
-    ctx.lineTo(99, -282);
-    ctx.lineTo(78, -295);
-    ctx.lineTo(49, -256);
-    ctx.lineTo(27, -246);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Helmet bands and chest energy retain detail while reading as a silhouette.
-    ctx.shadowBlur = 8;
-    ctx.strokeStyle = "rgba(192, 132, 252, 0.55)";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(-38, -211);
-    ctx.lineTo(38, -211);
-    ctx.moveTo(-33, -190);
-    ctx.lineTo(33, -190);
-    ctx.moveTo(-86, -58);
-    ctx.quadraticCurveTo(-28, -98, 2, -46);
-    ctx.quadraticCurveTo(32, 1, 91, -52);
-    ctx.stroke();
-
     ctx.shadowColor = "#22d3ee";
-    ctx.shadowBlur = 18;
-    ctx.strokeStyle = "#22d3ee";
-    ctx.lineWidth = 5;
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = "#67e8f9";
+    ctx.lineWidth = 7;
     ctx.beginPath();
-    ctx.moveTo(-22, -184);
-    ctx.lineTo(-6, -181);
-    ctx.moveTo(6, -181);
-    ctx.lineTo(22, -184);
-    ctx.stroke();
-
-    ctx.globalAlpha = 0.72;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(-39, -67);
-    ctx.lineTo(-12, -43);
-    ctx.lineTo(4, -69);
-    ctx.lineTo(29, -32);
-    ctx.lineTo(58, -55);
+    ctx.moveTo(-54, -73);
+    ctx.lineTo(-16, -69);
+    ctx.moveTo(16, -69);
+    ctx.lineTo(54, -73);
     ctx.stroke();
     ctx.restore();
   };
@@ -1637,8 +1770,10 @@ export default function App() {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    if (left?.type === "eightBall" || right?.type === "eightBall") {
-      drawRecordingEightBallSilhouette(ctx, width / 2, hudY - 10);
+    const eightBallFighter = left?.type === "eightBall" ? left : right?.type === "eightBall" ? right : null;
+    if (eightBallFighter) {
+      const cueSkillActive = eightBallFighter.eightCueState === "pullback" || eightBallFighter.eightCueState === "striking";
+      drawRecordingEightBallSilhouette(ctx, width / 2, hudY + 1, cueSkillActive, gameRef.current.simTime);
     }
 
     drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left");
@@ -1771,6 +1906,15 @@ export default function App() {
     }
     startFight({ record: true });
   };
+
+  useEffect(() => {
+    const image = new Image();
+    image.src = EIGHT_BALL_SILHOUETTE_URI;
+    recordingSilhouetteImageRef.current = image;
+    return () => {
+      recordingSilhouetteImageRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -15012,6 +15156,76 @@ ${ball.description}`;
     );
   };
 
+  const renderSilhouetteContent = () => (
+    <div className="space-y-6">
+      <div className="border-b border-slate-900 pb-5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-fuchsia-400">Recording Artwork</p>
+        <h2 className="mt-2 text-3xl font-black text-slate-100">8-Ball Silhouette</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
+          This page uses the same SVG asset as the HD recording overlay. Changes to the silhouette appear here and in recordings automatically.
+        </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
+        <Card className="overflow-hidden rounded-3xl border-slate-800 bg-slate-900/50 text-slate-100 shadow-2xl">
+          <CardContent className="p-5 md:p-8">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <h3 className="font-black">Transparent Artwork</h3>
+                <p className="text-xs text-slate-500">Full 1200 x 1200 silhouette</p>
+              </div>
+              <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
+                Live Asset
+              </span>
+            </div>
+            <div
+              className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-slate-700 p-5"
+              style={{
+                backgroundColor: "#111827",
+                backgroundImage: "linear-gradient(45deg, #1e293b 25%, transparent 25%), linear-gradient(-45deg, #1e293b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e293b 75%), linear-gradient(-45deg, transparent 75%, #1e293b 75%)",
+                backgroundPosition: "0 0, 0 16px, 16px -16px, -16px 0px",
+                backgroundSize: "32px 32px"
+              }}
+            >
+              <img src={EIGHT_BALL_SILHOUETTE_URI} alt="8-Ball cosmic silhouette" className="h-full w-full object-contain" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden rounded-3xl border-slate-800 bg-slate-900/50 text-slate-100 shadow-2xl">
+          <CardContent className="p-5 md:p-8">
+            <div className="mb-4">
+              <h3 className="font-black">Recording Placement</h3>
+              <p className="text-xs text-slate-500">Silhouette above the two health cards</p>
+            </div>
+            <div className="relative aspect-[1080/520] overflow-hidden rounded-2xl border border-slate-700 bg-gradient-to-b from-slate-800 to-slate-950">
+              <img
+                src={EIGHT_BALL_SILHOUETTE_URI}
+                alt="8-Ball recording placement"
+                className="absolute left-1/2 top-[7%] h-[70%] w-[42%] -translate-x-1/2 object-contain"
+              />
+              <div className="absolute inset-x-[4.5%] bottom-[8%] grid grid-cols-2 gap-0">
+                <div className="rounded-l-2xl border border-slate-600 bg-slate-800/95 p-3">
+                  <div className="text-sm font-black text-white">8-Ball</div>
+                  <div className="mt-1 text-[10px] font-bold text-slate-300">150 HP</div>
+                  <div className="mt-1 h-2 rounded-full bg-white" />
+                </div>
+                <div className="rounded-r-2xl border border-slate-600 bg-slate-800/95 p-3 text-right">
+                  <div className="text-sm font-black text-white">Opponent</div>
+                  <div className="mt-1 text-[10px] font-bold text-slate-300">150 HP</div>
+                  <div className="mt-1 h-2 rounded-full bg-red-500" />
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-400">
+              The transparent SVG is rendered at 360 x 360 pixels in the 1080 x 1920 recording header whenever either fighter is 8-Ball.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="mx-auto w-full max-w-[1600px] space-y-6">
@@ -15030,7 +15244,7 @@ ${ball.description}`;
             </div>
           </div>
           
-          <div className="flex bg-slate-900/60 p-1 rounded-xl border border-slate-800/80 backdrop-blur text-xs">
+          <div className="flex flex-wrap justify-center bg-slate-900/60 p-1 rounded-xl border border-slate-800/80 backdrop-blur text-xs">
             <button
               onClick={() => setActiveTab("simulator")}
               className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 flex items-center gap-2 ${
@@ -15057,10 +15271,27 @@ ${ball.description}`;
               </svg>
               Fighter Dictionary
             </button>
+            <button
+              onClick={() => setActiveTab("silhouette")}
+              className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 flex items-center gap-2 ${
+                activeTab === "silhouette"
+                  ? "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-slate-950 shadow-md shadow-fuchsia-500/20"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l3 4 5 1-3 4 1 6-6-3-6 3 1-6-3-4 5-1 3-4z" />
+              </svg>
+              Silhouette
+            </button>
           </div>
         </div>
 
-        {activeTab === "simulator" ? renderAppContent() : renderDictionaryContent()}
+        {activeTab === "simulator"
+          ? renderAppContent()
+          : activeTab === "dictionary"
+            ? renderDictionaryContent()
+            : renderSilhouetteContent()}
 
       </div>
     </div>
