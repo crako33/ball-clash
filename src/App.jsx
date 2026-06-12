@@ -649,7 +649,7 @@ const loadSavedBalanceSettings = () => {
 
 const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
 const isWreckerJumpInvulnerable = (ball) => (ball?.type === "wrecker" && ball.wreckerState === "leaping") || (ball?.type === "dragon" && ball.dragonState === "dashing");
-const isEightBallBreakInvulnerable = (ball, currentTime) => ball?.type === "eightBall" && currentTime < (ball.eightPoweredUntil || 0);
+const isEightBallBreakInvulnerable = (ball, currentTime) => false;
 
 const interruptSkills = (ball) => {
   if (!ball) return;
@@ -1292,6 +1292,7 @@ export default function App() {
   };
 
   const beginCombatFromIntro = () => {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (!fightIntroRef.current.active) return;
     const left = gameRef.current.balls[0];
     const right = gameRef.current.balls[1];
@@ -1323,6 +1324,34 @@ export default function App() {
     playSound("gunReload");
   };
 
+  const speakIntro = (leftName, rightName) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const text = `${leftName} Versus ${rightName}... Who would win?`;
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    let selectedVoice = null;
+    
+    const maleNames = ["david", "microsoft david", "james", "microsoft james", "daniel", "google uk english male", "male", "low"];
+    for (const name of maleNames) {
+      const found = voices.find(v => v.name.toLowerCase().includes(name));
+      if (found) {
+        selectedVoice = found;
+        break;
+      }
+    }
+    
+    if (!selectedVoice && voices.length > 0) {
+      selectedVoice = voices.find(v => v.lang.toLowerCase().startsWith("en")) || voices[0];
+    }
+    
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.pitch = 0.6;
+    utterance.rate = 0.82;
+    utterance.volume = 1.0;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const startFight = ({ record = false } = {}) => {
     const balls = initializeFightState();
     setGameStarted(false);
@@ -1344,14 +1373,18 @@ export default function App() {
       fightSoundPlayed: false
     };
     setFightIntroActive(true);
-    playAudioFile("/Balls%20Ready.%20Fight!.mp3", 1.05, 0.02);
+    speakIntro(balls[0].name, balls[1].name);
     playSound("shieldCatch", 0.75, 80);
     if (record && !isRecording) requestAnimationFrame(() => startFightRecording());
   };
 
-  const skipFightIntro = () => beginCombatFromIntro();
+  const skipFightIntro = () => {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    beginCombatFromIntro();
+  };
 
   const resetToSelection = () => {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     fightIntroRef.current = { active: false, startTime: 0, recordingRequested: false, impactSoundPlayed: false, readySoundPlayed: false, fightSoundPlayed: false };
     setFightIntroActive(false);
     stopMatchMusic();
@@ -10631,11 +10664,11 @@ export default function App() {
 
         ctx.save();
         ctx.lineCap = "round";
-        ctx.strokeStyle = "rgba(0,0,0,0.32)";
-        ctx.lineWidth = 8;
+        ctx.strokeStyle = "rgba(0,0,0,0.22)";
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.moveTo(buttX + 3, buttY + 4);
-        ctx.lineTo(tipX + 3, tipY + 4);
+        ctx.moveTo(buttX + 1.2, buttY + 1.6);
+        ctx.lineTo(tipX + 1.2, tipY + 1.6);
         ctx.stroke();
         const cueGradient = ctx.createLinearGradient(buttX, buttY, tipX, tipY);
         cueGradient.addColorStop(0, "#3f1d0b");
@@ -13090,13 +13123,15 @@ export default function App() {
           intro.readySoundPlayed = true;
           playSound("shieldBlock", 0.8, 120);
         }
-        drawIntroText("READY", centerX, centerY - 72, 54, "#facc15", 1);
+        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, BALL_TYPES[left.type]?.color || "#38bdf8", 1);
+        drawIntroText("VERSUS", centerX, centerY - 15, 22, "#f8fafc", 1);
+        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, BALL_TYPES[right.type]?.color || "#f43f5e", 1);
       } else {
         if (!intro.fightSoundPlayed) {
           intro.fightSoundPlayed = true;
           playSound("explosion", 0.65, 180);
         }
-        drawIntroText("FIGHT", centerX, centerY - 78, 66, "#ef4444", 1);
+        drawIntroText("WHO WOULD WIN?", centerX, centerY - 15, 36, "#ef4444", 1);
       }
       ctx.restore();
     };
