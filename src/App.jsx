@@ -5706,7 +5706,7 @@ export default function App() {
             y: cueBallY,
             vx: 0,
             vy: 0,
-            r: 20,
+            r: ball.r,
             health: 100,
             color: "#f8fafc",
             stroke: "#94a3b8",
@@ -5747,8 +5747,9 @@ export default function App() {
           ball.eightStrikeFlashUntil = currentTime + 220;
 
           if (ball.eightCueBall) {
-            ball.eightCueBall.vx = Math.cos(ball.eightCueAngle) * bal.launchSpeed;
-            ball.eightCueBall.vy = Math.sin(ball.eightCueAngle) * bal.launchSpeed;
+            const speed = bal.launchSpeed * 2.8;
+            ball.eightCueBall.vx = Math.cos(ball.eightCueAngle) * speed;
+            ball.eightCueBall.vy = Math.sin(ball.eightCueAngle) * speed;
           }
 
           game.screenShake = Math.max(game.screenShake || 0, 7);
