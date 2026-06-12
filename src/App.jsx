@@ -833,9 +833,117 @@ const drawStar = (ctx, cx, cy, spikes, outerRadius, innerRadius) => {
   ctx.fill();
 };
 
+const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const ballRadius = BALL_TYPES[type]?.radius || 28;
+    const mockBall = {
+      id: "mock-" + type,
+      type: type,
+      x: 32, // centered in 64x64 canvas
+      y: 32,
+      r: ballRadius,
+      health: 100,
+      angle: -Math.PI / 4,
+      spinAngle: -Math.PI / 4,
+      side: "left",
+      
+      // Default properties to prevent any issues with specific rendering types
+      knifeBladeState: "rotating",
+      saberSlashActive: false,
+      wreckerState: "idle",
+      flashUntil: 0,
+      dog: null,
+      latchUntil: 0,
+      shieldActive: false,
+      webState: "idle",
+      hammerState: "idle",
+      chessRole: "pawn",
+      
+      // Black Spider
+      bsSkillState: "idle",
+      bsHookedTargetId: null,
+      
+      // Feral Claw
+      feralComboStage: 0,
+      
+      // Joker
+      jokerFlashUntil: 0,
+      
+      // Gazer
+      gazerAuraActive: false,
+      
+      // Constellation
+      constellationStarsCollected: 0,
+      
+      // Fire Skull
+      fireSkullFlameIntensity: 1,
+      
+      // Chaos
+      chaosDraggedUntil: 0,
+      
+      // Spore
+      sporeCount: 0,
+    };
+
+    const mockGame = {
+      simTime: 0,
+      balance: BALANCE,
+      balls: [mockBall],
+      width: 64,
+      height: 64,
+      jokerThreads: []
+    };
+
+    if (drawBallProxyRef && drawBallProxyRef.current) {
+      ctx.save();
+      // Scale down to fit nicely in 64x64 canvas
+      const targetRadius = 18;
+      const scale = targetRadius / ballRadius;
+      
+      ctx.translate(32, 32);
+      ctx.scale(scale, scale);
+      ctx.translate(-32, -32);
+      
+      drawBallProxyRef.current(ctx, mockGame, mockBall, 0);
+      
+      ctx.restore();
+    } else {
+      // Fallback: draw a basic circle
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(32, 32, 20, 0, Math.PI * 2);
+      ctx.fillStyle = color || "#cbd5e1";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = stroke || "#94a3b8";
+      ctx.stroke();
+      ctx.restore();
+    }
+  }, [type, color, stroke, proxyReady]);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={64} 
+      height={64} 
+      className="w-16 h-16 block shrink-0 select-none rounded-full bg-slate-950/80 border border-slate-800/60 shadow-inner overflow-hidden"
+    />
+  );
+};
+
 export default function App() {
   const { playSound, playAudioFile, getAudioStream, startMatchMusic, stopMatchMusic } = useSoundEngine();
   const canvasRef = useRef(null);
+  const drawBallProxyRef = useRef(null);
   const animationRef = useRef(null);
   const recordingCanvasRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -852,6 +960,7 @@ export default function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [activeTab, setActiveTab] = useState("simulator");
+  const [proxyReady, setProxyReady] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedArchetype, setSelectedArchetype] = useState("All");
   const [expandedBallId, setExpandedBallId] = useState(null);
@@ -3184,10 +3293,15 @@ export default function App() {
   };
 
   useEffect(() => {
-    const canvas = canvasRef.current, ctx = canvas.getContext("2d"), game = gameRef.current;
+    setProxyReady(false);
+    const canvas = canvasRef.current;
+    let ctx = canvas ? canvas.getContext("2d") : null;
+    let game = gameRef.current;
 
     const resizeCanvas = () => {
+      if (!canvas || !ctx) return;
       const scale = window.devicePixelRatio || 1, container = canvas.parentElement;
+      if (!container) return;
       const maxDisplaySize = 650;
       const displaySize = Math.min(container.clientWidth, maxDisplaySize);
       canvas.width = displaySize * scale; canvas.height = displaySize * scale;
@@ -3197,8 +3311,10 @@ export default function App() {
       game.width = ARENA_SIZE; game.height = ARENA_SIZE;
     };
 
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+    if (canvas) {
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+    }
 
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
       if (defender.constellationShieldedUntil && currentTime < defender.constellationShieldedUntil) return;
@@ -11627,6 +11743,22 @@ export default function App() {
       }
     };
 
+    drawBallProxyRef.current = (targetCtx, targetGame, ball, currentTime) => {
+      let origCtx = ctx;
+      let origGame = game;
+      ctx = targetCtx;
+      game = targetGame;
+      try {
+        drawBall(ball, currentTime);
+      } catch (err) {
+        console.error("Error in proxy drawBall:", err);
+      } finally {
+        ctx = origCtx;
+        game = origGame;
+      }
+    };
+    setProxyReady(true);
+
     const drawBallTrail = (ball) => {
       if (!ball.trail || ball.trail.length < 2) return;
       const config = BALL_TYPES[ball.type] || { color: "#cbd5e1", stroke: "#94a3b8" };
@@ -13327,15 +13459,19 @@ export default function App() {
       });
       setElapsedTime(game.simTime / 1000);
 
-      animationRef.current = requestAnimationFrame(loop);
+      if (canvas) {
+        animationRef.current = requestAnimationFrame(loop);
+      }
     };
 
-    animationRef.current = requestAnimationFrame(loop);
+    if (canvas) {
+      animationRef.current = requestAnimationFrame(loop);
+    }
     return () => {
-      cancelAnimationFrame(animationRef.current);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
       window.removeEventListener("resize", resizeCanvas);
     };
-  }, [gameStarted, simulationSpeed, startMatchMusic, stopMatchMusic]);
+  }, [gameStarted, simulationSpeed, startMatchMusic, stopMatchMusic, activeTab]);
 
   const renderSlider = (label, type, key, min, max, step = 1, unit = "") => {
     const isDamageSetting = key.toLowerCase().includes("damage") || key === "drainPerTick";
@@ -14143,18 +14279,13 @@ export default function App() {
                   {/* Card Header (Ball Visual & Basic info) */}
                   <div className="flex items-center gap-4">
                     {/* Visual representation of the ball */}
-                    <div 
-                      className="w-16 h-16 rounded-full flex items-center justify-center relative select-none shrink-0 border-2"
-                      style={{
-                        backgroundColor: ball.color,
-                        borderColor: ball.stroke,
-                        boxShadow: `0 0 12px ${ball.stroke}50, inset 0 0 10px rgba(0,0,0,0.4)`
-                      }}
-                    >
-                      <div className="text-xl">{ball.emoji}</div>
-                      {/* Glow Ring reflection */}
-                      <div className="absolute inset-0.5 rounded-full border border-white/10 pointer-events-none" />
-                    </div>
+                    <StaticBallCanvas 
+                      type={ball.id} 
+                      color={ball.color} 
+                      stroke={ball.stroke} 
+                      drawBallProxyRef={drawBallProxyRef} 
+                      proxyReady={proxyReady} 
+                    />
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
