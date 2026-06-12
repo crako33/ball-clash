@@ -3999,7 +3999,21 @@ export default function App() {
         
         if (otherBall.type === "eightBall" && otherBall.side === cueBall.side) {
           cueBall.hasHitEightBall = true;
-          spawnSparks(cueBall.x, cueBall.y, "#f8fafc", 8);
+
+          const bal = game.balance.eightBall || BALANCE.eightBall;
+          otherBall.eightCueState = "powered";
+          otherBall.eightPoweredUntil = game.simTime + bal.poweredDuration;
+          otherBall.eightPowerStacks = 0;
+          otherBall.eightInvulnerableHealth = otherBall.health;
+          otherBall.eightStrikeFlashUntil = game.simTime + 220;
+
+          const strikeSpeed = Math.hypot(cueBall.vx, cueBall.vy);
+          const pushAngle = Math.atan2(otherBall.y - cueBall.y, otherBall.x - cueBall.x);
+          otherBall.vx = Math.cos(pushAngle) * Math.max(bal.launchSpeed, strikeSpeed * 0.95);
+          otherBall.vy = Math.sin(pushAngle) * Math.max(bal.launchSpeed, strikeSpeed * 0.95);
+
+          spawnSparks(cueBall.x, cueBall.y, "#f8fafc", 15);
+          playSound("cueImpact", 1.1, 140);
         } else if (otherBall.side !== cueBall.side && otherBall.type !== "cueBall") {
           if (cueBall.hasHitEightBall) {
             const bal = game.balance.eightBall || BALANCE.eightBall;
@@ -5678,6 +5692,14 @@ export default function App() {
     const updateEightBall = (ball, target, currentTime) => {
       const bal = game.balance.eightBall || BALANCE.eightBall;
 
+      // Cue Ball safety timeout clean up if it misses the Eight Ball
+      if (ball.eightCueBall && !ball.eightPoweredUntil && currentTime >= (ball.eightCueSpawnedAt || 0) + bal.poweredDuration) {
+        game.balls = game.balls.filter(b => b.id !== ball.eightCueBall.id);
+        ball.eightCueBall = null;
+        ball.eightCueState = "idle";
+        ball.eightNextCueAt = currentTime + bal.cooldown;
+      }
+
       if (ball.eightPoweredUntil && currentTime >= ball.eightPoweredUntil) {
         ball.eightPoweredUntil = 0;
         ball.eightPowerStacks = 0;
@@ -5696,8 +5718,20 @@ export default function App() {
 
         if (!ball.eightCueBall) {
           const pad = 120;
-          const cueBallX = pad + Math.random() * (game.width - pad * 2);
-          const cueBallY = pad + Math.random() * (game.height - pad * 2);
+          let cueBallX = 0, cueBallY = 0;
+          let attempts = 0;
+          const otherBall = game.balls.find(b => b.id !== ball.id);
+          while (attempts < 50) {
+            cueBallX = pad + Math.random() * (game.width - pad * 2);
+            cueBallY = pad + Math.random() * (game.height - pad * 2);
+            const distToEight = Math.hypot(cueBallX - ball.x, cueBallY - ball.y);
+            const distToOpponent = otherBall ? Math.hypot(cueBallX - otherBall.x, cueBallY - otherBall.y) : Infinity;
+            if (distToEight > ball.r * 2.5 && distToOpponent > ball.r * 2.5) {
+              break;
+            }
+            attempts++;
+          }
+
           const cueBall = {
             id: `${ball.id}-cueBall`,
             type: "cueBall",
@@ -5715,10 +5749,16 @@ export default function App() {
             hasHitEightBall: false
           };
           ball.eightCueBall = cueBall;
+          ball.eightCueSpawnedAt = currentTime;
           game.balls.push(cueBall);
         }
 
         const cueBall = ball.eightCueBall;
+        if (cueBall) {
+          cueBall.vx = 0;
+          cueBall.vy = 0;
+        }
+
         const targetTypes = ["eightBall", "opponent", "bank"];
         const targetType = targetTypes[(ball.eightCueCount || 0) % 3];
         if (targetType === "eightBall") {
@@ -5739,13 +5779,11 @@ export default function App() {
       if (ball.eightCueState === "striking") {
         ball.vx *= 0.85;
         ball.vy *= 0.85;
+        if (ball.eightCueBall) {
+          ball.eightCueBall.vx = 0;
+          ball.eightCueBall.vy = 0;
+        }
         if (currentTime >= ball.eightCueContactAt) {
-          ball.eightCueState = "powered";
-          ball.eightPoweredUntil = currentTime + bal.poweredDuration;
-          ball.eightPowerStacks = 0;
-          ball.eightInvulnerableHealth = ball.health;
-          ball.eightStrikeFlashUntil = currentTime + 220;
-
           if (ball.eightCueBall) {
             const speed = bal.launchSpeed * 2.8;
             ball.eightCueBall.vx = Math.cos(ball.eightCueAngle) * speed;
@@ -5763,6 +5801,9 @@ export default function App() {
             x: ball.x, y: ball.y - ball.r - 20, vy: -42,
             text, color: "#f8fafc", life: 0.65, maxLife: 0.65
           });
+
+          ball.eightCueState = "idle";
+          ball.eightNextCueAt = currentTime + bal.cooldown;
         }
         return;
       }
