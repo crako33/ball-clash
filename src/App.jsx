@@ -506,8 +506,8 @@ const BALL_TYPES = {
   },
   eightBall: {
     id: "eightBall",
-    name: "Eight Ball",
-    shortName: "8BALL",
+    name: "8-Ball",
+    shortName: "8-BALL",
     color: "#050505",
     stroke: "#f8fafc",
     radius: 31,
@@ -1494,6 +1494,123 @@ export default function App() {
     ctx.restore();
   };
 
+  const drawRecordingEightBallSilhouette = (ctx, centerX, bottomY) => {
+    ctx.save();
+    ctx.translate(centerX, bottomY);
+
+    const aura = ctx.createRadialGradient(0, -112, 12, 0, -112, 178);
+    aura.addColorStop(0, "rgba(34, 211, 238, 0.36)");
+    aura.addColorStop(0.28, "rgba(168, 85, 247, 0.42)");
+    aura.addColorStop(0.66, "rgba(219, 39, 119, 0.2)");
+    aura.addColorStop(1, "rgba(59, 130, 246, 0)");
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, -112, 178, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.7;
+    [
+      [-122, -179, 7, "#f0abfc"], [116, -149, 5, "#67e8f9"],
+      [-151, -93, 4, "#a78bfa"], [142, -72, 6, "#f472b6"],
+      [-82, -239, 3, "#67e8f9"], [83, -224, 4, "#c084fc"]
+    ].forEach(([x, y, r, color]) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    ctx.shadowColor = "rgba(168, 85, 247, 0.75)";
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = "#070a18";
+    ctx.strokeStyle = "#4c1d95";
+    ctx.lineWidth = 4;
+
+    // Broad cosmic shoulders and armored torso.
+    ctx.beginPath();
+    ctx.moveTo(-146, 0);
+    ctx.quadraticCurveTo(-137, -66, -76, -86);
+    ctx.lineTo(-48, -103);
+    ctx.quadraticCurveTo(-33, -117, -30, -141);
+    ctx.lineTo(30, -141);
+    ctx.quadraticCurveTo(33, -117, 48, -103);
+    ctx.lineTo(76, -86);
+    ctx.quadraticCurveTo(137, -66, 146, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Helmet and face.
+    ctx.beginPath();
+    ctx.moveTo(-42, -207);
+    ctx.quadraticCurveTo(-36, -240, 0, -246);
+    ctx.quadraticCurveTo(36, -240, 42, -207);
+    ctx.lineTo(34, -151);
+    ctx.quadraticCurveTo(0, -132, -34, -151);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Tall side horns inspired by the supplied silhouette.
+    ctx.beginPath();
+    ctx.moveTo(-38, -222);
+    ctx.lineTo(-72, -244);
+    ctx.lineTo(-99, -282);
+    ctx.lineTo(-78, -295);
+    ctx.lineTo(-49, -256);
+    ctx.lineTo(-27, -246);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(38, -222);
+    ctx.lineTo(72, -244);
+    ctx.lineTo(99, -282);
+    ctx.lineTo(78, -295);
+    ctx.lineTo(49, -256);
+    ctx.lineTo(27, -246);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Helmet bands and chest energy retain detail while reading as a silhouette.
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = "rgba(192, 132, 252, 0.55)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-38, -211);
+    ctx.lineTo(38, -211);
+    ctx.moveTo(-33, -190);
+    ctx.lineTo(33, -190);
+    ctx.moveTo(-86, -58);
+    ctx.quadraticCurveTo(-28, -98, 2, -46);
+    ctx.quadraticCurveTo(32, 1, 91, -52);
+    ctx.stroke();
+
+    ctx.shadowColor = "#22d3ee";
+    ctx.shadowBlur = 18;
+    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-22, -184);
+    ctx.lineTo(-6, -181);
+    ctx.moveTo(6, -181);
+    ctx.lineTo(22, -184);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.72;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-39, -67);
+    ctx.lineTo(-12, -43);
+    ctx.lineTo(4, -69);
+    ctx.lineTo(29, -32);
+    ctx.lineTo(58, -55);
+    ctx.stroke();
+    ctx.restore();
+  };
+
   const drawRecordingFrame = () => {
     const sourceCanvas = canvasRef.current;
     const recordCanvas = recordingCanvasRef.current;
@@ -1519,6 +1636,10 @@ export default function App() {
     bg.addColorStop(1, "#374151");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
+
+    if (left?.type === "eightBall" || right?.type === "eightBall") {
+      drawRecordingEightBallSilhouette(ctx, width / 2, hudY - 10);
+    }
 
     drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left");
     drawRecordingHudCard(ctx, right, arenaX + arenaSize - cardW, hudY, cardW, "right");
