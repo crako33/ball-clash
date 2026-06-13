@@ -4274,6 +4274,7 @@ export default function App() {
       if (a.type === "cueBall" || b.type === "cueBall") {
         const cueBall = a.type === "cueBall" ? a : b;
         const otherBall = a.type === "cueBall" ? b : a;
+        const cueIncomingVelocity = a.type === "cueBall" ? incomingA : incomingB;
         
         if (otherBall.type === "eightBall" && otherBall.id === cueBall.ownerId &&
             otherBall.eightCueInFlight && !cueBall.hasHitEightBall) {
@@ -4287,7 +4288,6 @@ export default function App() {
           otherBall.eightInvulnerableHealth = otherBall.health;
           otherBall.eightStrikeFlashUntil = game.simTime + 220;
 
-          const cueIncomingVelocity = a.type === "cueBall" ? incomingA : incomingB;
           const strikeSpeed = Math.hypot(cueIncomingVelocity.vx, cueIncomingVelocity.vy);
           const pushAngle = Math.atan2(otherBall.y - cueBall.y, otherBall.x - cueBall.x);
           otherBall.vx = Math.cos(pushAngle) * Math.max(bal.launchSpeed, strikeSpeed * 0.95);
@@ -6428,6 +6428,29 @@ export default function App() {
         (game.cacti || []).forEach((cactus) => bounceShieldFrom(cactus.x, cactus.y, cactus.r || cactus.targetR || 18, "#14b8a6"));
         game.balls.forEach((ball) => {
           if (ball.id === shieldBall.id) return;
+          if (ball.type === "cueBall" && ball.side !== shieldBall.side && currentTime >= (ball.nextShieldBounceAt || 0)) {
+            const dx = ball.x - shieldBall.shieldX;
+            const dy = ball.y - shieldBall.shieldY;
+            const dist = Math.hypot(dx, dy);
+            const minDist = ball.r + shieldR;
+            if (dist > 0 && dist < minDist) {
+              const nx = dx / dist;
+              const ny = dy / dist;
+              const cueSpeed = Math.max(260, Math.hypot(ball.vx, ball.vy));
+              const shieldSpeed = Math.max(bal.shield.shieldSpeed, Math.hypot(shieldBall.shieldVx, shieldBall.shieldVy));
+              ball.x = shieldBall.shieldX + nx * (minDist + 2);
+              ball.y = shieldBall.shieldY + ny * (minDist + 2);
+              ball.vx = nx * cueSpeed;
+              ball.vy = ny * cueSpeed;
+              shieldBall.shieldVx = -nx * shieldSpeed;
+              shieldBall.shieldVy = -ny * shieldSpeed;
+              shieldBall.shieldThrownUntil = Math.max(shieldBall.shieldThrownUntil, currentTime + 250);
+              shieldBall.shieldBonusDamage = (shieldBall.shieldBonusDamage || 0) + 1;
+              ball.nextShieldBounceAt = currentTime + 180;
+              spawnShieldSparks(shieldBall.shieldX + nx * shieldR, shieldBall.shieldY + ny * shieldR, Math.atan2(ny, nx));
+              playSound("shieldBlock", 0.9, 110);
+            }
+          }
           if (ball.type === "shield" && (ball.shieldState === "thrown" || ball.shieldState === "returning")) {
             bounceShieldFrom(ball.shieldX, ball.shieldY, shieldR, "#93c5fd");
           }
