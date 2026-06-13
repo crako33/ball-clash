@@ -444,6 +444,26 @@ const BALL_TYPES = {
     animeStyle: "High-intensity chaotic villain / battle-jester anime character",
     gameStyle: "Physics-defying displacement trickster that slingshots opponents",
   },
+  fisherman: {
+    id: "fisherman",
+    name: "Fisherman Ball",
+    shortName: "FISH",
+    color: "#22c55e",
+    stroke: "#dc2626",
+    radius: 31,
+    description: "Casts a ricocheting hook. A caught opponent is reeled backward along the hook's exact bounce path.",
+    emoji: "🎣",
+    visualTheme: "Anime Angler / Ricochet Hunter",
+    colorPalette: "River Green, Hook Red, Deep Forest",
+    facialAge: "Teen adventurer with spiky dark hair and focused eyes",
+    personality: "Patient, cheerful, precise",
+    primaryWeapon: "Ricochet Fishing Rod and Hook",
+    signatureAbility: "Exact-Path Hook Reel",
+    companion: "None",
+    specialVisualEffects: "Green fishing line, red bobber sparks, exact-path pull trail",
+    animeStyle: "Bright wilderness adventure anime angler",
+    gameStyle: "Geometry-based displacement controller that rewards bank-shot accuracy",
+  },
   gazerBall: {
     id: "gazerBall",
     name: "Gazer Ball",
@@ -613,6 +633,7 @@ const BALANCE = {
   feralClaw: { slashDamage: 3, slashRange: 30, slashCooldown: 720, slashKnockback: 210, slashWindup: 90, slashDuration: 310, slashLunge: 155, slashRecoil: 105, pounceDamage: 7, pounceCooldown: 5200, pounceSpeed: 650, pounceDuration: 480, pounceWindup: 220, pounceOvershoot: 190, pounceMinRange: 115, pounceMaxRange: 285, regenDelay: 2800, regenAmount: 1, regenInterval: 1000, lowHealthThreshold: 45, lowHealthCooldownMult: 0.78, lowHealthRegenMult: 0.72, rageJitter: 36, ultimateThreshold: 28, ultimateDuration: 4800, ultimateCooldownMult: 0.48, ultimateSpeedMult: 1.08, ultimateDamageMult: 1.1 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
   joker: { throwSpeed: 580, cooldown: 6000, secCooldown: 8000, tipRadius: 9, maxBounces: 15, threadLife: 4000 },
+  fisherman: { cooldown: 6200, hookSpeed: 620, pullSpeed: 520, hookDamage: 3, tipRadius: 8, maxBounces: 8, castLife: 4200 },
   blackSpider: { cooldown: 7000, secCooldown: 10000, pullSpeed: 1200,
     // String Pull Slam
     slamCooldown: 7000, slamStringSpeed: 900, slamPullDuration: 600, slamSpinDuration: 700, slamSpinRadius: 75, slamLaunchSpeed: 1150, slamWallDamage: 12, slamHitDamage: 4,
@@ -918,6 +939,10 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
       
       // Joker
       jokerFlashUntil: 0,
+
+      // Fisherman
+      fishermanPulledUntil: 0,
+      fishermanPullOwnerId: null,
       
       // Gazer
       gazerAuraActive: false,
@@ -942,7 +967,8 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
       balls: [mockBall],
       width: 96,
       height: 96,
-      jokerThreads: []
+      jokerThreads: [],
+      fishingLines: []
     };
 
     if (drawBallProxyRef && drawBallProxyRef.current) {
@@ -1182,6 +1208,8 @@ export default function App() {
 
       // Joker Specific
       jokerNextThreadAt: type === "joker" ? (balanceSettings.joker?.cooldown ?? BALANCE.joker.cooldown) : 0, jokerFlashUntil: 0,
+      // Fisherman Specific
+      fishermanNextCastAt: type === "fisherman" ? 1800 : 0, fishermanFlashUntil: 0, fishermanRodAngle: side === "left" ? 0 : Math.PI,
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
@@ -1236,6 +1264,7 @@ export default function App() {
     psychicCircles: [],
     chaosCircles: [],
     jokerThreads: [],
+    fishingLines: [],
     venomPools: [],
     webStrands: [],
     fireCars: [],
@@ -1280,6 +1309,7 @@ export default function App() {
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
     gameRef.current.jokerThreads = [];
+    gameRef.current.fishingLines = [];
     gameRef.current.venomPools = [];
     gameRef.current.deathEffectStarted = false;
     gameRef.current.deathSlowMoUntil = 0;
@@ -1310,6 +1340,7 @@ export default function App() {
       psychicCircles: [],
       chaosCircles: [],
       jokerThreads: [],
+      fishingLines: [],
       venomPools: [],
       webStrands: [],
       fireCars: [],
@@ -1414,6 +1445,7 @@ export default function App() {
     gameRef.current.psychicCircles = [];
     gameRef.current.chaosCircles = [];
     gameRef.current.jokerThreads = [];
+    gameRef.current.fishingLines = [];
     gameRef.current.venomPools = [];
     gameRef.current.deathEffectStarted = false;
     gameRef.current.deathSlowMoUntil = 0;
@@ -6800,6 +6832,145 @@ export default function App() {
       }
     };
 
+    const updateFisherman = (ball, target, currentTime) => {
+      const bal = game.balance.fisherman || BALANCE.fisherman;
+      if (!game.fishingLines) game.fishingLines = [];
+      const activeLine = game.fishingLines.some((line) => line.ownerId === ball.id);
+      ball.fishermanRodAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      if (activeLine || currentTime < (ball.fishermanNextCastAt || 0)) return;
+      if (!canStartSkillConnection(ball, target, game.balls, currentTime)) return;
+
+      const aimAngle = ball.fishermanRodAngle + (Math.random() - 0.5) * 0.28;
+      const startX = ball.x + Math.cos(aimAngle) * (ball.r + 18);
+      const startY = ball.y + Math.sin(aimAngle) * (ball.r + 18);
+      game.fishingLines.push({
+        id: `${ball.id}-fish-${currentTime}`,
+        ownerId: ball.id,
+        ownerSide: ball.side,
+        x: startX,
+        y: startY,
+        vx: Math.cos(aimAngle) * bal.hookSpeed,
+        vy: Math.sin(aimAngle) * bal.hookSpeed,
+        r: bal.tipRadius,
+        state: "flying",
+        points: [{ x: startX, y: startY }],
+        bouncesLeft: bal.maxBounces,
+        life: bal.castLife,
+        returnIndex: 0,
+        targetId: null
+      });
+      ball.fishermanNextCastAt = Infinity;
+      ball.fishermanFlashUntil = currentTime + 500;
+      spawnSparks(startX, startY, "#ef4444", 9);
+      playSound("shieldThrow", 0.82, 180);
+      const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+      if (stats) stats.totalShots++;
+    };
+
+    const updateFishingLines = (dt) => {
+      if (!game.fishingLines?.length) return;
+      const pad = 18;
+      game.fishingLines = game.fishingLines.filter((line) => {
+        const owner = game.balls.find((ball) => ball.id === line.ownerId);
+        if (!owner) return false;
+        const bal = game.balance.fisherman || BALANCE.fisherman;
+        const finishLine = () => {
+          const target = game.balls.find((ball) => ball.id === line.targetId);
+          if (target) {
+            target.fishermanPulledUntil = 0;
+            target.fishermanPullOwnerId = null;
+          }
+          owner.fishermanNextCastAt = game.simTime + bal.cooldown;
+          return false;
+        };
+        const startReturn = () => {
+          line.state = "returning";
+          line.returnIndex = Math.max(0, line.points.length - 1);
+          return true;
+        };
+        const moveToward = (actor, point, speed) => {
+          const dx = point.x - actor.x;
+          const dy = point.y - actor.y;
+          const dist = Math.max(0.001, Math.hypot(dx, dy));
+          const travel = Math.min(dist, speed * dt);
+          actor.x += (dx / dist) * travel;
+          actor.y += (dy / dist) * travel;
+          return dist - travel;
+        };
+
+        if (line.state === "flying") {
+          line.life -= dt * 1000;
+          line.x += line.vx * dt;
+          line.y += line.vy * dt;
+          let bounced = false;
+          if (line.x - line.r < pad) { line.x = pad + line.r; line.vx = Math.abs(line.vx); bounced = true; }
+          else if (line.x + line.r > game.width - pad) { line.x = game.width - pad - line.r; line.vx = -Math.abs(line.vx); bounced = true; }
+          if (line.y - line.r < pad) { line.y = pad + line.r; line.vy = Math.abs(line.vy); bounced = true; }
+          else if (line.y + line.r > game.height - pad) { line.y = game.height - pad - line.r; line.vy = -Math.abs(line.vy); bounced = true; }
+          if (bounced) {
+            line.points.push({ x: line.x, y: line.y });
+            line.bouncesLeft--;
+            spawnSparks(line.x, line.y, "#ef4444", 6);
+            playSound("stringTwang", 0.65, 110);
+          }
+
+          const target = game.balls.find((ball) => ball.side !== line.ownerSide && ball.type !== "cueBall");
+          if (target && Math.hypot(line.x - target.x, line.y - target.y) < line.r + target.r &&
+              canStartSkillConnection(owner, target, game.balls, game.simTime)) {
+            line.points.push({ x: line.x, y: line.y });
+            line.state = "pulling";
+            line.targetId = target.id;
+            line.returnIndex = Math.max(0, line.points.length - 2);
+            target.fishermanPulledUntil = game.simTime + 5000;
+            target.fishermanPullOwnerId = owner.id;
+            applyDamage(target, bal.hookDamage, `${owner.id}-fisher-hook`, game.simTime, 500);
+            const stats = owner.side === "left" ? game.stats.left : game.stats.right;
+            if (stats) { stats.damageDealt += bal.hookDamage; stats.hitsLanded++; }
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({ x: target.x, y: target.y - target.r - 18, vy: -52, text: "HOOKED!", color: "#ef4444", life: 0.75, maxLife: 0.75 });
+            spawnSparks(target.x, target.y, "#ef4444", 14);
+            playSound("stringTwang", 0.95, 80);
+            return true;
+          }
+          if (line.life <= 0 || line.bouncesLeft <= 0) return startReturn();
+          return true;
+        }
+
+        if (line.state === "returning") {
+          const point = line.returnIndex <= 0
+            ? { x: owner.x, y: owner.y }
+            : line.points[line.returnIndex];
+          if (moveToward(line, point, bal.hookSpeed * 1.25) < 10) line.returnIndex--;
+          if (line.returnIndex < 0 || Math.hypot(line.x - owner.x, line.y - owner.y) < owner.r + 8) return finishLine();
+          return true;
+        }
+
+        if (line.state === "pulling") {
+          const target = game.balls.find((ball) => ball.id === line.targetId);
+          if (!target || target.health <= 0) return finishLine();
+          const point = line.returnIndex <= 0
+            ? { x: owner.x, y: owner.y }
+            : line.points[line.returnIndex];
+          target.fishermanPulledUntil = game.simTime + 100;
+          target.fishermanPullOwnerId = owner.id;
+          target.vx = 0;
+          target.vy = 0;
+          if (moveToward(target, point, bal.pullSpeed) < Math.max(8, target.r * 0.28)) line.returnIndex--;
+          line.x = target.x;
+          line.y = target.y;
+          if (line.returnIndex < 0 || Math.hypot(target.x - owner.x, target.y - owner.y) < target.r + owner.r + 8) {
+            const releaseAngle = Math.atan2(target.y - owner.y, target.x - owner.x);
+            target.vx = Math.cos(releaseAngle) * 250;
+            target.vy = Math.sin(releaseAngle) * 250;
+            spawnSparks(owner.x, owner.y, "#22c55e", 12);
+            return finishLine();
+          }
+          return true;
+        }
+        return false;
+      });
+    };
+
     const checkTetherIntersection = (thread, game) => {
       if (!game.bullets) return false;
       const owner = game.balls.find(b => b.id === thread.ownerId);
@@ -12108,6 +12279,122 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawFishermanBall = (ball) => {
+      const pulse = 0.5 + Math.sin(game.simTime * 0.016) * 0.5;
+      const angle = ball.fishermanRodAngle || 0;
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      if (ball.fishermanFlashUntil && game.simTime < ball.fishermanFlashUntil) {
+        ctx.globalAlpha = 0.25 + pulse * 0.2;
+        ctx.strokeStyle = "#ef4444";
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(0, 0, ball.r + 7 + pulse * 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.fillStyle = "#15803d";
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#dc2626";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Red jacket zipper and collar accents.
+      ctx.fillStyle = "#dc2626";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.62, -ball.r * 0.2);
+      ctx.lineTo(-5, -2);
+      ctx.lineTo(-10, ball.r * 0.78);
+      ctx.lineTo(-ball.r * 0.52, ball.r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.62, -ball.r * 0.2);
+      ctx.lineTo(5, -2);
+      ctx.lineTo(10, ball.r * 0.78);
+      ctx.lineTo(ball.r * 0.52, ball.r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(-2, -3, 4, ball.r * 0.82);
+
+      // Compact anime face and dark spiky hair.
+      ctx.fillStyle = "#fde7c7";
+      ctx.beginPath(); ctx.arc(0, -ball.r * 0.28, ball.r * 0.42, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#10251a";
+      for (let i = 0; i < 7; i++) {
+        const hairAngle = -Math.PI + (i / 6) * Math.PI;
+        const hx = Math.cos(hairAngle) * ball.r * 0.36;
+        const hy = -ball.r * 0.55 + Math.sin(hairAngle) * ball.r * 0.14;
+        ctx.beginPath();
+        ctx.moveTo(hx - 4, hy + 8);
+        ctx.lineTo(hx, hy - 11 - (i % 2) * 5);
+        ctx.lineTo(hx + 5, hy + 8);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = "#111827";
+      ctx.beginPath(); ctx.arc(-7, -9, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(7, -9, 2.4, 0, Math.PI * 2); ctx.fill();
+
+      // Fishing rod projects from the ball toward the current cast direction.
+      ctx.rotate(angle);
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-4, 7);
+      ctx.lineTo(ball.r + 34, -10);
+      ctx.stroke();
+      ctx.fillStyle = "#ef4444";
+      ctx.beginPath(); ctx.arc(4, 6, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawFishingLines = () => {
+      if (!game.fishingLines?.length) return;
+      game.fishingLines.forEach((line) => {
+        const owner = game.balls.find((ball) => ball.id === line.ownerId);
+        if (!owner) return;
+        const points = [{ x: owner.x, y: owner.y }];
+        if (line.state === "pulling" || line.state === "returning") {
+          for (let i = 1; i <= line.returnIndex; i++) {
+            if (line.points[i]) points.push(line.points[i]);
+          }
+        } else {
+          points.push(...line.points.slice(1));
+        }
+        points.push({ x: line.x, y: line.y });
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = line.state === "pulling" ? "#22c55e" : "#86efac";
+        ctx.shadowColor = line.state === "pulling" ? "#ef4444" : "#22c55e";
+        ctx.shadowBlur = line.state === "pulling" ? 12 : 7;
+        ctx.lineWidth = line.state === "pulling" ? 4 : 2.5;
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
+
+        ctx.translate(line.x, line.y);
+        ctx.rotate(Math.atan2(line.vy || 0, line.vx || 1));
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath(); ctx.arc(-7, 0, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#e5e7eb";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(2, 2, line.r, -Math.PI * 0.55, Math.PI * 0.5);
+        ctx.lineTo(9, 8);
+        ctx.stroke();
+        ctx.restore();
+      });
+    };
+
     const drawJokerThreads = () => {
       if (!game.jokerThreads) return;
       game.jokerThreads.forEach((thread) => {
@@ -12261,6 +12548,7 @@ export default function App() {
       else if (ball.type === "mirror") drawMirrorBall(ball);
 
       else if (ball.type === "joker") drawJokerBall(ball);
+      else if (ball.type === "fisherman") drawFishermanBall(ball);
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
       else if (ball.type === "gazerBall") drawGazerBall(ball);
       else if (ball.type === "constellation") drawConstellationBall(ball);
@@ -13588,18 +13876,18 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawIntroText = (text, x, y, size, color = "#f8fafc", alpha = 1) => {
+    const drawIntroText = (text, x, y, size, color = "#f8fafc", alpha = 1, blackGlow = false) => {
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.font = `900 ${size}px Arial Black, Impact, sans-serif`;
-      ctx.lineWidth = Math.max(5, size * 0.12);
-      ctx.strokeStyle = "#020617";
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 14;
+      ctx.lineWidth = blackGlow ? Math.max(6, size * 0.16) : Math.max(5, size * 0.12);
+      ctx.strokeStyle = blackGlow ? "#000000" : "#020617";
+      ctx.shadowColor = blackGlow ? "#000000" : color;
+      ctx.shadowBlur = blackGlow ? 22 : 14;
       ctx.strokeText(text, x, y);
-      ctx.fillStyle = color;
+      ctx.fillStyle = blackGlow ? "#ffffff" : color;
       ctx.fillText(text, x, y);
       ctx.restore();
     };
@@ -13695,8 +13983,8 @@ export default function App() {
       drawBall(left, game.simTime);
       drawBall(right, game.simTime);
       if (elapsed < impactAt) {
-        drawIntroText(left.name, left.x, left.y - left.r - 28, 14, BALL_TYPES[left.type].color, 0.92);
-        drawIntroText(right.name, right.x, right.y - right.r - 28, 14, BALL_TYPES[right.type].color, 0.92);
+        drawIntroText(left.name, left.x, left.y - left.r - 28, 14, BALL_TYPES[left.type].color, 0.92, left.type === "eightBall");
+        drawIntroText(right.name, right.x, right.y - right.r - 28, 14, BALL_TYPES[right.type].color, 0.92, right.type === "eightBall");
       }
 
       if (elapsed >= impactAt && elapsed < impactAt + 520) {
@@ -13726,9 +14014,9 @@ export default function App() {
           intro.readySoundPlayed = true;
           playSound("shieldBlock", 0.8, 120);
         }
-        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, BALL_TYPES[left.type]?.color || "#38bdf8", 1);
+        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, BALL_TYPES[left.type]?.color || "#38bdf8", 1, left.type === "eightBall");
         drawIntroText("VERSUS", centerX, centerY - 15, 22, "#f8fafc", 1);
-        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, BALL_TYPES[right.type]?.color || "#f43f5e", 1);
+        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, BALL_TYPES[right.type]?.color || "#f43f5e", 1, right.type === "eightBall");
       } else {
         if (!intro.fightSoundPlayed) {
           intro.fightSoundPlayed = true;
@@ -13785,6 +14073,7 @@ export default function App() {
             const isBlackSpiderDashing = false;
             const isBlackSpiderPullingSelf = false;
             const isBlackSpiderPulled = game.balls.some(b => b.type === "blackSpider" && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
+            const isFishermanPulled = ball.fishermanPulledUntil && game.simTime < ball.fishermanPulledUntil;
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
@@ -13808,7 +14097,7 @@ export default function App() {
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
-            if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
+            if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isFishermanPulled && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
               const previousX = ball.x;
               const previousY = ball.y;
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
@@ -13921,6 +14210,7 @@ export default function App() {
                 }
                 const isGumPulled = ball.jokerPulledUntil && game.simTime < ball.jokerPulledUntil;
                 const isBlackSpiderPulled = game.balls.some(b => b.type === "blackSpider" && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
+                const isFishermanPulled = ball.fishermanPulledUntil && game.simTime < ball.fishermanPulledUntil;
                 if (ball.type === "knife" && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled) {
                   const bal = game.balance.knife;
                   if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
@@ -13983,7 +14273,7 @@ export default function App() {
                 }
                 const isParalyzed = ball.paralyzedUntil && game.simTime < ball.paralyzedUntil;
                 const skillsLocked = ball.skillLockedUntil && game.simTime < ball.skillLockedUntil;
-                if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !skillsLocked) {
+                if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !isFishermanPulled && !skillsLocked) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
@@ -14005,6 +14295,7 @@ export default function App() {
                   if (ball.type === "feralClaw") updateFeralClaw(ball, target, game.simTime);
                   if (ball.type === "mirror") updateMirror(ball, target, game.simTime);
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
+                  if (ball.type === "fisherman") updateFisherman(ball, target, game.simTime);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
                   if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
@@ -14033,6 +14324,7 @@ export default function App() {
           updateChaosCircles(stepDt);
           updateActiveConstellations(game.simTime);
           updateJokerThreads(stepDt);
+          updateFishingLines(stepDt);
           game.balls.forEach((ball) => {
             if (!isEightBallBreakInvulnerable(ball, game.simTime)) return;
             const protectedHealth = ball.eightInvulnerableHealth ?? ball.health;
@@ -14046,6 +14338,7 @@ export default function App() {
         updateParticles(effectDt);
         updateFloatingTexts(effectDt);
         updateJokerThreads(effectDt);
+        updateFishingLines(effectDt);
       } else if (!combatActive) {
         game.balls.forEach((ball) => {
           const previousX = ball.x;
@@ -14083,6 +14376,7 @@ export default function App() {
         updatePsychicCircles(dt);
         updateChaosCircles(dt);
         updateJokerThreads(dt);
+        updateFishingLines(dt);
       }
 
       drawArena();
@@ -14102,7 +14396,7 @@ export default function App() {
 
       game.balls.forEach(drawBallTrail);
       drawFireRoads();
-      drawStrings(); drawJokerThreads(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
+      drawStrings(); drawJokerThreads(); drawFishingLines(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawFireCarEntities();
       game.balls.forEach((ball) => {
@@ -14380,6 +14674,17 @@ export default function App() {
               {renderSlider("Wall Pull Damage", "joker", "pullWallDamage", 1, 18)}
               {renderSlider("Pull Duration", "joker", "pullDuration", 500, 3200, 100, "ms")}
               {renderSlider("Gum String Lifetime", "joker", "threadLife", 1000, 12000, 250, "ms")}
+            </>
+          )}
+          {type === "fisherman" && (
+            <>
+              {renderSlider("Cast Cooldown", "fisherman", "cooldown", 1800, 12000, 100, "ms")}
+              {renderSlider("Hook Speed", "fisherman", "hookSpeed", 300, 1000, 20, "px/s")}
+              {renderSlider("Reel Speed", "fisherman", "pullSpeed", 240, 900, 20, "px/s")}
+              {renderSlider("Hook Damage", "fisherman", "hookDamage", 1, 12, 1)}
+              {renderSlider("Hook Radius", "fisherman", "tipRadius", 5, 18, 1, "px")}
+              {renderSlider("Wall Bounces", "fisherman", "maxBounces", 1, 16, 1)}
+              {renderSlider("Cast Lifetime", "fisherman", "castLife", 1200, 9000, 200, "ms")}
             </>
           )}
           {type === "constellation" && (
@@ -14939,7 +15244,7 @@ ${ball.description}`;
         (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker"].includes(ball.id)) ||
         (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall"].includes(ball.id)) ||
         (selectedArchetype === "Summoner" && ["spore", "shadow"].includes(ball.id)) ||
-        (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull"].includes(ball.id)) ||
+        (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull", "fisherman"].includes(ball.id)) ||
         (selectedArchetype === "Utility/Defense" && ["vampire", "shield", "chess", "trident", "mirror", "joker", "eightBall"].includes(ball.id));
 
       return matchesSearch && matchesArchetype;
