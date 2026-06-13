@@ -1511,11 +1511,16 @@ export default function App() {
 
     ctx.textAlign = align;
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#f8fafc";
+    const isEightBall = ball?.type === "eightBall";
+    ctx.fillStyle = isEightBall ? "#e9d5ff" : "#f8fafc";
+    ctx.shadowColor = isEightBall ? "#a855f7" : "transparent";
+    ctx.shadowBlur = isEightBall ? 20 : 0;
     ctx.font = "800 34px Arial, sans-serif";
     const nameX = align === "left" ? x + 22 : x + w - 22;
     ctx.fillText(ball?.name || config.name, nameX, y + 42);
 
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
     ctx.font = "800 24px Arial, sans-serif";
     ctx.fillStyle = "#cbd5e1";
     ctx.fillText(`${hp} HP`, nameX, y + 76);
@@ -1769,12 +1774,6 @@ export default function App() {
     bg.addColorStop(1, "#374151");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
-
-    const eightBallFighter = left?.type === "eightBall" ? left : right?.type === "eightBall" ? right : null;
-    if (eightBallFighter) {
-      const cueSkillActive = eightBallFighter.eightCueState === "pullback" || eightBallFighter.eightCueState === "striking";
-      drawRecordingEightBallSilhouette(ctx, width / 2, hudY + 1, cueSkillActive, gameRef.current.simTime);
-    }
 
     drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left");
     drawRecordingHudCard(ctx, right, arenaX + arenaSize - cardW, hudY, cardW, "right");
@@ -15271,27 +15270,10 @@ ${ball.description}`;
               </svg>
               Fighter Dictionary
             </button>
-            <button
-              onClick={() => setActiveTab("silhouette")}
-              className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 flex items-center gap-2 ${
-                activeTab === "silhouette"
-                  ? "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-slate-950 shadow-md shadow-fuchsia-500/20"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l3 4 5 1-3 4 1 6-6-3-6 3 1-6-3-4 5-1 3-4z" />
-              </svg>
-              Silhouette
-            </button>
           </div>
         </div>
 
-        {activeTab === "simulator"
-          ? renderAppContent()
-          : activeTab === "dictionary"
-            ? renderDictionaryContent()
-            : renderSilhouetteContent()}
+        {activeTab === "simulator" ? renderAppContent() : renderDictionaryContent()}
 
       </div>
     </div>
