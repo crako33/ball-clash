@@ -1044,13 +1044,12 @@ export default function App() {
   const animationRef = useRef(null);
   const recordingCanvasRef = useRef(null);
   const recordingSilhouetteImageRef = useRef(null);
-  const arenaWatermarkImageRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordingFrameRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const fightIntroRef = useRef({ active: false, startTime: 0, recordingRequested: false, impactSoundPlayed: false, readySoundPlayed: false, fightSoundPlayed: false });
   const [selectedBalls, setSelectedBalls] = useState(["knife", "laser", "vampire", "mazeChomper"]);
-  const [battleMode, setBattleMode] = useState("2v2");
+  const [battleMode, setBattleMode] = useState("1v1");
   const [gameStarted, setGameStarted] = useState(false);
   const [fightIntroActive, setFightIntroActive] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1.5);
@@ -1229,6 +1228,7 @@ export default function App() {
       chomperState: "idle", chomperStateUntil: 0, chomperNextBiteAt: type === "mazeChomper" ? 1500 : 0,
       chomperBiteAngle: side === "left" ? 0 : Math.PI, chomperHitDone: false,
       chomperNextPowerAt: type === "mazeChomper" ? 4200 : 0, chomperPoweredUntil: 0, chomperPelletAngle: 0, chomperNextPowerHitAt: 0,
+      chomperKnockbackBouncesLeft: 0,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
       nextPsychicAt: 0,
@@ -1321,7 +1321,7 @@ export default function App() {
   };
 
   const gameRef = useRef({
-    width: TEAM_ARENA_WIDTH,
+    width: ARENA_SIZE,
     height: ARENA_SIZE,
     lastTime: 0,
     simTime: 0,
@@ -1349,7 +1349,7 @@ export default function App() {
     combatStarted: false,
     simulationSpeed: 1.5,
     balance: balanceSettings,
-    balls: [makeBall("knife", "left", 20, 0), makeBall("laser", "right", 20, 0), makeBall("vampire", "left", 20, 1), makeBall("mazeChomper", "right", 20, 1)],
+    balls: [makeBall("knife", "left", 20), makeBall("laser", "right", 20)],
     stats: {
       left: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 },
       right: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 }
@@ -2058,12 +2058,8 @@ export default function App() {
     const image = new Image();
     image.src = EIGHT_BALL_SILHOUETTE_URI;
     recordingSilhouetteImageRef.current = image;
-    const watermark = new Image();
-    watermark.src = "/Bounce%20Ball%20Battles%20Watermark.png";
-    arenaWatermarkImageRef.current = watermark;
     return () => {
       recordingSilhouetteImageRef.current = null;
-      arenaWatermarkImageRef.current = null;
     };
   }, []);
 
@@ -3751,8 +3747,6 @@ export default function App() {
     }
 
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
-      const sourceBall = game.balls.find((candidate) => candidate.id !== defender.id && String(cooldownKey).includes(candidate.id));
-      if (battleMode === "2v2" && sourceBall?.side === defender.side) return;
       if (defender.constellationShieldedUntil && currentTime < defender.constellationShieldedUntil) return;
       if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
       if (isWreckerJumpInvulnerable(defender)) return;
@@ -3913,7 +3907,7 @@ export default function App() {
     const pruneShadowMinions = () => {
       game.balls.forEach((owner) => {
         if (owner.type !== "shadow" || !owner.shadowMinions) return;
-        const target = game.balls.find((ball) => ball.side !== owner.side && ball.health > 0 && ball.type !== "cueBall");
+        const target = game.balls.find(o => o.id !== owner.id);
         const bal = game.balance.shadow || BALANCE.shadow;
         owner.shadowMinions = owner.shadowMinions.filter((minion) => {
           const alive = minion.health > 0 && game.simTime < minion.createdTime + bal.minionLife;
@@ -3947,7 +3941,6 @@ export default function App() {
 
 
     const spawnDeathShatter = (defeated, currentTime) => {
-      if (!defeated || defeated.shattered) return;
       const config = BALL_TYPES[defeated.type] || BALL_TYPES.knife;
       const colors = [config.color, config.stroke, "#f8fafc", "#94a3b8"];
       const count = getParticleBudget(52);
@@ -3979,6 +3972,7 @@ export default function App() {
         life: 1.1,
         maxLife: 1.1
       });
+      game.deathEffectStarted = true;
       game.deathSlowMoUntil = currentTime + DEATH_SLOW_MO_DURATION;
       game.screenShake = Math.max(game.screenShake, 22);
       defeated.shattered = true;
@@ -4053,6 +4047,22 @@ export default function App() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        if ((ball.chomperKnockbackBouncesLeft || 0) > 0) {
+          ball.chomperKnockbackBouncesLeft -= 1;
+          if (ball.chomperKnockbackBouncesLeft > 0) {
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 18, vy: -45,
+              text: `CHOMP FORCE ${ball.chomperKnockbackBouncesLeft}`, color: "#facc15", life: 0.55, maxLife: 0.55
+            });
+          } else {
+            const speed = Math.hypot(ball.vx, ball.vy);
+            if (speed > 220) {
+              ball.vx = (ball.vx / speed) * 220;
+              ball.vy = (ball.vy / speed) * 220;
+            }
+          }
+        }
         if (hasStringBounceGuard(ball)) {
           ball.stringBounceWallBouncesLeft = Math.max(0, (ball.stringBounceWallBouncesLeft || 0) - 1);
           if (ball.stringBounceWallBouncesLeft > 0) {
@@ -4925,11 +4935,6 @@ export default function App() {
       vampire.vx = target.vx; vampire.vy = target.vy;
 
       if (vampire.nextDrainAt <= currentTime) {
-        if (target.side === vampire.side) {
-          vampire.latchedTo = null;
-          vampire.latchUntil = 0;
-          return;
-        }
         if (isWreckerJumpInvulnerable(target)) {
           vampire.nextDrainAt = currentTime + bal.tickCooldown;
           return;
@@ -4970,79 +4975,40 @@ export default function App() {
         ball.chomperPoweredUntil = currentTime + bal.powerDuration;
         ball.chomperNextPowerAt = currentTime + bal.powerCooldown;
         ball.chomperState = "idle";
-        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-        ball.vx = Math.cos(angle) * bal.powerSpeed;
-        ball.vy = Math.sin(angle) * bal.powerSpeed;
+        const moveAngle = Math.atan2(ball.vy || 0, ball.vx || (ball.side === "left" ? 1 : -1));
+        ball.vx = Math.cos(moveAngle) * bal.powerSpeed;
+        ball.vy = Math.sin(moveAngle) * bal.powerSpeed;
         game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -42, text: "POWER PELLET!", color: "#67e8f9", life: 0.8, maxLife: 0.8 });
         spawnSparks(ball.x, ball.y, "#fef08a", 18);
         playSound("repulsorCharge", 0.7, 180);
       }
 
-      if (ball.chomperState === "windup") {
-        const lead = 0.16;
-        ball.chomperBiteAngle = Math.atan2(target.y + target.vy * lead - ball.y, target.x + target.vx * lead - ball.x);
-        ball.vx *= 0.8;
-        ball.vy *= 0.8;
-        if (currentTime >= ball.chomperStateUntil) {
-          ball.chomperState = "lunging";
-          ball.chomperStateUntil = currentTime + bal.lungeDuration;
-          ball.chomperHitDone = false;
-          const speed = powered ? Math.max(bal.lungeSpeed, bal.powerSpeed * 1.3) : bal.lungeSpeed;
-          ball.vx = Math.cos(ball.chomperBiteAngle) * speed;
-          ball.vy = Math.sin(ball.chomperBiteAngle) * speed;
-          playSound("shieldThrow", 0.72, 160);
-        }
-        return;
-      }
-
-      if (ball.chomperState === "lunging") {
-        const hitDistance = ball.r + target.r + 18;
-        if (!ball.chomperHitDone && Math.hypot(target.x - ball.x, target.y - ball.y) < hitDistance &&
-            canStartSkillConnection(ball, target, game.balls, currentTime)) {
-          ball.chomperHitDone = true;
-          const damage = powered ? bal.powerDamage : bal.biteDamage;
-          const knockback = powered ? bal.powerKnockback : bal.biteKnockback;
-          const healthBefore = target.health;
-          applyDamage(target, damage, `${ball.id}-chomp-${powered ? "power" : "bite"}`, currentTime, 0);
-          const damageDone = healthBefore - target.health;
-          const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-          target.vx = Math.cos(angle) * knockback;
-          target.vy = Math.sin(angle) * knockback;
-          ball.vx = -Math.cos(angle) * 220;
-          ball.vy = -Math.sin(angle) * 220;
-          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
-          if (stats && damageDone > 0) { stats.damageDealt += damageDone; stats.hitsLanded++; }
-          game.floatingTexts.push({ x: target.x, y: target.y - target.r - 18, vy: -52, text: powered ? "MEGA CHOMP!" : "CHOMP!", color: powered ? "#67e8f9" : "#facc15", life: 0.65, maxLife: 0.65 });
-          spawnSparks(target.x, target.y, powered ? "#67e8f9" : "#facc15", powered ? 18 : 11);
-          game.screenShake = Math.max(game.screenShake || 0, powered ? 12 : 7);
-          playSound("hammerHit", powered ? 0.9 : 0.65, powered ? 120 : 60);
-        }
-        if (currentTime >= ball.chomperStateUntil || ball.chomperHitDone) {
-          ball.chomperState = "recovering";
-          ball.chomperStateUntil = currentTime + 180;
-          ball.chomperNextBiteAt = currentTime + bal.biteCooldown;
-        }
-        return;
-      }
-
-      if (ball.chomperState === "recovering") {
-        if (currentTime < ball.chomperStateUntil) return;
-        ball.chomperState = "idle";
-      }
-
       const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-      if (currentTime >= (ball.chomperNextBiteAt || 0) && dist < bal.biteRange &&
+      const moveSpeed = Math.max(1, Math.hypot(ball.vx, ball.vy));
+      const toTargetX = (target.x - ball.x) / Math.max(1, dist);
+      const toTargetY = (target.y - ball.y) / Math.max(1, dist);
+      const forwardDot = (ball.vx / moveSpeed) * toTargetX + (ball.vy / moveSpeed) * toTargetY;
+      if (currentTime >= (ball.chomperNextBiteAt || 0) && dist < ball.r + target.r + 22 && forwardDot > 0.15 &&
           canStartSkillConnection(ball, target, game.balls, currentTime)) {
-        ball.chomperState = "windup";
-        ball.chomperStateUntil = currentTime + 150;
-        ball.chomperBiteAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-      } else if (powered) {
-        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-        const desiredVx = Math.cos(angle) * bal.powerSpeed;
-        const desiredVy = Math.sin(angle) * bal.powerSpeed;
-        ball.vx += (desiredVx - ball.vx) * 0.08;
-        ball.vy += (desiredVy - ball.vy) * 0.08;
+        const damage = powered ? bal.powerDamage : bal.biteDamage;
+        const knockback = (powered ? bal.powerKnockback : bal.biteKnockback) * 2;
+        const healthBefore = target.health;
+        applyDamage(target, damage, `${ball.id}-chomp-${powered ? "power" : "bite"}`, currentTime, 0);
+        const damageDone = healthBefore - target.health;
+        target.vx = (ball.vx / moveSpeed) * knockback;
+        target.vy = (ball.vy / moveSpeed) * knockback;
+        target.chomperKnockbackBouncesLeft = 2;
+        ball.chomperState = "biting";
+        ball.chomperStateUntil = currentTime + 180;
+        ball.chomperNextBiteAt = currentTime + bal.biteCooldown;
+        const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+        if (stats && damageDone > 0) { stats.damageDealt += damageDone; stats.hitsLanded++; }
+        game.floatingTexts.push({ x: target.x, y: target.y - target.r - 18, vy: -52, text: powered ? "MEGA CHOMP!" : "CHOMP!", color: powered ? "#67e8f9" : "#facc15", life: 0.65, maxLife: 0.65 });
+        spawnSparks(target.x, target.y, powered ? "#67e8f9" : "#facc15", powered ? 18 : 11);
+        game.screenShake = Math.max(game.screenShake || 0, powered ? 12 : 7);
+        playSound("hammerHit", powered ? 0.9 : 0.65, powered ? 120 : 60);
       }
+      if (ball.chomperState === "biting" && currentTime >= ball.chomperStateUntil) ball.chomperState = "idle";
     };
 
     const updateArm = (armBall, target, currentTime, stepDt) => {
@@ -5617,7 +5583,6 @@ export default function App() {
 
         const d = linePointDist(target.x, target.y, mX, mY, eX, eY);
         if (!beamClone && d < target.r + bal.laser.beamWidth / 2 && currentTime >= laserBall.laserNextTickAt) {
-          if (target.side === laserBall.side) return;
           const beamDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
           if (isChessCrownActive(target)) return;
           if (isWreckerJumpInvulnerable(target)) {
@@ -6441,7 +6406,7 @@ export default function App() {
           const pad = 120;
           let cueBallX = 0, cueBallY = 0;
           let attempts = 0;
-          const otherBall = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
+          const otherBall = game.balls.find(b => b.id !== ball.id);
           while (attempts < 50) {
             cueBallX = pad + Math.random() * (game.width - pad * 2);
             cueBallY = pad + Math.random() * (game.height - pad * 2);
@@ -8795,7 +8760,6 @@ export default function App() {
             playSound("explosion");
 
             balls.forEach(ball => {
-              if (ball.side === mine.ownerSide) return;
               const db = Math.hypot(ball.x - mine.x, ball.y - mine.y);
               if (db < game.balance.bomber.mineRadius + ball.r) {
                 if (isChessCrownActive(ball)) return;
@@ -9222,17 +9186,6 @@ export default function App() {
         ctx.fillStyle = "rgba(56, 189, 248, 0.08)"; ctx.fillRect(4, 4, game.width / 2 - 4, game.height - 8);
         ctx.fillStyle = "rgba(244, 63, 94, 0.07)"; ctx.fillRect(game.width / 2, 4, game.width / 2 - 4, game.height - 8);
       }
-      const watermark = arenaWatermarkImageRef.current;
-      if (watermark?.complete && watermark.naturalWidth > 0) {
-        const maxWidth = game.width * (battleMode === "2v2" ? 0.34 : 0.42);
-        const maxHeight = game.height * 0.34;
-        const scale = Math.min(maxWidth / watermark.naturalWidth, maxHeight / watermark.naturalHeight);
-        const width = watermark.naturalWidth * scale;
-        const height = watermark.naturalHeight * scale;
-        ctx.globalAlpha = 0.09;
-        ctx.drawImage(watermark, (game.width - width) / 2, (game.height - height) / 2, width, height);
-        ctx.globalAlpha = 1;
-      }
       ctx.restore();
     };
 
@@ -9458,11 +9411,9 @@ export default function App() {
 
     const drawMazeChomperBall = (ball) => {
       const powered = game.simTime < (ball.chomperPoweredUntil || 0);
-      const lunging = ball.chomperState === "lunging";
-      const facing = lunging || ball.chomperState === "windup"
-        ? ball.chomperBiteAngle
-        : Math.atan2(ball.vy || 0, ball.vx || (ball.side === "left" ? 1 : -1));
-      const mouthPulse = 0.16 + Math.abs(Math.sin(game.simTime * (lunging ? 0.04 : 0.018))) * (lunging ? 0.68 : 0.38);
+      const biting = ball.chomperState === "biting";
+      const facing = Math.atan2(ball.vy || 0, ball.vx || (ball.side === "left" ? 1 : -1));
+      const mouthPulse = 0.16 + Math.abs(Math.sin(game.simTime * (biting ? 0.04 : 0.018))) * (biting ? 0.68 : 0.38);
 
       if (powered) {
         ctx.save();
@@ -9481,7 +9432,7 @@ export default function App() {
         ctx.restore();
       }
 
-      if (lunging) {
+      if (biting) {
         ctx.save();
         ctx.globalAlpha = 0.28;
         ctx.strokeStyle = powered ? "#67e8f9" : "#fde047";
@@ -10142,7 +10093,7 @@ export default function App() {
 
       if (ball.fangFlashUntil > game.simTime) {
         ctx.save();
-        const target = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
+        const target = game.balls.find(o => o.id !== ball.id);
         if (target) {
           const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
           ctx.rotate(angle + Math.PI / 2);
@@ -10549,7 +10500,7 @@ export default function App() {
       }
       
       const armAngle = ball.armAngle || 0;
-      const enemy = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
+      const enemy = game.balls.find(b => b.id !== ball.id);
       const punching = ball.armPunchUntil && game.simTime < ball.armPunchUntil;
       const punchDuration = Math.max(1, (ball.armPunchUntil || 0) - (ball.armPunchStartAt || 0));
       const punchProgress = punching ? clamp((game.simTime - (ball.armPunchStartAt || game.simTime)) / punchDuration, 0, 1) : 0;
@@ -14785,14 +14736,6 @@ export default function App() {
       if (elapsed > 250 && elapsed < FIGHT_INTRO_IMPACT_AT) shake = easeIn((elapsed - 250) / (FIGHT_INTRO_IMPACT_AT - 250)) * 13;
       if (elapsed >= FIGHT_INTRO_IMPACT_AT && elapsed < 2050) shake = 20 * (1 - clamp((elapsed - FIGHT_INTRO_IMPACT_AT) / 420, 0, 1));
 
-      if (combatActive) {
-        game.balls.forEach((ball) => {
-          if (ball.type !== "cueBall" && ball.health <= 0 && !ball.shattered) {
-            spawnDeathShatter(ball, time);
-          }
-        });
-      }
-
       drawArena();
       ctx.save();
       if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
@@ -15054,6 +14997,7 @@ export default function App() {
                 (ball.type === "feralClaw" && (ball.feralPounceState === "launch" || ball.feralPounceState === "settle")) ||
                 (ball.type === "eightBall" && game.simTime < (ball.eightPoweredUntil || 0)) ||
                 (ball.type === "mazeChomper" && (ball.chomperState === "lunging" || game.simTime < (ball.chomperPoweredUntil || 0))) ||
+                (ball.chomperKnockbackBouncesLeft || 0) > 0 ||
                 ball.type === "cueBall") {
               // bypass base speed limits
             } else {
@@ -15320,8 +15264,8 @@ export default function App() {
           }
 
           if (ball.type === "shield") {
-            const target = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
-            if (target) ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+            const target = ball.side === "left" ? right : left;
+            ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
           }
           if (ball.type === "knife") ball.spinAngle += 0.02;
         });
@@ -15370,9 +15314,11 @@ export default function App() {
       });
       ctx.restore();
 
-      const currentLeftAlive = leftTeam.some((ball) => ball.health > 0);
-      const currentRightAlive = rightTeam.some((ball) => ball.health > 0);
-      const winner = combatActive ? !currentLeftAlive ? getTeamLabel(rightTeam, "right") : !currentRightAlive ? getTeamLabel(leftTeam, "left") : null : null;
+      const winner = combatActive ? !leftAlive ? getTeamLabel(rightTeam, "right") : !rightAlive ? getTeamLabel(leftTeam, "left") : null : null;
+      if (winner && !game.deathEffectStarted) {
+        const defeated = (!leftAlive ? leftTeam : rightTeam).find((ball) => ball.health <= 0) || (!leftAlive ? left : right);
+        spawnDeathShatter(defeated, time);
+      }
       if (winner && !game.roundOverSoundPlayed) {
         game.roundOverSoundPlayed = true;
         stopMatchMusic();
