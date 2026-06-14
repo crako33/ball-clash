@@ -576,6 +576,7 @@ const getHpBarColor = (type) => {
 const GRID_SIZE = 7;
 const TILE_SIZE = 64;
 const ARENA_SIZE = GRID_SIZE * TILE_SIZE;
+const TEAM_ARENA_WIDTH = ARENA_SIZE + TILE_SIZE * 3.5;
 
 const getEightBallCueAngle = (ball, target, bankShot, width = ARENA_SIZE, height = ARENA_SIZE) => {
   if (!bankShot) return Math.atan2(target.y - ball.y, target.x - ball.x);
@@ -1300,19 +1301,26 @@ export default function App() {
       balls.push(makeBall(selection[2], "left", 20, 1));
       balls.push(makeBall(selection[3], "right", 20, 1));
       balls.forEach((ball) => {
+        ball.x = ball.side === "left" ? 72 : TEAM_ARENA_WIDTH - 72;
         ball.y = ball.teamSlot === 0 ? ARENA_SIZE * 0.32 : ARENA_SIZE * 0.68;
       });
     }
     return balls;
   };
 
+  const getHudBallName = (ball) => {
+    const name = ball?.name || BALL_TYPES[ball?.type]?.name || "Fighter";
+    if (battleMode !== "2v2" || ball?.type === "eightBall") return name;
+    return name.replace(/\s+Ball\b/gi, "").trim();
+  };
+
   const getTeamLabel = (balls, side) => {
-    const names = balls.filter((ball) => ball.side === side).map((ball) => ball.name);
+    const names = balls.filter((ball) => ball.side === side).map(getHudBallName);
     return names.length > 1 ? names.join(" + ") : names[0] || `${side === "left" ? "Left" : "Right"} Team`;
   };
 
   const gameRef = useRef({
-    width: ARENA_SIZE,
+    width: TEAM_ARENA_WIDTH,
     height: ARENA_SIZE,
     lastTime: 0,
     simTime: 0,
@@ -1432,7 +1440,18 @@ export default function App() {
     if (!fightIntroRef.current.active) return;
     const left = gameRef.current.balls[0];
     const right = gameRef.current.balls[1];
-    if (left && right) {
+    if (battleMode === "2v2") {
+      const centerX = gameRef.current.width / 2;
+      const centerY = gameRef.current.height / 2;
+      const speed = 560;
+      gameRef.current.balls.forEach((ball) => {
+        const dx = ball.x - centerX;
+        const dy = ball.y - centerY;
+        const length = Math.max(1, Math.hypot(dx, dy));
+        ball.vx = (dx / length) * speed;
+        ball.vy = (dy / length) * speed;
+      });
+    } else if (left && right) {
       const centerY = gameRef.current.height / 2;
       const intro = fightIntroRef.current;
       const seed = (left.type.length * 17 + right.type.length * 31) % 100;
@@ -1447,12 +1466,6 @@ export default function App() {
       right.vy = Math.sin(rightAngle) * speed;
       left.y = clamp(left.y || centerY, left.r + 18, gameRef.current.height - left.r - 18);
       right.y = clamp(right.y || centerY, right.r + 18, gameRef.current.height - right.r - 18);
-      gameRef.current.balls.slice(2).forEach((ball, index) => {
-        const vertical = index % 2 === 0 ? 1 : -1;
-        const angle = ball.side === "left" ? Math.PI + vertical * 0.55 : vertical * 0.55;
-        ball.vx = Math.cos(angle) * speed;
-        ball.vy = Math.sin(angle) * speed;
-      });
     }
     gameRef.current.combatStarted = true;
     fightIntroRef.current = { active: false, startTime: 0, recordingRequested: false, impactSoundPlayed: false, readySoundPlayed: false, fightSoundPlayed: false };
@@ -1619,7 +1632,7 @@ export default function App() {
     ctx.shadowBlur = isEightBall ? 20 : 0;
     ctx.font = "800 34px Arial, sans-serif";
     const nameX = align === "left" ? x + 22 : x + w - 22;
-    ctx.fillText(ball?.name || config.name, nameX, y + 42);
+    ctx.fillText(getHudBallName(ball), nameX, y + 42);
 
     ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
@@ -1886,10 +1899,11 @@ export default function App() {
     const right = rightTeam[0];
     const width = 1920;
     const height = 1080;
-    const arenaSize = 900;
-    const arenaX = (width - arenaSize) / 2;
-    const arenaY = 110;
-    const cardW = 430;
+    const arenaWidth = battleMode === "2v2" ? 1200 : 900;
+    const arenaHeight = battleMode === "2v2" ? 800 : 900;
+    const arenaX = (width - arenaWidth) / 2;
+    const arenaY = battleMode === "2v2" ? 140 : 110;
+    const cardW = battleMode === "2v2" ? 300 : 430;
 
     ctx.clearRect(0, 0, width, height);
     const bg = ctx.createLinearGradient(0, 0, 0, height);
@@ -1906,24 +1920,24 @@ export default function App() {
     ctx.fillText(battleMode === "2v2" ? "BALL FIGHTERS 2V2 ARENA" : "BALL FIGHTERS DUEL", width / 2, 62);
     ctx.restore();
 
-    leftTeam.forEach((ball, index) => drawRecordingHudCard(ctx, ball, 30, 210 + index * 300, cardW, "left"));
-    rightTeam.forEach((ball, index) => drawRecordingHudCard(ctx, ball, width - cardW - 30, 210 + index * 300, cardW, "right"));
+    leftTeam.forEach((ball, index) => drawRecordingHudCard(ctx, ball, 25, 230 + index * 280, cardW, "left"));
+    rightTeam.forEach((ball, index) => drawRecordingHudCard(ctx, ball, width - cardW - 25, 230 + index * 280, cardW, "right"));
 
     ctx.save();
     ctx.shadowColor = "rgba(15, 23, 42, 0.32)";
     ctx.shadowBlur = 28;
     ctx.shadowOffsetY = 16;
     ctx.fillStyle = "#020617";
-    drawRoundedRect(ctx, arenaX - 8, arenaY - 8, arenaSize + 16, arenaSize + 16, 26);
+    drawRoundedRect(ctx, arenaX - 8, arenaY - 8, arenaWidth + 16, arenaHeight + 16, 26);
     ctx.fill();
     ctx.restore();
 
-    ctx.drawImage(sourceCanvas, arenaX, arenaY, arenaSize, arenaSize);
+    ctx.drawImage(sourceCanvas, arenaX, arenaY, arenaWidth, arenaHeight);
 
     ctx.save();
     ctx.lineWidth = 8;
     ctx.strokeStyle = "#020617";
-    drawRoundedRect(ctx, arenaX, arenaY, arenaSize, arenaSize, 18);
+    drawRoundedRect(ctx, arenaX, arenaY, arenaWidth, arenaHeight, 18);
     ctx.stroke();
     ctx.restore();
 
@@ -3714,13 +3728,16 @@ export default function App() {
       if (!canvas || !ctx) return;
       const scale = window.devicePixelRatio || 1, container = canvas.parentElement;
       if (!container) return;
-      const maxDisplaySize = 650;
-      const displaySize = Math.min(container.clientWidth, maxDisplaySize);
-      canvas.width = displaySize * scale; canvas.height = displaySize * scale;
-      canvas.style.width = `${displaySize}px`; canvas.style.height = `${displaySize}px`;
-      const virtScale = (displaySize / ARENA_SIZE) * scale;
+      const arenaWidth = battleMode === "2v2" ? TEAM_ARENA_WIDTH : ARENA_SIZE;
+      const arenaHeight = ARENA_SIZE;
+      const maxDisplayWidth = battleMode === "2v2" ? 900 : 650;
+      const displayWidth = Math.min(container.clientWidth, maxDisplayWidth);
+      const displayHeight = displayWidth * (arenaHeight / arenaWidth);
+      canvas.width = displayWidth * scale; canvas.height = displayHeight * scale;
+      canvas.style.width = `${displayWidth}px`; canvas.style.height = `${displayHeight}px`;
+      const virtScale = (displayWidth / arenaWidth) * scale;
       ctx.setTransform(virtScale, 0, 0, virtScale, 0, 0);
-      game.width = ARENA_SIZE; game.height = ARENA_SIZE;
+      game.width = arenaWidth; game.height = arenaHeight;
     };
 
     if (canvas) {
@@ -5141,8 +5158,8 @@ export default function App() {
           playSound("chessMove");
         }
       } else if (ball.chessState === "movingToCenter") {
-        const cx = ARENA_SIZE / 2;
-        const cy = ARENA_SIZE / 2;
+        const cx = game.width / 2;
+        const cy = game.height / 2;
         const dx = cx - ball.x;
         const dy = cy - ball.y;
         const dist = Math.hypot(dx, dy);
@@ -5167,8 +5184,8 @@ export default function App() {
           ball.vy = Math.sin(angle) * chessBal.centerSpeed;
         }
       } else if (ball.chessState === "activeCrown") {
-        ball.x = ARENA_SIZE / 2;
-        ball.y = ARENA_SIZE / 2;
+        ball.x = game.width / 2;
+        ball.y = game.height / 2;
         ball.vx = 0;
         ball.vy = 0;
 
@@ -5198,26 +5215,26 @@ export default function App() {
           ball.chessScale = 1.0;
           ball.chessWaypointIndex = 0;
           
-          const cx = ARENA_SIZE / 2;
-          const cy = ARENA_SIZE / 2;
+          const cx = game.width / 2;
+          const cy = game.height / 2;
           const pad = 18 + ball.r;
           
           if (ball.chessCrown === "bishop") {
             ball.chessAttackWaypoints = [
               { x: pad, y: pad },
-              { x: ARENA_SIZE - pad, y: ARENA_SIZE - pad },
+              { x: game.width - pad, y: game.height - pad },
               { x: cx, y: cy },
-              { x: ARENA_SIZE - pad, y: pad },
-              { x: pad, y: ARENA_SIZE - pad },
+              { x: game.width - pad, y: pad },
+              { x: pad, y: game.height - pad },
               { x: cx, y: cy }
             ];
           } else if (ball.chessCrown === "rook") {
             ball.chessAttackWaypoints = [
               { x: pad, y: cy },
-              { x: ARENA_SIZE - pad, y: cy },
+              { x: game.width - pad, y: cy },
               { x: cx, y: cy },
               { x: cx, y: pad },
-              { x: cx, y: ARENA_SIZE - pad },
+              { x: cx, y: game.height - pad },
               { x: cx, y: cy }
             ];
           } else { // knight
@@ -9176,10 +9193,11 @@ export default function App() {
       ctx.save();
       ctx.strokeStyle = "rgba(148, 163, 184, 0.18)";
       ctx.lineWidth = 1;
-      for (let i = 1; i < GRID_SIZE; i++) {
-        const p = i * TILE_SIZE;
-        ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, game.height); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(game.width, p); ctx.stroke();
+      for (let x = TILE_SIZE; x < game.width; x += TILE_SIZE) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, game.height); ctx.stroke();
+      }
+      for (let y = TILE_SIZE; y < game.height; y += TILE_SIZE) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(game.width, y); ctx.stroke();
       }
       if (battleMode === "2v2") {
         ctx.setLineDash([10, 10]);
@@ -10779,7 +10797,7 @@ export default function App() {
         ctx.lineWidth = 2.5;
         ctx.setLineDash([6, 6]);
         ctx.beginPath();
-        ctx.arc(ARENA_SIZE / 2, ARENA_SIZE / 2, ball.r * ball.chessScale, 0, Math.PI * 2);
+        ctx.arc(game.width / 2, game.height / 2, ball.r * ball.chessScale, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.restore();
@@ -10790,23 +10808,23 @@ export default function App() {
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 6]);
         
-        const cx = ARENA_SIZE / 2;
-        const cy = ARENA_SIZE / 2;
+        const cx = game.width / 2;
+        const cy = game.height / 2;
         const pad = 18 + ball.r;
 
         if (ball.chessCrown === "bishop") {
           ctx.beginPath();
           ctx.moveTo(pad, pad);
-          ctx.lineTo(ARENA_SIZE - pad, ARENA_SIZE - pad);
-          ctx.moveTo(ARENA_SIZE - pad, pad);
-          ctx.lineTo(pad, ARENA_SIZE - pad);
+          ctx.lineTo(game.width - pad, game.height - pad);
+          ctx.moveTo(game.width - pad, pad);
+          ctx.lineTo(pad, game.height - pad);
           ctx.stroke();
         } else if (ball.chessCrown === "rook") {
           ctx.beginPath();
           ctx.moveTo(pad, cy);
-          ctx.lineTo(ARENA_SIZE - pad, cy);
+          ctx.lineTo(game.width - pad, cy);
           ctx.moveTo(cx, pad);
-          ctx.lineTo(cx, ARENA_SIZE - pad);
+          ctx.lineTo(cx, game.height - pad);
           ctx.stroke();
         } else if (ball.chessCrown === "knight") {
           ctx.beginPath();
@@ -14702,6 +14720,19 @@ export default function App() {
       let shake = 0;
       if (!intro.initialized) {
         intro.initialized = true;
+        if (battleMode === "2v2") {
+          intro.teamStarts = game.balls.map((ball) => ({
+            x: ball.side === "left" ? ball.r + 54 : game.width - ball.r - 54,
+            y: ball.teamSlot === 0 ? ball.r + 54 : game.height - ball.r - 54,
+          }));
+          game.balls.forEach((ball, index) => {
+            ball.x = intro.teamStarts[index].x;
+            ball.y = intro.teamStarts[index].y;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.trail = [];
+          });
+        } else {
         intro.leftStartX = left.r + 42;
         intro.rightStartX = game.width - right.r - 42;
         intro.centerY = centerY;
@@ -14724,6 +14755,7 @@ export default function App() {
           ball.vy = 0;
           ball.trail = [];
         });
+        }
       }
       if (elapsed > 250 && elapsed < FIGHT_INTRO_IMPACT_AT) shake = easeIn((elapsed - 250) / (FIGHT_INTRO_IMPACT_AT - 250)) * 13;
       if (elapsed >= FIGHT_INTRO_IMPACT_AT && elapsed < 2050) shake = 20 * (1 - clamp((elapsed - FIGHT_INTRO_IMPACT_AT) / 420, 0, 1));
@@ -14734,6 +14766,62 @@ export default function App() {
       ctx.beginPath();
       ctx.rect(0, 0, game.width, game.height);
       ctx.clip();
+
+      if (battleMode === "2v2") {
+        const chargeStart = 250;
+        const impactAt = FIGHT_INTRO_IMPACT_AT;
+        const chargeProgress = easeIn((elapsed - chargeStart) / (impactAt - chargeStart));
+        const recoilProgress = elapsed >= impactAt ? easeOut((elapsed - impactAt) / 420) : 0;
+        game.balls.forEach((ball, index) => {
+          const start = intro.teamStarts[index];
+          const horizontalSign = ball.side === "left" ? -1 : 1;
+          const verticalSign = ball.teamSlot === 0 ? -1 : 1;
+          const impactX = centerX + horizontalSign * ball.r * 0.58;
+          const impactY = centerY + verticalSign * ball.r * 0.58;
+          if (elapsed < chargeStart) {
+            ball.x = start.x;
+            ball.y = start.y;
+          } else if (elapsed < impactAt) {
+            ball.x = start.x + (impactX - start.x) * chargeProgress;
+            ball.y = start.y + (impactY - start.y) * chargeProgress;
+          } else {
+            const dx = start.x - impactX;
+            const dy = start.y - impactY;
+            const length = Math.max(1, Math.hypot(dx, dy));
+            ball.x = impactX + (dx / length) * recoilProgress * 142;
+            ball.y = impactY + (dy / length) * recoilProgress * 108;
+          }
+          ball.trail = [...(ball.trail || []), { x: ball.x, y: ball.y }].slice(-MAX_TRAIL_POINTS);
+        });
+
+        game.balls.forEach(drawBallTrail);
+        game.balls.forEach((ball) => drawBall(ball, game.simTime));
+        if (elapsed < impactAt) {
+          game.balls.forEach((ball) => {
+            const labelY = ball.teamSlot === 0 ? ball.y + ball.r + 22 : ball.y - ball.r - 22;
+            drawIntroText(ball.name, ball.x, labelY, 12, BALL_TYPES[ball.type].color, 0.9, ball.type === "eightBall");
+          });
+          drawIntroText("2V2 TEAM CLASH", centerX, centerY - 8, 28, "#f8fafc", 1);
+        } else {
+          if (!intro.impactSoundPlayed) {
+            intro.impactSoundPlayed = true;
+            playSound("hammerHit", 1, 200);
+          }
+          if (!intro.fightSoundPlayed) {
+            intro.fightSoundPlayed = true;
+            playSound("explosion", 0.65, 180);
+          }
+          const flash = 1 - clamp((elapsed - impactAt) / 480, 0, 1);
+          ctx.save();
+          ctx.globalAlpha = flash * 0.75;
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(0, 0, game.width, game.height);
+          ctx.restore();
+          drawIntroText("FIGHT!", centerX, centerY, 42, "#ef4444", flash);
+        }
+        ctx.restore();
+        return;
+      }
 
       let leftX = intro.leftStartX || left.x;
       let rightX = intro.rightStartX || right.x;
