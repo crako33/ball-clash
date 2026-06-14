@@ -564,6 +564,26 @@ const BALL_TYPES = {
     animeStyle: "Retro arcade mascot reimagined as a neon arena fighter",
     gameStyle: "Aggressive collision striker with predictive lunges and temporary powered bites",
   },
+  yoYo: {
+    id: "yoYo",
+    name: "Yo-Yo Ball",
+    shortName: "YOYO",
+    color: "#f8fafc",
+    stroke: "#172554",
+    radius: 30,
+    description: "Spins up and throws a giant tethered yo-yo. Each enemy hit increases its knockback.",
+    emoji: "YO",
+    visualTheme: "White Jersey Trick Fighter / Momentum Spinner",
+    colorPalette: "Clean White, Deep Navy, Cool Blue-Gray",
+    facialAge: "Young adult trick-shot champion",
+    personality: "Flashy, focused, playful",
+    primaryWeapon: "Oversized spinning yo-yo",
+    signatureAbility: "Momentum Throw",
+    companion: "None",
+    specialVisualEffects: "White spiral trails, navy string, cool-blue impact rings",
+    animeStyle: "Urban trick-battle champion",
+    gameStyle: "Tethered projectile fighter with escalating knockback",
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -666,6 +686,7 @@ const BALANCE = {
   fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, carHitboxWidthScale: 1.75, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
   eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
   mazeChomper: { biteDamage: 4, biteCooldown: 1050, biteRange: 150, lungeSpeed: 700, lungeDuration: 360, biteKnockback: 360, powerCooldown: 7200, powerDuration: 3200, powerSpeed: 520, powerDamage: 7, powerKnockback: 620 },
+  yoYo: { cooldown: 3000, windup: 380, throwSpeed: 980, returnSpeed: 1100, duration: 4300, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 520, knockbackGrowth: 180, maxKnockback: 1500, hitCooldown: 300, yoYoRadius: 30, wallInset: 30 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -1229,6 +1250,10 @@ export default function App() {
       chomperBiteAngle: side === "left" ? 0 : Math.PI, chomperHitDone: false,
       chomperNextPowerAt: type === "mazeChomper" ? 4200 : 0, chomperPoweredUntil: 0, chomperPelletAngle: 0, chomperNextPowerHitAt: 0,
       chomperKnockbackBouncesLeft: 0,
+      // Yo-Yo Specific
+      yoYoState: "idle", yoYoNextThrowAt: type === "yoYo" ? 1700 : 0, yoYoStateUntil: 0,
+      yoYoX: 0, yoYoY: 0, yoYoVx: 0, yoYoVy: 0, yoYoSpin: 0, yoYoKnockback: 0, yoYoHitAt: {},
+      yoYoWallIndex: 0, yoYoHitStacks: 0, yoYoCutX: 0, yoYoCutY: 0,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
       nextPsychicAt: 0,
@@ -5009,6 +5034,145 @@ export default function App() {
         playSound("hammerHit", powered ? 0.9 : 0.65, powered ? 120 : 60);
       }
       if (ball.chomperState === "biting" && currentTime >= ball.chomperStateUntil) ball.chomperState = "idle";
+    };
+
+    const updateYoYo = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.yoYo || BALANCE.yoYo;
+      if (ball.yoYoState === "idle") {
+        if (currentTime < (ball.yoYoNextThrowAt || 0)) return;
+        ball.yoYoState = "windup";
+        ball.yoYoStateUntil = currentTime + bal.windup;
+        ball.yoYoSpin = 0;
+        ball.yoYoKnockback = bal.baseKnockback;
+        ball.yoYoHitAt = {};
+        ball.yoYoHitStacks = 0;
+        playSound("repulsorCharge", 0.65, 140);
+        return;
+      }
+
+      if (ball.yoYoState === "windup") {
+        ball.yoYoSpin += stepDt * 24;
+        ball.spinAngle += stepDt * 18;
+        ball.vx *= 0.985;
+        ball.vy *= 0.985;
+        if (currentTime < ball.yoYoStateUntil) return;
+        const dx = target.x - ball.x;
+        const dy = target.y - ball.y;
+        const angle = Math.atan2(dy, dx);
+        const startingWall = Math.abs(dx) > Math.abs(dy)
+          ? (dx > 0 ? 1 : 3)
+          : (dy > 0 ? 2 : 0);
+        ball.yoYoWallIndex = startingWall * 2;
+        ball.yoYoState = "walkDog";
+        ball.yoYoStateUntil = currentTime + bal.duration;
+        ball.yoYoX = ball.x + Math.cos(angle) * (ball.r + bal.yoYoRadius + 4);
+        ball.yoYoY = ball.y + Math.sin(angle) * (ball.r + bal.yoYoRadius + 4);
+        ball.yoYoVx = Math.cos(angle) * bal.throwSpeed;
+        ball.yoYoVy = Math.sin(angle) * bal.throwSpeed;
+        playSound("shieldThrow", 0.85, 80);
+        return;
+      }
+
+      if (ball.yoYoState === "walkDog") {
+        const pad = bal.wallInset + bal.yoYoRadius;
+        const wallTargets = [
+          { x: clamp(target.x, pad, game.width - pad), y: pad },
+          { x: game.width - pad, y: clamp(target.y, pad, game.height - pad) },
+          { x: clamp(target.x, pad, game.width - pad), y: game.height - pad },
+          { x: pad, y: clamp(target.y, pad, game.height - pad) },
+        ];
+        const isCutPass = ball.yoYoWallIndex % 2 === 1;
+        if (isCutPass && !ball.yoYoCutX && !ball.yoYoCutY) {
+          const lead = 0.22;
+          ball.yoYoCutX = clamp(target.x + (target.vx || 0) * lead, pad, game.width - pad);
+          ball.yoYoCutY = clamp(target.y + (target.vy || 0) * lead, pad, game.height - pad);
+        }
+        const waypoint = isCutPass
+          ? { x: ball.yoYoCutX, y: ball.yoYoCutY }
+          : wallTargets[Math.floor(ball.yoYoWallIndex / 2) % wallTargets.length];
+        const waypointDx = waypoint.x - ball.yoYoX;
+        const waypointDy = waypoint.y - ball.yoYoY;
+        const waypointDist = Math.max(1, Math.hypot(waypointDx, waypointDy));
+        const speedBoost = (isCutPass ? 1.18 : 1) + Math.min(0.36, (ball.yoYoHitStacks || 0) * 0.06);
+        ball.yoYoVx = (waypointDx / waypointDist) * bal.throwSpeed * speedBoost;
+        ball.yoYoVy = (waypointDy / waypointDist) * bal.throwSpeed * speedBoost;
+        ball.yoYoX += ball.yoYoVx * stepDt;
+        ball.yoYoY += ball.yoYoVy * stepDt;
+        ball.yoYoSpin += stepDt * (40 + (ball.yoYoHitStacks || 0) * 3);
+        if (waypointDist < Math.max(24, bal.throwSpeed * stepDt * 1.4)) {
+          ball.yoYoX = waypoint.x;
+          ball.yoYoY = waypoint.y;
+          ball.yoYoWallIndex = (ball.yoYoWallIndex + 1) % (wallTargets.length * 2);
+          ball.yoYoCutX = 0;
+          ball.yoYoCutY = 0;
+          spawnSparks(ball.yoYoX, ball.yoYoY, "#cbd5e1", 7);
+          playSound("ballCollision", 0.45, 220);
+        }
+
+        game.balls.forEach((enemy) => {
+          if (enemy.side === ball.side || enemy.type === "cueBall" || enemy.health <= 0) return;
+          if (Math.hypot(enemy.x - ball.yoYoX, enemy.y - ball.yoYoY) >= enemy.r + bal.yoYoRadius * 1.25) return;
+          if (currentTime < (ball.yoYoHitAt[enemy.id] || 0)) return;
+          ball.yoYoHitAt[enemy.id] = currentTime + bal.hitCooldown;
+          const healthBefore = enemy.health;
+          const hitDamage = Math.min(bal.maxDamage, bal.damage + (ball.yoYoHitStacks || 0) * bal.damageGrowth);
+          applyDamage(enemy, hitDamage, `${ball.id}-yoyo-${enemy.id}`, currentTime, 0);
+          const damageDone = healthBefore - enemy.health;
+          const angle = Math.atan2(enemy.y - ball.yoYoY, enemy.x - ball.yoYoX);
+          const knockback = Math.min(bal.maxKnockback, ball.yoYoKnockback || bal.baseKnockback);
+          enemy.vx = Math.cos(angle) * knockback;
+          enemy.vy = Math.sin(angle) * knockback;
+          enemy.knockbackActiveUntil = currentTime + 620;
+          ball.yoYoHitStacks = (ball.yoYoHitStacks || 0) + 1;
+          ball.yoYoKnockback = Math.min(bal.maxKnockback, knockback + bal.knockbackGrowth);
+          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+          if (stats && damageDone > 0) { stats.damageDealt += damageDone; stats.hitsLanded++; }
+          spawnSparks(enemy.x, enemy.y, "#cbd5e1", 14);
+          game.floatingTexts.push({ x: enemy.x, y: enemy.y - enemy.r - 15, vy: -48, text: `WALK x${ball.yoYoHitStacks}  -${hitDamage}`, color: "#dbeafe", life: 0.72, maxLife: 0.72 });
+          game.screenShake = Math.max(game.screenShake || 0, Math.min(15, 7 + ball.yoYoHitStacks));
+          playSound("hammerHit", Math.min(0.95, 0.66 + ball.yoYoHitStacks * 0.04), 100 + ball.yoYoHitStacks * 24);
+        });
+
+        if (currentTime < ball.yoYoStateUntil) return;
+        ball.yoYoState = "returning";
+      }
+
+      if (ball.yoYoState === "returning") {
+        const dx = ball.x - ball.yoYoX;
+        const dy = ball.y - ball.yoYoY;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        ball.yoYoSpin += stepDt * 38;
+        ball.yoYoX += (dx / dist) * bal.returnSpeed * stepDt;
+        ball.yoYoY += (dy / dist) * bal.returnSpeed * stepDt;
+        game.balls.forEach((enemy) => {
+          if (enemy.side === ball.side || enemy.type === "cueBall" || enemy.health <= 0) return;
+          if (Math.hypot(enemy.x - ball.yoYoX, enemy.y - ball.yoYoY) >= enemy.r + bal.yoYoRadius * 1.2) return;
+          if (currentTime < (ball.yoYoHitAt[enemy.id] || 0)) return;
+          ball.yoYoHitAt[enemy.id] = currentTime + bal.hitCooldown;
+          const hitDamage = Math.min(bal.maxDamage, bal.damage + (ball.yoYoHitStacks || 0) * bal.damageGrowth);
+          const healthBefore = enemy.health;
+          applyDamage(enemy, hitDamage, `${ball.id}-yoyo-recall-${enemy.id}`, currentTime, 0);
+          const damageDone = healthBefore - enemy.health;
+          const knockback = Math.min(bal.maxKnockback, ball.yoYoKnockback || bal.baseKnockback);
+          enemy.vx = (-dx / dist) * knockback;
+          enemy.vy = (-dy / dist) * knockback;
+          enemy.knockbackActiveUntil = currentTime + 620;
+          ball.yoYoHitStacks = (ball.yoYoHitStacks || 0) + 1;
+          ball.yoYoKnockback = Math.min(bal.maxKnockback, knockback + bal.knockbackGrowth);
+          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+          if (stats && damageDone > 0) { stats.damageDealt += damageDone; stats.hitsLanded++; }
+          spawnSparks(enemy.x, enemy.y, "#f8fafc", 16);
+          game.floatingTexts.push({ x: enemy.x, y: enemy.y - enemy.r - 15, vy: -50, text: `SNAP BACK x${ball.yoYoHitStacks}`, color: "#bfdbfe", life: 0.72, maxLife: 0.72 });
+          game.screenShake = Math.max(game.screenShake || 0, 11);
+          playSound("hammerHit", 0.88, 180);
+        });
+        if (dist > ball.r + bal.yoYoRadius + 8) return;
+        ball.yoYoState = "idle";
+        ball.yoYoNextThrowAt = currentTime + bal.cooldown;
+        ball.yoYoX = 0;
+        ball.yoYoY = 0;
+        playSound("shieldCatch", 0.75, 90);
+      }
     };
 
     const updateArm = (armBall, target, currentTime, stepDt) => {
@@ -9487,6 +9651,70 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawYoYoBall = (ball) => {
+      const bal = game.balance.yoYo || BALANCE.yoYo;
+      const active = ball.yoYoState === "walkDog" || ball.yoYoState === "returning";
+      if (active) {
+        const dx = ball.yoYoX - ball.x;
+        const dy = ball.yoYoY - ball.y;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const nx = -dy / dist;
+        const ny = dx / dist;
+        const curve = Math.min(34, dist * 0.14) * Math.sin(game.simTime * 0.012);
+        ctx.save();
+        ctx.strokeStyle = "rgba(30, 41, 59, 0.42)";
+        ctx.lineWidth = 7;
+        ctx.shadowColor = "#64748b";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.quadraticCurveTo((ball.x + ball.yoYoX) / 2 + nx * curve, (ball.y + ball.yoYoY) / 2 + ny * curve, ball.yoYoX, ball.yoYoY);
+        ctx.stroke();
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(ball.yoYoX, ball.yoYoY);
+        ctx.rotate(ball.yoYoSpin || 0);
+        ctx.shadowColor = "#94a3b8";
+        ctx.shadowBlur = 18;
+        [-7, 7].forEach((offset) => {
+          ctx.fillStyle = offset < 0 ? "#f8fafc" : "#e2e8f0";
+          ctx.strokeStyle = "#172554";
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(offset, 0, bal.yoYoRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#1e3a8a";
+          ctx.beginPath(); ctx.arc(offset, 0, bal.yoYoRadius * 0.36, 0, Math.PI * 2); ctx.fill();
+        });
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(-8, -3, 16, 6);
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(ball.spinAngle || 0);
+      const body = ctx.createRadialGradient(-8, -10, 2, 0, 0, ball.r);
+      body.addColorStop(0, "#ffffff");
+      body.addColorStop(0.56, "#f8fafc");
+      body.addColorStop(1, "#cbd5e1");
+      ctx.fillStyle = body;
+      ctx.strokeStyle = "#172554";
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#1e3a8a";
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.62, -1.05, 1.05); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.62, Math.PI - 1.05, Math.PI + 1.05); ctx.stroke();
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawGunBall = (ball, currentTime) => {
       const config = BALL_TYPES.gun;
       
@@ -13344,6 +13572,7 @@ export default function App() {
       else if (ball.type === "fireSkull") drawFireSkullBall(ball);
       else if (ball.type === "eightBall") drawEightBall(ball);
       else if (ball.type === "mazeChomper") drawMazeChomperBall(ball);
+      else if (ball.type === "yoYo") drawYoYoBall(ball);
       else if (ball.type === "cueBall") drawCueBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
@@ -15205,6 +15434,7 @@ export default function App() {
                   if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
                   if (ball.type === "eightBall") updateEightBall(ball, target, game.simTime);
                   if (ball.type === "mazeChomper") updateMazeChomper(ball, target, game.simTime);
+                  if (ball.type === "yoYo") updateYoYo(ball, target, game.simTime, stepDt);
                   if (ball.type === "constellation") updateConstellation(ball, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
@@ -15665,6 +15895,23 @@ export default function App() {
               {renderSlider("Power Speed", "mazeChomper", "powerSpeed", 250, 900, 20, "px/s")}
               {renderSlider("Power Damage", "mazeChomper", "powerDamage", 1, 25, 1)}
               {renderSlider("Power Knockback", "mazeChomper", "powerKnockback", 150, 1200, 20, "px/s")}
+            </>
+          )}
+          {type === "yoYo" && (
+            <>
+              {renderSlider("Throw Cooldown", "yoYo", "cooldown", 1500, 9000, 100, "ms")}
+              {renderSlider("Spin Windup", "yoYo", "windup", 250, 1600, 50, "ms")}
+              {renderSlider("Throw Speed", "yoYo", "throwSpeed", 300, 1100, 20, "px/s")}
+              {renderSlider("Return Speed", "yoYo", "returnSpeed", 350, 1300, 20, "px/s")}
+              {renderSlider("Active Duration", "yoYo", "duration", 800, 6000, 100, "ms")}
+              {renderSlider("Hit Damage", "yoYo", "damage", 1, 15, 1)}
+              {renderSlider("Damage Growth", "yoYo", "damageGrowth", 0, 5, 1, "/ hit")}
+              {renderSlider("Max Hit Damage", "yoYo", "maxDamage", 3, 20, 1)}
+              {renderSlider("Base Knockback", "yoYo", "baseKnockback", 100, 900, 20, "px/s")}
+              {renderSlider("Knockback Growth", "yoYo", "knockbackGrowth", 10, 250, 10, "px/s")}
+              {renderSlider("Max Knockback", "yoYo", "maxKnockback", 300, 1600, 25, "px/s")}
+              {renderSlider("Yo-Yo Size", "yoYo", "yoYoRadius", 14, 40, 1, "px")}
+              {renderSlider("Wall Inset", "yoYo", "wallInset", 12, 80, 2, "px")}
             </>
           )}
           {type === "trident" && (
@@ -16187,7 +16434,7 @@ ${ball.description}`;
       const matchesArchetype =
         selectedArchetype === "All" ||
         (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker", "mazeChomper"].includes(ball.id)) ||
-        (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall"].includes(ball.id)) ||
+        (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall", "yoYo"].includes(ball.id)) ||
         (selectedArchetype === "Summoner" && ["spore", "shadow"].includes(ball.id)) ||
         (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull", "fisherman"].includes(ball.id)) ||
         (selectedArchetype === "Utility/Defense" && ["vampire", "shield", "chess", "trident", "mirror", "joker", "eightBall"].includes(ball.id));
