@@ -446,7 +446,7 @@ const BALL_TYPES = {
   },
   fisherman: {
     id: "fisherman",
-    name: "Fisherman Ball",
+    name: "Fisher Ball",
     shortName: "FISH",
     color: "#22c55e",
     stroke: "#dc2626",
@@ -6919,12 +6919,17 @@ export default function App() {
 
       if (ball.fishermanSpinUntil) {
         ball.fishermanSpinUntil = 0;
+        const targetDx = target.x - ball.x;
+        const targetDy = target.y - ball.y;
+        const castTowardTarget = Math.cos(ball.fishermanCastAngle) * targetDx + Math.sin(ball.fishermanCastAngle) * targetDy > 0;
+        if (castTowardTarget) ball.fishermanCastAngle += Math.PI;
         ball.fishermanRodAngle = ball.fishermanCastAngle;
       } else {
         updateFishermanIdleLine(ball, dt);
         if (currentTime < (ball.fishermanNextCastAt || 0)) return;
         if (!canStartSkillConnection(ball, target, game.balls, currentTime)) return;
-        ball.fishermanCastAngle = Math.random() * Math.PI * 2;
+        const opponentAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        ball.fishermanCastAngle = opponentAngle + Math.PI / 2 + Math.random() * Math.PI;
         ball.fishermanSpinStartAt = currentTime;
         ball.fishermanSpinUntil = currentTime + (bal.spinWindup || 520);
         ball.fishermanNextCastAt = Infinity;
