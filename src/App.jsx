@@ -455,7 +455,7 @@ const BALL_TYPES = {
     emoji: "🎣",
     visualTheme: "Anime Angler / Ricochet Hunter",
     colorPalette: "River Green, Hook Red, Deep Forest",
-    facialAge: "Teen adventurer with spiky dark hair and focused eyes",
+    facialAge: "Minimal green fighter with two red center marks",
     personality: "Patient, cheerful, precise",
     primaryWeapon: "Ricochet Fishing Rod and Hook",
     signatureAbility: "Exact-Path Hook Reel",
@@ -633,7 +633,7 @@ const BALANCE = {
   feralClaw: { slashDamage: 3, slashRange: 30, slashCooldown: 720, slashKnockback: 210, slashWindup: 90, slashDuration: 310, slashLunge: 155, slashRecoil: 105, pounceDamage: 7, pounceCooldown: 5200, pounceSpeed: 650, pounceDuration: 480, pounceWindup: 220, pounceOvershoot: 190, pounceMinRange: 115, pounceMaxRange: 285, regenDelay: 2800, regenAmount: 1, regenInterval: 1000, lowHealthThreshold: 45, lowHealthCooldownMult: 0.78, lowHealthRegenMult: 0.72, rageJitter: 36, ultimateThreshold: 28, ultimateDuration: 4800, ultimateCooldownMult: 0.48, ultimateSpeedMult: 1.08, ultimateDamageMult: 1.1 },
   mirror: { cloneDamage: 3, hitCooldown: 650, cloneRadiusScale: 0.82, knockback: 240, switchCooldown: 4200 },
   joker: { throwSpeed: 580, cooldown: 6000, secCooldown: 8000, tipRadius: 9, maxBounces: 15, threadLife: 4000 },
-  fisherman: { cooldown: 6200, hookSpeed: 620, pullSpeed: 520, hookDamage: 3, tipRadius: 8, maxBounces: 8, castLife: 4200 },
+  fisherman: { cooldown: 6200, hookSpeed: 900, pullSpeed: 840, releaseRecoil: 720, hookDamage: 3, tipRadius: 6, maxBounces: 8, castLife: 4200, spinWindup: 520 },
   blackSpider: { cooldown: 7000, secCooldown: 10000, pullSpeed: 1200,
     // String Pull Slam
     slamCooldown: 7000, slamStringSpeed: 900, slamPullDuration: 600, slamSpinDuration: 700, slamSpinRadius: 75, slamLaunchSpeed: 1150, slamWallDamage: 12, slamHitDamage: 4,
@@ -657,6 +657,13 @@ const mergeBalanceSettings = (base, saved = {}) => {
       merged[type].cooldown = 6800;
       merged[type].hitDamage = 2;
       merged[type].cueDamage = 2;
+    }
+    if (type === "fisherman") {
+      if (merged[type].hookSpeed === 620) merged[type].hookSpeed = settings.hookSpeed;
+      if (merged[type].pullSpeed === 520) merged[type].pullSpeed = settings.pullSpeed;
+      if (merged[type].releaseRecoil === 520) merged[type].releaseRecoil = settings.releaseRecoil;
+      if (merged[type].hookDamage === 2 || merged[type].hookDamage === 4) merged[type].hookDamage = settings.hookDamage;
+      if (merged[type].maxBounces === 10) merged[type].maxBounces = settings.maxBounces;
     }
   });
   return merged;
@@ -1209,7 +1216,9 @@ export default function App() {
       // Joker Specific
       jokerNextThreadAt: type === "joker" ? (balanceSettings.joker?.cooldown ?? BALANCE.joker.cooldown) : 0, jokerFlashUntil: 0,
       // Fisherman Specific
-      fishermanNextCastAt: type === "fisherman" ? 1800 : 0, fishermanFlashUntil: 0, fishermanRodAngle: side === "left" ? 0 : Math.PI,
+      fishermanNextCastAt: type === "fisherman" ? 1800 : 0, fishermanFlashUntil: 0, fishermanRodAngle: side === "left" ? Math.PI : 0,
+      fishermanSpinStartAt: 0, fishermanSpinUntil: 0, fishermanCastAngle: 0,
+      fishermanIdleRope: null, fishermanReleaseUntil: 0, fishermanReleasePartnerId: null,
       // Hammer Specific
       hammerState: "spinning", hammerAngle: 0, hammerStateUntil: 0, hammerNextHitAt: 0, hammerLaunchAngle: 0,
       // Arm Specific
@@ -4237,6 +4246,9 @@ export default function App() {
       }
 
       const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy), minDist = a.r + b.r;
+      const releasePairActive = game.simTime < (a.fishermanReleaseUntil || 0) && a.fishermanReleasePartnerId === b.id ||
+        game.simTime < (b.fishermanReleaseUntil || 0) && b.fishermanReleasePartnerId === a.id;
+      if (releasePairActive) return false;
       if (dist === 0 || dist >= minDist) return false;
 
       // Disrupt Fire Skull road if it hits opponent
@@ -6832,15 +6844,94 @@ export default function App() {
       }
     };
 
-    const updateFisherman = (ball, target, currentTime) => {
+    const updateFishermanIdleLine = (ball, dt) => {
+      if (!dt) return;
+      const angle = ball.fishermanRodAngle || 0;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const tipX = ball.x + (ball.r + 34) * cos + 10 * sin;
+      const tipY = ball.y + (ball.r + 34) * sin - 10 * cos;
+      const segmentCount = 7;
+      const segmentLength = 7;
+      if (!ball.fishermanIdleRope?.length) {
+        ball.fishermanIdleRope = Array.from({ length: segmentCount + 1 }, (_, index) => ({
+          x: tipX,
+          y: tipY + index * segmentLength,
+          prevX: tipX,
+          prevY: tipY + index * segmentLength
+        }));
+      }
+
+      const rope = ball.fishermanIdleRope;
+      rope[0].x = tipX;
+      rope[0].y = tipY;
+      rope[0].prevX = tipX;
+      rope[0].prevY = tipY;
+      const gravityStep = 760 * dt * dt;
+      for (let i = 1; i < rope.length; i++) {
+        const node = rope[i];
+        const vx = (node.x - node.prevX) * 0.985;
+        const vy = (node.y - node.prevY) * 0.985;
+        node.prevX = node.x;
+        node.prevY = node.y;
+        node.x += vx;
+        node.y += vy + gravityStep;
+      }
+
+      for (let iteration = 0; iteration < 6; iteration++) {
+        rope[0].x = tipX;
+        rope[0].y = tipY;
+        for (let i = 1; i < rope.length; i++) {
+          const previous = rope[i - 1];
+          const node = rope[i];
+          const dx = node.x - previous.x;
+          const dy = node.y - previous.y;
+          const distance = Math.max(0.001, Math.hypot(dx, dy));
+          const correction = (distance - segmentLength) / distance;
+          if (i === 1) {
+            node.x -= dx * correction;
+            node.y -= dy * correction;
+          } else {
+            previous.x += dx * correction * 0.5;
+            previous.y += dy * correction * 0.5;
+            node.x -= dx * correction * 0.5;
+            node.y -= dy * correction * 0.5;
+          }
+        }
+      }
+    };
+
+    const updateFisherman = (ball, target, currentTime, dt) => {
       const bal = game.balance.fisherman || BALANCE.fisherman;
       if (!game.fishingLines) game.fishingLines = [];
       const activeLine = game.fishingLines.some((line) => line.ownerId === ball.id);
-      ball.fishermanRodAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-      if (activeLine || currentTime < (ball.fishermanNextCastAt || 0)) return;
-      if (!canStartSkillConnection(ball, target, game.balls, currentTime)) return;
+      if (activeLine) {
+        ball.fishermanIdleRope = null;
+        return;
+      }
 
-      const aimAngle = ball.fishermanRodAngle + (Math.random() - 0.5) * 0.28;
+      if (currentTime < (ball.fishermanSpinUntil || 0)) {
+        const spinElapsed = currentTime - (ball.fishermanSpinStartAt || currentTime);
+        ball.fishermanRodAngle = (ball.fishermanCastAngle || 0) + spinElapsed * 0.045;
+        updateFishermanIdleLine(ball, dt);
+        return;
+      }
+
+      if (ball.fishermanSpinUntil) {
+        ball.fishermanSpinUntil = 0;
+        ball.fishermanRodAngle = ball.fishermanCastAngle;
+      } else {
+        updateFishermanIdleLine(ball, dt);
+        if (currentTime < (ball.fishermanNextCastAt || 0)) return;
+        if (!canStartSkillConnection(ball, target, game.balls, currentTime)) return;
+        ball.fishermanCastAngle = Math.random() * Math.PI * 2;
+        ball.fishermanSpinStartAt = currentTime;
+        ball.fishermanSpinUntil = currentTime + (bal.spinWindup || 520);
+        ball.fishermanNextCastAt = Infinity;
+        return;
+      }
+
+      const aimAngle = ball.fishermanCastAngle;
       const startX = ball.x + Math.cos(aimAngle) * (ball.r + 18);
       const startY = ball.y + Math.sin(aimAngle) * (ball.r + 18);
       game.fishingLines.push({
@@ -6859,9 +6950,8 @@ export default function App() {
         returnIndex: 0,
         targetId: null
       });
-      ball.fishermanNextCastAt = Infinity;
       ball.fishermanFlashUntil = currentTime + 500;
-      spawnSparks(startX, startY, "#ef4444", 9);
+      spawnSparks(startX, startY, "#f472b6", 9);
       playSound("shieldThrow", 0.82, 180);
       const stats = ball.side === "left" ? game.stats.left : game.stats.right;
       if (stats) stats.totalShots++;
@@ -6937,31 +7027,113 @@ export default function App() {
         }
 
         if (line.state === "returning") {
+          const rodAngle = owner.fishermanRodAngle || 0;
+          const rodTip = {
+            x: owner.x + Math.cos(rodAngle) * (owner.r + 34) + Math.sin(rodAngle) * 10,
+            y: owner.y + Math.sin(rodAngle) * (owner.r + 34) - Math.cos(rodAngle) * 10
+          };
           const point = line.returnIndex <= 0
-            ? { x: owner.x, y: owner.y }
+            ? rodTip
             : line.points[line.returnIndex];
-          if (moveToward(line, point, bal.hookSpeed * 1.25) < 10) line.returnIndex--;
-          if (line.returnIndex < 0 || Math.hypot(line.x - owner.x, line.y - owner.y) < owner.r + 8) return finishLine();
+          const remaining = moveToward(line, point, bal.hookSpeed * 1.25);
+          if (line.returnIndex > 0 && remaining < 10) line.returnIndex--;
+          const target = game.balls.find((ball) => ball.side !== line.ownerSide && ball.type !== "cueBall");
+          if (target && Math.hypot(line.x - target.x, line.y - target.y) < line.r + target.r &&
+              canStartSkillConnection(owner, target, game.balls, game.simTime)) {
+            line.state = "pulling";
+            line.targetId = target.id;
+            line.finalPullAngle = undefined;
+            target.fishermanPulledUntil = game.simTime + 5000;
+            target.fishermanPullOwnerId = owner.id;
+            applyDamage(target, bal.hookDamage, `${owner.id}-fisher-return-hook`, game.simTime, 500);
+            const stats = owner.side === "left" ? game.stats.left : game.stats.right;
+            if (stats) {
+              stats.damageDealt += bal.hookDamage;
+              stats.hitsLanded++;
+            }
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x, y: target.y - target.r - 18, vy: -52,
+              text: "RETURN HOOK!", color: "#f472b6", life: 0.75, maxLife: 0.75
+            });
+            spawnSparks(target.x, target.y, "#f472b6", 14);
+            playSound("stringTwang", 1, 70);
+            return true;
+          }
+          if (line.returnIndex <= 0 && remaining < 2) return finishLine();
           return true;
         }
 
         if (line.state === "pulling") {
           const target = game.balls.find((ball) => ball.id === line.targetId);
           if (!target || target.health <= 0) return finishLine();
+          const waypointIndex = line.returnIndex;
+          let finalPullAngle = line.finalPullAngle;
+          if (line.returnIndex <= 0 && finalPullAngle === undefined) {
+            const baseAngle = Math.atan2(target.y - owner.y, target.x - owner.x);
+            const finalDistance = owner.r + target.r + 14;
+            const minX = target.r + 18;
+            const maxX = game.width - target.r - 18;
+            const minY = target.r + 18;
+            const maxY = game.height - target.r - 18;
+            const offsets = [0, Math.PI / 8, -Math.PI / 8, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, Math.PI];
+            finalPullAngle = offsets.map((offset) => baseAngle + offset).find((candidateAngle) => {
+              const x = owner.x + Math.cos(candidateAngle) * finalDistance;
+              const y = owner.y + Math.sin(candidateAngle) * finalDistance;
+              return x >= minX && x <= maxX && y >= minY && y <= maxY;
+            }) ?? baseAngle + Math.PI;
+            line.finalPullAngle = finalPullAngle;
+          }
           const point = line.returnIndex <= 0
-            ? { x: owner.x, y: owner.y }
+            ? {
+                x: owner.x + Math.cos(finalPullAngle) * (owner.r + target.r + 14),
+                y: owner.y + Math.sin(finalPullAngle) * (owner.r + target.r + 14)
+              }
             : line.points[line.returnIndex];
           target.fishermanPulledUntil = game.simTime + 100;
           target.fishermanPullOwnerId = owner.id;
           target.vx = 0;
           target.vy = 0;
-          if (moveToward(target, point, bal.pullSpeed) < Math.max(8, target.r * 0.28)) line.returnIndex--;
+          if (moveToward(target, point, bal.pullSpeed) < Math.max(8, target.r * 0.28)) {
+            if (waypointIndex > 0) {
+              applyDamage(target, bal.hookDamage, `${owner.id}-fisher-wall-pull-${waypointIndex}`, game.simTime, 100);
+              const stats = owner.side === "left" ? game.stats.left : game.stats.right;
+              if (stats) {
+                stats.damageDealt += bal.hookDamage;
+                stats.hitsLanded++;
+              }
+              spawnSparks(target.x, target.y, "#f472b6", 16);
+              game.screenShake = Math.max(game.screenShake || 0, 14);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: target.x, y: target.y - target.r - 18, vy: -52,
+                text: "WALL PULL!", color: "#f472b6", life: 0.65, maxLife: 0.65
+              });
+              playSound("stringTwang", 0.9, 70);
+            }
+            line.returnIndex--;
+          }
           line.x = target.x;
           line.y = target.y;
-          if (line.returnIndex < 0 || Math.hypot(target.x - owner.x, target.y - owner.y) < target.r + owner.r + 8) {
-            const releaseAngle = Math.atan2(target.y - owner.y, target.x - owner.x);
-            target.vx = Math.cos(releaseAngle) * 250;
-            target.vy = Math.sin(releaseAngle) * 250;
+          if (line.returnIndex < 0) {
+            const releaseAngle = line.finalPullAngle ?? Math.atan2(target.y - owner.y, target.x - owner.x);
+            const nx = Math.cos(releaseAngle);
+            const ny = Math.sin(releaseAngle);
+            const releaseRecoil = bal.releaseRecoil || 520;
+            target.x = point.x;
+            target.y = point.y;
+            owner.vx = -nx * releaseRecoil;
+            owner.vy = -ny * releaseRecoil;
+            target.vx = nx * releaseRecoil;
+            target.vy = ny * releaseRecoil;
+            target.fishermanPulledUntil = 0;
+            target.fishermanPullOwnerId = null;
+            const releaseUntil = game.simTime + 220;
+            owner.fishermanReleaseUntil = releaseUntil;
+            owner.fishermanReleasePartnerId = target.id;
+            target.fishermanReleaseUntil = releaseUntil;
+            target.fishermanReleasePartnerId = owner.id;
+            game.screenShake = Math.max(game.screenShake || 0, 12);
             spawnSparks(owner.x, owner.y, "#22c55e", 12);
             return finishLine();
           }
@@ -12302,42 +12474,16 @@ export default function App() {
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      // Red jacket zipper and collar accents.
-      ctx.fillStyle = "#dc2626";
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.62, -ball.r * 0.2);
-      ctx.lineTo(-5, -2);
-      ctx.lineTo(-10, ball.r * 0.78);
-      ctx.lineTo(-ball.r * 0.52, ball.r * 0.48);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(ball.r * 0.62, -ball.r * 0.2);
-      ctx.lineTo(5, -2);
-      ctx.lineTo(10, ball.r * 0.78);
-      ctx.lineTo(ball.r * 0.52, ball.r * 0.48);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillRect(-2, -3, 4, ball.r * 0.82);
-
-      // Compact anime face and dark spiky hair.
-      ctx.fillStyle = "#fde7c7";
-      ctx.beginPath(); ctx.arc(0, -ball.r * 0.28, ball.r * 0.42, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#10251a";
-      for (let i = 0; i < 7; i++) {
-        const hairAngle = -Math.PI + (i / 6) * Math.PI;
-        const hx = Math.cos(hairAngle) * ball.r * 0.36;
-        const hy = -ball.r * 0.55 + Math.sin(hairAngle) * ball.r * 0.14;
+      // Two simple red center marks.
+      ctx.strokeStyle = "#dc2626";
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      [-6, 6].forEach((x) => {
         ctx.beginPath();
-        ctx.moveTo(hx - 4, hy + 8);
-        ctx.lineTo(hx, hy - 11 - (i % 2) * 5);
-        ctx.lineTo(hx + 5, hy + 8);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.fillStyle = "#111827";
-      ctx.beginPath(); ctx.arc(-7, -9, 2.4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(7, -9, 2.4, 0, Math.PI * 2); ctx.fill();
+        ctx.moveTo(x, -ball.r * 0.48);
+        ctx.lineTo(x, ball.r * 0.48);
+        ctx.stroke();
+      });
 
       // Fishing rod projects from the ball toward the current cast direction.
       ctx.rotate(angle);
@@ -12350,7 +12496,38 @@ export default function App() {
       ctx.stroke();
       ctx.fillStyle = "#ef4444";
       ctx.beginPath(); ctx.arc(4, 6, 5, 0, Math.PI * 2); ctx.fill();
+
       ctx.restore();
+
+      const hasActiveLine = game.fishingLines?.some((line) => line.ownerId === ball.id);
+      if (!hasActiveLine) {
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const tipLocalX = ball.r + 34;
+        const tipLocalY = -10;
+        const tipX = ball.x + tipLocalX * cos - tipLocalY * sin;
+        const tipY = ball.y + tipLocalX * sin + tipLocalY * cos;
+        const rope = ball.fishermanIdleRope?.length
+          ? ball.fishermanIdleRope
+          : Array.from({ length: 8 }, (_, index) => ({ x: tipX, y: tipY + index * 7 }));
+        const bobber = rope[rope.length - 1];
+        ctx.save();
+        ctx.strokeStyle = "#bbf7d0";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(rope[0].x, rope[0].y);
+        for (let i = 1; i < rope.length; i++) ctx.lineTo(rope[i].x, rope[i].y);
+        ctx.stroke();
+        ctx.fillStyle = "#f472b6";
+        ctx.shadowColor = "#f9a8d4";
+        ctx.shadowBlur = 7;
+        ctx.beginPath();
+        ctx.arc(bobber.x, bobber.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
       drawHealthInsideBall(ball);
     };
 
@@ -12359,7 +12536,11 @@ export default function App() {
       game.fishingLines.forEach((line) => {
         const owner = game.balls.find((ball) => ball.id === line.ownerId);
         if (!owner) return;
-        const points = [{ x: owner.x, y: owner.y }];
+        const rodAngle = owner.fishermanRodAngle || 0;
+        const points = [{
+          x: owner.x + Math.cos(rodAngle) * (owner.r + 34) + Math.sin(rodAngle) * 10,
+          y: owner.y + Math.sin(rodAngle) * (owner.r + 34) - Math.cos(rodAngle) * 10
+        }];
         if (line.state === "pulling" || line.state === "returning") {
           for (let i = 1; i <= line.returnIndex; i++) {
             if (line.points[i]) points.push(line.points[i]);
@@ -12381,15 +12562,14 @@ export default function App() {
         for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
         ctx.stroke();
 
-        ctx.translate(line.x, line.y);
-        ctx.rotate(Math.atan2(line.vy || 0, line.vx || 1));
-        ctx.fillStyle = "#ef4444";
-        ctx.beginPath(); ctx.arc(-7, 0, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#e5e7eb";
-        ctx.lineWidth = 3;
+        ctx.fillStyle = "#f472b6";
+        ctx.shadowColor = "#f9a8d4";
+        ctx.shadowBlur = 9;
         ctx.beginPath();
-        ctx.arc(2, 2, line.r, -Math.PI * 0.55, Math.PI * 0.5);
-        ctx.lineTo(9, 8);
+        ctx.arc(line.x, line.y, line.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#fce7f3";
+        ctx.lineWidth = 2;
         ctx.stroke();
         ctx.restore();
       });
@@ -14295,7 +14475,7 @@ export default function App() {
                   if (ball.type === "feralClaw") updateFeralClaw(ball, target, game.simTime);
                   if (ball.type === "mirror") updateMirror(ball, target, game.simTime);
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
-                  if (ball.type === "fisherman") updateFisherman(ball, target, game.simTime);
+                  if (ball.type === "fisherman") updateFisherman(ball, target, game.simTime, stepDt);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
                   if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
@@ -14681,6 +14861,7 @@ export default function App() {
               {renderSlider("Cast Cooldown", "fisherman", "cooldown", 1800, 12000, 100, "ms")}
               {renderSlider("Hook Speed", "fisherman", "hookSpeed", 300, 1000, 20, "px/s")}
               {renderSlider("Reel Speed", "fisherman", "pullSpeed", 240, 900, 20, "px/s")}
+              {renderSlider("Release Recoil", "fisherman", "releaseRecoil", 200, 900, 20, "px/s")}
               {renderSlider("Hook Damage", "fisherman", "hookDamage", 1, 12, 1)}
               {renderSlider("Hook Radius", "fisherman", "tipRadius", 5, 18, 1, "px")}
               {renderSlider("Wall Bounces", "fisherman", "maxBounces", 1, 16, 1)}
