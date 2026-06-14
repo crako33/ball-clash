@@ -51,18 +51,18 @@ const BALL_TYPES = {
     color: "#1e1b4b",
     stroke: "#b91c1c",
     radius: 30,
-    description: "Vampiric brawler. Latch to drain health. Cape and glowing red eyes.",
+    description: "Gothic duelist. Siphons health at close range and dissolves into a Blood Mist Rush.",
     emoji: "🧛",
     visualTheme: "Gothic Aristocracy / Vampire Lord",
     colorPalette: "Royal Indigo, Blood Crimson, Pale Alabaster",
     facialAge: "Ageless (looks 25, sharp cheekbones, ruby pupils)",
     personality: "Melancholic, predatory, dramatic",
-    primaryWeapon: "Vampiric Fangs (melee siphon)",
-    signatureAbility: "Vampiric Latch (health siphon over time)",
-    companion: "Swarm of Shadows/Bats",
+    primaryWeapon: "Crimson Siphon and Living Shadow Cape",
+    signatureAbility: "Blood Mist Rush (bat-cloud phase dash)",
+    companion: "Two vulnerable Mist Echo duplicates",
     specialVisualEffects: "Crimson mist trails, bat outlines on dash, floating red life particles",
     animeStyle: "Dark fantasy gothic anime antagonist/anti-hero",
-    gameStyle: "Lifesteal tank and close-range sticky skirmisher",
+    gameStyle: "Mobile lifesteal duelist alternating between siphon pressure and a phasing burst dash",
   },
   laser: {
     id: "laser",
@@ -544,6 +544,26 @@ const BALL_TYPES = {
     animeStyle: "Retro cool gambling/underground sports anime character",
     gameStyle: "Physics-driven striker that grows stronger and faster with each bounce",
   },
+  mazeChomper: {
+    id: "mazeChomper",
+    name: "Maze Chomper",
+    shortName: "CHOMP",
+    color: "#facc15",
+    stroke: "#f59e0b",
+    radius: 30,
+    description: "Arcade maze predator. Lunges with snapping bites and enters a powered pellet rush.",
+    emoji: "🟡",
+    visualTheme: "Neon Maze Hunter / Arcade Glutton",
+    colorPalette: "Electric Yellow, Neon Cyan, Midnight Navy",
+    facialAge: "Ageless arcade creature",
+    personality: "Hungry, fearless, relentlessly cheerful",
+    primaryWeapon: "Animated Chomp Lunge",
+    signatureAbility: "Power Pellet Rush",
+    companion: "Orbiting energy pellets",
+    specialVisualEffects: "Pixel sparks, neon pellets, chomping motion trails",
+    animeStyle: "Retro arcade mascot reimagined as a neon arena fighter",
+    gameStyle: "Aggressive collision striker with predictive lunges and temporary powered bites",
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -614,7 +634,7 @@ const FIGHT_INTRO_IMPACT_AT = 1550;
 const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
   gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
-  vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 1000, latchCooldown: 3000, latchDistance: 10 },
+  vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 900, latchCooldown: 3200, latchDistance: 10, secCooldown: 6200, mistWindup: 260, mistDuration: 520, mistSpeed: 920, mistDamage: 7, mistHeal: 4, mistKnockback: 420, cloneRadius: 17, cloneLife: 7000 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 10, pulseSpeed: 620, pulseStunDuration: 950, recoilForce: 180 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
   spider: { fangDamage: 2, webSpeed: 900, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
@@ -644,6 +664,7 @@ const BALANCE = {
   constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
   fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, carHitboxWidthScale: 1.75, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
   eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
+  mazeChomper: { biteDamage: 4, biteCooldown: 1050, biteRange: 150, lungeSpeed: 700, lungeDuration: 360, biteKnockback: 360, powerCooldown: 7200, powerDuration: 3200, powerSpeed: 520, powerDamage: 7, powerKnockback: 620 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -1026,7 +1047,8 @@ export default function App() {
   const recordingFrameRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const fightIntroRef = useRef({ active: false, startTime: 0, recordingRequested: false, impactSoundPlayed: false, readySoundPlayed: false, fightSoundPlayed: false });
-  const [selectedBalls, setSelectedBalls] = useState(["knife", "laser"]);
+  const [selectedBalls, setSelectedBalls] = useState(["knife", "laser", "vampire", "mazeChomper"]);
+  const [battleMode, setBattleMode] = useState("2v2");
   const [gameStarted, setGameStarted] = useState(false);
   const [fightIntroActive, setFightIntroActive] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1.5);
@@ -1059,22 +1081,24 @@ export default function App() {
   const [tournamentResults, setTournamentResults] = useState(null);
   const [simulatingTournament, setSimulatingTournament] = useState(false);
 
-  const makeBall = (type, side, speedJitter = 0) => {
+  const makeBall = (type, side, speedJitter = 0, teamSlot = null) => {
     const config = BALL_TYPES[type];
     const direction = side === "left" ? 1 : -1;
     const pad = 18;
     const r = config.radius;
     const minY = pad + r + 50;
     const maxY = ARENA_SIZE - pad - r - 50;
-    const randomY = minY + Math.random() * (maxY - minY);
+    const teamY = teamSlot === 0 ? ARENA_SIZE * 0.32 : ARENA_SIZE * 0.68;
+    const randomY = teamSlot !== null ? teamY : minY + Math.random() * (maxY - minY);
     const startX = side === "left" ? pad + r + 15 : ARENA_SIZE - pad - r - 15;
     const vxVal = direction * (180 + Math.random() * 60) * BOUNCE_SPEED_MULTIPLIER;
     const vyVal = (Math.random() - 0.5) * 250 * BOUNCE_SPEED_MULTIPLIER;
 
     return {
-      id: `${side}-${type}`,
+      id: `${side}-${teamSlot ?? 0}-${type}`,
       type,
       side,
+      teamSlot: teamSlot ?? 0,
       name: config.name,
       shortName: config.shortName,
       x: startX,
@@ -1117,6 +1141,13 @@ export default function App() {
       latchUntil: 0,
       nextDrainAt: 0,
       nextLatchAt: 0,
+      vampireMistState: "idle",
+      vampireMistUntil: 0,
+      vampireNextMistAt: type === "vampire" ? 3200 : 0,
+      vampireMistAngle: side === "left" ? 0 : Math.PI,
+      vampireMistHitDone: false,
+      vampireMistTrail: [],
+      vampireMistSecondCloneDropped: false,
       trail: [],
       nextBombAt: 0,
       laserState: "idle",
@@ -1192,6 +1223,10 @@ export default function App() {
       eightCueState: "idle", eightCueStartAt: 0, eightCueStrikeAt: 0, eightCueContactAt: 0, eightCueAngle: side === "left" ? 0 : Math.PI,
       eightNextCueAt: type === "eightBall" ? 1800 : 0, eightPoweredUntil: 0, eightPowerStacks: 0, eightNextHitAt: 0, eightStrikeFlashUntil: 0,
       eightRollX: 0, eightRollY: 0, eightCueCount: 0, eightCueBankShot: false, eightInvulnerableHealth: null,
+      // Maze Chomper Specific
+      chomperState: "idle", chomperStateUntil: 0, chomperNextBiteAt: type === "mazeChomper" ? 1500 : 0,
+      chomperBiteAngle: side === "left" ? 0 : Math.PI, chomperHitDone: false,
+      chomperNextPowerAt: type === "mazeChomper" ? 4200 : 0, chomperPoweredUntil: 0, chomperPelletAngle: 0, chomperNextPowerHitAt: 0,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
       nextPsychicAt: 0,
@@ -1255,6 +1290,27 @@ export default function App() {
     };
   };
 
+  const createFightBalls = (selection = selectedBalls, mode = battleMode) => {
+    const primarySlot = mode === "2v2" ? 0 : null;
+    const balls = [
+      makeBall(selection[0], "left", 20, primarySlot),
+      makeBall(selection[1], "right", 20, primarySlot),
+    ];
+    if (mode === "2v2") {
+      balls.push(makeBall(selection[2], "left", 20, 1));
+      balls.push(makeBall(selection[3], "right", 20, 1));
+      balls.forEach((ball) => {
+        ball.y = ball.teamSlot === 0 ? ARENA_SIZE * 0.32 : ARENA_SIZE * 0.68;
+      });
+    }
+    return balls;
+  };
+
+  const getTeamLabel = (balls, side) => {
+    const names = balls.filter((ball) => ball.side === side).map((ball) => ball.name);
+    return names.length > 1 ? names.join(" + ") : names[0] || `${side === "left" ? "Left" : "Right"} Team`;
+  };
+
   const gameRef = useRef({
     width: ARENA_SIZE,
     height: ARENA_SIZE,
@@ -1277,13 +1333,14 @@ export default function App() {
     venomPools: [],
     webStrands: [],
     fireCars: [],
+    vampireClones: [],
     screenShake: 0,
     deathEffectStarted: false,
     deathSlowMoUntil: 0,
     combatStarted: false,
     simulationSpeed: 1.5,
     balance: balanceSettings,
-    balls: [makeBall("knife", "left", 20), makeBall("laser", "right", 20)],
+    balls: [makeBall("knife", "left", 20, 0), makeBall("laser", "right", 20, 0), makeBall("vampire", "left", 20, 1), makeBall("mazeChomper", "right", 20, 1)],
     stats: {
       left: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 },
       right: { damageDealt: 0, hitsLanded: 0, totalShots: 0, healed: 0, blocked: 0 }
@@ -1302,9 +1359,9 @@ export default function App() {
     setGameStarted(false);
     setGameState((prev) => ({ ...prev, winner: null, running: false }));
     setElapsedTime(0);
-    const nextLeft = slot === 0 ? type : selectedBalls[0];
-    const nextRight = slot === 1 ? type : selectedBalls[1];
-    const balls = [makeBall(nextLeft, "left", 20), makeBall(nextRight, "right", 20)];
+    const nextSelection = [...selectedBalls];
+    nextSelection[slot] = type;
+    const balls = createFightBalls(nextSelection);
     gameRef.current.balls = balls;
     gameRef.current.bullets = [];
     gameRef.current.bombs = [];
@@ -1328,10 +1385,7 @@ export default function App() {
   };
 
   const initializeFightState = () => {
-    const balls = [
-      makeBall(selectedBalls[0], "left", 20),
-      makeBall(selectedBalls[1], "right", 20),
-    ];
+    const balls = createFightBalls();
     gameRef.current = {
       ...gameRef.current,
       lastTime: 0,
@@ -1353,6 +1407,7 @@ export default function App() {
       venomPools: [],
       webStrands: [],
       fireCars: [],
+      vampireClones: [],
       screenShake: 0,
       deathEffectStarted: false,
       deathSlowMoUntil: 0,
@@ -1392,6 +1447,12 @@ export default function App() {
       right.vy = Math.sin(rightAngle) * speed;
       left.y = clamp(left.y || centerY, left.r + 18, gameRef.current.height - left.r - 18);
       right.y = clamp(right.y || centerY, right.r + 18, gameRef.current.height - right.r - 18);
+      gameRef.current.balls.slice(2).forEach((ball, index) => {
+        const vertical = index % 2 === 0 ? 1 : -1;
+        const angle = ball.side === "left" ? Math.PI + vertical * 0.55 : vertical * 0.55;
+        ball.vx = Math.cos(angle) * speed;
+        ball.vy = Math.sin(angle) * speed;
+      });
     }
     gameRef.current.combatStarted = true;
     fightIntroRef.current = { active: false, startTime: 0, recordingRequested: false, impactSoundPlayed: false, readySoundPlayed: false, fightSoundPlayed: false };
@@ -1409,10 +1470,10 @@ export default function App() {
     const balls = initializeFightState();
     setGameStarted(false);
     setGameState({
-      leftHealth: MAX_HEALTH,
-      rightHealth: MAX_HEALTH,
-      leftName: balls[0].name,
-      rightName: balls[1].name,
+      leftHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "left").length,
+      rightHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "right").length,
+      leftName: getTeamLabel(balls, "left"),
+      rightName: getTeamLabel(balls, "right"),
       winner: null,
       running: false,
     });
@@ -1440,7 +1501,7 @@ export default function App() {
     setGameStarted(false);
     setGameState((prev) => ({ ...prev, winner: null, running: false }));
     setElapsedTime(0);
-    const balls = [makeBall(selectedBalls[0], "left", 20), makeBall(selectedBalls[1], "right", 20)];
+    const balls = createFightBalls();
     gameRef.current.balls = balls;
     gameRef.current.bullets = [];
     gameRef.current.bombs = [];
@@ -1575,6 +1636,26 @@ export default function App() {
     drawRoundedRect(ctx, barX, barY, barW * (hp / MAX_HEALTH), barH, 9);
     ctx.fill();
     ctx.restore();
+  };
+
+  const changeBattleMode = (mode) => {
+    fightIntroRef.current.active = false;
+    setFightIntroActive(false);
+    stopMatchMusic();
+    setBattleMode(mode);
+    setGameStarted(false);
+    setElapsedTime(0);
+    const balls = createFightBalls(selectedBalls, mode);
+    gameRef.current.balls = balls;
+    gameRef.current.combatStarted = false;
+    setGameState({
+      leftHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "left").length,
+      rightHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "right").length,
+      leftName: getTeamLabel(balls, "left"),
+      rightName: getTeamLabel(balls, "right"),
+      winner: null,
+      running: false,
+    });
   };
 
   const drawRecordingEightBallSilhouette = (ctx, centerX, bottomY, skillActive = false, currentTime = 0) => {
@@ -1798,15 +1879,17 @@ export default function App() {
     const ctx = recordCanvas.getContext("2d", { alpha: false });
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    const left = gameRef.current.balls?.find((ball) => ball.side === "left");
-    const right = gameRef.current.balls?.find((ball) => ball.side === "right");
-    const width = 1080;
-    const height = 1920;
-    const arenaSize = 980;
+    const balls = gameRef.current.balls || [];
+    const leftTeam = balls.filter((ball) => ball.side === "left" && ball.type !== "cueBall");
+    const rightTeam = balls.filter((ball) => ball.side === "right" && ball.type !== "cueBall");
+    const left = leftTeam[0];
+    const right = rightTeam[0];
+    const width = 1920;
+    const height = 1080;
+    const arenaSize = 900;
     const arenaX = (width - arenaSize) / 2;
-    const arenaY = 520;
-    const hudY = arenaY - 154;
-    const cardW = 490;
+    const arenaY = 110;
+    const cardW = 430;
 
     ctx.clearRect(0, 0, width, height);
     const bg = ctx.createLinearGradient(0, 0, 0, height);
@@ -1816,8 +1899,15 @@ export default function App() {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left");
-    drawRecordingHudCard(ctx, right, arenaX + arenaSize - cardW, hudY, cardW, "right");
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "900 42px Arial, sans-serif";
+    ctx.fillText(battleMode === "2v2" ? "BALL FIGHTERS 2V2 ARENA" : "BALL FIGHTERS DUEL", width / 2, 62);
+    ctx.restore();
+
+    leftTeam.forEach((ball, index) => drawRecordingHudCard(ctx, ball, 30, 210 + index * 300, cardW, "left"));
+    rightTeam.forEach((ball, index) => drawRecordingHudCard(ctx, ball, width - cardW - 30, 210 + index * 300, cardW, "right"));
 
     ctx.save();
     ctx.shadowColor = "rgba(15, 23, 42, 0.32)";
@@ -1837,17 +1927,19 @@ export default function App() {
     ctx.stroke();
     ctx.restore();
 
-    const winner = left?.health <= 0 && right?.health > 0
-      ? right.name
-      : right?.health <= 0 && left?.health > 0
-        ? left.name
+    const leftAlive = leftTeam.some((ball) => ball.health > 0);
+    const rightAlive = rightTeam.some((ball) => ball.health > 0);
+    const winner = !leftAlive && rightAlive
+      ? getTeamLabel(rightTeam, "right")
+      : !rightAlive && leftAlive
+        ? getTeamLabel(leftTeam, "left")
         : null;
     if (winner) {
       ctx.save();
       ctx.textAlign = "center";
       ctx.fillStyle = "#f8fafc";
-      ctx.font = "900 58px Arial, sans-serif";
-      ctx.fillText(`${winner} Wins!`, width / 2, arenaY + arenaSize + 96);
+      ctx.font = "900 42px Arial, sans-serif";
+      ctx.fillText(`${winner} Wins!`, width / 2, 1055);
       ctx.restore();
     }
   };
@@ -1871,8 +1963,8 @@ export default function App() {
     }
 
     const recordCanvas = document.createElement("canvas");
-    recordCanvas.width = 1080;
-    recordCanvas.height = 1920;
+    recordCanvas.width = 1920;
+    recordCanvas.height = 1080;
     recordingCanvasRef.current = recordCanvas;
     recordedChunksRef.current = [];
     drawRecordingFrame();
@@ -1893,7 +1985,7 @@ export default function App() {
     const recordingExtension = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
     const recorder = new MediaRecorder(stream, {
       mimeType,
-      videoBitsPerSecond: 24000000,
+      videoBitsPerSecond: 28000000,
       audioBitsPerSecond: 192000
     });
 
@@ -1910,13 +2002,13 @@ export default function App() {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ball-fighters-recording-${stamp}.${recordingExtension}`;
+      link.download = `ball-fighters-${battleMode}-youtube-longform-${stamp}.${recordingExtension}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
       setIsRecording(false);
-      setRecordingStatus(`Downloaded 1080x1920 ${recordingExtension.toUpperCase()} with audio`);
+      setRecordingStatus(`Downloaded 1920x1080 ${recordingExtension.toUpperCase()} with audio`);
       mediaRecorderRef.current = null;
       recordingCanvasRef.current = null;
       recordedChunksRef.current = [];
@@ -1930,7 +2022,7 @@ export default function App() {
     mediaRecorderRef.current = recorder;
     recorder.start(250);
     setIsRecording(true);
-    setRecordingStatus(`Recording HD ${recordingExtension.toUpperCase()} 1080x1920 60fps`);
+    setRecordingStatus(`Recording YouTube ${recordingExtension.toUpperCase()} 1920x1080 60fps`);
     renderRecording();
   };
 
@@ -3870,18 +3962,6 @@ export default function App() {
       playSound("explosion", 0.9, -120);
     };
 
-    const spawnVampireCrosses = (vampire, target) => {
-      if (game.particles.length < MAX_PARTICLES && Math.random() < 0.2) {
-        const dx = target.x - vampire.x, dy = target.y - vampire.y, d = Math.hypot(dx, dy);
-        const a = Math.atan2(dy, dx), speed = 120;
-        game.particles.push({
-          x: target.x - Math.cos(a) * target.r, y: target.y - Math.sin(a) * target.r,
-          vx: -Math.cos(a) * speed, vy: -Math.sin(a) * speed,
-          color: "#fca5a5", radius: 3, life: d / speed, maxLife: d / speed, isCross: true
-        });
-      }
-    };
-
     const getShieldBeamBlock = (shieldBall, x1, y1, x2, y2, beamWidth = 0) => {
       if (!shieldBall || shieldBall.type !== "shield") return null;
       if (shieldBall.shieldState === "held") {
@@ -4279,6 +4359,7 @@ export default function App() {
         });
       }
 
+      if ((a.type === "vampire" && a.vampireMistState === "dashing") || (b.type === "vampire" && b.vampireMistState === "dashing")) return false;
       if ((a.type === "vampire" || b.type === "vampire") && a.type !== "cueBall" && b.type !== "cueBall") return true;
 
       const nx = dx / dist, ny = dy / dist, overlap = minDist - dist;
@@ -4592,12 +4673,188 @@ export default function App() {
       }
     };
 
-    const updateVampire = (vampire, target, currentTime) => {
-      if (isChessCrownActive(target)) return;
+    const spawnVampireClone = (vampire, currentTime, offsetSign = 1) => {
+      game.vampireClones = game.vampireClones || [];
+      const bal = game.balance.vampire || BALANCE.vampire;
+      const sideAngle = vampire.vampireMistAngle + Math.PI / 2 * offsetSign;
+      const clone = {
+        id: `${vampire.id}-mist-clone-${currentTime}-${offsetSign}`,
+        ownerId: vampire.id,
+        side: vampire.side,
+        x: clamp(vampire.x + Math.cos(sideAngle) * 18, 36, game.width - 36),
+        y: clamp(vampire.y + Math.sin(sideAngle) * 18, 36, game.height - 36),
+        vx: Math.cos(sideAngle) * 95 + vampire.vx * 0.18,
+        vy: Math.sin(sideAngle) * 95 + vampire.vy * 0.18,
+        r: bal.cloneRadius || 17,
+        health: Math.max(1, vampire.health),
+        maxHealth: Math.max(1, vampire.health),
+        createdTime: currentTime,
+        expiresAt: currentTime + (bal.cloneLife || 7000),
+        flashUntil: 0,
+        pulseOffset: Math.random() * Math.PI * 2
+      };
+      const ownerClones = game.vampireClones.filter((item) => item.ownerId === vampire.id);
+      if (ownerClones.length >= 2) {
+        const oldest = ownerClones.sort((a, b) => a.createdTime - b.createdTime)[0];
+        game.vampireClones = game.vampireClones.filter((item) => item !== oldest);
+      }
+      game.vampireClones.push(clone);
+      spawnSparks(clone.x, clone.y, "#9f1239", 10);
+    };
+
+    const damageVampireClone = (clone, amount, sourceColor = "#f87171") => {
+      if (!clone || clone.health <= 0) return false;
+      clone.health = Math.max(0, clone.health - Math.max(MIN_DAMAGE, Math.round(amount)));
+      clone.flashUntil = game.simTime + 130;
+      spawnSparks(clone.x, clone.y, sourceColor, clone.health <= 0 ? 16 : 7);
+      if (clone.health <= 0) {
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({ x: clone.x, y: clone.y - clone.r - 10, vy: -42, text: "MIST BROKEN", color: "#fb7185", life: 0.7, maxLife: 0.7 });
+        playSound("vampireDrain", 0.45, -120);
+      }
+      return true;
+    };
+
+    const updateVampireClones = (stepDt) => {
+      if (!game.vampireClones?.length) return;
+      const opponentBalls = game.balls.filter((ball) => ball.type !== "cueBall");
+      game.vampireClones = game.vampireClones.filter((clone) => {
+        if (clone.health <= 0 || game.simTime >= clone.expiresAt) return false;
+        clone.x += clone.vx * stepDt;
+        clone.y += clone.vy * stepDt;
+        clone.vx *= Math.pow(0.992, stepDt * 60);
+        clone.vy *= Math.pow(0.992, stepDt * 60);
+        const pad = 18 + clone.r;
+        if (clone.x < pad) { clone.x = pad; clone.vx = Math.abs(clone.vx); }
+        if (clone.x > game.width - pad) { clone.x = game.width - pad; clone.vx = -Math.abs(clone.vx); }
+        if (clone.y < pad) { clone.y = pad; clone.vy = Math.abs(clone.vy); }
+        if (clone.y > game.height - pad) { clone.y = game.height - pad; clone.vy = -Math.abs(clone.vy); }
+
+        opponentBalls.forEach((ball) => {
+          if (ball.side === clone.side) return;
+          const dx = ball.x - clone.x;
+          const dy = ball.y - clone.y;
+          const dist = Math.max(0.001, Math.hypot(dx, dy));
+          const minDist = ball.r + clone.r;
+          if (dist >= minDist) return;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const overlap = minDist - dist + 1;
+          ball.x += nx * overlap * 0.65;
+          ball.y += ny * overlap * 0.65;
+          clone.x -= nx * overlap * 0.35;
+          clone.y -= ny * overlap * 0.35;
+          const impactSpeed = Math.max(180, Math.hypot(ball.vx - clone.vx, ball.vy - clone.vy));
+          ball.vx = nx * impactSpeed;
+          ball.vy = ny * impactSpeed;
+          clone.vx = -nx * impactSpeed * 0.55;
+          clone.vy = -ny * impactSpeed * 0.55;
+          damageVampireClone(clone, Math.max(1, impactSpeed / 170), "#c4b5fd");
+          game.screenShake = Math.max(game.screenShake || 0, 5);
+          playSound("ballCollision", 0.6, -80);
+        });
+        return clone.health > 0;
+      });
+    };
+
+    const updateVampire = (vampire, target, currentTime, stepDt) => {
+      const bal = game.balance.vampire || BALANCE.vampire;
+      const targetProtected = isChessCrownActive(target);
+
+      if (vampire.vampireMistState === "charging") {
+        vampire.vx = 0;
+        vampire.vy = 0;
+        const targetDistance = Math.hypot(target.x - vampire.x, target.y - vampire.y);
+        const travelLead = clamp(targetDistance / Math.max(1, bal.mistSpeed), 0.08, bal.mistDuration / 1000);
+        vampire.vampireMistAngle = Math.atan2(
+          target.y + target.vy * travelLead - vampire.y,
+          target.x + target.vx * travelLead - vampire.x
+        );
+        if (currentTime >= vampire.vampireMistUntil) {
+          vampire.vampireMistState = "dashing";
+          vampire.vampireMistUntil = currentTime + bal.mistDuration;
+          vampire.vampireMistAngle = Math.atan2(
+            target.y + target.vy * 0.18 - vampire.y,
+            target.x + target.vx * 0.18 - vampire.x
+          );
+          vampire.vampireMistHitDone = false;
+          vampire.vampireMistTrail = [];
+          vampire.vampireMistSecondCloneDropped = false;
+          spawnVampireClone(vampire, currentTime, -1);
+          playSound("shieldThrow", 0.75, 70);
+          spawnSparks(vampire.x, vampire.y, "#e11d48", 14);
+        }
+        return;
+      }
+
+      if (vampire.vampireMistState === "dashing") {
+        if (!vampire.vampireMistHitDone) {
+          const desiredAngle = Math.atan2(target.y - vampire.y, target.x - vampire.x);
+          let turn = desiredAngle - vampire.vampireMistAngle;
+          while (turn > Math.PI) turn -= Math.PI * 2;
+          while (turn < -Math.PI) turn += Math.PI * 2;
+          vampire.vampireMistAngle += clamp(turn, -0.055, 0.055);
+        }
+        const dashSpeed = bal.mistSpeed || 920;
+        vampire.vx = Math.cos(vampire.vampireMistAngle) * dashSpeed;
+        vampire.vy = Math.sin(vampire.vampireMistAngle) * dashSpeed;
+        vampire.x += vampire.vx * stepDt;
+        vampire.y += vampire.vy * stepDt;
+        const arenaPad = vampire.r + 18;
+        vampire.x = clamp(vampire.x, arenaPad, game.width - arenaPad);
+        vampire.y = clamp(vampire.y, arenaPad, game.height - arenaPad);
+        vampire.vampireMistTrail.push({ x: vampire.x, y: vampire.y, life: 0.32 });
+        if (vampire.vampireMistTrail.length > 10) vampire.vampireMistTrail.shift();
+        const dashRemaining = vampire.vampireMistUntil - currentTime;
+        if (!vampire.vampireMistSecondCloneDropped && dashRemaining <= bal.mistDuration * 0.28) {
+          vampire.vampireMistSecondCloneDropped = true;
+          spawnVampireClone(vampire, currentTime, 1);
+        }
+
+        if (!targetProtected && !vampire.vampireMistHitDone && Math.hypot(target.x - vampire.x, target.y - vampire.y) < target.r + vampire.r + 18 &&
+            canStartSkillConnection(vampire, target, game.balls, currentTime)) {
+          vampire.vampireMistHitDone = true;
+          const healthBefore = target.health;
+          applyDamage(target, bal.mistDamage, `${vampire.id}-blood-mist`, currentTime, 0);
+          const damageDone = healthBefore - target.health;
+          const healDone = damageDone > 0 ? bal.mistHeal : 0;
+          vampire.health = clamp(vampire.health + healDone, 0, MAX_HEALTH);
+          const knockAngle = Math.atan2(target.y - vampire.y, target.x - vampire.x);
+          target.vx = Math.cos(knockAngle) * bal.mistKnockback;
+          target.vy = Math.sin(knockAngle) * bal.mistKnockback;
+          const stats = vampire.side === "left" ? game.stats.left : game.stats.right;
+          if (stats && damageDone > 0) {
+            stats.damageDealt += damageDone;
+            stats.healed += healDone;
+            stats.hitsLanded++;
+          }
+          game.floatingTexts.push({ x: target.x, y: target.y - target.r - 18, vy: -55, text: "BLOOD MIST", color: "#fb7185", life: 0.75, maxLife: 0.75 });
+          if (healDone > 0) game.floatingTexts.push({ x: vampire.x, y: vampire.y - vampire.r - 12, vy: -48, text: `+${healDone}`, color: "#4ade80", life: 0.7, maxLife: 0.7 });
+          spawnSparks(target.x, target.y, "#be123c", 20);
+          game.screenShake = Math.max(game.screenShake || 0, 10);
+          playSound("vampireDrain", 0.9, 80);
+        }
+
+        if (currentTime >= vampire.vampireMistUntil) {
+          vampire.vampireMistState = "recovering";
+          vampire.vampireMistUntil = currentTime + 180;
+          vampire.vx = Math.cos(vampire.vampireMistAngle) * 320;
+          vampire.vy = Math.sin(vampire.vampireMistAngle) * 320;
+        }
+        return;
+      }
+
+      if (vampire.vampireMistState === "recovering") {
+        if (currentTime < vampire.vampireMistUntil) return;
+        vampire.vampireMistState = "idle";
+        vampire.vampireMistTrail = [];
+      }
+
       const isLatched = vampire.latchedTo === target.id && vampire.latchUntil > currentTime;
       if (!isLatched) {
         if (vampire.latchedTo === target.id) {
           vampire.latchedTo = null;
+          vampire.nextLatchAt = currentTime + bal.latchCooldown;
           const pushAngle = Math.atan2(vampire.y - target.y, vampire.x - target.x);
           const pushForce = 480;
           vampire.vx = Math.cos(pushAngle) * pushForce;
@@ -4609,14 +4866,27 @@ export default function App() {
         }
 
         const dist = distance(vampire, target);
-        const latchLimit = vampire.r + target.r + game.balance.vampire.latchDistance;
+        if (!targetProtected && currentTime >= (vampire.vampireNextMistAt || 0) && dist > vampire.r + target.r + 55 && dist < 360 &&
+            canStartSkillConnection(vampire, target, game.balls, currentTime)) {
+          vampire.vampireMistState = "charging";
+          vampire.vampireMistUntil = currentTime + bal.mistWindup;
+          vampire.vampireNextMistAt = currentTime + bal.secCooldown;
+          vampire.vampireMistAngle = Math.atan2(target.y - vampire.y, target.x - vampire.x);
+          vampire.vx = 0;
+          vampire.vy = 0;
+          game.floatingTexts.push({ x: vampire.x, y: vampire.y - vampire.r - 18, vy: -35, text: "MIST RUSH", color: "#f43f5e", life: 0.6, maxLife: 0.6 });
+          playSound("repulsorCharge", 0.55, 60);
+          return;
+        }
+
+        const latchLimit = vampire.r + target.r + bal.latchDistance;
         if (dist >= latchLimit) {
           vampire.hasStuck = false;
         }
 
-        if (dist < latchLimit && !vampire.hasStuck && canStartSkillConnection(vampire, target, game.balls, currentTime)) {
+        if (!targetProtected && dist < latchLimit && currentTime >= (vampire.nextLatchAt || 0) && !vampire.hasStuck && canStartSkillConnection(vampire, target, game.balls, currentTime)) {
           vampire.latchedTo = target.id;
-          vampire.latchUntil = currentTime + game.balance.vampire.latchDuration;
+          vampire.latchUntil = currentTime + bal.latchDuration;
           vampire.hasStuck = true;
           vampire.nextDrainAt = currentTime;
           playSound("vampireLatch");
@@ -4625,26 +4895,26 @@ export default function App() {
       }
 
       const angle = Math.atan2(vampire.y - target.y, vampire.x - target.x);
-      const attachDistance = vampire.r + target.r - 8;
+      const attachDistance = vampire.r + target.r + 2;
       vampire.x = target.x + Math.cos(angle) * attachDistance;
       vampire.y = target.y + Math.sin(angle) * attachDistance;
       vampire.vx = target.vx; vampire.vy = target.vy;
 
       if (vampire.nextDrainAt <= currentTime) {
         if (isWreckerJumpInvulnerable(target)) {
-          vampire.nextDrainAt = currentTime + game.balance.vampire.tickCooldown;
+          vampire.nextDrainAt = currentTime + bal.tickCooldown;
           return;
         }
-        const drainAmount = Math.max(MIN_DAMAGE, game.balance.vampire.drainPerTick);
+        const drainAmount = Math.max(MIN_DAMAGE, bal.drainPerTick);
         target.health = clamp(target.health - drainAmount, 0, MAX_HEALTH);
-        vampire.health = clamp(vampire.health + game.balance.vampire.healPerTick, 0, MAX_HEALTH);
+        vampire.health = clamp(vampire.health + bal.healPerTick, 0, MAX_HEALTH);
         
         if (vampire.side === "left") {
           game.stats.left.damageDealt += drainAmount;
-          game.stats.left.healed += game.balance.vampire.healPerTick;
+          game.stats.left.healed += bal.healPerTick;
         } else {
           game.stats.right.damageDealt += drainAmount;
-          game.stats.right.healed += game.balance.vampire.healPerTick;
+          game.stats.right.healed += bal.healPerTick;
         }
         
         game.floatingTexts = game.floatingTexts || [];
@@ -4654,11 +4924,95 @@ export default function App() {
         });
         game.floatingTexts.push({
           x: vampire.x + (Math.random() - 0.5) * 16, y: vampire.y - vampire.r - 5, vy: -60,
-          text: `+${game.balance.vampire.healPerTick}`, color: "#34d399", life: 0.8, maxLife: 0.8
+          text: `+${bal.healPerTick}`, color: "#34d399", life: 0.8, maxLife: 0.8
         });
 
         playSound("vampireDrain", 0.6, 50);
-        vampire.nextDrainAt = currentTime + game.balance.vampire.tickCooldown;
+        vampire.nextDrainAt = currentTime + bal.tickCooldown;
+      }
+    };
+
+    const updateMazeChomper = (ball, target, currentTime) => {
+      const bal = game.balance.mazeChomper || BALANCE.mazeChomper;
+      const powered = currentTime < (ball.chomperPoweredUntil || 0);
+      ball.chomperPelletAngle = (ball.chomperPelletAngle || 0) + (powered ? 0.12 : 0.045);
+
+      if (!powered && currentTime >= (ball.chomperNextPowerAt || 0)) {
+        ball.chomperPoweredUntil = currentTime + bal.powerDuration;
+        ball.chomperNextPowerAt = currentTime + bal.powerCooldown;
+        ball.chomperState = "idle";
+        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        ball.vx = Math.cos(angle) * bal.powerSpeed;
+        ball.vy = Math.sin(angle) * bal.powerSpeed;
+        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -42, text: "POWER PELLET!", color: "#67e8f9", life: 0.8, maxLife: 0.8 });
+        spawnSparks(ball.x, ball.y, "#fef08a", 18);
+        playSound("repulsorCharge", 0.7, 180);
+      }
+
+      if (ball.chomperState === "windup") {
+        const lead = 0.16;
+        ball.chomperBiteAngle = Math.atan2(target.y + target.vy * lead - ball.y, target.x + target.vx * lead - ball.x);
+        ball.vx *= 0.8;
+        ball.vy *= 0.8;
+        if (currentTime >= ball.chomperStateUntil) {
+          ball.chomperState = "lunging";
+          ball.chomperStateUntil = currentTime + bal.lungeDuration;
+          ball.chomperHitDone = false;
+          const speed = powered ? Math.max(bal.lungeSpeed, bal.powerSpeed * 1.3) : bal.lungeSpeed;
+          ball.vx = Math.cos(ball.chomperBiteAngle) * speed;
+          ball.vy = Math.sin(ball.chomperBiteAngle) * speed;
+          playSound("shieldThrow", 0.72, 160);
+        }
+        return;
+      }
+
+      if (ball.chomperState === "lunging") {
+        const hitDistance = ball.r + target.r + 18;
+        if (!ball.chomperHitDone && Math.hypot(target.x - ball.x, target.y - ball.y) < hitDistance &&
+            canStartSkillConnection(ball, target, game.balls, currentTime)) {
+          ball.chomperHitDone = true;
+          const damage = powered ? bal.powerDamage : bal.biteDamage;
+          const knockback = powered ? bal.powerKnockback : bal.biteKnockback;
+          const healthBefore = target.health;
+          applyDamage(target, damage, `${ball.id}-chomp-${powered ? "power" : "bite"}`, currentTime, 0);
+          const damageDone = healthBefore - target.health;
+          const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          target.vx = Math.cos(angle) * knockback;
+          target.vy = Math.sin(angle) * knockback;
+          ball.vx = -Math.cos(angle) * 220;
+          ball.vy = -Math.sin(angle) * 220;
+          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+          if (stats && damageDone > 0) { stats.damageDealt += damageDone; stats.hitsLanded++; }
+          game.floatingTexts.push({ x: target.x, y: target.y - target.r - 18, vy: -52, text: powered ? "MEGA CHOMP!" : "CHOMP!", color: powered ? "#67e8f9" : "#facc15", life: 0.65, maxLife: 0.65 });
+          spawnSparks(target.x, target.y, powered ? "#67e8f9" : "#facc15", powered ? 18 : 11);
+          game.screenShake = Math.max(game.screenShake || 0, powered ? 12 : 7);
+          playSound("hammerHit", powered ? 0.9 : 0.65, powered ? 120 : 60);
+        }
+        if (currentTime >= ball.chomperStateUntil || ball.chomperHitDone) {
+          ball.chomperState = "recovering";
+          ball.chomperStateUntil = currentTime + 180;
+          ball.chomperNextBiteAt = currentTime + bal.biteCooldown;
+        }
+        return;
+      }
+
+      if (ball.chomperState === "recovering") {
+        if (currentTime < ball.chomperStateUntil) return;
+        ball.chomperState = "idle";
+      }
+
+      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+      if (currentTime >= (ball.chomperNextBiteAt || 0) && dist < bal.biteRange &&
+          canStartSkillConnection(ball, target, game.balls, currentTime)) {
+        ball.chomperState = "windup";
+        ball.chomperStateUntil = currentTime + 150;
+        ball.chomperBiteAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+      } else if (powered) {
+        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        const desiredVx = Math.cos(angle) * bal.powerSpeed;
+        const desiredVy = Math.sin(angle) * bal.powerSpeed;
+        ball.vx += (desiredVx - ball.vx) * 0.08;
+        ball.vy += (desiredVy - ball.vy) * 0.08;
       }
     };
 
@@ -5223,8 +5577,17 @@ export default function App() {
           laserBall.laserShieldBlockCount = Math.max(0, (laserBall.laserShieldBlockCount || 0) - 0.05);
         }
 
+        const beamClone = (game.vampireClones || []).find((clone) =>
+          clone.side === target.side && clone.health > 0 && linePointDist(clone.x, clone.y, mX, mY, eX, eY) < clone.r + bal.laser.beamWidth / 2
+        );
+        if (beamClone && currentTime >= laserBall.laserNextTickAt) {
+          damageVampireClone(beamClone, Math.max(MIN_DAMAGE, bal.laser.damagePerTick), "#ffffff");
+          laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
+          spawnSparks(beamClone.x, beamClone.y, "#facc15", 6);
+        }
+
         const d = linePointDist(target.x, target.y, mX, mY, eX, eY);
-        if (d < target.r + bal.laser.beamWidth / 2 && currentTime >= laserBall.laserNextTickAt) {
+        if (!beamClone && d < target.r + bal.laser.beamWidth / 2 && currentTime >= laserBall.laserNextTickAt) {
           const beamDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
           if (isChessCrownActive(target)) return;
           if (isWreckerJumpInvulnerable(target)) {
@@ -8345,6 +8708,23 @@ export default function App() {
           }
         });
 
+        (game.vampireClones || []).forEach((clone) => {
+          if (clone.side === car.ownerSide || clone.health <= 0) return;
+          const dx = clone.x - car.x;
+          const dy = clone.y - car.y;
+          const cos = Math.cos(car.angle);
+          const sin = Math.sin(car.angle);
+          const localForward = dx * cos + dy * sin;
+          const localSide = -dx * sin + dy * cos;
+          const forwardRadius = car.radius * ((game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32) + clone.r;
+          const sideRadius = car.radius * ((game.balance.fireSkull?.carHitboxWidthScale) || BALANCE.fireSkull.carHitboxWidthScale || 1.75) + clone.r;
+          if ((localForward * localForward) / (forwardRadius * forwardRadius) + (localSide * localSide) / (sideRadius * sideRadius) < 1) {
+            damageVampireClone(clone, car.damage, "#f97316");
+            clone.vx += Math.cos(car.angle) * 520;
+            clone.vy += Math.sin(car.angle) * 520;
+          }
+        });
+
         return true;
       });
     };
@@ -8425,6 +8805,17 @@ export default function App() {
                   game.stats.right.damageDealt += dmg; game.stats.right.hitsLanded++;
                 }
               }
+            });
+            (game.vampireClones || []).forEach((clone) => {
+              if (clone.side === mine.ownerSide || clone.health <= 0) return;
+              const cloneDist = Math.hypot(clone.x - mine.x, clone.y - mine.y);
+              if (cloneDist >= game.balance.bomber.mineRadius + clone.r) return;
+              const falloff = 1 - cloneDist / (game.balance.bomber.mineRadius + clone.r);
+              const cloneDamage = mine.isHoming ? 2 : Math.max(MIN_DAMAGE, Math.round(game.balance.bomber.mineDamage * falloff));
+              damageVampireClone(clone, cloneDamage, mine.isHoming ? "#38bdf8" : "#f97316");
+              const angle = Math.atan2(clone.y - mine.y, clone.x - mine.x);
+              clone.vx += Math.cos(angle) * game.balance.bomber.knockback * 14;
+              clone.vy += Math.sin(angle) * game.balance.bomber.knockback * 14;
             });
             return false;
           }
@@ -8707,6 +9098,14 @@ export default function App() {
         }
 
         const target = bullet.targetSide ? balls.find((ball) => ball.side === bullet.targetSide) : null;
+        const cloneTarget = bullet.targetSide
+          ? (game.vampireClones || []).find((clone) => clone.side === bullet.targetSide && clone.health > 0 && Math.hypot(bullet.x - clone.x, bullet.y - clone.y) < clone.r + bullet.r)
+          : null;
+        if (cloneTarget) {
+          damageVampireClone(cloneTarget, bullet.damage, bullet.kind === "dragonFireball" ? "#f97316" : "#facc15");
+          spawnSparks(bullet.x, bullet.y, "#fb7185", 8);
+          return false;
+        }
         if (target && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
           if (isChessCrownActive(target)) return false;
           if (isWreckerJumpInvulnerable(target)) return false;
@@ -8781,6 +9180,15 @@ export default function App() {
         const p = i * TILE_SIZE;
         ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, game.height); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(game.width, p); ctx.stroke();
+      }
+      if (battleMode === "2v2") {
+        ctx.setLineDash([10, 10]);
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.3)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(game.width / 2, 14); ctx.lineTo(game.width / 2, game.height - 14); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(56, 189, 248, 0.08)"; ctx.fillRect(4, 4, game.width / 2 - 4, game.height - 8);
+        ctx.fillStyle = "rgba(244, 63, 94, 0.07)"; ctx.fillRect(game.width / 2, 4, game.width / 2 - 4, game.height - 8);
       }
       ctx.restore();
     };
@@ -8867,26 +9275,220 @@ export default function App() {
     const drawVampireBall = (ball, currentTime, target) => {
       const config = BALL_TYPES.vampire;
       const isLatched = ball.latchUntil > currentTime && target;
-      const biteAngle = target ? Math.atan2(target.y - ball.y, target.x - ball.x) : ball.angle;
+      const isMistCharging = ball.vampireMistState === "charging";
+      const isMistDashing = ball.vampireMistState === "dashing";
+      const facingAngle = isMistCharging || isMistDashing
+        ? ball.vampireMistAngle
+        : isLatched ? Math.atan2(target.y - ball.y, target.x - ball.x) : ball.angle;
 
-      if (isLatched) {
-        ctx.save(); ctx.strokeStyle = "rgba(239, 68, 68, 0.6)"; ctx.lineWidth = 3;
-        ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(ball.x, ball.y);
-        ctx.lineTo(target.x, target.y); ctx.stroke(); ctx.restore();
-        spawnVampireCrosses(ball, target);
+      if (ball.vampireMistTrail?.length) {
+        ball.vampireMistTrail.forEach((point, index) => {
+          const alpha = ((index + 1) / ball.vampireMistTrail.length) * 0.28;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = index % 2 ? "#881337" : "#312e81";
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, ball.r * (0.45 + index * 0.025), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.translate(point.x, point.y);
+          ctx.rotate(facingAngle + (index % 2 ? 0.35 : -0.35));
+          ctx.fillStyle = "#09090b";
+          ctx.beginPath();
+          ctx.moveTo(-8, 0); ctx.lineTo(-18, -7); ctx.lineTo(-13, 5);
+          ctx.lineTo(0, 1); ctx.lineTo(13, 5); ctx.lineTo(18, -7); ctx.lineTo(8, 0);
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+        });
       }
 
-      ctx.save(); ctx.translate(ball.x, ball.y); ctx.rotate(biteAngle);
-      ctx.beginPath(); ctx.arc(0, 0, ball.r + (isLatched ? 6 : 2), 0, Math.PI * 2);
-      ctx.fillStyle = isLatched ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.05)"; ctx.fill();
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
+      if (isLatched) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(244, 63, 94, 0.75)";
+        ctx.shadowColor = "#e11d48";
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([7, 5]);
+        ctx.lineDashOffset = -currentTime * 0.03;
+        ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(target.x, target.y); ctx.stroke();
+        for (let i = 0; i < 3; i++) {
+          const travel = (currentTime * 0.0015 + i / 3) % 1;
+          const x = target.x + (ball.x - target.x) * travel;
+          const y = target.y + (ball.y - target.y) * travel;
+          ctx.fillStyle = "#fb7185";
+          ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
 
-      const fangLength = isLatched ? 24 : 15, fangStart = ball.r - 3;
-      ctx.fillStyle = "#fee2e2"; ctx.strokeStyle = "#991b1b"; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(fangStart, -9); ctx.lineTo(fangStart + fangLength, -3); ctx.lineTo(fangStart, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(fangStart, 9); ctx.lineTo(fangStart + fangLength, 3); ctx.lineTo(fangStart, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(facingAngle);
+
+      // Living cape and high collar.
+      const capeWave = Math.sin(currentTime * 0.012) * 3;
+      ctx.fillStyle = isMistDashing ? "rgba(76, 5, 25, 0.45)" : "#4c0519";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.2, -ball.r * 0.7);
+      ctx.quadraticCurveTo(-ball.r * 1.15, -ball.r * 0.95 + capeWave, -ball.r * 1.32, 0);
+      ctx.quadraticCurveTo(-ball.r * 1.08, ball.r * 0.95 - capeWave, -ball.r * 0.12, ball.r * 0.72);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#9f1239";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if (isMistCharging) {
+        const chargePulse = 0.5 + Math.sin(currentTime * 0.035) * 0.5;
+        ctx.strokeStyle = `rgba(244, 63, 94, ${0.4 + chargePulse * 0.4})`;
+        ctx.shadowColor = "#e11d48";
+        ctx.shadowBlur = 16;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(0, 0, ball.r + 7 + chargePulse * 5, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      const bodyGradient = ctx.createRadialGradient(8, -10, 3, 0, 0, ball.r);
+      bodyGradient.addColorStop(0, isMistDashing ? "#9f1239" : "#4338ca");
+      bodyGradient.addColorStop(0.58, config.color);
+      bodyGradient.addColorStop(1, "#090617");
+      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = bodyGradient; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = isMistDashing ? "#fb7185" : config.stroke; ctx.stroke();
+
+      // Pale aristocratic face, widow's peak, eyes, and restrained fangs.
+      ctx.fillStyle = "#f5e7df";
+      ctx.beginPath(); ctx.ellipse(8, 0, ball.r * 0.5, ball.r * 0.58, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.moveTo(-5, -ball.r * 0.48); ctx.lineTo(8, -ball.r * 0.22); ctx.lineTo(19, -ball.r * 0.5);
+      ctx.quadraticCurveTo(7, -ball.r * 0.72, -5, -ball.r * 0.48); ctx.fill();
+      ctx.fillStyle = "#ef4444";
+      ctx.shadowColor = "#ef4444"; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.ellipse(12, -7, 3.8, 2.2, -0.15, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(12, 7, 3.8, 2.2, 0.15, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(19, 0, 8, -0.65, 0.65); ctx.stroke();
+      ctx.fillStyle = "#fff7ed";
+      ctx.beginPath(); ctx.moveTo(23, -5); ctx.lineTo(29, -2); ctx.lineTo(23, 0); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(23, 5); ctx.lineTo(29, 2); ctx.lineTo(23, 0); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
+    const drawVampireClones = () => {
+      (game.vampireClones || []).forEach((clone) => {
+        const pulse = 0.5 + Math.sin(game.simTime * 0.012 + clone.pulseOffset) * 0.5;
+        ctx.save();
+        ctx.translate(clone.x, clone.y);
+        ctx.globalAlpha = clone.flashUntil > game.simTime ? 0.65 : 0.82;
+        ctx.shadowColor = "#e11d48";
+        ctx.shadowBlur = 8 + pulse * 5;
+        const gradient = ctx.createRadialGradient(4, -5, 1, 0, 0, clone.r);
+        gradient.addColorStop(0, "#7c3aed");
+        gradient.addColorStop(0.55, "#312e81");
+        gradient.addColorStop(1, "#19051b");
+        ctx.fillStyle = gradient;
+        ctx.beginPath(); ctx.arc(0, 0, clone.r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#be123c";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#f8e7df";
+        ctx.beginPath(); ctx.ellipse(4, 0, clone.r * 0.42, clone.r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath(); ctx.arc(7, -4, 1.8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(7, 4, 1.8, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        const healthRatio = clamp(clone.health / Math.max(1, clone.maxHealth), 0, 1);
+        ctx.save();
+        ctx.strokeStyle = "rgba(15, 23, 42, 0.8)";
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(clone.x, clone.y, clone.r + 5, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = healthRatio > 0.5 ? "#fb7185" : "#ef4444";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(clone.x, clone.y, clone.r + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * healthRatio); ctx.stroke();
+        ctx.restore();
+      });
+    };
+
+    const drawMazeChomperBall = (ball) => {
+      const powered = game.simTime < (ball.chomperPoweredUntil || 0);
+      const lunging = ball.chomperState === "lunging";
+      const facing = lunging || ball.chomperState === "windup"
+        ? ball.chomperBiteAngle
+        : Math.atan2(ball.vy || 0, ball.vx || (ball.side === "left" ? 1 : -1));
+      const mouthPulse = 0.16 + Math.abs(Math.sin(game.simTime * (lunging ? 0.04 : 0.018))) * (lunging ? 0.68 : 0.38);
+
+      if (powered) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(103, 232, 249, 0.55)";
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r + 8, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 4; i++) {
+          const angle = (ball.chomperPelletAngle || 0) + i * Math.PI / 2;
+          const px = ball.x + Math.cos(angle) * (ball.r + 16);
+          const py = ball.y + Math.sin(angle) * (ball.r + 16);
+          ctx.fillStyle = i % 2 ? "#67e8f9" : "#fef08a";
+          ctx.fillRect(px - 3, py - 3, 6, 6);
+        }
+        ctx.restore();
+      }
+
+      if (lunging) {
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.strokeStyle = powered ? "#67e8f9" : "#fde047";
+        ctx.lineWidth = ball.r * 0.75;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(ball.x - Math.cos(facing) * 48, ball.y - Math.sin(facing) * 48);
+        ctx.lineTo(ball.x - Math.cos(facing) * 10, ball.y - Math.sin(facing) * 10);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(facing);
+      ctx.shadowColor = powered ? "#22d3ee" : "#facc15";
+      ctx.shadowBlur = powered ? 16 : 7;
+      const gradient = ctx.createRadialGradient(-8, -10, 2, 0, 0, ball.r);
+      gradient.addColorStop(0, powered ? "#ecfeff" : "#fef9c3");
+      gradient.addColorStop(0.45, powered ? "#22d3ee" : "#facc15");
+      gradient.addColorStop(1, powered ? "#0e7490" : "#ca8a04");
+      ctx.fillStyle = gradient;
+      ctx.strokeStyle = powered ? "#cffafe" : "#f59e0b";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, ball.r, mouthPulse, Math.PI * 2 - mouthPulse);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.arc(ball.r * 0.2, -ball.r * 0.48, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(ball.r * 0.22, -ball.r * 0.5, 1.4, 0, Math.PI * 2); ctx.fill();
+
+      if (ball.chomperState === "windup") {
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(ball.r + 8 + i * 7, -8);
+          ctx.lineTo(ball.r + 12 + i * 7, 0);
+          ctx.lineTo(ball.r + 8 + i * 7, 8);
+          ctx.stroke();
+        }
+      }
       ctx.restore();
       drawHealthInsideBall(ball);
     };
@@ -12747,6 +13349,7 @@ export default function App() {
       else if (ball.type === "constellation") drawConstellationBall(ball);
       else if (ball.type === "fireSkull") drawFireSkullBall(ball);
       else if (ball.type === "eightBall") drawEightBall(ball);
+      else if (ball.type === "mazeChomper") drawMazeChomperBall(ball);
       else if (ball.type === "cueBall") drawCueBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
@@ -14114,6 +14717,13 @@ export default function App() {
         right.vy = 0;
         left.trail = [];
         right.trail = [];
+        game.balls.slice(2).forEach((ball) => {
+          ball.x = ball.side === "left" ? ball.r + 62 : game.width - ball.r - 62;
+          ball.y = game.height * 0.7;
+          ball.vx = 0;
+          ball.vy = 0;
+          ball.trail = [];
+        });
       }
       if (elapsed > 250 && elapsed < FIGHT_INTRO_IMPACT_AT) shake = easeIn((elapsed - 250) / (FIGHT_INTRO_IMPACT_AT - 250)) * 13;
       if (elapsed >= FIGHT_INTRO_IMPACT_AT && elapsed < 2050) shake = 20 * (1 - clamp((elapsed - FIGHT_INTRO_IMPACT_AT) / 420, 0, 1));
@@ -14175,9 +14785,11 @@ export default function App() {
       game.balls.forEach(drawBallTrail);
       drawBall(left, game.simTime);
       drawBall(right, game.simTime);
+      game.balls.slice(2).forEach((ball) => drawBall(ball, game.simTime));
       if (elapsed < impactAt) {
         drawIntroText(left.name, left.x, left.y - left.r - 28, 14, BALL_TYPES[left.type].color, 0.92, left.type === "eightBall");
         drawIntroText(right.name, right.x, right.y - right.r - 28, 14, BALL_TYPES[right.type].color, 0.92, right.type === "eightBall");
+        game.balls.slice(2).forEach((ball) => drawIntroText(ball.name, ball.x, ball.y - ball.r - 24, 12, BALL_TYPES[ball.type].color, 0.86, ball.type === "eightBall"));
       }
 
       if (elapsed >= impactAt && elapsed < impactAt + 520) {
@@ -14241,6 +14853,10 @@ export default function App() {
       const dt = Math.min((time - (game.lastTime || time)) / 1000, 0.025);
       game.lastTime = time;
       const left = game.balls[0], right = game.balls[1];
+      const leftTeam = game.balls.filter((ball) => ball.side === "left" && ball.type !== "cueBall");
+      const rightTeam = game.balls.filter((ball) => ball.side === "right" && ball.type !== "cueBall");
+      const leftAlive = leftTeam.some((ball) => ball.health > 0);
+      const rightAlive = rightTeam.some((ball) => ball.health > 0);
       const combatActive = gameStarted || game.combatStarted;
 
       if (fightIntroRef.current.active) {
@@ -14254,19 +14870,21 @@ export default function App() {
         return;
       }
 
-      if (combatActive && left.health > 0 && right.health > 0) {
+      if (combatActive && leftAlive && rightAlive) {
         const steps = Math.ceil(game.simulationSpeed), stepDt = (dt * game.simulationSpeed) / steps;
         for (let s = 0; s < steps; s++) {
           game.simTime += stepDt * 1000;
 
           const activeVenomPools = game.venomPools?.length ? game.venomPools : null;
           game.balls.forEach((ball) => {
+            if (ball.health <= 0 && ball.type !== "cueBall") return;
             const isPulling = ball.type === "spider" && ball.webState === "pulling";
             const isChargingHammer = ball.type === "hammer" && ball.hammerState === "charging";
             const isBlackSpiderDashing = false;
             const isBlackSpiderPullingSelf = false;
             const isBlackSpiderPulled = game.balls.some(b => b.type === "blackSpider" && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
             const isFishermanPulled = ball.fishermanPulledUntil && game.simTime < ball.fishermanPulledUntil;
+            const isVampireMistAction = ball.type === "vampire" && ball.vampireMistState !== "idle";
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
@@ -14290,7 +14908,7 @@ export default function App() {
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
-            if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isFishermanPulled && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
+            if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isFishermanPulled && !isVampireMistAction && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
               const previousX = ball.x;
               const previousY = ball.y;
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
@@ -14314,6 +14932,7 @@ export default function App() {
             if ((ball.type === "wrecker" && (ball.wreckerState === "leaping" || ball.wreckerState === "cooldown")) ||
                 (ball.type === "feralClaw" && (ball.feralPounceState === "launch" || ball.feralPounceState === "settle")) ||
                 (ball.type === "eightBall" && game.simTime < (ball.eightPoweredUntil || 0)) ||
+                (ball.type === "mazeChomper" && (ball.chomperState === "lunging" || game.simTime < (ball.chomperPoweredUntil || 0))) ||
                 ball.type === "cueBall") {
               // bypass base speed limits
             } else {
@@ -14337,6 +14956,7 @@ export default function App() {
             for (let j = i + 1; j < game.balls.length; j++) {
               const bA = game.balls[i];
               const bB = game.balls[j];
+              if ((bA.health <= 0 && bA.type !== "cueBall") || (bB.health <= 0 && bB.type !== "cueBall")) continue;
               const collided = resolveBallCollision(bA, bB);
               if (collided) {
                 const isEightBallPowered = (bA.type === "eightBall" && game.simTime < (bA.eightPoweredUntil || 0)) ||
@@ -14349,6 +14969,28 @@ export default function App() {
                 }
                 
                 if (game.simTime >= OPENING_SKILL_DELAY) {
+                  const applyPoweredChompCollision = (chomper, enemy) => {
+                    if (chomper.type !== "mazeChomper" || enemy.type === "cueBall") return;
+                    if (chomper.side === enemy.side) return;
+                    if (game.simTime >= (chomper.chomperPoweredUntil || 0) || chomper.chomperState === "lunging") return;
+                    if (game.simTime < (chomper.chomperNextPowerHitAt || 0)) return;
+                    const bal = game.balance.mazeChomper || BALANCE.mazeChomper;
+                    chomper.chomperNextPowerHitAt = game.simTime + 520;
+                    const healthBefore = enemy.health;
+                    applyDamage(enemy, bal.powerDamage, `${chomper.id}-power-collision`, game.simTime, 0);
+                    const damageDone = healthBefore - enemy.health;
+                    const angle = Math.atan2(enemy.y - chomper.y, enemy.x - chomper.x);
+                    enemy.vx = Math.cos(angle) * bal.powerKnockback;
+                    enemy.vy = Math.sin(angle) * bal.powerKnockback;
+                    const stats = chomper.side === "left" ? game.stats.left : game.stats.right;
+                    if (stats && damageDone > 0) { stats.damageDealt += damageDone; stats.hitsLanded++; }
+                    spawnSparks(enemy.x, enemy.y, "#67e8f9", 15);
+                    game.screenShake = Math.max(game.screenShake || 0, 10);
+                    playSound("hammerHit", 0.82, 100);
+                  };
+                  applyPoweredChompCollision(bA, bB);
+                  applyPoweredChompCollision(bB, bA);
+
                   if (bA.type === "spore" && bA.hydraGlowStacks > 0 && bB.id === right.id) {
                     const glowDamage = bA.hydraGlowStacks * game.balance.spore.cactusDamage;
                     applyDamage(bB, glowDamage, `${bA.id}-hydra-glow-hit`, game.simTime, 250);
@@ -14365,10 +15007,10 @@ export default function App() {
                   }
                 }
 
-                if ((bA === left && bB === right) || (bA === right && bB === left)) {
-                  [left, right].forEach((b, idx) => {
+                if (bA.side !== bB.side) {
+                  [bA, bB].forEach((b) => {
                     if (b.type === "shield" && b.shieldState === "held") {
-                      const enemy = idx === 0 ? right : left;
+                      const enemy = b === bA ? bB : bA;
                       const angle = Math.atan2(enemy.y - b.y, enemy.x - b.x);
                       let diff = Math.abs(angle - b.shieldAngle);
                       while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
@@ -14390,7 +15032,11 @@ export default function App() {
           game.balls = game.balls.filter((ball) => !ball.pendingRemoval);
 
           game.balls.forEach((ball) => {
-            const target = ball.side === "left" ? right : left;
+            if (ball.health <= 0 && ball.type !== "cueBall") return;
+            const target = game.balls
+              .filter((candidate) => candidate.side !== ball.side && candidate.type !== "cueBall" && candidate.health > 0)
+              .sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0];
+            if (!target) return;
             const isGrabbedByArm = game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime);
             if (game.simTime >= OPENING_SKILL_DELAY) {
                 if (ball.burnUntil && game.simTime < ball.burnUntil && game.simTime >= (ball.nextBurnTickAt || 0)) {
@@ -14469,7 +15115,7 @@ export default function App() {
                 if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !isFishermanPulled && !skillsLocked) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
-                  if (ball.type === "vampire") updateVampire(ball, target, game.simTime);
+                  if (ball.type === "vampire") updateVampire(ball, target, game.simTime, stepDt);
                   if (ball.type === "laser") updateLaser(ball, target, game.simTime, stepDt);
                   
                   // New Weapon Ticks
@@ -14493,6 +15139,7 @@ export default function App() {
                   if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
                   if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
                   if (ball.type === "eightBall") updateEightBall(ball, target, game.simTime);
+                  if (ball.type === "mazeChomper") updateMazeChomper(ball, target, game.simTime);
                   if (ball.type === "constellation") updateConstellation(ball, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
@@ -14500,6 +15147,7 @@ export default function App() {
             }
           });
 
+          updateVampireClones(stepDt);
           updateBullets(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
           updateMines(stepDt, game.balls);
@@ -14592,15 +15240,18 @@ export default function App() {
       drawStrings(); drawJokerThreads(); drawFishingLines(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawFireCarEntities();
+      drawVampireClones();
       game.balls.forEach((ball) => {
         if (ball.type === "cueBall") drawBall(ball, game.simTime);
       });
-      drawBall(left, game.simTime); drawBall(right, game.simTime);
+      game.balls.forEach((ball) => {
+        if (ball.type !== "cueBall" && ball.health > 0) drawBall(ball, game.simTime);
+      });
       ctx.restore();
 
-      const winner = combatActive ? left.health <= 0 ? right.name : right.health <= 0 ? left.name : null : null;
+      const winner = combatActive ? !leftAlive ? getTeamLabel(rightTeam, "right") : !rightAlive ? getTeamLabel(leftTeam, "left") : null : null;
       if (winner && !game.deathEffectStarted) {
-        const defeated = left.health <= 0 ? left : right;
+        const defeated = (!leftAlive ? leftTeam : rightTeam).find((ball) => ball.health <= 0) || (!leftAlive ? left : right);
         spawnDeathShatter(defeated, time);
       }
       if (winner && !game.roundOverSoundPlayed) {
@@ -14616,8 +15267,9 @@ export default function App() {
 
       setGameState((prev) => {
         const next = {
-          leftHealth: Math.ceil(left.health), rightHealth: Math.ceil(right.health),
-          leftName: left.name, rightName: right.name, winner, running: combatActive && !winner
+          leftHealth: Math.ceil(leftTeam.reduce((sum, ball) => sum + Math.max(0, ball.health), 0)),
+          rightHealth: Math.ceil(rightTeam.reduce((sum, ball) => sum + Math.max(0, ball.health), 0)),
+          leftName: getTeamLabel(leftTeam, "left"), rightName: getTeamLabel(rightTeam, "right"), winner, running: combatActive && !winner
         };
         setCombatStats({ left: { ...game.stats.left }, right: { ...game.stats.right } });
         if (
@@ -14641,7 +15293,7 @@ export default function App() {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       window.removeEventListener("resize", resizeCanvas);
     };
-  }, [gameStarted, simulationSpeed, startMatchMusic, stopMatchMusic, activeTab]);
+  }, [gameStarted, simulationSpeed, startMatchMusic, stopMatchMusic, activeTab, battleMode]);
 
   const renderSlider = (label, type, key, min, max, step = 1, unit = "") => {
     const isDamageSetting = key.toLowerCase().includes("damage") || key === "drainPerTick";
@@ -14708,6 +15360,13 @@ export default function App() {
               {renderSlider("Latch Duration", "vampire", "latchDuration", 200, 3000, 50, "ms")}
               {renderSlider("Latch Cooldown", "vampire", "latchCooldown", 1000, 6000, 100, "ms")}
               {renderSlider("Latch Distance", "vampire", "latchDistance", 0, 60, 1, "px")}
+              {renderSlider("Mist Rush Cooldown", "vampire", "secCooldown", 2000, 12000, 100, "ms")}
+              {renderSlider("Mist Rush Speed", "vampire", "mistSpeed", 400, 1400, 20, "px/s")}
+              {renderSlider("Mist Rush Damage", "vampire", "mistDamage", 1, 20, 1)}
+              {renderSlider("Mist Rush Heal", "vampire", "mistHeal", 0, 12, 1)}
+              {renderSlider("Mist Rush Knockback", "vampire", "mistKnockback", 100, 900, 20, "px/s")}
+              {renderSlider("Mist Echo Size", "vampire", "cloneRadius", 10, 26, 1, "px")}
+              {renderSlider("Mist Echo Lifetime", "vampire", "cloneLife", 2000, 12000, 500, "ms")}
             </>
           )}
           {type === "laser" && (
@@ -14929,6 +15588,20 @@ export default function App() {
               {renderSlider("Max Powered Speed", "eightBall", "maxPoweredSpeed", 500, 1400, 20, "px/s")}
             </>
           )}
+          {type === "mazeChomper" && (
+            <>
+              {renderSlider("Bite Damage", "mazeChomper", "biteDamage", 1, 15, 1)}
+              {renderSlider("Bite Cooldown", "mazeChomper", "biteCooldown", 300, 3000, 50, "ms")}
+              {renderSlider("Bite Range", "mazeChomper", "biteRange", 70, 260, 5, "px")}
+              {renderSlider("Lunge Speed", "mazeChomper", "lungeSpeed", 300, 1200, 20, "px/s")}
+              {renderSlider("Bite Knockback", "mazeChomper", "biteKnockback", 100, 900, 20, "px/s")}
+              {renderSlider("Power Cooldown", "mazeChomper", "powerCooldown", 2500, 15000, 100, "ms")}
+              {renderSlider("Power Duration", "mazeChomper", "powerDuration", 1000, 7000, 100, "ms")}
+              {renderSlider("Power Speed", "mazeChomper", "powerSpeed", 250, 900, 20, "px/s")}
+              {renderSlider("Power Damage", "mazeChomper", "powerDamage", 1, 25, 1)}
+              {renderSlider("Power Knockback", "mazeChomper", "powerKnockback", 150, 1200, 20, "px/s")}
+            </>
+          )}
           {type === "trident" && (
             <>
               {renderSlider("Throw Damage", "trident", "throwDamage", 1, 25)}
@@ -15080,26 +15753,26 @@ export default function App() {
             {/* Health Bars & Match Status */}
             <div className="grid gap-4 sm:grid-cols-3">
               <Card className="rounded-2xl border-slate-900 bg-slate-900/40 backdrop-blur-sm text-slate-100 p-5 shadow-lg">
-                <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Fighter 1</div>
+                <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">{battleMode === "2v2" ? "Blue Team" : "Fighter 1"}</div>
                 <div className="mt-1 rounded-lg bg-slate-100 px-2 py-1 text-xl font-bold text-slate-950 truncate">{gameState.leftName}</div>
                 <div className="mt-2.5 flex items-center justify-between text-sm">
                   <span className="text-slate-400">HP:</span>
                   <span className="text-base font-bold text-slate-200">{gameState.leftHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.leftHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: getHpBarColor(selectedBalls[0]) }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.leftHealth, 0, MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) / (MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) * 100}%`, backgroundColor: getHpBarColor(selectedBalls[0]) }} />
                 </div>
               </Card>
 
               <Card className="rounded-2xl border-slate-900 bg-slate-900/40 backdrop-blur-sm text-slate-100 p-5 shadow-lg">
-                <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Fighter 2</div>
+                <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">{battleMode === "2v2" ? "Red Team" : "Fighter 2"}</div>
                 <div className="mt-1 rounded-lg bg-slate-100 px-2 py-1 text-xl font-bold text-slate-950 truncate">{gameState.rightName}</div>
                 <div className="mt-2.5 flex items-center justify-between text-sm">
                   <span className="text-slate-400">HP:</span>
                   <span className="text-base font-bold text-slate-200">{gameState.rightHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.rightHealth, 0, MAX_HEALTH) / MAX_HEALTH * 100}%`, backgroundColor: getHpBarColor(selectedBalls[1]) }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.rightHealth, 0, MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) / (MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) * 100}%`, backgroundColor: getHpBarColor(selectedBalls[1]) }} />
                 </div>
               </Card>
 
@@ -15187,15 +15860,28 @@ export default function App() {
             <Card className="rounded-2xl border-slate-900 bg-slate-900/30 backdrop-blur-md text-slate-100 shadow-xl">
               <CardContent className="space-y-5 p-5">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200 border-b border-slate-900 pb-2 text-center">Contestant Selector</h3>
-                
+
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-950/50 p-1.5 border border-slate-800">
+                  {["1v1", "2v2"].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => changeBattleMode(mode)}
+                      className={`rounded-lg px-3 py-2 text-xs font-extrabold uppercase tracking-wider transition ${battleMode === mode ? "bg-sky-500 text-slate-950" : "text-slate-400 hover:bg-slate-800"}`}
+                    >
+                      {mode === "2v2" ? "2v2 Longform" : "1v1 Duel"}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="space-y-4">
-                  {[0, 1].map((slot) => {
+                  {(battleMode === "2v2" ? [0, 1, 2, 3] : [0, 1]).map((slot) => {
                     const selectedId = selectedBalls[slot];
                     const selectedBall = BALL_TYPES[selectedId];
                     return (
                       <div key={slot} className="space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-900">
                         <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Slot {slot + 1} ({slot === 0 ? "Left" : "Right"})</span>
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{["Blue A", "Red A", "Blue B", "Red B"][slot]}</span>
                           <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border text-slate-950" style={{ backgroundColor: "#f8fafc", borderColor: `${selectedBall?.color}70` }}>
                             {selectedBall?.name}
                           </span>
@@ -15245,7 +15931,7 @@ export default function App() {
                         : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20"
                     }`}
                   >
-                    {isRecording ? "Stop Recording" : "Launch + Record HD"}
+                    {isRecording ? "Stop Recording" : "Launch + Record YouTube"}
                   </Button>
                 </div>
                 {fightIntroActive && (
@@ -15435,7 +16121,7 @@ ${ball.description}`;
         
       const matchesArchetype =
         selectedArchetype === "All" ||
-        (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker"].includes(ball.id)) ||
+        (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker", "mazeChomper"].includes(ball.id)) ||
         (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall"].includes(ball.id)) ||
         (selectedArchetype === "Summoner" && ["spore", "shadow"].includes(ball.id)) ||
         (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull", "fisherman"].includes(ball.id)) ||
