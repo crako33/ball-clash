@@ -642,7 +642,7 @@ const BALANCE = {
   },
   gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
   constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
-  fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
+  fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, carHitboxWidthScale: 1.75, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
   eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
 };
 
@@ -8313,9 +8313,17 @@ export default function App() {
 
         balls.forEach(ball => {
           if (ball.side === car.ownerSide) return;
-          const d = Math.hypot(ball.x - car.x, ball.y - car.y);
-          const carHitRadius = car.radius * ((game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32);
-          if (d < ball.r + carHitRadius) {
+          const dx = ball.x - car.x;
+          const dy = ball.y - car.y;
+          const cos = Math.cos(car.angle);
+          const sin = Math.sin(car.angle);
+          const localForward = dx * cos + dy * sin;
+          const localSide = -dx * sin + dy * cos;
+          const forwardRadius = car.radius * ((game.balance.fireSkull?.carHitboxScale) || BALANCE.fireSkull.carHitboxScale || 1.32) + ball.r;
+          const sideRadius = car.radius * ((game.balance.fireSkull?.carHitboxWidthScale) || BALANCE.fireSkull.carHitboxWidthScale || 1.75) + ball.r;
+          const insideMotorcycleHitbox = (localForward * localForward) / (forwardRadius * forwardRadius) +
+            (localSide * localSide) / (sideRadius * sideRadius) < 1;
+          if (insideMotorcycleHitbox) {
             applyDamage(ball, car.damage, `${car.id}-pass-${car.pass}-hit-${ball.id}`, game.simTime, 400);
             const recoilForce = Math.max(1280, (game.balance.fireSkull?.carKnockback) || BALANCE.fireSkull.carKnockback || 1280);
             ball.vx += Math.cos(car.angle) * recoilForce;
