@@ -1044,6 +1044,7 @@ export default function App() {
   const animationRef = useRef(null);
   const recordingCanvasRef = useRef(null);
   const recordingSilhouetteImageRef = useRef(null);
+  const arenaWatermarkImageRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordingFrameRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -2057,8 +2058,12 @@ export default function App() {
     const image = new Image();
     image.src = EIGHT_BALL_SILHOUETTE_URI;
     recordingSilhouetteImageRef.current = image;
+    const watermark = new Image();
+    watermark.src = "/Bounce%20Ball%20Battles%20Watermark.png";
+    arenaWatermarkImageRef.current = watermark;
     return () => {
       recordingSilhouetteImageRef.current = null;
+      arenaWatermarkImageRef.current = null;
     };
   }, []);
 
@@ -3746,6 +3751,8 @@ export default function App() {
     }
 
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
+      const sourceBall = game.balls.find((candidate) => candidate.id !== defender.id && String(cooldownKey).includes(candidate.id));
+      if (battleMode === "2v2" && sourceBall?.side === defender.side) return;
       if (defender.constellationShieldedUntil && currentTime < defender.constellationShieldedUntil) return;
       if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
       if (isWreckerJumpInvulnerable(defender)) return;
@@ -3906,7 +3913,7 @@ export default function App() {
     const pruneShadowMinions = () => {
       game.balls.forEach((owner) => {
         if (owner.type !== "shadow" || !owner.shadowMinions) return;
-        const target = game.balls.find(o => o.id !== owner.id);
+        const target = game.balls.find((ball) => ball.side !== owner.side && ball.health > 0 && ball.type !== "cueBall");
         const bal = game.balance.shadow || BALANCE.shadow;
         owner.shadowMinions = owner.shadowMinions.filter((minion) => {
           const alive = minion.health > 0 && game.simTime < minion.createdTime + bal.minionLife;
@@ -3940,6 +3947,7 @@ export default function App() {
 
 
     const spawnDeathShatter = (defeated, currentTime) => {
+      if (!defeated || defeated.shattered) return;
       const config = BALL_TYPES[defeated.type] || BALL_TYPES.knife;
       const colors = [config.color, config.stroke, "#f8fafc", "#94a3b8"];
       const count = getParticleBudget(52);
@@ -3971,7 +3979,6 @@ export default function App() {
         life: 1.1,
         maxLife: 1.1
       });
-      game.deathEffectStarted = true;
       game.deathSlowMoUntil = currentTime + DEATH_SLOW_MO_DURATION;
       game.screenShake = Math.max(game.screenShake, 22);
       defeated.shattered = true;
@@ -4918,6 +4925,11 @@ export default function App() {
       vampire.vx = target.vx; vampire.vy = target.vy;
 
       if (vampire.nextDrainAt <= currentTime) {
+        if (target.side === vampire.side) {
+          vampire.latchedTo = null;
+          vampire.latchUntil = 0;
+          return;
+        }
         if (isWreckerJumpInvulnerable(target)) {
           vampire.nextDrainAt = currentTime + bal.tickCooldown;
           return;
@@ -5605,6 +5617,7 @@ export default function App() {
 
         const d = linePointDist(target.x, target.y, mX, mY, eX, eY);
         if (!beamClone && d < target.r + bal.laser.beamWidth / 2 && currentTime >= laserBall.laserNextTickAt) {
+          if (target.side === laserBall.side) return;
           const beamDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
           if (isChessCrownActive(target)) return;
           if (isWreckerJumpInvulnerable(target)) {
@@ -6428,7 +6441,7 @@ export default function App() {
           const pad = 120;
           let cueBallX = 0, cueBallY = 0;
           let attempts = 0;
-          const otherBall = game.balls.find(b => b.id !== ball.id);
+          const otherBall = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
           while (attempts < 50) {
             cueBallX = pad + Math.random() * (game.width - pad * 2);
             cueBallY = pad + Math.random() * (game.height - pad * 2);
@@ -8782,6 +8795,7 @@ export default function App() {
             playSound("explosion");
 
             balls.forEach(ball => {
+              if (ball.side === mine.ownerSide) return;
               const db = Math.hypot(ball.x - mine.x, ball.y - mine.y);
               if (db < game.balance.bomber.mineRadius + ball.r) {
                 if (isChessCrownActive(ball)) return;
@@ -9207,6 +9221,17 @@ export default function App() {
         ctx.setLineDash([]);
         ctx.fillStyle = "rgba(56, 189, 248, 0.08)"; ctx.fillRect(4, 4, game.width / 2 - 4, game.height - 8);
         ctx.fillStyle = "rgba(244, 63, 94, 0.07)"; ctx.fillRect(game.width / 2, 4, game.width / 2 - 4, game.height - 8);
+      }
+      const watermark = arenaWatermarkImageRef.current;
+      if (watermark?.complete && watermark.naturalWidth > 0) {
+        const maxWidth = game.width * (battleMode === "2v2" ? 0.34 : 0.42);
+        const maxHeight = game.height * 0.34;
+        const scale = Math.min(maxWidth / watermark.naturalWidth, maxHeight / watermark.naturalHeight);
+        const width = watermark.naturalWidth * scale;
+        const height = watermark.naturalHeight * scale;
+        ctx.globalAlpha = 0.09;
+        ctx.drawImage(watermark, (game.width - width) / 2, (game.height - height) / 2, width, height);
+        ctx.globalAlpha = 1;
       }
       ctx.restore();
     };
@@ -10117,7 +10142,7 @@ export default function App() {
 
       if (ball.fangFlashUntil > game.simTime) {
         ctx.save();
-        const target = game.balls.find(o => o.id !== ball.id);
+        const target = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
         if (target) {
           const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
           ctx.rotate(angle + Math.PI / 2);
@@ -10524,7 +10549,7 @@ export default function App() {
       }
       
       const armAngle = ball.armAngle || 0;
-      const enemy = game.balls.find(b => b.id !== ball.id);
+      const enemy = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
       const punching = ball.armPunchUntil && game.simTime < ball.armPunchUntil;
       const punchDuration = Math.max(1, (ball.armPunchUntil || 0) - (ball.armPunchStartAt || 0));
       const punchProgress = punching ? clamp((game.simTime - (ball.armPunchStartAt || game.simTime)) / punchDuration, 0, 1) : 0;
@@ -14760,6 +14785,14 @@ export default function App() {
       if (elapsed > 250 && elapsed < FIGHT_INTRO_IMPACT_AT) shake = easeIn((elapsed - 250) / (FIGHT_INTRO_IMPACT_AT - 250)) * 13;
       if (elapsed >= FIGHT_INTRO_IMPACT_AT && elapsed < 2050) shake = 20 * (1 - clamp((elapsed - FIGHT_INTRO_IMPACT_AT) / 420, 0, 1));
 
+      if (combatActive) {
+        game.balls.forEach((ball) => {
+          if (ball.type !== "cueBall" && ball.health <= 0 && !ball.shattered) {
+            spawnDeathShatter(ball, time);
+          }
+        });
+      }
+
       drawArena();
       ctx.save();
       if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
@@ -15287,8 +15320,8 @@ export default function App() {
           }
 
           if (ball.type === "shield") {
-            const target = ball.side === "left" ? right : left;
-            ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+            const target = game.balls.find((other) => other.side !== ball.side && other.health > 0 && other.type !== "cueBall");
+            if (target) ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
           }
           if (ball.type === "knife") ball.spinAngle += 0.02;
         });
@@ -15337,11 +15370,9 @@ export default function App() {
       });
       ctx.restore();
 
-      const winner = combatActive ? !leftAlive ? getTeamLabel(rightTeam, "right") : !rightAlive ? getTeamLabel(leftTeam, "left") : null : null;
-      if (winner && !game.deathEffectStarted) {
-        const defeated = (!leftAlive ? leftTeam : rightTeam).find((ball) => ball.health <= 0) || (!leftAlive ? left : right);
-        spawnDeathShatter(defeated, time);
-      }
+      const currentLeftAlive = leftTeam.some((ball) => ball.health > 0);
+      const currentRightAlive = rightTeam.some((ball) => ball.health > 0);
+      const winner = combatActive ? !currentLeftAlive ? getTeamLabel(rightTeam, "right") : !currentRightAlive ? getTeamLabel(leftTeam, "left") : null : null;
       if (winner && !game.roundOverSoundPlayed) {
         game.roundOverSoundPlayed = true;
         stopMatchMusic();
