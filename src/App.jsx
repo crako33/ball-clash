@@ -584,6 +584,26 @@ const BALL_TYPES = {
     animeStyle: "Urban trick-battle champion",
     gameStyle: "Tethered projectile fighter with escalating knockback",
   },
+  slipper: {
+    id: "slipper",
+    name: "Mother Ball",
+    shortName: "MAMA",
+    color: "#f59e0b",
+    stroke: "#7c2d12",
+    radius: 30,
+    description: "Cycles through household discipline tools, throwing each with ricochet precision before it returns.",
+    emoji: "MA",
+    visualTheme: "Household Arsenal / Strict Trick Thrower",
+    colorPalette: "Warm Amber, Leather Brown, Cream",
+    facialAge: "Young adult precision thrower",
+    personality: "Strict, resourceful, relentlessly accurate",
+    primaryWeapon: "Slipper, feather duster, wooden spoon, and ruler",
+    signatureAbility: "Household Arsenal",
+    companion: "None",
+    specialVisualEffects: "Tool-swap clicks, amber spin arcs, and comic impact bursts",
+    animeStyle: "Fast household-comedy arena striker",
+    gameStyle: "Cycling returning-projectile zoner with varied damage and knockback",
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -636,6 +656,12 @@ const SHIELD_BASH_READY_THROWS = 3;
 const SHIELD_BASH_CLOSE_RADIUS = 95;
 const SHIELD_BASH_LUNGE_SPEED = 720;
 const SHIELD_BASH_LUNGE_DURATION = 430;
+const MOTHER_TOOLS = [
+  { name: "SLIPPER", damageMult: 1, knockbackMult: 1.05, color: "#f59e0b" },
+  { name: "DUSTER", damageMult: 0.8, knockbackMult: 1.2, color: "#a78bfa" },
+  { name: "SPOON", damageMult: 1.25, knockbackMult: 0.9, color: "#d97706" },
+  { name: "RULER", damageMult: 1.05, knockbackMult: 1, color: "#38bdf8" },
+];
 const HYDRA_MAX_GLOW_STACKS = 3;
 const HYDRA_RAGE_PER_BOUNCE = 1;
 const SPIDER_FINAL_BOUNCE_MULTIPLIER = 1.8;
@@ -687,6 +713,7 @@ const BALANCE = {
   eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
   mazeChomper: { biteDamage: 4, biteCooldown: 1050, biteRange: 150, lungeSpeed: 700, lungeDuration: 360, biteKnockback: 360, powerCooldown: 7200, powerDuration: 3200, powerSpeed: 520, powerDamage: 7, powerKnockback: 620 },
   yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
+  slipper: { cooldown: 3300, windup: 260, throwSpeed: 840, returnSpeed: 980, duration: 2600, damage: 5, knockback: 560, hitCooldown: 360, projectileRadius: 22, maxBounces: 3 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -1262,6 +1289,9 @@ export default function App() {
       yoYoX: 0, yoYoY: 0, yoYoVx: 0, yoYoVy: 0, yoYoSpin: 0, yoYoKnockback: 0, yoYoHitAt: {},
       yoYoWallIndex: 0, yoYoWallDirection: 1, yoYoHitStacks: 0, yoYoCutX: 0, yoYoCutY: 0,
       yoYoAnchorX: 0, yoYoAnchorY: 0, yoYoRicochetBouncesLeft: 0,
+      // Slipper Thrower Specific
+      slipperState: "idle", slipperNextThrowAt: type === "slipper" ? 1900 : 0, slipperStateUntil: 0,
+      slipperX: 0, slipperY: 0, slipperVx: 0, slipperVy: 0, slipperSpin: 0, slipperBouncesLeft: 0, slipperHitAt: {}, slipperThrowAngle: side === "left" ? 0 : Math.PI, slipperToolIndex: 0,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
       nextPsychicAt: 0,
@@ -5287,6 +5317,116 @@ export default function App() {
         ball.yoYoX = 0;
         ball.yoYoY = 0;
         playSound("shieldCatch", 0.75, 90);
+      }
+    };
+
+    const updateSlipper = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.slipper || BALANCE.slipper;
+      const tool = MOTHER_TOOLS[(ball.slipperToolIndex || 0) % MOTHER_TOOLS.length];
+      const hitEnemies = (returning = false) => {
+        game.balls.forEach((enemy) => {
+          if (enemy.side === ball.side || enemy.type === "cueBall" || enemy.health <= 0) return;
+          if (Math.hypot(enemy.x - ball.slipperX, enemy.y - ball.slipperY) >= enemy.r + bal.projectileRadius) return;
+          if (currentTime < (ball.slipperHitAt[enemy.id] || 0)) return;
+          ball.slipperHitAt[enemy.id] = currentTime + bal.hitCooldown;
+          const before = enemy.health;
+          const toolDamage = Math.max(MIN_DAMAGE, Math.round(bal.damage * tool.damageMult));
+          const toolKnockback = bal.knockback * tool.knockbackMult;
+          applyDamage(enemy, toolDamage, `${ball.id}-slipper-${returning ? "return" : "throw"}-${enemy.id}`, currentTime, 0);
+          const angle = Math.atan2(enemy.y - ball.slipperY, enemy.x - ball.slipperX);
+          enemy.vx = Math.cos(angle) * toolKnockback;
+          enemy.vy = Math.sin(angle) * toolKnockback;
+          enemy.knockbackActiveUntil = currentTime + 560;
+          const damageDone = before - enemy.health;
+          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+          if (stats && damageDone > 0) { stats.damageDealt += damageDone; stats.hitsLanded++; }
+          spawnSparks(enemy.x, enemy.y, tool.color, 14);
+          game.floatingTexts.push({
+            x: enemy.x, y: enemy.y - enemy.r - 14, vy: -50,
+            text: returning ? `${tool.name} BACKHAND!` : `${tool.name} SMACK!`, color: tool.color, life: 0.72, maxLife: 0.72
+          });
+          game.screenShake = Math.max(game.screenShake || 0, 9);
+          playSound("hammerHit", 0.78, returning ? 170 : 90);
+        });
+      };
+
+      if (ball.slipperState === "idle") {
+        if (currentTime < (ball.slipperNextThrowAt || 0)) return;
+        ball.slipperState = "windup";
+        ball.slipperStateUntil = currentTime + bal.windup;
+        ball.slipperSpin = 0;
+        ball.slipperHitAt = {};
+        ball.slipperThrowAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        playSound("repulsorCharge", 0.5, 190);
+        return;
+      }
+
+      if (ball.slipperState === "windup") {
+        ball.slipperSpin += stepDt * 30;
+        ball.slipperThrowAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        if (currentTime < ball.slipperStateUntil) return;
+        const lead = 0.18;
+        const aimX = target.x + (target.vx || 0) * lead;
+        const aimY = target.y + (target.vy || 0) * lead;
+        const angle = Math.atan2(aimY - ball.y, aimX - ball.x);
+        ball.slipperState = "thrown";
+        ball.slipperStateUntil = currentTime + bal.duration;
+        ball.slipperX = ball.x + Math.cos(angle) * (ball.r + bal.projectileRadius + 3);
+        ball.slipperY = ball.y + Math.sin(angle) * (ball.r + bal.projectileRadius + 3);
+        ball.slipperVx = Math.cos(angle) * bal.throwSpeed;
+        ball.slipperVy = Math.sin(angle) * bal.throwSpeed;
+        ball.slipperBouncesLeft = bal.maxBounces;
+        const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+        if (stats) stats.totalShots++;
+        playSound("shieldThrow", 0.82, 210);
+        return;
+      }
+
+      if (ball.slipperState === "thrown") {
+        ball.slipperX += ball.slipperVx * stepDt;
+        ball.slipperY += ball.slipperVy * stepDt;
+        ball.slipperSpin += stepDt * 34;
+        const pad = 18 + bal.projectileRadius;
+        let bounced = false;
+        if (ball.slipperX < pad) { ball.slipperX = pad; ball.slipperVx = Math.abs(ball.slipperVx); bounced = true; }
+        if (ball.slipperX > game.width - pad) { ball.slipperX = game.width - pad; ball.slipperVx = -Math.abs(ball.slipperVx); bounced = true; }
+        if (ball.slipperY < pad) { ball.slipperY = pad; ball.slipperVy = Math.abs(ball.slipperVy); bounced = true; }
+        if (ball.slipperY > game.height - pad) { ball.slipperY = game.height - pad; ball.slipperVy = -Math.abs(ball.slipperVy); bounced = true; }
+        if (bounced) {
+          ball.slipperBouncesLeft -= 1;
+          spawnSparks(ball.slipperX, ball.slipperY, "#fbbf24", 8);
+          playSound("ballCollision", 0.58, 150);
+        }
+        hitEnemies(false);
+        if (currentTime < ball.slipperStateUntil && ball.slipperBouncesLeft > 0) return;
+        ball.slipperState = "returning";
+      }
+
+      if (ball.slipperState === "returning") {
+        const dx = ball.x - ball.slipperX;
+        const dy = ball.y - ball.slipperY;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const travel = bal.returnSpeed * stepDt;
+        ball.slipperSpin += stepDt * 40;
+        if (dist <= travel + ball.r + bal.projectileRadius) {
+          ball.slipperState = "idle";
+          ball.slipperNextThrowAt = currentTime + bal.cooldown;
+          ball.slipperX = 0;
+          ball.slipperY = 0;
+          ball.slipperToolIndex = ((ball.slipperToolIndex || 0) + 1) % MOTHER_TOOLS.length;
+          const nextTool = MOTHER_TOOLS[ball.slipperToolIndex];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 18, vy: -42,
+            text: `LOAD ${nextTool.name}`, color: nextTool.color, life: 0.72, maxLife: 0.72
+          });
+          playSound("gunReload", 0.9, 80);
+          return;
+        }
+        ball.slipperVx = (dx / dist) * bal.returnSpeed;
+        ball.slipperVy = (dy / dist) * bal.returnSpeed;
+        ball.slipperX += ball.slipperVx * stepDt;
+        ball.slipperY += ball.slipperVy * stepDt;
+        hitEnemies(true);
       }
     };
 
@@ -9874,6 +10014,143 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawSlipperBall = (ball) => {
+      const bal = game.balance.slipper || BALANCE.slipper;
+      const toolIndex = (ball.slipperToolIndex || 0) % MOTHER_TOOLS.length;
+      const tool = MOTHER_TOOLS[toolIndex];
+      const active = ball.slipperState === "thrown" || ball.slipperState === "returning";
+      if (active) {
+        ctx.save();
+        const speed = Math.hypot(ball.slipperVx || 0, ball.slipperVy || 0);
+        const angle = Math.atan2(ball.slipperVy || 0, ball.slipperVx || 0);
+        ctx.translate(ball.slipperX, ball.slipperY);
+        ctx.rotate(angle);
+        const trail = ctx.createLinearGradient(0, 0, -Math.min(50, speed * 0.055), 0);
+        trail.addColorStop(0, `${tool.color}aa`);
+        trail.addColorStop(1, `${tool.color}00`);
+        ctx.strokeStyle = trail;
+        ctx.lineWidth = 9;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-5, 0);
+        ctx.lineTo(-Math.min(50, speed * 0.055), 0);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(ball.slipperX, ball.slipperY);
+        ctx.rotate(ball.slipperSpin || 0);
+        ctx.shadowColor = tool.color;
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 3;
+        if (toolIndex === 0) {
+          ctx.fillStyle = "#92400e";
+          ctx.strokeStyle = "#451a03";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, bal.projectileRadius * 1.2, bal.projectileRadius * 0.52, -0.18, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#fbbf24";
+          ctx.beginPath();
+          ctx.moveTo(-bal.projectileRadius * 0.35, -4);
+          ctx.quadraticCurveTo(0, -bal.projectileRadius * 0.75, bal.projectileRadius * 0.52, -3);
+          ctx.lineTo(bal.projectileRadius * 0.32, 5);
+          ctx.quadraticCurveTo(0, -bal.projectileRadius * 0.26, -bal.projectileRadius * 0.45, 5);
+          ctx.closePath(); ctx.fill();
+        } else if (toolIndex === 1) {
+          ctx.strokeStyle = "#78350f";
+          ctx.lineWidth = 7;
+          ctx.beginPath(); ctx.moveTo(-bal.projectileRadius, 0); ctx.lineTo(bal.projectileRadius * 0.45, 0); ctx.stroke();
+          ctx.fillStyle = "#c4b5fd";
+          for (let i = -3; i <= 3; i++) {
+            ctx.beginPath();
+            ctx.ellipse(bal.projectileRadius * 0.62, i * 3, bal.projectileRadius * 0.58, 5, i * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (toolIndex === 2) {
+          ctx.fillStyle = "#92400e";
+          ctx.strokeStyle = "#451a03";
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.roundRect(-bal.projectileRadius * 1.1, -4, bal.projectileRadius * 1.35, 8, 4); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(bal.projectileRadius * 0.65, 0, bal.projectileRadius * 0.55, bal.projectileRadius * 0.36, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        } else {
+          ctx.fillStyle = "#38bdf8";
+          ctx.strokeStyle = "#075985";
+          ctx.beginPath(); ctx.roundRect(-bal.projectileRadius * 1.25, -6, bal.projectileRadius * 2.5, 12, 3); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = "#e0f2fe";
+          ctx.lineWidth = 1.5;
+          for (let i = -4; i <= 4; i++) {
+            const x = i * bal.projectileRadius * 0.22;
+            ctx.beginPath(); ctx.moveTo(x, -5); ctx.lineTo(x, i % 2 === 0 ? 1 : -1); ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      const body = ctx.createRadialGradient(-8, -10, 3, 0, 0, ball.r);
+      body.addColorStop(0, "#fde68a");
+      body.addColorStop(0.62, "#f59e0b");
+      body.addColorStop(1, "#b45309");
+      ctx.fillStyle = body;
+      ctx.strokeStyle = "#7c2d12";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (!active) {
+        ctx.save();
+        ctx.rotate(ball.slipperThrowAngle || 0);
+        ctx.strokeStyle = "#78350f";
+        ctx.lineWidth = 7;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(ball.r - 5, 0);
+        ctx.lineTo(ball.r + 9, 0);
+        ctx.stroke();
+        ctx.translate(ball.r + 21, 0);
+        ctx.shadowColor = tool.color;
+        ctx.shadowBlur = 8;
+        if (toolIndex === 0) {
+          ctx.fillStyle = "#92400e";
+          ctx.strokeStyle = "#451a03";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.ellipse(5, 0, 19, 8, -0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = "#fbbf24";
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(-1, -1); ctx.quadraticCurveTo(7, -11, 15, -1); ctx.stroke();
+        } else if (toolIndex === 1) {
+          ctx.strokeStyle = "#78350f";
+          ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(7, 0); ctx.stroke();
+          ctx.fillStyle = "#c4b5fd";
+          for (let i = -2; i <= 2; i++) {
+            ctx.beginPath(); ctx.ellipse(14, i * 3, 11, 4, i * 0.12, 0, Math.PI * 2); ctx.fill();
+          }
+        } else if (toolIndex === 2) {
+          ctx.fillStyle = "#92400e";
+          ctx.strokeStyle = "#451a03";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.roundRect(-16, -3, 25, 6, 3); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(15, 0, 11, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        } else {
+          ctx.fillStyle = "#38bdf8";
+          ctx.strokeStyle = "#075985";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.roundRect(-18, -5, 38, 10, 2); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = "#e0f2fe";
+          ctx.lineWidth = 1;
+          for (let i = -3; i <= 3; i++) {
+            ctx.beginPath(); ctx.moveTo(i * 5, -4); ctx.lineTo(i * 5, 0); ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawGunBall = (ball, currentTime) => {
       const config = BALL_TYPES.gun;
       
@@ -13742,6 +14019,7 @@ export default function App() {
       else if (ball.type === "eightBall") drawEightBall(ball);
       else if (ball.type === "mazeChomper") drawMazeChomperBall(ball);
       else if (ball.type === "yoYo") drawYoYoBall(ball);
+      else if (ball.type === "slipper") drawSlipperBall(ball);
       else if (ball.type === "cueBall") drawCueBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
@@ -15605,6 +15883,7 @@ export default function App() {
                   if (ball.type === "eightBall") updateEightBall(ball, target, game.simTime);
                   if (ball.type === "mazeChomper") updateMazeChomper(ball, target, game.simTime);
                   if (ball.type === "yoYo") updateYoYo(ball, target, game.simTime, stepDt);
+                  if (ball.type === "slipper") updateSlipper(ball, target, game.simTime, stepDt);
                   if (ball.type === "constellation") updateConstellation(ball, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
@@ -16086,6 +16365,20 @@ export default function App() {
               {renderSlider("Ricochet Bounces", "yoYo", "ricochetBounces", 1, 8, 1)}
               {renderSlider("Yo-Yo Size", "yoYo", "yoYoRadius", 14, 40, 1, "px")}
               {renderSlider("Wall Inset", "yoYo", "wallInset", 12, 80, 2, "px")}
+            </>
+          )}
+          {type === "slipper" && (
+            <>
+              {renderSlider("Throw Cooldown", "slipper", "cooldown", 1200, 9000, 100, "ms")}
+              {renderSlider("Throw Windup", "slipper", "windup", 80, 900, 20, "ms")}
+              {renderSlider("Throw Speed", "slipper", "throwSpeed", 300, 1200, 20, "px/s")}
+              {renderSlider("Return Speed", "slipper", "returnSpeed", 350, 1400, 20, "px/s")}
+              {renderSlider("Flight Duration", "slipper", "duration", 600, 5000, 100, "ms")}
+              {renderSlider("Tool Damage", "slipper", "damage", 1, 20, 1)}
+              {renderSlider("Tool Knockback", "slipper", "knockback", 100, 1200, 20, "px/s")}
+              {renderSlider("Hit Cooldown", "slipper", "hitCooldown", 150, 1200, 25, "ms")}
+              {renderSlider("Tool Size", "slipper", "projectileRadius", 12, 34, 1, "px")}
+              {renderSlider("Wall Bounces", "slipper", "maxBounces", 1, 10, 1)}
             </>
           )}
           {type === "trident" && (
@@ -16608,7 +16901,7 @@ ${ball.description}`;
       const matchesArchetype =
         selectedArchetype === "All" ||
         (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker", "mazeChomper"].includes(ball.id)) ||
-        (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall", "yoYo"].includes(ball.id)) ||
+        (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall", "yoYo", "slipper"].includes(ball.id)) ||
         (selectedArchetype === "Summoner" && ["spore", "shadow"].includes(ball.id)) ||
         (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull", "fisherman"].includes(ball.id)) ||
         (selectedArchetype === "Utility/Defense" && ["vampire", "shield", "chess", "trident", "mirror", "joker", "eightBall"].includes(ball.id));
@@ -16625,7 +16918,7 @@ ${ball.description}`;
               Fighter Dictionary
             </h1>
             <p className="mt-1.5 text-xs text-sm text-slate-400">
-              Browse the visual themes, personalities, weapons, and styles of all 26 combatants.
+              Browse the visual themes, personalities, weapons, and styles of all {Object.keys(BALL_TYPES).length} combatants.
             </p>
           </div>
           
