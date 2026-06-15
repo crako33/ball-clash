@@ -657,7 +657,7 @@ const BALANCE = {
   gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 900, latchCooldown: 3200, latchDistance: 10, secCooldown: 6200, mistWindup: 260, mistDuration: 520, mistSpeed: 920, mistDamage: 7, mistHeal: 4, mistKnockback: 420, cloneRadius: 17, cloneLife: 7000 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 10, pulseSpeed: 620, pulseStunDuration: 950, recoilForce: 180 },
-  shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, shieldSpeed: 550, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
+  shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, throwWindup: 150, shieldSpeed: 800, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
   spider: { fangDamage: 2, webSpeed: 900, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 35, secDamage: 1 },
   bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 2, cactusLife: 5000, cooldown: 6000 },
@@ -686,7 +686,7 @@ const BALANCE = {
   fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, carHitboxWidthScale: 1.75, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
   eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
   mazeChomper: { biteDamage: 4, biteCooldown: 1050, biteRange: 150, lungeSpeed: 700, lungeDuration: 360, biteKnockback: 360, powerCooldown: 7200, powerDuration: 3200, powerSpeed: 520, powerDamage: 7, powerKnockback: 620 },
-  yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 32, ricochetBounces: 3, wallInset: 30 },
+  yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -707,6 +707,13 @@ const mergeBalanceSettings = (base, saved = {}) => {
       if (merged[type].releaseRecoil === 520) merged[type].releaseRecoil = settings.releaseRecoil;
       if (merged[type].hookDamage === 2 || merged[type].hookDamage === 4) merged[type].hookDamage = settings.hookDamage;
       if (merged[type].maxBounces === 10) merged[type].maxBounces = settings.maxBounces;
+    }
+    if (type === "yoYo" && merged[type].yoYoRadius === 32) {
+      merged[type].yoYoRadius = settings.yoYoRadius;
+    }
+    if (type === "shield") {
+      if (merged[type].shieldSpeed === 550 || merged[type].shieldSpeed === 720) merged[type].shieldSpeed = settings.shieldSpeed;
+      if (merged[type].throwWindup === 360) merged[type].throwWindup = settings.throwWindup;
     }
   });
   return merged;
@@ -772,7 +779,7 @@ const interruptSkills = (ball) => {
   if (ball.dragonBreathUntil) ball.dragonBreathUntil = 0;
   if (ball.knifeBladeState && ball.knifeBladeState !== "rotating") ball.knifeBladeState = "rotating";
   if (ball.tridentDiveState && ball.tridentDiveState !== "idle") ball.tridentDiveState = "idle";
-  if (ball.type === "shield" && ball.shieldState === "held") {
+  if (ball.type === "shield" && (ball.shieldState === "held" || ball.shieldState === "windup")) {
     ball.shieldState = "dropped";
     ball.shieldGuardHits = 0;
     ball.shieldX = ball.x;
@@ -1179,7 +1186,7 @@ export default function App() {
       laserReflect: null,
       laserShotCount: 0,
       shieldAngle: side === "left" ? 0 : Math.PI,
-      shieldState: "held", shieldX: 0, shieldY: 0, shieldVx: 0, shieldVy: 0, shieldThrownUntil: 0, shieldNextHitAt: 0, nextThrowAt: 0, shieldSpinAngle: 0, shieldGuardHits: 0, shieldBonusDamage: 0,
+      shieldState: "held", shieldX: 0, shieldY: 0, shieldVx: 0, shieldVy: 0, shieldThrownUntil: 0, shieldNextHitAt: 0, nextThrowAt: 0, shieldSpinAngle: 0, shieldWindupAngle: 0, shieldWindupUntil: 0, shieldThrowAngle: 0, shieldGuardHits: 0, shieldBonusDamage: 0,
       // Spider Specific
       webState: "idle", webX: 0, webY: 0, webVx: 0, webVy: 0, webStateUntil: 0, webTargetId: null, webBouncesLeft: 0, webLastTargetX: 0, webLastTargetY: 0, fangFlashUntil: 0,
       // Black Spider Specific
@@ -2309,7 +2316,7 @@ export default function App() {
             }
             
             [leftBall, rightBall].forEach((b, idx) => {
-              if (b.type === "shield" && b.shieldState === "held") {
+              if (b.type === "shield" && (b.shieldState === "held" || b.shieldState === "windup")) {
                 const enemy = idx === 0 ? rightBall : leftBall;
                 const angle = Math.atan2(enemy.y - b.y, enemy.x - b.x);
                 let diff = Math.abs(angle - b.shieldAngle);
@@ -2677,6 +2684,19 @@ export default function App() {
                     ball.vy = Math.sin(bashAngle) * SHIELD_BASH_LUNGE_SPEED;
                   }
                 } else if (ball.nextThrowAt <= simTime) {
+                  ball.shieldState = "windup";
+                  ball.shieldWindupAngle = 0;
+                  ball.shieldThrowAngle = ball.shieldAngle;
+                  ball.shieldWindupUntil = simTime + (balance.shield.throwWindup || BALANCE.shield.throwWindup);
+                }
+              } else if (ball.shieldState === "windup") {
+                const windupDuration = Math.max(1, balance.shield.throwWindup || BALANCE.shield.throwWindup);
+                const remaining = Math.max(0, ball.shieldWindupUntil - simTime);
+                ball.shieldWindupAngle = Math.PI * 2 * (1 - remaining / windupDuration);
+                ball.shieldAngle = ball.shieldThrowAngle + ball.shieldWindupAngle;
+                if (simTime >= ball.shieldWindupUntil) {
+                  ball.shieldWindupAngle = Math.PI * 2;
+                  ball.shieldAngle = ball.shieldThrowAngle;
                   ball.shieldState = "thrown";
                   ball.shieldGuardHits = 0;
                   ball.shieldBonusDamage = 0;
@@ -3440,7 +3460,7 @@ export default function App() {
             
             const shieldBall = bullet.targetSide === "left" ? leftBall : rightBall;
             if (shieldBall.type === "shield" && !bullet.piercesDefense && !bullet.cannotReflect) {
-              if (shieldBall.shieldState === "held") {
+              if (shieldBall.shieldState === "held" || shieldBall.shieldState === "windup") {
                 const d = Math.hypot(bullet.x - shieldBall.x, bullet.y - shieldBall.y);
                 if (d < shieldBall.r + 15 && d > shieldBall.r - 10) {
                   const angle = Math.atan2(bullet.y - shieldBall.y, bullet.x - shieldBall.x);
@@ -4008,7 +4028,7 @@ export default function App() {
 
     const getShieldBeamBlock = (shieldBall, x1, y1, x2, y2, beamWidth = 0) => {
       if (!shieldBall || shieldBall.type !== "shield") return null;
-      if (shieldBall.shieldState === "held") {
+      if (shieldBall.shieldState === "held" || shieldBall.shieldState === "windup") {
         const d = linePointDist(shieldBall.x, shieldBall.y, x1, y1, x2, y2);
         if (d > shieldBall.r + 8 + beamWidth / 2) return null;
         const impactAngle = Math.atan2(y1 - shieldBall.y, x1 - shieldBall.x);
@@ -4044,7 +4064,7 @@ export default function App() {
     };
 
     const registerShieldGuardHit = (shieldBall, impactAngle, currentTime) => {
-      if (!shieldBall || shieldBall.type !== "shield" || shieldBall.shieldState !== "held") return;
+      if (!shieldBall || shieldBall.type !== "shield" || (shieldBall.shieldState !== "held" && shieldBall.shieldState !== "windup")) return;
       shieldBall.shieldGuardHits = (shieldBall.shieldGuardHits || 0) + 1;
       if (shieldBall.shieldGuardHits < SHIELD_GUARD_HITS) return;
 
@@ -5063,20 +5083,14 @@ export default function App() {
       if (ball.yoYoState === "windup") {
         ball.yoYoSpin += stepDt * 42;
         ball.spinAngle += stepDt * 34;
-        ball.vx *= 0.94;
-        ball.vy *= 0.94;
         if (currentTime < ball.yoYoStateUntil) return;
         ball.yoYoState = "releasePause";
         ball.yoYoStateUntil = currentTime + bal.releasePause;
-        ball.vx = 0;
-        ball.vy = 0;
         playSound("shieldCatch", 0.55, -80);
         return;
       }
 
       if (ball.yoYoState === "releasePause") {
-        ball.vx = 0;
-        ball.vy = 0;
         if (currentTime < ball.yoYoStateUntil) return;
         const pad = bal.wallInset + bal.yoYoRadius;
         const predictedX = clamp(target.x + (target.vx || 0) * 0.18, pad, game.width - pad);
@@ -5169,20 +5183,36 @@ export default function App() {
         const waypoint = perimeterPoints[ball.yoYoWallIndex % perimeterPoints.length];
         const waypointDx = waypoint.x - ball.yoYoX;
         const waypointDy = waypoint.y - ball.yoYoY;
-        const waypointDist = Math.max(1, Math.hypot(waypointDx, waypointDy));
+        const waypointDist = Math.hypot(waypointDx, waypointDy);
         const speedBoost = 1 + Math.min(0.36, (ball.yoYoHitStacks || 0) * 0.06);
-        ball.yoYoVx = (waypointDx / waypointDist) * bal.throwSpeed * speedBoost;
-        ball.yoYoVy = (waypointDy / waypointDist) * bal.throwSpeed * speedBoost;
-        ball.yoYoX += ball.yoYoVx * stepDt;
-        ball.yoYoY += ball.yoYoVy * stepDt;
-        ball.yoYoSpin += stepDt * (40 + (ball.yoYoHitStacks || 0) * 3);
-        if (waypointDist < Math.max(24, bal.throwSpeed * stepDt * 1.4)) {
+        const rollSpeed = bal.throwSpeed * speedBoost;
+        const travelDistance = rollSpeed * stepDt;
+        if (!Number.isFinite(waypointDist) || !Number.isFinite(ball.yoYoX) || !Number.isFinite(ball.yoYoY)) {
+          ball.yoYoX = clamp(ball.x, pad, game.width - pad);
+          ball.yoYoY = clamp(ball.y, pad, game.height - pad);
+          ball.yoYoState = "returning";
+          return;
+        }
+        if (waypointDist <= travelDistance + 2) {
           ball.yoYoX = waypoint.x;
           ball.yoYoY = waypoint.y;
-          ball.yoYoWallIndex = (ball.yoYoWallIndex + ball.yoYoWallDirection + perimeterPoints.length) % perimeterPoints.length;
+          const direction = ball.yoYoWallDirection === -1 ? -1 : 1;
+          ball.yoYoWallIndex = (ball.yoYoWallIndex + direction + perimeterPoints.length) % perimeterPoints.length;
+          const nextWaypoint = perimeterPoints[ball.yoYoWallIndex];
+          const nextDx = nextWaypoint.x - ball.yoYoX;
+          const nextDy = nextWaypoint.y - ball.yoYoY;
+          const nextDist = Math.max(1, Math.hypot(nextDx, nextDy));
+          ball.yoYoVx = (nextDx / nextDist) * rollSpeed;
+          ball.yoYoVy = (nextDy / nextDist) * rollSpeed;
           spawnSparks(ball.yoYoX, ball.yoYoY, "#cbd5e1", 7);
           playSound("ballCollision", 0.45, 220);
+        } else {
+          ball.yoYoVx = (waypointDx / waypointDist) * rollSpeed;
+          ball.yoYoVy = (waypointDy / waypointDist) * rollSpeed;
+          ball.yoYoX += ball.yoYoVx * stepDt;
+          ball.yoYoY += ball.yoYoVy * stepDt;
         }
+        ball.yoYoSpin += stepDt * (40 + (ball.yoYoHitStacks || 0) * 3);
 
         game.balls.forEach((enemy) => {
           if (enemy.side === ball.side || enemy.type === "cueBall" || enemy.health <= 0) return;
@@ -5243,6 +5273,15 @@ export default function App() {
           playSound("hammerHit", 0.88, 180);
         });
         if (dist > ball.r + bal.yoYoRadius + 8) return;
+        ball.vx = (dx / dist) * bal.returnRecoil;
+        ball.vy = (dy / dist) * bal.returnRecoil;
+        ball.knockbackActiveUntil = currentTime + 520;
+        spawnSparks(ball.x, ball.y, "#dbeafe", 12);
+        game.floatingTexts.push({
+          x: ball.x, y: ball.y - ball.r - 16, vy: -42,
+          text: "RETURN RECOIL", color: "#bfdbfe", life: 0.62, maxLife: 0.62
+        });
+        game.screenShake = Math.max(game.screenShake || 0, 8);
         ball.yoYoState = "idle";
         ball.yoYoNextThrowAt = currentTime + bal.cooldown;
         ball.yoYoX = 0;
@@ -6937,6 +6976,7 @@ export default function App() {
     const updateShield = (shieldBall, target, currentTime, stepDt) => {
       const bal = game.balance;
       const shieldR = 24;
+      const throwWindup = bal.shield.throwWindup || BALANCE.shield.throwWindup;
 
       const bounceShieldFrom = (x, y, radius, color = "#60a5fa") => {
         const dx = shieldBall.shieldX - x;
@@ -7017,6 +7057,20 @@ export default function App() {
         }
 
         if (shieldBall.nextThrowAt <= currentTime) {
+          shieldBall.shieldState = "windup";
+          shieldBall.shieldWindupAngle = 0;
+          shieldBall.shieldThrowAngle = shieldBall.shieldAngle;
+          shieldBall.shieldWindupUntil = currentTime + throwWindup;
+          playSound("repulsorCharge", 0.55, 80);
+        }
+      } else if (shieldBall.shieldState === "windup") {
+        const windupDuration = Math.max(1, throwWindup);
+        const remaining = Math.max(0, shieldBall.shieldWindupUntil - currentTime);
+        shieldBall.shieldWindupAngle = Math.PI * 2 * (1 - remaining / windupDuration);
+        shieldBall.shieldAngle = shieldBall.shieldThrowAngle + shieldBall.shieldWindupAngle;
+        if (currentTime >= shieldBall.shieldWindupUntil) {
+          shieldBall.shieldWindupAngle = Math.PI * 2;
+          shieldBall.shieldAngle = shieldBall.shieldThrowAngle;
           shieldBall.shieldState = "thrown";
           shieldBall.shieldGuardHits = 0;
           shieldBall.shieldBonusDamage = 0;
@@ -9309,7 +9363,7 @@ export default function App() {
 
         const side = bullet.targetSide, shieldBall = balls.find(b => b.side === side);
         if (shieldBall && shieldBall.type === "shield" && !bullet.piercesDefense && !bullet.cannotReflect) {
-          if (shieldBall.shieldState === "held") {
+          if (shieldBall.shieldState === "held" || shieldBall.shieldState === "windup") {
             const d = Math.hypot(bullet.x - shieldBall.x, bullet.y - shieldBall.y);
             if (d < shieldBall.r + 15 && d > shieldBall.r - 10) {
               const angle = Math.atan2(bullet.y - shieldBall.y, bullet.x - shieldBall.x);
@@ -10223,7 +10277,7 @@ export default function App() {
       ctx.restore();
 
       // If the shield is held, draw the protective shield arc
-      if (ball.shieldState === "held") {
+      if (ball.shieldState === "held" || ball.shieldState === "windup") {
         if ((ball.shieldBashThrows || 0) >= SHIELD_BASH_READY_THROWS) {
           const pulse = 0.5 + Math.sin(game.simTime * 0.014) * 0.5;
           ctx.save();
@@ -10256,6 +10310,16 @@ export default function App() {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 3, ball.shieldAngle - game.balance.shield.arcWidth / 2, ball.shieldAngle + game.balance.shield.arcWidth / 2);
         ctx.stroke();
+        if (ball.shieldState === "windup") {
+          ctx.strokeStyle = "rgba(191, 219, 254, 0.45)";
+          ctx.lineWidth = 2;
+          for (let i = 1; i <= 3; i++) {
+            const trailAngle = ball.shieldAngle - i * 0.28;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.r + 8 + i * 3, trailAngle - 0.34, trailAngle + 0.34);
+            ctx.stroke();
+          }
+        }
         ctx.restore();
       } else if (ball.shieldState === "dropped") {
         ctx.save();
@@ -15409,7 +15473,7 @@ export default function App() {
 
                 if (bA.side !== bB.side) {
                   [bA, bB].forEach((b) => {
-                    if (b.type === "shield" && b.shieldState === "held") {
+                    if (b.type === "shield" && (b.shieldState === "held" || b.shieldState === "windup")) {
                       const enemy = b === bA ? bB : bA;
                       const angle = Math.atan2(enemy.y - b.y, enemy.x - b.x);
                       let diff = Math.abs(angle - b.shieldAngle);
@@ -15790,6 +15854,7 @@ export default function App() {
               {renderSlider("Shield Arc Width", "shield", "arcWidth", 0.3, 3.14, 0.05)}
               {renderSlider("Knockback Force", "shield", "knockback", 5, 35, 1)}
               {renderSlider("Throw Cooldown", "shield", "cooldown", 500, 4000, 50, "ms")}
+              {renderSlider("Throw Spin Time", "shield", "throwWindup", 150, 900, 25, "ms")}
               {renderSlider("Shield Speed", "shield", "shieldSpeed", 200, 1000, 20, "px/s")}
               {renderSlider("Return Speed", "shield", "returnSpeed", 200, 1200, 20, "px/s")}
               {renderSlider("Throw Duration", "shield", "duration", 300, 3000, 50, "ms")}
@@ -16010,6 +16075,7 @@ export default function App() {
               {renderSlider("Release Pause", "yoYo", "releasePause", 80, 700, 20, "ms")}
               {renderSlider("Throw Speed", "yoYo", "throwSpeed", 300, 1100, 20, "px/s")}
               {renderSlider("Return Speed", "yoYo", "returnSpeed", 350, 1300, 20, "px/s")}
+              {renderSlider("Return Recoil", "yoYo", "returnRecoil", 100, 900, 20, "px/s")}
               {renderSlider("Active Duration", "yoYo", "duration", 800, 6000, 100, "ms")}
               {renderSlider("Hit Damage", "yoYo", "damage", 1, 15, 1)}
               {renderSlider("Damage Growth", "yoYo", "damageGrowth", 0, 5, 1, "/ hit")}
