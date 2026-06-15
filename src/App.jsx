@@ -1961,6 +1961,60 @@ export default function App() {
     const rightTeam = balls.filter((ball) => ball.side === "right" && ball.type !== "cueBall");
     const left = leftTeam[0];
     const right = rightTeam[0];
+    if (battleMode === "1v1") {
+      const width = 1080;
+      const height = 1920;
+      const arenaSize = 980;
+      const arenaX = (width - arenaSize) / 2;
+      const arenaY = 520;
+      const hudY = arenaY - 154;
+      const cardW = 490;
+
+      ctx.clearRect(0, 0, width, height);
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, "#1f2937");
+      bg.addColorStop(0.48, "#111827");
+      bg.addColorStop(1, "#374151");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left");
+      drawRecordingHudCard(ctx, right, arenaX + arenaSize - cardW, hudY, cardW, "right");
+
+      ctx.save();
+      ctx.shadowColor = "rgba(15, 23, 42, 0.32)";
+      ctx.shadowBlur = 28;
+      ctx.shadowOffsetY = 16;
+      ctx.fillStyle = "#020617";
+      drawRoundedRect(ctx, arenaX - 8, arenaY - 8, arenaSize + 16, arenaSize + 16, 26);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.drawImage(sourceCanvas, arenaX, arenaY, arenaSize, arenaSize);
+
+      ctx.save();
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = "#020617";
+      drawRoundedRect(ctx, arenaX, arenaY, arenaSize, arenaSize, 18);
+      ctx.stroke();
+      ctx.restore();
+
+      const winner = left?.health <= 0 && right?.health > 0
+        ? right.name
+        : right?.health <= 0 && left?.health > 0
+          ? left.name
+          : null;
+      if (winner) {
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#f8fafc";
+        ctx.font = "900 58px Arial, sans-serif";
+        ctx.fillText(`${winner} Wins!`, width / 2, arenaY + arenaSize + 96);
+        ctx.restore();
+      }
+      return;
+    }
+
     const width = 1920;
     const height = 1080;
     const arenaWidth = battleMode === "2v2" ? 1200 : 900;
@@ -2041,8 +2095,11 @@ export default function App() {
     }
 
     const recordCanvas = document.createElement("canvas");
-    recordCanvas.width = 1920;
-    recordCanvas.height = 1080;
+    const isShortForm = battleMode === "1v1";
+    const recordingWidth = isShortForm ? 1080 : 1920;
+    const recordingHeight = isShortForm ? 1920 : 1080;
+    recordCanvas.width = recordingWidth;
+    recordCanvas.height = recordingHeight;
     recordingCanvasRef.current = recordCanvas;
     recordedChunksRef.current = [];
     drawRecordingFrame();
@@ -2063,7 +2120,7 @@ export default function App() {
     const recordingExtension = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
     const recorder = new MediaRecorder(stream, {
       mimeType,
-      videoBitsPerSecond: 28000000,
+      videoBitsPerSecond: isShortForm ? 24000000 : 28000000,
       audioBitsPerSecond: 192000
     });
 
@@ -2080,13 +2137,13 @@ export default function App() {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ball-fighters-${battleMode}-youtube-longform-${stamp}.${recordingExtension}`;
+      link.download = `ball-fighters-${battleMode}-youtube-${isShortForm ? "shortform" : "longform"}-${stamp}.${recordingExtension}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
       setIsRecording(false);
-      setRecordingStatus(`Downloaded 1920x1080 ${recordingExtension.toUpperCase()} with audio`);
+      setRecordingStatus(`Downloaded ${recordingWidth}x${recordingHeight} ${recordingExtension.toUpperCase()} with audio`);
       mediaRecorderRef.current = null;
       recordingCanvasRef.current = null;
       recordedChunksRef.current = [];
@@ -2100,7 +2157,7 @@ export default function App() {
     mediaRecorderRef.current = recorder;
     recorder.start(250);
     setIsRecording(true);
-    setRecordingStatus(`Recording YouTube ${recordingExtension.toUpperCase()} 1920x1080 60fps`);
+    setRecordingStatus(`Recording YouTube ${isShortForm ? "Short" : "Longform"} ${recordingExtension.toUpperCase()} ${recordingWidth}x${recordingHeight} 60fps`);
     renderRecording();
   };
 
@@ -16648,7 +16705,7 @@ export default function App() {
                       onClick={() => changeBattleMode(mode)}
                       className={`rounded-lg px-3 py-2 text-xs font-extrabold uppercase tracking-wider transition ${battleMode === mode ? "bg-sky-500 text-slate-950" : "text-slate-400 hover:bg-slate-800"}`}
                     >
-                      {mode === "2v2" ? "2v2 Longform" : "1v1 Duel"}
+                      {mode === "2v2" ? "2v2 Longform" : "1v1 Shortform"}
                     </button>
                   ))}
                 </div>
@@ -16710,7 +16767,7 @@ export default function App() {
                         : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20"
                     }`}
                   >
-                    {isRecording ? "Stop Recording" : "Launch + Record YouTube"}
+                    {isRecording ? "Stop Recording" : `Launch + Record ${battleMode === "1v1" ? "Short" : "Longform"}`}
                   </Button>
                 </div>
                 {fightIntroActive && (
