@@ -10240,27 +10240,26 @@ export default function App() {
       // Save context to draw rotated gun barrels first
       ctx.save();
       ctx.translate(ball.x, ball.y);
+      ctx.rotate(ball.angle);
       
-      let drawAngle = ball.angle;
-      if (ball.reloadUntil > currentTime) {
-        const reloadDuration = game.balance.gun.reloadTime;
-        const timeRemaining = ball.reloadUntil - currentTime;
-        const progress = 1 - Math.max(0, Math.min(1, timeRemaining / reloadDuration)); // 0 to 1
-        // Spin 2 full rotations (4 * Math.PI)
-        drawAngle += progress * Math.PI * 4;
-      }
-      ctx.rotate(drawAngle);
-      
-      // Gun base connector
+      // Gun base connector (fixed pointing to the target)
       ctx.fillStyle = "#1e293b";
       ctx.fillRect(ball.r - 7, -7, 7, 14);
       ctx.strokeStyle = "#cbd5e1";
       ctx.lineWidth = 1.5;
       ctx.strokeRect(ball.r - 7, -7, 7, 14);
 
-      // Redesigned SVG Pixel Art Rifle
+      // Redesigned SVG Pixel Art Rifle (spins around pivot point when reloading)
       ctx.save();
       ctx.translate(ball.r - 4, 0);
+      
+      if (ball.reloadUntil > currentTime) {
+        const reloadDuration = game.balance.gun.reloadTime;
+        const timeRemaining = ball.reloadUntil - currentTime;
+        const progress = 1 - Math.max(0, Math.min(1, timeRemaining / reloadDuration)); // 0 to 1
+        // Spin 2 full rotations (4 * Math.PI)
+        ctx.rotate(progress * Math.PI * 4);
+      }
       
       const scale = 0.25;
       const pivotX = 40;
