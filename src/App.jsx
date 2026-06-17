@@ -669,7 +669,7 @@ const ARM_RAGDOLL_WALL_DAMAGE = 7;
 const ARM_THROW_WALL_DAMAGE = 10;
 const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
-const MAX_HEALTH = 150;
+let MAX_HEALTH = 150;
 const MAX_PARTICLES = 180;
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 13;
@@ -1119,6 +1119,10 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedArchetype, setSelectedArchetype] = useState("All");
   const [expandedBallId, setExpandedBallId] = useState(null);
+
+  useEffect(() => {
+    MAX_HEALTH = battleMode === "2v2" ? 200 : 150;
+  }, [battleMode]);
   
   const [gameState, setGameState] = useState({
     leftHealth: MAX_HEALTH,
@@ -1127,6 +1131,8 @@ export default function App() {
     rightName: "Laser Ball",
     winner: null,
     running: false,
+    leftScore: 0,
+    rightScore: 0
   });
 
   const [combatStats, setCombatStats] = useState({
@@ -1146,7 +1152,7 @@ export default function App() {
     const maxY = ARENA_SIZE - pad - r - 50;
     const teamY = teamSlot === 0 ? ARENA_SIZE * 0.32 : ARENA_SIZE * 0.68;
     const randomY = teamSlot !== null ? teamY : minY + Math.random() * (maxY - minY);
-    const startX = side === "left" ? pad + r + 15 : ARENA_SIZE - pad - r - 15;
+    const startX = side === "left" ? pad + r + 15 : (battleMode === "2v2" ? TEAM_ARENA_WIDTH : ARENA_SIZE) - pad - r - 15;
     const vxVal = direction * (180 + Math.random() * 60) * BOUNCE_SPEED_MULTIPLIER;
     const vyVal = (Math.random() - 0.5) * 250 * BOUNCE_SPEED_MULTIPLIER;
 
@@ -1460,6 +1466,8 @@ export default function App() {
     const balls = createFightBalls();
     gameRef.current = {
       ...gameRef.current,
+      leftScore: 0,
+      rightScore: 0,
       lastTime: 0,
       simTime: 0,
       damageCooldowns: {},
@@ -1545,6 +1553,8 @@ export default function App() {
 
   const startFight = ({ record = false } = {}) => {
     const balls = initializeFightState();
+    gameRef.current.leftScore = 0;
+    gameRef.current.rightScore = 0;
     setGameStarted(false);
     setGameState({
       leftHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "left").length,
@@ -1553,6 +1563,8 @@ export default function App() {
       rightName: getTeamLabel(balls, "right"),
       winner: null,
       running: false,
+      leftScore: 0,
+      rightScore: 0
     });
     setElapsedTime(0);
     fightIntroRef.current = {
@@ -1716,6 +1728,7 @@ export default function App() {
   };
 
   const changeBattleMode = (mode) => {
+    MAX_HEALTH = mode === "2v2" ? 200 : 150;
     fightIntroRef.current.active = false;
     setFightIntroActive(false);
     stopMatchMusic();
@@ -1725,6 +1738,8 @@ export default function App() {
     const balls = createFightBalls(selectedBalls, mode);
     gameRef.current.balls = balls;
     gameRef.current.combatStarted = false;
+    gameRef.current.leftScore = 0;
+    gameRef.current.rightScore = 0;
     setGameState({
       leftHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "left").length,
       rightHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "right").length,
@@ -1732,6 +1747,8 @@ export default function App() {
       rightName: getTeamLabel(balls, "right"),
       winner: null,
       running: false,
+      leftScore: 0,
+      rightScore: 0
     });
   };
 
@@ -1957,8 +1974,8 @@ export default function App() {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     const balls = gameRef.current.balls || [];
-    const leftTeam = balls.filter((ball) => ball.side === "left" && ball.type !== "cueBall");
-    const rightTeam = balls.filter((ball) => ball.side === "right" && ball.type !== "cueBall");
+    const leftTeam = balls.filter((ball) => ball.side === "left" && ball.type !== "cueBall" && ball.type !== "puck");
+    const rightTeam = balls.filter((ball) => ball.side === "right" && ball.type !== "cueBall" && ball.type !== "puck");
     const left = leftTeam[0];
     const right = rightTeam[0];
     if (battleMode === "1v1") {
@@ -2017,11 +2034,12 @@ export default function App() {
 
     const width = 1920;
     const height = 1080;
-    const arenaWidth = battleMode === "2v2" ? 1200 : 900;
-    const arenaHeight = battleMode === "2v2" ? 800 : 900;
+    const isWidescreen = battleMode === "2v2";
+    const arenaWidth = isWidescreen ? 1200 : 900;
+    const arenaHeight = isWidescreen ? 800 : 900;
     const arenaX = (width - arenaWidth) / 2;
-    const arenaY = battleMode === "2v2" ? 140 : 110;
-    const cardW = battleMode === "2v2" ? 300 : 430;
+    const arenaY = isWidescreen ? 140 : 110;
+    const cardW = isWidescreen ? 300 : 430;
 
     ctx.clearRect(0, 0, width, height);
     const bg = ctx.createLinearGradient(0, 0, 0, height);
@@ -4073,7 +4091,7 @@ export default function App() {
     };
 
 
-    const spawnDeathShatter = (defeated, currentTime) => {
+    const spawnDeathShatter = (defeated, currentTime, isMatchOver = true) => {
       const config = BALL_TYPES[defeated.type] || BALL_TYPES.knife;
       const colors = [config.color, config.stroke, "#f8fafc", "#94a3b8"];
       const count = getParticleBudget(52);
@@ -4105,9 +4123,13 @@ export default function App() {
         life: 1.1,
         maxLife: 1.1
       });
-      game.deathEffectStarted = true;
-      game.deathSlowMoUntil = currentTime + DEATH_SLOW_MO_DURATION;
-      game.screenShake = Math.max(game.screenShake, 22);
+      if (isMatchOver) {
+        game.deathEffectStarted = true;
+        game.deathSlowMoUntil = currentTime + DEATH_SLOW_MO_DURATION;
+        game.screenShake = Math.max(game.screenShake, 22);
+      } else {
+        game.screenShake = Math.max(game.screenShake || 0, 14);
+      }
       defeated.shattered = true;
       defeated.trail = [];
       playSound("explosion", 0.9, -120);
@@ -4171,9 +4193,11 @@ export default function App() {
       spawnDust(shieldBall.shieldX, shieldBall.shieldY, 6);
     };
 
+
     const handleWallBounce = (ball) => {
       const pad = 18; let bounced = false, bx = ball.x, by = ball.y;
       let sideHit = null;
+
       if (ball.x - ball.r < pad) { ball.x = pad + ball.r; ball.vx = Math.abs(ball.vx); bounced = true; bx = pad; sideHit = "left"; }
       if (ball.x + ball.r > game.width - pad) { ball.x = game.width - pad - ball.r; ball.vx = -Math.abs(ball.vx); bounced = true; bx = game.width - pad; sideHit = "right"; }
       if (ball.y - ball.r < pad) { ball.y = pad + ball.r; ball.vy = Math.abs(ball.vy); bounced = true; by = pad; sideHit = "top"; }
@@ -9602,6 +9626,7 @@ export default function App() {
           }
         }
 
+
         const target = bullet.targetSide ? balls.find((ball) => ball.side === bullet.targetSide) : null;
         const cloneTarget = bullet.targetSide
           ? (game.vampireClones || []).find((clone) => clone.side === bullet.targetSide && clone.health > 0 && Math.hypot(bullet.x - clone.x, bullet.y - clone.y) < clone.r + bullet.r)
@@ -9675,6 +9700,7 @@ export default function App() {
       ctx.restore();
 
       ctx.fillStyle = "#0f172a"; ctx.fillRect(0, 0, game.width, game.height);
+
       ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 4;
       ctx.strokeRect(0, 0, game.width, game.height);
 
@@ -12999,6 +13025,7 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+
     const drawCueBall = (ball) => {
       ctx.save();
       ctx.beginPath();
@@ -14213,6 +14240,10 @@ export default function App() {
     setProxyReady(true);
 
     const drawBallTrail = (ball) => {
+      if (ball.health <= 0 || ball.shattered) {
+        ball.trail = [];
+        return;
+      }
       if (ball.type === "cueBall") {
         ball.trail = [];
         return;
@@ -14439,7 +14470,7 @@ export default function App() {
         const alpha = Math.max(0, ft.life / ft.maxLife);
         ctx.globalAlpha = alpha;
         ctx.fillStyle = ft.color;
-        ctx.font = "bold 15px sans-serif";
+        ctx.font = ft.fontSize || "bold 15px sans-serif";
         ctx.textAlign = "center";
         ctx.shadowColor = "rgba(0,0,0,0.5)";
         ctx.shadowBlur = 4;
@@ -15831,6 +15862,11 @@ export default function App() {
           game.balls = game.balls.filter((ball) => !ball.pendingRemoval);
 
           game.balls.forEach((ball) => {
+            if (ball.health <= 0 && ball.type !== "cueBall" && !ball.shattered) {
+              const team = game.balls.filter((b) => b.side === ball.side && b.type !== "cueBall");
+              const teamAlive = team.some((b) => b.health > 0 && b.id !== ball.id);
+              spawnDeathShatter(ball, game.simTime, !teamAlive);
+            }
             if (ball.health <= 0 && ball.type !== "cueBall") return;
             const target = game.balls
               .filter((candidate) => candidate.side !== ball.side && candidate.type !== "cueBall" && candidate.health > 0)
@@ -16050,7 +16086,7 @@ export default function App() {
       });
       ctx.restore();
 
-      const winner = combatActive ? !leftAlive ? getTeamLabel(rightTeam, "right") : !rightAlive ? getTeamLabel(leftTeam, "left") : null : null;
+      let winner = combatActive ? !leftAlive ? getTeamLabel(rightTeam, "right") : !rightAlive ? getTeamLabel(leftTeam, "left") : null : null;
       if (winner && !game.deathEffectStarted) {
         const defeated = (!leftAlive ? leftTeam : rightTeam).find((ball) => ball.health <= 0) || (!leftAlive ? left : right);
         spawnDeathShatter(defeated, time);
@@ -16596,7 +16632,7 @@ export default function App() {
                   <span className="text-base font-bold text-slate-200">{gameState.leftHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.leftHealth, 0, MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) / (MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) * 100}%`, backgroundColor: getHpBarColor(selectedBalls[0]) }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(clamp(gameState.leftHealth, 0, MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) / (MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) * 100)}%`, backgroundColor: getHpBarColor(selectedBalls[0]) }} />
                 </div>
               </Card>
 
@@ -16608,7 +16644,7 @@ export default function App() {
                   <span className="text-base font-bold text-slate-200">{gameState.rightHealth}</span>
                 </div>
                 <div className="w-full bg-slate-850 h-2 rounded-full mt-2 overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamp(gameState.rightHealth, 0, MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) / (MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) * 100}%`, backgroundColor: getHpBarColor(selectedBalls[1]) }} />
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(clamp(gameState.rightHealth, 0, MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) / (MAX_HEALTH * (battleMode === "2v2" ? 2 : 1)) * 100)}%`, backgroundColor: getHpBarColor(selectedBalls[1]) }} />
                 </div>
               </Card>
 
@@ -16697,15 +16733,15 @@ export default function App() {
               <CardContent className="space-y-5 p-5">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200 border-b border-slate-900 pb-2 text-center">Contestant Selector</h3>
 
-                <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-950/50 p-1.5 border border-slate-800">
+                <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-slate-950/50 p-1.5 border border-slate-800">
                   {["1v1", "2v2"].map((mode) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => changeBattleMode(mode)}
-                      className={`rounded-lg px-3 py-2 text-xs font-extrabold uppercase tracking-wider transition ${battleMode === mode ? "bg-sky-500 text-slate-950" : "text-slate-400 hover:bg-slate-800"}`}
+                      className={`rounded-lg px-2.5 py-2 text-[10px] font-extrabold uppercase tracking-wider transition ${battleMode === mode ? "bg-sky-500 text-slate-950" : "text-slate-400 hover:bg-slate-800"}`}
                     >
-                      {mode === "2v2" ? "2v2 Longform" : "1v1 Shortform"}
+                      {mode === "2v2" ? "2v2 Mode" : "1v1 Duel"}
                     </button>
                   ))}
                 </div>
