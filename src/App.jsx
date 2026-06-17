@@ -10295,7 +10295,6 @@ export default function App() {
     };
 
     const drawGunBall = (ball, currentTime) => {
-      const config = BALL_TYPES.gun;
       const R = ball.r;
       
       // 1. Draw the base ball suit shell (a black base circle)
