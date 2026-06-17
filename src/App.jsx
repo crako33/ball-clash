@@ -10280,7 +10280,72 @@ export default function App() {
     const drawGunBall = (ball, currentTime) => {
       const config = BALL_TYPES.gun;
       
-      // Save context to draw rotated gun barrels first
+      // Ball shell: black suit
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+      const metalGrad = ctx.createRadialGradient(
+        ball.x - ball.r * 0.2, ball.y - ball.r * 0.2, 2,
+        ball.x, ball.y, ball.r
+      );
+      metalGrad.addColorStop(0, "#1f2937");
+      metalGrad.addColorStop(0.55, "#020617");
+      metalGrad.addColorStop(1, "#000000");
+      ctx.fillStyle = metalGrad;
+      ctx.fill();
+
+      // Suit border
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.stroke();
+
+      // Suit lapels, shirt, and tie
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(ball.angle);
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.25, -ball.r * 0.58);
+      ctx.lineTo(ball.r * 0.18, 0);
+      ctx.lineTo(-ball.r * 0.25, ball.r * 0.58);
+      ctx.lineTo(-ball.r * 0.5, ball.r * 0.36);
+      ctx.lineTo(-ball.r * 0.18, 0);
+      ctx.lineTo(-ball.r * 0.5, -ball.r * 0.36);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.78, -ball.r * 0.55);
+      ctx.lineTo(-ball.r * 0.18, 0);
+      ctx.lineTo(-ball.r * 0.78, ball.r * 0.55);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.45, -ball.r * 0.5);
+      ctx.lineTo(ball.r * 0.12, 0);
+      ctx.lineTo(ball.r * 0.45, ball.r * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#020617";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.02, -ball.r * 0.28);
+      ctx.lineTo(ball.r * 0.16, 0);
+      ctx.lineTo(-ball.r * 0.02, ball.r * 0.36);
+      ctx.lineTo(-ball.r * 0.18, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.18, -ball.r * 0.45);
+      ctx.lineTo(-ball.r * 0.02, -ball.r * 0.28);
+      ctx.moveTo(-ball.r * 0.18, ball.r * 0.45);
+      ctx.lineTo(-ball.r * 0.02, ball.r * 0.36);
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Save context to draw rotated gun barrels on top
       ctx.save();
       ctx.translate(ball.x, ball.y);
       ctx.rotate(ball.angle);
@@ -10563,71 +10628,6 @@ export default function App() {
         ctx.arc(aimStart + 4, 0, 16, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.restore();
-
-      // Ball shell: black suit
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-      const metalGrad = ctx.createRadialGradient(
-        ball.x - ball.r * 0.2, ball.y - ball.r * 0.2, 2,
-        ball.x, ball.y, ball.r
-      );
-      metalGrad.addColorStop(0, "#1f2937");
-      metalGrad.addColorStop(0.55, "#020617");
-      metalGrad.addColorStop(1, "#000000");
-      ctx.fillStyle = metalGrad;
-      ctx.fill();
-
-      // Suit border
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = "#cbd5e1";
-      ctx.stroke();
-
-      // Suit lapels, shirt, and tie
-      ctx.save();
-      ctx.translate(ball.x, ball.y);
-      ctx.rotate(ball.angle);
-      ctx.fillStyle = "#f8fafc";
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.25, -ball.r * 0.58);
-      ctx.lineTo(ball.r * 0.18, 0);
-      ctx.lineTo(-ball.r * 0.25, ball.r * 0.58);
-      ctx.lineTo(-ball.r * 0.5, ball.r * 0.36);
-      ctx.lineTo(-ball.r * 0.18, 0);
-      ctx.lineTo(-ball.r * 0.5, -ball.r * 0.36);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#111827";
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.78, -ball.r * 0.55);
-      ctx.lineTo(-ball.r * 0.18, 0);
-      ctx.lineTo(-ball.r * 0.78, ball.r * 0.55);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#111827";
-      ctx.beginPath();
-      ctx.moveTo(ball.r * 0.45, -ball.r * 0.5);
-      ctx.lineTo(ball.r * 0.12, 0);
-      ctx.lineTo(ball.r * 0.45, ball.r * 0.5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#020617";
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.02, -ball.r * 0.28);
-      ctx.lineTo(ball.r * 0.16, 0);
-      ctx.lineTo(-ball.r * 0.02, ball.r * 0.36);
-      ctx.lineTo(-ball.r * 0.18, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = "#e5e7eb";
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.18, -ball.r * 0.45);
-      ctx.lineTo(-ball.r * 0.02, -ball.r * 0.28);
-      ctx.moveTo(-ball.r * 0.18, ball.r * 0.45);
-      ctx.lineTo(-ball.r * 0.02, ball.r * 0.36);
-      ctx.stroke();
-
       ctx.restore();
 
       if (ball.dog) {
