@@ -5867,7 +5867,7 @@ export default function App() {
             x: gun.x + Math.cos(gun.angle) * (gun.r + 15),
             y: gun.y + Math.sin(gun.angle) * (gun.r + 15),
             vx: Math.cos(throwAngle) * throwSpeed + gun.vx,
-            vy: Math.sin(throwAngle) * throwSpeed - 160 + gun.vy,
+            vy: Math.sin(throwAngle) * throwSpeed - 450 + gun.vy,
             r: 10,
             life: 999999,
             maxLife: 999999,
@@ -9578,9 +9578,9 @@ export default function App() {
           if (bullet.y > game.height - pad) {
             bullet.y = game.height - pad;
             const prevVy = bullet.vy;
-            bullet.vy = -bullet.vy * 0.45; // slightly bouncy
-            bullet.vx *= Math.exp(-2.5 * dt); // ground friction
-            bullet.spinSpeed *= Math.exp(-3.2 * dt); // spin friction
+            bullet.vy = -bullet.vy * 0.35; // slightly bouncy
+            bullet.vx *= Math.exp(-6.0 * dt); // high ground friction
+            bullet.spinSpeed *= Math.exp(-6.0 * dt); // high spin friction
             if (Math.abs(bullet.vx) < 5) bullet.vx = 0;
             if (Math.abs(bullet.spinSpeed) < 0.1) bullet.spinSpeed = 0;
             if (Math.abs(prevVy) > 28) {
@@ -9593,8 +9593,8 @@ export default function App() {
             bullet.spinSpeed *= -0.7;
             playSound("wallBounce", 0.4, 60);
           }
-          if (bullet.y < game.height - pad || Math.abs(bullet.vy) > 2) {
-            bullet.vy += 450 * dt; // gravity
+          if (bullet.y < game.height - pad) {
+            bullet.vy += 1400 * dt; // gravity
           }
           return true;
         }
