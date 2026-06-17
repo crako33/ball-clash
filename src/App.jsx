@@ -1501,7 +1501,6 @@ export default function App() {
   };
 
   const beginCombatFromIntro = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (!fightIntroRef.current.active) return;
     const left = gameRef.current.balls[0];
     const right = gameRef.current.balls[1];
@@ -1544,95 +1543,14 @@ export default function App() {
     playSound("gunReload");
   };
 
-  const speakIntro = (leftName, rightName) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-
-    const cleanLeft = leftName.replace(/\+/g, "and");
-    const cleanRight = rightName.replace(/\+/g, "and");
-
-    const segments = [
-      { text: cleanLeft, displayText: leftName, phase: 0 },
-      { text: "versus", displayText: "VERSUS", phase: 1 },
-      { text: cleanRight, displayText: rightName, phase: 2 },
-      { text: "who would win?", displayText: "WHO WOULD WIN?", phase: 3 },
-      { text: "fight!", displayText: "FIGHT!", phase: 4 }
-    ];
-
-    let currentSegmentIndex = 0;
-
-    const playNextSegment = () => {
-      if (!fightIntroRef.current.active) {
-        window.speechSynthesis.cancel();
-        return;
-      }
-
-      if (currentSegmentIndex >= segments.length) {
-        setTimeout(() => {
-          if (fightIntroRef.current.active) {
-            beginCombatFromIntro();
-          }
-        }, 600);
-        return;
-      }
-
-      const seg = segments[currentSegmentIndex];
-      fightIntroRef.current.phase = seg.phase;
-      fightIntroRef.current.phaseStartTime = performance.now();
-
-      if (seg.phase === 1) {
-        playSound("shieldBlock", 0.8, 120);
-      } else if (seg.phase === 4) {
-        playSound("explosion", 0.65, 180);
-      }
-
-      const utterance = new SpeechSynthesisUtterance(seg.text);
-      const voices = window.speechSynthesis.getVoices();
-      let selectedVoice = null;
-      const maleNames = ["david", "microsoft david", "james", "microsoft james", "daniel", "google uk english male", "male", "low"];
-      for (const name of maleNames) {
-        const found = voices.find(v => v.name.toLowerCase().includes(name));
-        if (found) {
-          selectedVoice = found;
-          break;
-        }
-      }
-      if (!selectedVoice && voices.length > 0) {
-        selectedVoice = voices.find(v => v.lang.toLowerCase().startsWith("en")) || voices[0];
-      }
-
-      if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.pitch = 0.65;
-      utterance.rate = 0.85;
-      utterance.volume = 1.0;
-
-      utterance.onend = () => {
-        currentSegmentIndex++;
-        playNextSegment();
-      };
-
-      utterance.onerror = (e) => {
-        console.error("SpeechSynthesis segment error:", e);
-        currentSegmentIndex++;
-        playNextSegment();
-      };
-
-      window.speechSynthesis.speak(utterance);
-    };
-
-    playNextSegment();
-  };
-
   const startFight = ({ record = false } = {}) => {
     const balls = initializeFightState();
     setGameStarted(false);
-    const leftName = getTeamLabel(balls, "left");
-    const rightName = getTeamLabel(balls, "right");
     setGameState({
       leftHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "left").length,
       rightHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "right").length,
-      leftName,
-      rightName,
+      leftName: getTeamLabel(balls, "left"),
+      rightName: getTeamLabel(balls, "right"),
       winner: null,
       running: false,
     });
@@ -1643,25 +1561,17 @@ export default function App() {
       recordingRequested: record,
       impactSoundPlayed: false,
       readySoundPlayed: false,
-      fightSoundPlayed: false,
-      leftName,
-      rightName,
-      phase: 0,
-      phaseStartTime: performance.now()
+      fightSoundPlayed: false
     };
     setFightIntroActive(true);
+    playAudioFile("/Balls%20Ready.%20Fight!.mp3", 1.05, 0.02);
     playSound("shieldCatch", 0.75, 80);
-    speakIntro(leftName, rightName);
     if (record && !isRecording) requestAnimationFrame(() => startFightRecording());
   };
 
-  const skipFightIntro = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    beginCombatFromIntro();
-  };
+  const skipFightIntro = () => beginCombatFromIntro();
 
   const resetToSelection = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
     fightIntroRef.current = { active: false, startTime: 0, recordingRequested: false, impactSoundPlayed: false, readySoundPlayed: false, fightSoundPlayed: false };
     setFightIntroActive(false);
     stopMatchMusic();
@@ -15511,13 +15421,11 @@ export default function App() {
       const right = game.balls[1];
       if (!intro.active || !left || !right) return;
 
+      const elapsed = time - intro.startTime;
       const easeOut = (v) => 1 - Math.pow(1 - clamp(v, 0, 1), 3);
       const easeIn = (v) => Math.pow(clamp(v, 0, 1), 3);
       const centerX = game.width / 2;
       const centerY = game.height / 2;
-      const phase = intro.phase ?? 0;
-      const phaseElapsed = time - (intro.phaseStartTime || intro.startTime);
-
       let shake = 0;
       if (!intro.initialized) {
         intro.initialized = true;
@@ -15534,41 +15442,32 @@ export default function App() {
             ball.trail = [];
           });
         } else {
-          intro.leftStartX = left.r + 42;
-          intro.rightStartX = game.width - right.r - 42;
-          intro.centerY = centerY;
-          intro.leftRecoilY = ((left.type.length * 17 + right.type.length * 31) % 2 === 0) ? -1 : 1;
-          intro.rightRecoilY = -intro.leftRecoilY;
-          left.x = intro.leftStartX;
-          right.x = intro.rightStartX;
-          left.y = centerY;
-          right.y = centerY;
-          left.vx = 0;
-          left.vy = 0;
-          right.vx = 0;
-          right.vy = 0;
-          left.trail = [];
-          right.trail = [];
-          game.balls.slice(2).forEach((ball) => {
-            ball.x = ball.side === "left" ? ball.r + 62 : game.width - ball.r - 62;
-            ball.y = game.height * 0.7;
-            ball.vx = 0;
-            ball.vy = 0;
-            ball.trail = [];
-          });
+        intro.leftStartX = left.r + 42;
+        intro.rightStartX = game.width - right.r - 42;
+        intro.centerY = centerY;
+        intro.leftRecoilY = ((left.type.length * 17 + right.type.length * 31) % 2 === 0) ? -1 : 1;
+        intro.rightRecoilY = -intro.leftRecoilY;
+        left.x = intro.leftStartX;
+        right.x = intro.rightStartX;
+        left.y = centerY;
+        right.y = centerY;
+        left.vx = 0;
+        left.vy = 0;
+        right.vx = 0;
+        right.vy = 0;
+        left.trail = [];
+        right.trail = [];
+        game.balls.slice(2).forEach((ball) => {
+          ball.x = ball.side === "left" ? ball.r + 62 : game.width - ball.r - 62;
+          ball.y = game.height * 0.7;
+          ball.vx = 0;
+          ball.vy = 0;
+          ball.trail = [];
+        });
         }
       }
-
-      if (phase === 3) {
-        shake = clamp((phaseElapsed / 1500) * 8, 0, 8);
-      } else if (phase === 4) {
-        const impactDuration = 280;
-        if (phaseElapsed < impactDuration) {
-          shake = (phaseElapsed / impactDuration) * 12;
-        } else {
-          shake = 22 * (1 - clamp((phaseElapsed - impactDuration) / 420, 0, 1));
-        }
-      }
+      if (elapsed > 250 && elapsed < FIGHT_INTRO_IMPACT_AT) shake = easeIn((elapsed - 250) / (FIGHT_INTRO_IMPACT_AT - 250)) * 13;
+      if (elapsed >= FIGHT_INTRO_IMPACT_AT && elapsed < 2050) shake = 20 * (1 - clamp((elapsed - FIGHT_INTRO_IMPACT_AT) / 420, 0, 1));
 
       drawArena();
       ctx.save();
@@ -15578,142 +15477,41 @@ export default function App() {
       ctx.clip();
 
       if (battleMode === "2v2") {
+        const chargeStart = 250;
+        const impactAt = FIGHT_INTRO_IMPACT_AT;
+        const chargeProgress = easeIn((elapsed - chargeStart) / (impactAt - chargeStart));
+        const recoilProgress = elapsed >= impactAt ? easeOut((elapsed - impactAt) / 420) : 0;
         game.balls.forEach((ball, index) => {
           const start = intro.teamStarts[index];
           const horizontalSign = ball.side === "left" ? -1 : 1;
           const verticalSign = ball.teamSlot === 0 ? -1 : 1;
           const impactX = centerX + horizontalSign * ball.r * 0.58;
           const impactY = centerY + verticalSign * ball.r * 0.58;
-
-          let targetX = start.x;
-          let targetY = start.y;
-
-          if (phase === 0) {
-            if (ball.side === "left") {
-              const slideProgress = easeOut(phaseElapsed / 600);
-              targetX = start.x + (centerX - 180 - start.x) * slideProgress;
-              targetY = start.y + ((centerY + verticalSign * 100) - start.y) * slideProgress;
-            } else {
-              targetX = game.width + ball.r + 100;
-              targetY = centerY + verticalSign * 100;
-            }
-          } else if (phase === 1) {
-            if (ball.side === "left") {
-              targetX = centerX - 180;
-              targetY = centerY + verticalSign * 100;
-            } else {
-              targetX = game.width + ball.r + 100;
-              targetY = centerY + verticalSign * 100;
-            }
-          } else if (phase === 2) {
-            if (ball.side === "left") {
-              targetX = centerX - 180;
-              targetY = centerY + verticalSign * 100;
-            } else {
-              const slideProgress = easeOut(phaseElapsed / 600);
-              targetX = (game.width + ball.r + 100) - ((game.width + ball.r + 100) - (centerX + 180)) * slideProgress;
-              targetY = centerY + verticalSign * 100;
-            }
-          } else if (phase === 3) {
-            const vibrate = Math.sin(time * 0.1) * 3;
-            if (ball.side === "left") {
-              targetX = centerX - 180 + vibrate;
-              targetY = centerY + verticalSign * 100;
-            } else {
-              targetX = centerX + 180 - vibrate;
-              targetY = centerY + verticalSign * 100;
-            }
-          } else if (phase === 4) {
-            const impactDuration = 280;
-            if (phaseElapsed < impactDuration) {
-              const p = easeIn(phaseElapsed / impactDuration);
-              const startX = ball.side === "left" ? centerX - 180 : centerX + 180;
-              const startY = centerY + verticalSign * 100;
-              targetX = startX + (impactX - startX) * p;
-              targetY = startY + (impactY - startY) * p;
-            } else {
-              const recoilElapsed = phaseElapsed - impactDuration;
-              const recoilProgress = easeOut(recoilElapsed / 420);
-              targetX = impactX + (start.x - impactX) * recoilProgress;
-              targetY = impactY + (start.y - impactY) * recoilProgress;
-
-              if (!intro.impactSoundPlayed) {
-                intro.impactSoundPlayed = true;
-                playSound("hammerHit", 1, 200);
-              }
-              if (!intro.fightSoundPlayed) {
-                intro.fightSoundPlayed = true;
-                playSound("explosion", 0.65, 180);
-              }
-            }
+          if (elapsed < chargeStart) {
+            ball.x = start.x;
+            ball.y = start.y;
+          } else if (elapsed < impactAt) {
+            ball.x = start.x + (impactX - start.x) * chargeProgress;
+            ball.y = start.y + (impactY - start.y) * chargeProgress;
+          } else {
+            const dx = start.x - impactX;
+            const dy = start.y - impactY;
+            const length = Math.max(1, Math.hypot(dx, dy));
+            ball.x = impactX + (dx / length) * recoilProgress * 142;
+            ball.y = impactY + (dy / length) * recoilProgress * 108;
           }
-
-          ball.x = targetX;
-          ball.y = targetY;
           ball.trail = [...(ball.trail || []), { x: ball.x, y: ball.y }].slice(-MAX_TRAIL_POINTS);
         });
 
         game.balls.forEach(drawBallTrail);
         game.balls.forEach((ball) => drawBall(ball, game.simTime));
-
-        // Draw Texts
-        if (phase === 0) {
-          drawIntroText(`${intro.leftName}`, centerX, centerY - 15, 30, "#38bdf8", 1);
-        } else if (phase === 1) {
-          drawIntroText("VERSUS", centerX, centerY - 15, 36, "#facc15", 1);
-        } else if (phase === 2) {
-          drawIntroText(`${intro.rightName}`, centerX, centerY - 15, 30, "#f43f5e", 1);
-        } else if (phase === 3) {
-          drawIntroText("WHO WOULD WIN?", centerX, centerY - 15, 34, "#ef4444", 1);
-        } else if (phase === 4) {
-          const impactDuration = 280;
-          const flash = phaseElapsed < impactDuration ? 0 : 1 - clamp((phaseElapsed - impactDuration) / 480, 0, 1);
-          const pulse = 1 + Math.sin(time * 0.02) * 0.1;
-          drawIntroText("FIGHT!", centerX, centerY, Math.round(48 * pulse), "#ef4444", flash);
-        }
-        ctx.restore();
-        return;
-      }
-
-      let leftX = left.x;
-      let rightX = right.x;
-      let leftY = centerY;
-      let rightY = centerY;
-
-      if (phase === 0) {
-        const slideProgress = easeOut(phaseElapsed / 600);
-        leftX = (left.r + 42) + (centerX - 180 - (left.r + 42)) * slideProgress;
-        rightX = game.width + right.r + 100;
-      } else if (phase === 1) {
-        leftX = centerX - 180;
-        rightX = game.width + right.r + 100;
-      } else if (phase === 2) {
-        leftX = centerX - 180;
-        const slideProgress = easeOut(phaseElapsed / 600);
-        rightX = (game.width + right.r + 100) - ((game.width + right.r + 100) - (centerX + 180)) * slideProgress;
-      } else if (phase === 3) {
-        const vibrate = Math.sin(time * 0.1) * 3;
-        leftX = centerX - 180 + vibrate;
-        rightX = centerX + 180 - vibrate;
-      } else if (phase === 4) {
-        const impactDuration = 280;
-        if (phaseElapsed < impactDuration) {
-          const p = easeIn(phaseElapsed / impactDuration);
-          leftX = (centerX - 180) + (centerX - left.r - 4 - (centerX - 180)) * p;
-          rightX = (centerX + 180) - ((centerX + 180) - (centerX + right.r + 4)) * p;
+        if (elapsed < impactAt) {
+          game.balls.forEach((ball) => {
+            const labelY = ball.teamSlot === 0 ? ball.y + ball.r + 22 : ball.y - ball.r - 22;
+            drawIntroText(ball.name, ball.x, labelY, 12, BALL_TYPES[ball.type].color, 0.9, ball.type === "eightBall");
+          });
+          drawIntroText("2V2 TEAM CLASH", centerX, centerY - 8, 28, "#f8fafc", 1);
         } else {
-          const recoilElapsed = phaseElapsed - impactDuration;
-          const p = easeOut(recoilElapsed / 420);
-          const arc = Math.sin(p * Math.PI) * 28;
-          leftX = centerX - left.r - 4 - p * 138;
-          rightX = centerX + right.r + 4 + p * 138;
-          leftY = centerY + (intro.leftRecoilY || -1) * (p * 92 + arc);
-          rightY = centerY + (intro.rightRecoilY || 1) * (p * 92 + arc * 0.8);
-          left.vx = -520;
-          left.vy = (intro.leftRecoilY || -1) * 300;
-          right.vx = 520;
-          right.vy = (intro.rightRecoilY || 1) * 300;
-
           if (!intro.impactSoundPlayed) {
             intro.impactSoundPlayed = true;
             playSound("hammerHit", 1, 200);
@@ -15722,7 +15520,56 @@ export default function App() {
             intro.fightSoundPlayed = true;
             playSound("explosion", 0.65, 180);
           }
+          const flash = 1 - clamp((elapsed - impactAt) / 480, 0, 1);
+          ctx.save();
+          ctx.globalAlpha = flash * 0.75;
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(0, 0, game.width, game.height);
+          ctx.restore();
+          drawIntroText("FIGHT!", centerX, centerY, 42, "#ef4444", flash);
         }
+        ctx.restore();
+        return;
+      }
+
+      let leftX = intro.leftStartX || left.x;
+      let rightX = intro.rightStartX || right.x;
+      let leftY = intro.centerY || centerY;
+      let rightY = intro.centerY || centerY;
+      const chargeStart = 250;
+      const impactAt = FIGHT_INTRO_IMPACT_AT;
+      if (elapsed >= chargeStart && elapsed < impactAt) {
+        const p = easeIn((elapsed - chargeStart) / (impactAt - chargeStart));
+        leftX = (intro.leftStartX || leftX) + (centerX - left.r - (intro.leftStartX || leftX)) * p;
+        rightX = (intro.rightStartX || rightX) - ((intro.rightStartX || rightX) - (centerX + right.r)) * p;
+        left.vx = 720 + p * 360;
+        right.vx = -720 - p * 360;
+        for (let i = 0; i < 9; i++) {
+          const trailP = i / 9;
+          ctx.globalAlpha = (1 - trailP) * 0.22;
+          ctx.fillStyle = BALL_TYPES[left.type].color;
+          ctx.beginPath(); ctx.arc(leftX - 18 - i * 16, leftY + Math.sin(i) * 3, left.r * (0.7 - trailP * 0.28), 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = BALL_TYPES[right.type].color;
+          ctx.beginPath(); ctx.arc(rightX + 18 + i * 16, rightY + Math.cos(i) * 3, right.r * (0.7 - trailP * 0.28), 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        for (let i = 0; i < 16; i++) {
+          const dustX = i % 2 === 0 ? leftX - 34 - Math.random() * 32 : rightX + 34 + Math.random() * 32;
+          const dustY = centerY + 30 + (Math.random() - 0.5) * 20;
+          ctx.fillStyle = "rgba(203, 213, 225, 0.55)";
+          ctx.fillRect(dustX, dustY, 4 + Math.random() * 6, 4 + Math.random() * 6);
+        }
+      } else if (elapsed >= impactAt) {
+        const recoil = easeOut(clamp((elapsed - impactAt) / 420, 0, 1));
+        const arc = Math.sin(recoil * Math.PI) * 28;
+        leftX = centerX - left.r - 4 - recoil * 138;
+        rightX = centerX + right.r + 4 + recoil * 138;
+        leftY = centerY + (intro.leftRecoilY || -1) * (recoil * 92 + arc);
+        rightY = centerY + (intro.rightRecoilY || 1) * (recoil * 92 + arc * 0.8);
+        left.vx = -520;
+        left.vy = (intro.leftRecoilY || -1) * 300;
+        right.vx = 520;
+        right.vy = (intro.rightRecoilY || 1) * 300;
       }
 
       left.x = leftX;
@@ -15736,16 +15583,18 @@ export default function App() {
       drawBall(left, game.simTime);
       drawBall(right, game.simTime);
       game.balls.slice(2).forEach((ball) => drawBall(ball, game.simTime));
+      if (elapsed < impactAt) {
+        drawIntroText(left.name, left.x, left.y - left.r - 28, 14, BALL_TYPES[left.type].color, 0.92, left.type === "eightBall");
+        drawIntroText(right.name, right.x, right.y - right.r - 28, 14, BALL_TYPES[right.type].color, 0.92, right.type === "eightBall");
+        game.balls.slice(2).forEach((ball) => drawIntroText(ball.name, ball.x, ball.y - ball.r - 24, 12, BALL_TYPES[ball.type].color, 0.86, ball.type === "eightBall"));
+      }
 
-      game.balls.forEach((ball) => {
-        if (ball.x > 0 && ball.x < game.width) {
-          const labelY = ball.y - ball.r - 24;
-          drawIntroText(ball.name, ball.x, labelY, 13, BALL_TYPES[ball.type].color, 0.85, ball.type === "eightBall");
+      if (elapsed >= impactAt && elapsed < impactAt + 520) {
+        const p = clamp((elapsed - impactAt) / 520, 0, 1);
+        if (!intro.impactSoundPlayed) {
+          intro.impactSoundPlayed = true;
+          playSound("hammerHit", 1, 200);
         }
-      });
-
-      if (phase === 4 && phaseElapsed >= 280 && phaseElapsed < 280 + 520) {
-        const p = clamp((phaseElapsed - 280) / 520, 0, 1);
         ctx.save();
         ctx.globalAlpha = 1 - p;
         ctx.fillStyle = "#f8fafc";
@@ -15762,19 +15611,20 @@ export default function App() {
         ctx.restore();
       }
 
-      if (phase === 0) {
-        drawIntroText(`${intro.leftName}`, centerX, centerY - 15, 30, BALL_TYPES[left.type]?.color || "#38bdf8", 1, left.type === "eightBall");
-      } else if (phase === 1) {
-        drawIntroText("VERSUS", centerX, centerY - 15, 36, "#facc15", 1);
-      } else if (phase === 2) {
-        drawIntroText(`${intro.rightName}`, centerX, centerY - 15, 30, BALL_TYPES[right.type]?.color || "#f43f5e", 1, right.type === "eightBall");
-      } else if (phase === 3) {
-        drawIntroText("WHO WOULD WIN?", centerX, centerY - 15, 34, "#ef4444", 1);
-      } else if (phase === 4) {
-        const pulse = 1 + Math.sin(time * 0.02) * 0.1;
-        const impactDuration = 280;
-        const flash = phaseElapsed < impactDuration ? 0 : 1 - clamp((phaseElapsed - impactDuration) / 480, 0, 1);
-        drawIntroText("FIGHT!", centerX, centerY - 15, Math.round(54 * pulse), "#ef4444", flash);
+      if (elapsed < impactAt) {
+        if (!intro.readySoundPlayed) {
+          intro.readySoundPlayed = true;
+          playSound("shieldBlock", 0.8, 120);
+        }
+        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, BALL_TYPES[left.type]?.color || "#38bdf8", 1, left.type === "eightBall");
+        drawIntroText("VERSUS", centerX, centerY - 15, 22, "#f8fafc", 1);
+        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, BALL_TYPES[right.type]?.color || "#f43f5e", 1, right.type === "eightBall");
+      } else {
+        if (!intro.fightSoundPlayed) {
+          intro.fightSoundPlayed = true;
+          playSound("explosion", 0.65, 180);
+        }
+        drawIntroText("WHO WOULD WIN?", centerX, centerY - 15, 36, "#ef4444", 1);
       }
       ctx.restore();
     };
@@ -15810,16 +15660,7 @@ export default function App() {
         const introElapsed = time - fightIntroRef.current.startTime;
         drawFightIntro(time);
         setElapsedTime(0);
-        
-        const hasSpeech = typeof window !== "undefined" && window.speechSynthesis;
-        const phaseStartTime = fightIntroRef.current.phaseStartTime || fightIntroRef.current.startTime;
-        const timeInPhase = time - phaseStartTime;
-        
-        const forceEnd = timeInPhase > 4800; 
-        const fallbackEnd = !hasSpeech && (introElapsed >= 5500); 
-        
-        if (forceEnd || fallbackEnd) {
-          if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (introElapsed >= FIGHT_INTRO_DURATION) {
           beginCombatFromIntro();
         }
         animationRef.current = requestAnimationFrame(loop);
