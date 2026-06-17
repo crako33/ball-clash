@@ -5858,8 +5858,8 @@ export default function App() {
           gun.dogRespawnAt = Infinity;
 
           // Spawn the thrown old gun!
-          const throwAngle = gun.angle + Math.PI + (Math.random() - 0.5) * 1.2;
-          const throwSpeed = 280 + Math.random() * 80;
+          const throwAngle = gun.angle + (Math.random() - 0.5) * 0.3;
+          const throwSpeed = 380 + Math.random() * 80;
           game.bullets = game.bullets || [];
           game.bullets.push({
             ownerId: gun.id,
@@ -5867,10 +5867,10 @@ export default function App() {
             x: gun.x + Math.cos(gun.angle) * (gun.r + 15),
             y: gun.y + Math.sin(gun.angle) * (gun.r + 15),
             vx: Math.cos(throwAngle) * throwSpeed + gun.vx,
-            vy: Math.sin(throwAngle) * throwSpeed - 120 + gun.vy,
+            vy: Math.sin(throwAngle) * throwSpeed - 160 + gun.vy,
             r: 10,
-            life: 2.2,
-            maxLife: 2.2,
+            life: 999999,
+            maxLife: 999999,
             angle: gun.angle,
             spinSpeed: (Math.random() > 0.5 ? 1 : -1) * (14 + Math.random() * 8),
             cannotReflect: true,
@@ -9564,8 +9564,10 @@ export default function App() {
       game.bullets = game.bullets.filter((bullet) => {
         if (bullet.isCosmetic || bullet.kind === "thrownGun") {
           bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
-          bullet.life -= dt;
-          if (bullet.life <= 0) return false;
+          if (bullet.kind !== "thrownGun") {
+            bullet.life -= dt;
+            if (bullet.life <= 0) return false;
+          }
           
           bullet.angle = (bullet.angle || 0) + bullet.spinSpeed * dt;
           let bounced = false;
@@ -9573,12 +9575,27 @@ export default function App() {
           if (bullet.x < pad) { bullet.x = pad; bullet.vx = -bullet.vx * 0.6; bullet.vy *= 0.9; bounced = true; }
           if (bullet.x > game.width - pad) { bullet.x = game.width - pad; bullet.vx = -bullet.vx * 0.6; bullet.vy *= 0.9; bounced = true; }
           if (bullet.y < pad) { bullet.y = pad; bullet.vy = -bullet.vy * 0.6; bullet.vx *= 0.9; bounced = true; }
-          if (bullet.y > game.height - pad) { bullet.y = game.height - pad; bullet.vy = -bullet.vy * 0.6; bullet.vx *= 0.9; bounced = true; }
+          if (bullet.y > game.height - pad) {
+            bullet.y = game.height - pad;
+            const prevVy = bullet.vy;
+            bullet.vy = -bullet.vy * 0.45; // slightly bouncy
+            bullet.vx *= Math.exp(-2.5 * dt); // ground friction
+            bullet.spinSpeed *= Math.exp(-3.2 * dt); // spin friction
+            if (Math.abs(bullet.vx) < 5) bullet.vx = 0;
+            if (Math.abs(bullet.spinSpeed) < 0.1) bullet.spinSpeed = 0;
+            if (Math.abs(prevVy) > 28) {
+              bounced = true;
+            } else {
+              bullet.vy = 0;
+            }
+          }
           if (bounced) {
             bullet.spinSpeed *= -0.7;
             playSound("wallBounce", 0.4, 60);
           }
-          bullet.vy += 450 * dt; // gravity
+          if (bullet.y < game.height - pad || Math.abs(bullet.vy) > 2) {
+            bullet.vy += 450 * dt; // gravity
+          }
           return true;
         }
 
