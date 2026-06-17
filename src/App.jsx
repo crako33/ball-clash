@@ -10320,23 +10320,77 @@ export default function App() {
       ctx.translate(ball.x, ball.y);
       ctx.rotate(ball.angle);
 
-      // Face area (skin tone)
+      // A. Suit Jacket base at the front
+      ctx.fillStyle = "#09090b";
       ctx.beginPath();
-      ctx.ellipse(-0.05 * R, 0, 0.65 * R, 0.6 * R, 0, 0, Math.PI * 2);
+      ctx.arc(0, 0, R, -Math.PI * 0.28, Math.PI * 0.28);
+      ctx.lineTo(0.3 * R, 0.3 * R);
+      ctx.lineTo(0.3 * R, -0.3 * R);
+      ctx.closePath();
+      ctx.fill();
+
+      // B. White Shirt Collar V-shape
+      ctx.fillStyle = "#fafafa";
+      ctx.beginPath();
+      ctx.moveTo(0.25 * R, 0);
+      ctx.lineTo(0.72 * R, -0.35 * R);
+      ctx.lineTo(0.92 * R, -0.32 * R);
+      ctx.lineTo(0.52 * R, 0);
+      ctx.lineTo(0.92 * R, 0.32 * R);
+      ctx.lineTo(0.72 * R, 0.35 * R);
+      ctx.closePath();
+      ctx.fill();
+
+      // C. Black Tie
+      ctx.fillStyle = "#18181b";
+      ctx.beginPath();
+      ctx.moveTo(0.35 * R, -0.06 * R);
+      ctx.lineTo(0.35 * R, 0.06 * R);
+      ctx.lineTo(0.55 * R, 0.1 * R);
+      ctx.lineTo(0.98 * R, 0.07 * R);
+      ctx.lineTo(1.02 * R, 0);
+      ctx.lineTo(0.98 * R, -0.07 * R);
+      ctx.lineTo(0.55 * R, -0.1 * R);
+      ctx.closePath();
+      ctx.fill();
+
+      // Tie knot
+      ctx.fillStyle = "#09090b";
+      ctx.beginPath();
+      ctx.moveTo(0.35 * R, -0.07 * R);
+      ctx.lineTo(0.35 * R, 0.07 * R);
+      ctx.lineTo(0.48 * R, 0.09 * R);
+      ctx.lineTo(0.48 * R, -0.09 * R);
+      ctx.closePath();
+      ctx.fill();
+
+      // Jacket Lapels highlight lines
+      ctx.strokeStyle = "#3f3f46";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0.72 * R, -0.35 * R);
+      ctx.lineTo(0.3 * R, -0.35 * R);
+      ctx.lineTo(0.3 * R, 0.35 * R);
+      ctx.lineTo(0.72 * R, 0.35 * R);
+      ctx.stroke();
+
+      // D. Face area (skin tone)
+      ctx.beginPath();
+      ctx.ellipse(-0.08 * R, 0, 0.65 * R, 0.58 * R, 0, 0, Math.PI * 2);
       ctx.fillStyle = "#d69f69";
       ctx.fill();
 
-      // Beard path
+      // E. Beard path
       ctx.fillStyle = "#1c1917";
       ctx.beginPath();
-      ctx.moveTo(-0.2 * R, -0.5 * R);
-      ctx.quadraticCurveTo(0.1 * R, -0.5 * R, 0.5 * R, -0.2 * R);
+      ctx.moveTo(-0.25 * R, -0.5 * R);
+      ctx.quadraticCurveTo(0.1 * R, -0.48 * R, 0.5 * R, -0.2 * R);
       ctx.lineTo(0.5 * R, 0.2 * R);
-      ctx.quadraticCurveTo(0.1 * R, 0.5 * R, -0.2 * R, 0.5 * R);
-      ctx.lineTo(-0.1 * R, 0.35 * R);
+      ctx.quadraticCurveTo(0.1 * R, 0.48 * R, -0.25 * R, 0.5 * R);
+      ctx.lineTo(-0.15 * R, 0.35 * R);
       ctx.quadraticCurveTo(0.2 * R, 0.3 * R, 0.35 * R, 0.15 * R);
       ctx.lineTo(0.35 * R, -0.15 * R);
-      ctx.quadraticCurveTo(0.2 * R, -0.3 * R, -0.1 * R, -0.35 * R);
+      ctx.quadraticCurveTo(0.2 * R, -0.3 * R, -0.15 * R, -0.35 * R);
       ctx.closePath();
       ctx.fill();
 
@@ -10359,7 +10413,7 @@ export default function App() {
       ctx.closePath();
       ctx.fill();
 
-      // Scars
+      // F. Scars
       ctx.strokeStyle = "#991b1b";
       ctx.lineWidth = 1.8;
       ctx.lineCap = "round";
@@ -10394,7 +10448,7 @@ export default function App() {
       ctx.lineTo(0.06 * R, 0.26 * R);
       ctx.stroke();
 
-      // Hair
+      // G. Hair
       ctx.fillStyle = "#0c0a09";
       ctx.beginPath();
       ctx.arc(0, 0, R, Math.PI * 0.5, Math.PI * 1.5);
@@ -10421,60 +10475,6 @@ export default function App() {
       ctx.quadraticCurveTo(-0.4 * R, -0.15 * R, -0.28 * R, -0.05 * R);
       ctx.moveTo(-0.6 * R, 0);
       ctx.quadraticCurveTo(-0.4 * R, 0.15 * R, -0.28 * R, 0.05 * R);
-      ctx.stroke();
-
-      // Suit Jacket base at the front
-      ctx.fillStyle = "#09090b";
-      ctx.beginPath();
-      ctx.arc(0, 0, R, -Math.PI * 0.28, Math.PI * 0.28);
-      ctx.lineTo(0.3 * R, 0.3 * R);
-      ctx.lineTo(0.3 * R, -0.3 * R);
-      ctx.closePath();
-      ctx.fill();
-
-      // White Shirt Collar V-shape
-      ctx.fillStyle = "#fafafa";
-      ctx.beginPath();
-      ctx.moveTo(0.32 * R, 0);
-      ctx.lineTo(0.72 * R, -0.35 * R);
-      ctx.lineTo(0.92 * R, -0.32 * R);
-      ctx.lineTo(0.52 * R, 0);
-      ctx.lineTo(0.92 * R, 0.32 * R);
-      ctx.lineTo(0.72 * R, 0.35 * R);
-      ctx.closePath();
-      ctx.fill();
-
-      // Black Tie
-      ctx.fillStyle = "#18181b";
-      ctx.beginPath();
-      ctx.moveTo(0.42 * R, -0.06 * R);
-      ctx.lineTo(0.42 * R, 0.06 * R);
-      ctx.lineTo(0.55 * R, 0.1 * R);
-      ctx.lineTo(0.98 * R, 0.07 * R);
-      ctx.lineTo(1.02 * R, 0);
-      ctx.lineTo(0.98 * R, -0.07 * R);
-      ctx.lineTo(0.55 * R, -0.1 * R);
-      ctx.closePath();
-      ctx.fill();
-
-      // Tie knot
-      ctx.fillStyle = "#09090b";
-      ctx.beginPath();
-      ctx.moveTo(0.42 * R, -0.07 * R);
-      ctx.lineTo(0.42 * R, 0.07 * R);
-      ctx.lineTo(0.52 * R, 0.09 * R);
-      ctx.lineTo(0.52 * R, -0.09 * R);
-      ctx.closePath();
-      ctx.fill();
-
-      // Jacket Lapels highlight lines
-      ctx.strokeStyle = "#3f3f46";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(0.72 * R, -0.35 * R);
-      ctx.lineTo(0.35 * R, -0.35 * R);
-      ctx.lineTo(0.35 * R, 0.35 * R);
-      ctx.lineTo(0.72 * R, 0.35 * R);
       ctx.stroke();
 
       ctx.restore();
