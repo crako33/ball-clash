@@ -2658,10 +2658,11 @@ export default function App() {
                     const isRapidShot = ball.permanentRapidFire;
                     const piercesDefense = isRapidShot && (ball.rapidPierceShotsRemaining || 0) > 0;
                     if (piercesDefense) ball.rapidPierceShotsRemaining -= 1;
+                    const spawnOffset = ball.permanentRapidFire ? (ball.r + 48) : (ball.r + 36);
                     localBullets.push({
                       ownerId: ball.id, targetSide: enemy.side,
-                      x: ball.x + Math.cos(ball.angle) * (ball.r + 26),
-                      y: ball.y + Math.sin(ball.angle) * (ball.r + 26),
+                      x: ball.x + Math.cos(ball.angle) * spawnOffset,
+                      y: ball.y + Math.sin(ball.angle) * spawnOffset,
                       vx: Math.cos(ball.angle) * balance.gun.bulletSpeed,
                       vy: Math.sin(ball.angle) * balance.gun.bulletSpeed,
                       r: 5, damage: balance.gun.bulletDamage, life: balance.gun.bulletLife, piercesDefense
@@ -5855,6 +5856,27 @@ export default function App() {
           gun.permanentRapidFire = true;
           gun.rapidPierceShotsRemaining = gunBal.rapidPierceShots || 2;
           gun.dogRespawnAt = Infinity;
+
+          // Spawn the thrown old gun!
+          const throwAngle = gun.angle + Math.PI + (Math.random() - 0.5) * 1.2;
+          const throwSpeed = 280 + Math.random() * 80;
+          game.bullets = game.bullets || [];
+          game.bullets.push({
+            ownerId: gun.id,
+            kind: "thrownGun",
+            x: gun.x + Math.cos(gun.angle) * (gun.r + 15),
+            y: gun.y + Math.sin(gun.angle) * (gun.r + 15),
+            vx: Math.cos(throwAngle) * throwSpeed + gun.vx,
+            vy: Math.sin(throwAngle) * throwSpeed - 120 + gun.vy,
+            r: 10,
+            life: 2.2,
+            maxLife: 2.2,
+            angle: gun.angle,
+            spinSpeed: (Math.random() > 0.5 ? 1 : -1) * (14 + Math.random() * 8),
+            cannotReflect: true,
+            isCosmetic: true
+          });
+
           game.floatingTexts = game.floatingTexts || [];
           ["My DOOG!!", "You Hurt My DOOG"].forEach((text, index) => {
             game.floatingTexts.push({
@@ -5911,8 +5933,9 @@ export default function App() {
       const piercesDefense = isRapidShot && (gun.rapidPierceShotsRemaining || 0) > 0;
       if (piercesDefense) gun.rapidPierceShotsRemaining -= 1;
 
-      const mX = gun.x + Math.cos(gun.angle) * (gun.r + 42);
-      const mY = gun.y + Math.sin(gun.angle) * (gun.r + 42);
+      const muzzleOffset = gun.permanentRapidFire ? (gun.r + 48) : (gun.r + 36);
+      const mX = gun.x + Math.cos(gun.angle) * muzzleOffset;
+      const mY = gun.y + Math.sin(gun.angle) * muzzleOffset;
       game.bullets.push({
         ownerId: gun.id, targetSide: target.side, x: mX, y: mY,
         vx: Math.cos(gun.angle) * gunBal.bulletSpeed,
@@ -9539,6 +9562,26 @@ export default function App() {
 
     const updateBullets = (dt, balls) => {
       game.bullets = game.bullets.filter((bullet) => {
+        if (bullet.isCosmetic || bullet.kind === "thrownGun") {
+          bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
+          bullet.life -= dt;
+          if (bullet.life <= 0) return false;
+          
+          bullet.angle = (bullet.angle || 0) + bullet.spinSpeed * dt;
+          let bounced = false;
+          const pad = 18 + bullet.r;
+          if (bullet.x < pad) { bullet.x = pad; bullet.vx = -bullet.vx * 0.6; bullet.vy *= 0.9; bounced = true; }
+          if (bullet.x > game.width - pad) { bullet.x = game.width - pad; bullet.vx = -bullet.vx * 0.6; bullet.vy *= 0.9; bounced = true; }
+          if (bullet.y < pad) { bullet.y = pad; bullet.vy = -bullet.vy * 0.6; bullet.vx *= 0.9; bounced = true; }
+          if (bullet.y > game.height - pad) { bullet.y = game.height - pad; bullet.vy = -bullet.vy * 0.6; bullet.vx *= 0.9; bounced = true; }
+          if (bounced) {
+            bullet.spinSpeed *= -0.7;
+            playSound("wallBounce", 0.4, 60);
+          }
+          bullet.vy += 450 * dt; // gravity
+          return true;
+        }
+
         bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
         if (bullet.kind !== "dragonFireball") {
           bullet.life -= dt;
@@ -10256,105 +10299,268 @@ export default function App() {
       if (ball.reloadUntil > currentTime) {
         const reloadDuration = game.balance.gun.reloadTime;
         const timeRemaining = ball.reloadUntil - currentTime;
-        const progress = 1 - Math.max(0, Math.min(1, timeRemaining / reloadDuration)); // 0 to 1
+        const elapsed = reloadDuration - timeRemaining;
+        const spinDuration = 350; // spin completes in 350ms
+        const progress = Math.min(1, elapsed / spinDuration);
         // Spin 1 full rotation (2 * Math.PI)
         ctx.rotate(progress * Math.PI * 2);
       }
       
-      const scale = 0.25;
-      const pivotX = 40;
-      const pivotY = 60;
-      
-      const colors = {
-        "#111": [
-          [48, 40, 128, 8],
-          [200, 52, 12, 20],
-          [208, 44, 8, 8],
-          [100, 100, 36, 8],
-          [116, 96, 12, 24],
-          [84, 92, 20, 12],
-          [76, 104, 32, 16],
-          [48, 148, 32, 8],
-          [40, 40, 8, 8],
-          [40, 72, 8, 8],
-          [192, 72, 8, 8]
-        ],
-        "#5b5b58": [
-          [40, 48, 160, 24]
-        ],
-        "#3d3d3b": [
-          [48, 72, 144, 16]
-        ],
-        "#222": [
-          [56, 88, 96, 8]
-        ],
-        "#7a7a77": [
-          [72, 52, 64, 4]
-        ],
-        "#2b2b2a": [
-          [144, 52, 32, 4],
-          [64, 88, 36, 16],
-          [60, 104, 40, 16],
-          [56, 120, 40, 16],
-          [52, 136, 36, 12]
-        ],
-        "#1b1b1a": [
-          [56, 56, 8, 20],
-          [68, 56, 4, 20],
-          [80, 56, 4, 20],
-          [92, 56, 4, 20],
-          [104, 56, 4, 20]
-        ],
-        "#333": [
-          [120, 44, 28, 8]
-        ],
-        "#555": [
-          [128, 48, 28, 8],
-          [68, 100, 20, 4],
-          [64, 120, 20, 4],
-          [60, 140, 20, 4]
-        ],
-        "#2c2c2a": [
-          [88, 88, 36, 12]
-        ],
-        "#d8d0bd": [
-          [120, 100, 16, 16]
-        ]
-      };
-
-      for (const [color, rectList] of Object.entries(colors)) {
-        ctx.fillStyle = color;
-        for (let i = 0; i < rectList.length; i++) {
-          const r = rectList[i];
-          ctx.fillRect(
-            (r[0] - pivotX) * scale,
-            (r[1] - pivotY) * scale,
-            r[2] * scale,
-            r[3] * scale
-          );
+      if (ball.permanentRapidFire) {
+        // Draw the rapid fire rifle (900x300 SVG pixel-art)
+        const scale = 0.08;
+        const pivotX = 240;
+        const pivotY = 140;
+        
+        ctx.save();
+        ctx.scale(scale, scale);
+        ctx.translate(-pivotX, -pivotY);
+        
+        const colors = {
+          "#111": [
+            [58, 114, 132, 26],
+            [72, 162, 20, 58],
+            [82, 202, 28, 22],
+            [262, 122, 20, 44],
+            [282, 110, 205, 38],
+            [292, 96, 280, 14],
+            [304, 88, 8, 8],
+            [324, 88, 8, 8],
+            [344, 88, 8, 8],
+            [364, 88, 8, 8],
+            [384, 88, 8, 8],
+            [404, 88, 8, 8],
+            [424, 88, 8, 8],
+            [444, 88, 8, 8],
+            [464, 88, 8, 8],
+            [484, 88, 8, 8],
+            [504, 88, 8, 8],
+            [524, 88, 8, 8],
+            [544, 88, 8, 8],
+            [826, 124, 54, 18],
+            [872, 118, 22, 30],
+            [284, 252, 48, 18],
+            [392, 172, 70, 14],
+            [386, 184, 16, 42],
+            [448, 184, 16, 42],
+            [402, 220, 50, 10],
+            [336, 166, 28, 18],
+            [416, 152, 10, 32]
+          ],
+          "#2b2b2b": [
+            [64, 120, 120, 42]
+          ],
+          "#222": [
+            [92, 176, 78, 18]
+          ],
+          "#3b3b3b": [
+            [78, 128, 92, 24]
+          ],
+          "#4a4a4a": [
+            [104, 166, 56, 8],
+            [532, 152, 276, 6]
+          ],
+          "#191919": [
+            [190, 132, 84, 20],
+            [306, 154, 120, 10],
+            [296, 198, 42, 72]
+          ],
+          "#2d2d2d": [
+            [214, 126, 42, 32],
+            [294, 118, 174, 54],
+            [520, 146, 304, 34],
+            [312, 188, 26, 70]
+          ],
+          "#171717": [
+            [320, 126, 70, 24]
+          ],
+          "#1e1e1e": [
+            [402, 126, 58, 32]
+          ],
+          "#262626": [
+            [474, 128, 38, 44]
+          ],
+          "#1c1c1c": [
+            [340, 174, 64, 12]
+          ],
+          "#151515": [
+            [510, 112, 318, 34]
+          ],
+          "#0d0d0d": [
+            [540, 124, 250, 10],
+            [548, 162, 246, 8]
+          ],
+          "#eee": [
+            [586, 116, 14, 32],
+            [618, 116, 14, 32],
+            [650, 116, 14, 32],
+            [682, 116, 14, 32],
+            [714, 116, 14, 32],
+            [746, 116, 14, 32],
+            [778, 116, 14, 32],
+            [420, 184, 18, 38]
+          ],
+          "#ddd": [
+            [852, 128, 12, 14],
+            [878, 124, 8, 8],
+            [878, 140, 8, 8]
+          ],
+          "#232323": [
+            [306, 168, 48, 34]
+          ],
+          "#3f3f3f": [
+            [318, 210, 16, 8],
+            [314, 234, 16, 8]
+          ],
+          "#252525": [
+            [456, 166, 72, 58]
+          ],
+          "#555": [
+            [348, 158, 12, 12],
+            [80, 130, 98, 8]
+          ],
+          "#444": [
+            [474, 118, 26, 10],
+            [306, 106, 250, 6],
+            [320, 122, 72, 6]
+          ]
+        };
+        
+        for (const [color, rectList] of Object.entries(colors)) {
+          ctx.fillStyle = color;
+          for (let i = 0; i < rectList.length; i++) {
+            const r = rectList[i];
+            ctx.fillRect(r[0], r[1], r[2], r[3]);
+          }
         }
+        
+        // Skewed magazine rects
+        ctx.save();
+        ctx.transform(1, Math.tan(-12 * Math.PI / 180), 0, 1, 0, 0);
+        const skewedColors = {
+          "#222": [
+            [474, 222, 46, 120]
+          ],
+          "#3a3a3a": [
+            [490, 230, 34, 102]
+          ],
+          "#111": [
+            [500, 340, 52, 18]
+          ],
+          "#4b4b4b": [
+            [500, 246, 24, 8],
+            [504, 270, 24, 8],
+            [508, 294, 24, 8]
+          ]
+        };
+        for (const [color, rectList] of Object.entries(skewedColors)) {
+          ctx.fillStyle = color;
+          for (let i = 0; i < rectList.length; i++) {
+            const r = rectList[i];
+            ctx.fillRect(r[0], r[1], r[2], r[3]);
+          }
+        }
+        ctx.restore();
+        
+        ctx.restore();
+      } else {
+        // Draw the normal handgun
+        const scale = 0.25;
+        const pivotX = 40;
+        const pivotY = 60;
+        
+        ctx.save();
+        ctx.scale(scale, scale);
+        ctx.translate(-pivotX, -pivotY);
+        
+        const colors = {
+          "#111": [
+            [48, 40, 128, 8],
+            [200, 52, 12, 20],
+            [208, 44, 8, 8],
+            [100, 100, 36, 8],
+            [116, 96, 12, 24],
+            [84, 92, 20, 12],
+            [76, 104, 32, 16],
+            [48, 148, 32, 8],
+            [40, 40, 8, 8],
+            [40, 72, 8, 8],
+            [192, 72, 8, 8]
+          ],
+          "#5b5b58": [
+            [40, 48, 160, 24]
+          ],
+          "#3d3d3b": [
+            [48, 72, 144, 16]
+          ],
+          "#222": [
+            [56, 88, 96, 8]
+          ],
+          "#7a7a77": [
+            [72, 52, 64, 4]
+          ],
+          "#2b2b2a": [
+            [144, 52, 32, 4],
+            [64, 88, 36, 16],
+            [60, 104, 40, 16],
+            [56, 120, 40, 16],
+            [52, 136, 36, 12]
+          ],
+          "#1b1b1a": [
+            [56, 56, 8, 20],
+            [68, 56, 4, 20],
+            [80, 56, 4, 20],
+            [92, 56, 4, 20],
+            [104, 56, 4, 20]
+          ],
+          "#333": [
+            [120, 44, 28, 8]
+          ],
+          "#555": [
+            [128, 48, 28, 8],
+            [68, 100, 20, 4],
+            [64, 120, 20, 4],
+            [60, 140, 20, 4]
+          ],
+          "#2c2c2a": [
+            [88, 88, 36, 12]
+          ],
+          "#d8d0bd": [
+            [120, 100, 16, 16]
+          ]
+        };
+        for (const [color, rectList] of Object.entries(colors)) {
+          ctx.fillStyle = color;
+          for (let i = 0; i < rectList.length; i++) {
+            const r = rectList[i];
+            ctx.fillRect(r[0], r[1], r[2], r[3]);
+          }
+        }
+        ctx.restore();
       }
+      
       ctx.restore();
-
-      // Clean aim line (starts at muzzle tip ball.r + 40, goes forward)
+ 
+      // Clean aim line (starts at muzzle tip, goes forward)
+      const aimStart = ball.permanentRapidFire ? (ball.r + 48) : (ball.r + 36);
       ctx.strokeStyle = "rgba(203, 213, 225, 0.28)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 6]);
       ctx.beginPath();
-      ctx.moveTo(ball.r + 40, 0);
-      ctx.lineTo(ball.r + 160, 0);
+      ctx.moveTo(aimStart, 0);
+      ctx.lineTo(aimStart + 120, 0);
       ctx.stroke();
       ctx.setLineDash([]);
-
+ 
       // Muzzle flash
       if (ball.flashUntil > currentTime) {
-        const flashGrad = ctx.createRadialGradient(ball.r + 40, 0, 2, ball.r + 52, 0, 15);
+        const flashGrad = ctx.createRadialGradient(aimStart, 0, 2, aimStart + 12, 0, 15);
         flashGrad.addColorStop(0, "#ffffff");
         flashGrad.addColorStop(0.3, "#facc15");
         flashGrad.addColorStop(1, "rgba(6, 182, 212, 0)");
         ctx.fillStyle = flashGrad;
         ctx.beginPath();
-        ctx.arc(ball.r + 44, 0, 16, 0, Math.PI * 2);
+        ctx.arc(aimStart + 4, 0, 16, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
@@ -14433,6 +14639,84 @@ export default function App() {
           coreGrad.addColorStop(1, "#f97316");
           ctx.fillStyle = coreGrad; ctx.fill();
           ctx.strokeStyle = "#fef3c7"; ctx.lineWidth = 2.5; ctx.stroke();
+        } else if (bullet.kind === "thrownGun") {
+          ctx.globalAlpha = Math.max(0, Math.min(1, bullet.life / bullet.maxLife));
+          ctx.translate(bullet.x, bullet.y);
+          ctx.rotate(bullet.angle);
+          
+          const scale = 0.25;
+          const pivotX = 40;
+          const pivotY = 60;
+          
+          const colors = {
+            "#111": [
+              [48, 40, 128, 8],
+              [200, 52, 12, 20],
+              [208, 44, 8, 8],
+              [100, 100, 36, 8],
+              [116, 96, 12, 24],
+              [84, 92, 20, 12],
+              [76, 104, 32, 16],
+              [48, 148, 32, 8],
+              [40, 40, 8, 8],
+              [40, 72, 8, 8],
+              [192, 72, 8, 8]
+            ],
+            "#5b5b58": [
+              [40, 48, 160, 24]
+            ],
+            "#3d3d3b": [
+              [48, 72, 144, 16]
+            ],
+            "#222": [
+              [56, 88, 96, 8]
+            ],
+            "#7a7a77": [
+              [72, 52, 64, 4]
+            ],
+            "#2b2b2a": [
+              [144, 52, 32, 4],
+              [64, 88, 36, 16],
+              [60, 104, 40, 16],
+              [56, 120, 40, 16],
+              [52, 136, 36, 12]
+            ],
+            "#1b1b1a": [
+              [56, 56, 8, 20],
+              [68, 56, 4, 20],
+              [80, 56, 4, 20],
+              [92, 56, 4, 20],
+              [104, 56, 4, 20]
+            ],
+            "#333": [
+              [120, 44, 28, 8]
+            ],
+            "#555": [
+              [128, 48, 28, 8],
+              [68, 100, 20, 4],
+              [64, 120, 20, 4],
+              [60, 140, 20, 4]
+            ],
+            "#2c2c2a": [
+              [88, 88, 36, 12]
+            ],
+            "#d8d0bd": [
+              [120, 100, 16, 16]
+            ]
+          };
+
+          for (const [color, rectList] of Object.entries(colors)) {
+            ctx.fillStyle = color;
+            for (let i = 0; i < rectList.length; i++) {
+              const r = rectList[i];
+              ctx.fillRect(
+                (r[0] - pivotX) * scale,
+                (r[1] - pivotY) * scale,
+                r[2] * scale,
+                r[3] * scale
+              );
+            }
+          }
         } else if (bullet.kind === "dragonEmber") {
           ctx.shadowColor = "#ef4444";
           ctx.shadowBlur = 8;
