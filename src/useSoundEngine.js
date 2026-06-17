@@ -127,9 +127,22 @@ export function useSoundEngine() {
       osc(ctx, dest, "sine", 120, 0.3, t, 0.12, 40);
     },
     gunReload: (ctx, dest, t) => {
+      // Magazine insert / reload rustle
       noise(ctx, dest, 0.2, t, 0.08, 3000, 1.5);
       osc(ctx, dest, "triangle", 200, 0.15, t, 0.06, 300);
       osc(ctx, dest, "triangle", 400, 0.12, t + 0.08, 0.07, 250);
+      noise(ctx, dest, 0.16, t + 0.3, 0.14, 2000, 1.2);
+      osc(ctx, dest, "triangle", 250, 0.15, t + 0.3, 0.12, 150);
+
+      // Cocking / slide release (chambering round) at t + 1.2s
+      const tCock = t + 1.2;
+      // Pull back
+      noise(ctx, dest, 0.18, tCock, 0.06, 2800, 1.5);
+      osc(ctx, dest, "triangle", 500, 0.2, tCock, 0.05, 900);
+      // Let go (clack)
+      noise(ctx, dest, 0.22, tCock + 0.12, 0.08, 3200, 1.8);
+      osc(ctx, dest, "triangle", 800, 0.22, tCock + 0.12, 0.06, 1400);
+      osc(ctx, dest, "sine", 1200, 0.15, tCock + 0.12, 0.05, 1800);
     },
 
     // Vampire Ball

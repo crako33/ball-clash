@@ -5911,8 +5911,8 @@ export default function App() {
       const piercesDefense = isRapidShot && (gun.rapidPierceShotsRemaining || 0) > 0;
       if (piercesDefense) gun.rapidPierceShotsRemaining -= 1;
 
-      const mX = gun.x + Math.cos(gun.angle) * (gun.r + 26);
-      const mY = gun.y + Math.sin(gun.angle) * (gun.r + 26);
+      const mX = gun.x + Math.cos(gun.angle) * (gun.r + 42);
+      const mY = gun.y + Math.sin(gun.angle) * (gun.r + 42);
       game.bullets.push({
         ownerId: gun.id, targetSide: target.side, x: mX, y: mY,
         vx: Math.cos(gun.angle) * gunBal.bulletSpeed,
@@ -10240,15 +10240,16 @@ export default function App() {
       // Save context to draw rotated gun barrels first
       ctx.save();
       ctx.translate(ball.x, ball.y);
-      ctx.rotate(ball.angle);
       
-      // Sleek pistol silhouette
-      ctx.fillStyle = "#020617";
-      ctx.fillRect(ball.r - 3, -4, 30, 8);
-      ctx.fillStyle = "#475569";
-      ctx.fillRect(ball.r + 4, -2, 22, 4);
-      ctx.fillStyle = "#111827";
-      ctx.fillRect(ball.r + 3, 4, 8, 12);
+      let drawAngle = ball.angle;
+      if (ball.reloadUntil > currentTime) {
+        const reloadDuration = game.balance.gun.reloadTime;
+        const timeRemaining = ball.reloadUntil - currentTime;
+        const progress = 1 - Math.max(0, Math.min(1, timeRemaining / reloadDuration)); // 0 to 1
+        // Spin 2 full rotations (4 * Math.PI)
+        drawAngle += progress * Math.PI * 4;
+      }
+      ctx.rotate(drawAngle);
       
       // Gun base connector
       ctx.fillStyle = "#1e293b";
@@ -10257,25 +10258,104 @@ export default function App() {
       ctx.lineWidth = 1.5;
       ctx.strokeRect(ball.r - 7, -7, 7, 14);
 
-      // Clean aim line
+      // Redesigned SVG Pixel Art Rifle
+      ctx.save();
+      ctx.translate(ball.r - 4, 0);
+      
+      const scale = 0.25;
+      const pivotX = 40;
+      const pivotY = 60;
+      
+      const colors = {
+        "#111": [
+          [48, 40, 128, 8],
+          [200, 52, 12, 20],
+          [208, 44, 8, 8],
+          [100, 100, 36, 8],
+          [116, 96, 12, 24],
+          [84, 92, 20, 12],
+          [76, 104, 32, 16],
+          [48, 148, 32, 8],
+          [40, 40, 8, 8],
+          [40, 72, 8, 8],
+          [192, 72, 8, 8]
+        ],
+        "#5b5b58": [
+          [40, 48, 160, 24]
+        ],
+        "#3d3d3b": [
+          [48, 72, 144, 16]
+        ],
+        "#222": [
+          [56, 88, 96, 8]
+        ],
+        "#7a7a77": [
+          [72, 52, 64, 4]
+        ],
+        "#2b2b2a": [
+          [144, 52, 32, 4],
+          [64, 88, 36, 16],
+          [60, 104, 40, 16],
+          [56, 120, 40, 16],
+          [52, 136, 36, 12]
+        ],
+        "#1b1b1a": [
+          [56, 56, 8, 20],
+          [68, 56, 4, 20],
+          [80, 56, 4, 20],
+          [92, 56, 4, 20],
+          [104, 56, 4, 20]
+        ],
+        "#333": [
+          [120, 44, 28, 8]
+        ],
+        "#555": [
+          [128, 48, 28, 8],
+          [68, 100, 20, 4],
+          [64, 120, 20, 4],
+          [60, 140, 20, 4]
+        ],
+        "#2c2c2a": [
+          [88, 88, 36, 12]
+        ],
+        "#d8d0bd": [
+          [120, 100, 16, 16]
+        ]
+      };
+
+      for (const [color, rectList] of Object.entries(colors)) {
+        ctx.fillStyle = color;
+        for (let i = 0; i < rectList.length; i++) {
+          const r = rectList[i];
+          ctx.fillRect(
+            (r[0] - pivotX) * scale,
+            (r[1] - pivotY) * scale,
+            r[2] * scale,
+            r[3] * scale
+          );
+        }
+      }
+      ctx.restore();
+
+      // Clean aim line (starts at muzzle tip ball.r + 40, goes forward)
       ctx.strokeStyle = "rgba(203, 213, 225, 0.28)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 6]);
       ctx.beginPath();
-      ctx.moveTo(ball.r + 28, 0);
-      ctx.lineTo(ball.r + 150, 0);
+      ctx.moveTo(ball.r + 40, 0);
+      ctx.lineTo(ball.r + 160, 0);
       ctx.stroke();
       ctx.setLineDash([]);
 
       // Muzzle flash
       if (ball.flashUntil > currentTime) {
-        const flashGrad = ctx.createRadialGradient(ball.r + 28, 0, 2, ball.r + 40, 0, 15);
+        const flashGrad = ctx.createRadialGradient(ball.r + 40, 0, 2, ball.r + 52, 0, 15);
         flashGrad.addColorStop(0, "#ffffff");
         flashGrad.addColorStop(0.3, "#facc15");
         flashGrad.addColorStop(1, "rgba(6, 182, 212, 0)");
         ctx.fillStyle = flashGrad;
         ctx.beginPath();
-        ctx.arc(ball.r + 32, 0, 16, 0, Math.PI * 2);
+        ctx.arc(ball.r + 44, 0, 16, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
