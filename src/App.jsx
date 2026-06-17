@@ -10257,8 +10257,8 @@ export default function App() {
         const reloadDuration = game.balance.gun.reloadTime;
         const timeRemaining = ball.reloadUntil - currentTime;
         const progress = 1 - Math.max(0, Math.min(1, timeRemaining / reloadDuration)); // 0 to 1
-        // Spin 2 full rotations (4 * Math.PI)
-        ctx.rotate(progress * Math.PI * 4);
+        // Spin 1 full rotation (2 * Math.PI)
+        ctx.rotate(progress * Math.PI * 2);
       }
       
       const scale = 0.25;
