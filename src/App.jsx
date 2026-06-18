@@ -881,6 +881,19 @@ const cancelActiveMovementStates = (ball) => {
   }
 };
 
+const applyMotorcycleRagdoll = (ball, angle, force, currentTime, lockDuration = 1400, additive = true) => {
+  if (!ball) return;
+  cancelActiveMovementStates(ball);
+  const launchVx = Math.cos(angle) * force;
+  const launchVy = Math.sin(angle) * force;
+  ball.vx = additive ? (ball.vx || 0) + launchVx : launchVx + (ball.vx || 0) * 0.18;
+  ball.vy = additive ? (ball.vy || 0) + launchVy : launchVy + (ball.vy || 0) * 0.18;
+  ball.skillLockedUntil = Math.max(ball.skillLockedUntil || 0, currentTime + lockDuration);
+  ball.ragdollUntil = Math.max(ball.ragdollUntil || 0, currentTime + lockDuration);
+  const tumbleDirection = Math.sin(angle * 1.7 + currentTime * 0.013) >= 0 ? 1 : -1;
+  ball.ragdollSpinVelocity = tumbleDirection * (20 + Math.min(12, force / 120));
+};
+
 const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (!ball) return false;
   if (ball.type === "vampire" && ball.latchedTo && ball.latchUntil > currentTime) return true;
@@ -1212,6 +1225,8 @@ export default function App() {
       reloadUntil: 0,
       nextShotAt: 0,
       skillLockedUntil: 0,
+      ragdollUntil: 0,
+      ragdollSpinVelocity: 0,
       flashUntil: 0,
       dogSummoned: false,
       dog: null,
@@ -1763,7 +1778,8 @@ export default function App() {
     ctx.fillStyle = config.color;
     ctx.shadowColor = config.stroke || config.color;
     ctx.shadowBlur = 18;
-    ctx.font = "900 40px Arial, sans-serif";
+    const nameFontSize = w <= 320 ? 46 : 54;
+    ctx.font = `900 ${nameFontSize}px Arial, sans-serif`;
     const nameX = align === "left" ? x + 22 : x + w - 22;
     ctx.lineWidth = 3;
     ctx.strokeStyle = config.stroke || "#f8fafc";
@@ -2050,8 +2066,8 @@ export default function App() {
       ctx.stroke();
       ctx.restore();
 
-      drawRecordingSkillStatus(ctx, left, arenaX + 12, arenaY + arenaSize + 54, "left");
-      drawRecordingSkillStatus(ctx, right, arenaX + arenaSize - 12, arenaY + arenaSize + 54, "right");
+      drawRecordingSkillStatus(ctx, left, arenaX + arenaSize * 0.25, arenaY + arenaSize + 54, "center");
+      drawRecordingSkillStatus(ctx, right, arenaX + arenaSize * 0.75, arenaY + arenaSize + 54, "center");
 
       const winner = left?.health <= 0 && right?.health > 0
         ? right.name
@@ -2114,8 +2130,8 @@ export default function App() {
     ctx.stroke();
     ctx.restore();
 
-    drawRecordingSkillStatus(ctx, left, arenaX + 10, arenaY + arenaHeight + 52, "left");
-    drawRecordingSkillStatus(ctx, right, arenaX + arenaWidth - 10, arenaY + arenaHeight + 52, "right");
+    drawRecordingSkillStatus(ctx, left, arenaX + arenaWidth * 0.25, arenaY + arenaHeight + 52, "center");
+    drawRecordingSkillStatus(ctx, right, arenaX + arenaWidth * 0.75, arenaY + arenaHeight + 52, "center");
 
     const leftAlive = leftTeam.some((ball) => ball.health > 0);
     const rightAlive = rightTeam.some((ball) => ball.health > 0);
@@ -4313,6 +4329,9 @@ export default function App() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        if (ball.ragdollUntil && game.simTime < ball.ragdollUntil) {
+          ball.ragdollSpinVelocity = -(ball.ragdollSpinVelocity || 24) * 0.9;
+        }
         if ((ball.hammerBouncesLeft || 0) > 0) {
           ball.hammerBouncesLeft -= 1;
           if (ball.hammerBouncesLeft > 0) {
@@ -6389,7 +6408,7 @@ export default function App() {
 
         const d = linePointDist(target.x, target.y, mX, mY, eX, eY);
         if (d < target.r + 27.5 && currentTime >= laserBall.laserNextTickAt) {
-          const damageRemaining = Math.max(0, 15 - (laserBall.hugeLaserDamageDealt || 0));
+          const damageRemaining = Math.max(0, 16 - (laserBall.hugeLaserDamageDealt || 0));
           const beamDamage = Math.min(3, damageRemaining);
           if (!isChessCrownActive(target) && !isWreckerJumpInvulnerable(target) && !isBomberSelfDestructInvulnerable(target)) {
             if (beamDamage > 0) {
@@ -6416,17 +6435,15 @@ export default function App() {
                   laserBall.hugeLaserBounceApplied = true;
                   const interruptedHammerCharge = target.type === "hammer" &&
                     (target.hammerState === "charging" || target.hammerState === "launching");
-                  cancelActiveMovementStates(target);
+                  applyMotorcycleRagdoll(target, pushAngle, 1280, currentTime, 1400, false);
                   if (interruptedHammerCharge) {
                     target.hammerAngle = 0;
                   }
                   target.laserBounceWallBouncesLeft = 5;
-                  target.vx = Math.cos(pushAngle) * 920;
-                  target.vy = Math.sin(pushAngle) * 920;
                   game.floatingTexts = game.floatingTexts || [];
                   game.floatingTexts.push({
                     x: target.x, y: target.y - target.r - 28, vy: -58,
-                    text: "5-BOUNCE SKILL LOCK", color: "#fde047", life: 1.05, maxLife: 1.05
+                    text: "LASER RAGDOLL · 5 BOUNCE", color: "#fde047", life: 1.05, maxLife: 1.05
                   });
                   if (interruptedHammerCharge) {
                     game.floatingTexts.push({
@@ -10295,9 +10312,7 @@ export default function App() {
           if (insideMotorcycleHitbox) {
             applyDamage(ball, car.damage, `${car.id}-pass-${car.pass}-hit-${ball.id}`, game.simTime, 400);
             const recoilForce = Math.max(1280, (game.balance.fireSkull?.carKnockback) || BALANCE.fireSkull.carKnockback || 1280);
-            ball.vx += Math.cos(car.angle) * recoilForce;
-            ball.vy += Math.sin(car.angle) * recoilForce;
-            ball.skillLockedUntil = Math.max(ball.skillLockedUntil || 0, game.simTime + 1400);
+            applyMotorcycleRagdoll(ball, car.angle, recoilForce, game.simTime, 1400, true);
             game.screenShake = Math.max(game.screenShake || 0, 20);
             playSound("explosion", 0.9, 130);
             spawnSparks(ball.x, ball.y, "#ef4444", 18);
@@ -16192,6 +16207,27 @@ export default function App() {
         ctx.restore();
       }
 
+      if (ball.ragdollUntil && game.simTime < ball.ragdollUntil) {
+        const remaining = clamp((ball.ragdollUntil - game.simTime) / 1400, 0, 1);
+        const tumble = ball.spinAngle || 0;
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.rotate(tumble);
+        ctx.globalAlpha = 0.42 + remaining * 0.38;
+        ctx.strokeStyle = "#fef08a";
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 9;
+        ctx.setLineDash([8, 5]);
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.arc(0, 0, ball.r + 8 + i * 5, -1.15 + i * 1.8, 0.55 + i * 1.8);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
       if (ball.shadowMarkedUntil && game.simTime < ball.shadowMarkedUntil) {
         const progress = clamp((ball.shadowMarkedUntil - game.simTime) / 1400, 0, 1);
         ctx.save();
@@ -18001,6 +18037,10 @@ export default function App() {
                 ball.vx = (ball.vx / speed) * 980;
                 ball.vy = (ball.vy / speed) * 980;
               }
+            }
+            if (ball.ragdollUntil && game.simTime < ball.ragdollUntil) {
+              ball.spinAngle = (ball.spinAngle || 0) + (ball.ragdollSpinVelocity || 24) * stepDt;
+              ball.ragdollSpinVelocity *= Math.pow(0.985, stepDt * 60);
             }
 
             if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isFishermanPulled && !isVampireMistAction && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
