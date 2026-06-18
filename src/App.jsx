@@ -11544,29 +11544,60 @@ export default function App() {
         ctx.restore();
       }
 
-      // Draw the Shielder body (patriotic concentric rings: blue, white, red)
+      // Draw the Shielder body (remodelled with golden theme & core)
       ctx.save();
       ctx.translate(ball.x, ball.y);
       
+      // Draw Golden Crown on top
+      ctx.fillStyle = "#fbbf24";
+      ctx.strokeStyle = "#d97706";
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = "#ef4444";
+      ctx.moveTo(-ball.r * 0.5, -ball.r + 2);
+      ctx.lineTo(-ball.r * 0.6, -ball.r - 12);
+      ctx.lineTo(-ball.r * 0.25, -ball.r - 4);
+      ctx.lineTo(0, -ball.r - 16);
+      ctx.lineTo(ball.r * 0.25, -ball.r - 4);
+      ctx.lineTo(ball.r * 0.6, -ball.r - 12);
+      ctx.lineTo(ball.r * 0.5, -ball.r + 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Jewels on crown
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(-ball.r * 0.6, -ball.r - 12, 2, 0, Math.PI * 2);
+      ctx.arc(0, -ball.r - 16, 2.5, 0, Math.PI * 2);
+      ctx.arc(ball.r * 0.6, -ball.r - 12, 2, 0, Math.PI * 2);
       ctx.fill();
       
+      // Outer gold body
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = "#ca8a04";
+      ctx.fill();
+      ctx.strokeStyle = "#854d0e";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Inner metallic ring
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.7, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = "#fef08a";
       ctx.fill();
       
+      // Golden core inside
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.45, 0, Math.PI * 2);
-      ctx.fillStyle = "#1e3a8a";
+      const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, ball.r * 0.45);
+      coreGrad.addColorStop(0, "#ffffff");
+      coreGrad.addColorStop(0.4, "#facc15");
+      coreGrad.addColorStop(1, "#b45309");
+      ctx.fillStyle = coreGrad;
       ctx.fill();
-      
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.strokeStyle = "#1e3a8a";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#ca8a04";
+      ctx.lineWidth = 1.5;
       ctx.stroke();
       
       ctx.restore();
@@ -11593,20 +11624,20 @@ export default function App() {
         }
 
         ctx.save();
-        ctx.shadowColor = "#60a5fa";
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle = "rgba(96, 165, 250, 0.85)";
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.9)"; // Neon yellow main arc
         ctx.lineWidth = 6;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 8, ball.shieldAngle - game.balance.shield.arcWidth / 2, ball.shieldAngle + game.balance.shield.arcWidth / 2);
         ctx.stroke();
-        ctx.strokeStyle = "#ef4444"; // Red accent on shield arc
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#fffbeb"; // Core white/pale yellow accent line
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r + 3, ball.shieldAngle - game.balance.shield.arcWidth / 2, ball.shieldAngle + game.balance.shield.arcWidth / 2);
+        ctx.arc(ball.x, ball.y, ball.r + 8, ball.shieldAngle - game.balance.shield.arcWidth / 2, ball.shieldAngle + game.balance.shield.arcWidth / 2);
         ctx.stroke();
         if (ball.shieldState === "windup") {
-          ctx.strokeStyle = "rgba(191, 219, 254, 0.45)";
+          ctx.strokeStyle = "rgba(254, 240, 138, 0.55)";
           ctx.lineWidth = 2;
           for (let i = 1; i <= 3; i++) {
             const trailAngle = ball.shieldAngle - i * 0.28;
