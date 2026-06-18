@@ -2254,6 +2254,19 @@ export default function App() {
             if (ball.paralyzedUntil && simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
+            if ((ball.hammerBouncesLeft || 0) > 0) {
+              const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+              const speed = Math.hypot(ball.vx, ball.vy);
+              if (speed > 0) {
+                ball.vx = (ball.vx / speed) * targetSpeed;
+                ball.vy = (ball.vy / speed) * targetSpeed;
+              } else {
+                const randAngle = Math.random() * Math.PI * 2;
+                ball.vx = Math.cos(randAngle) * targetSpeed;
+                ball.vy = Math.sin(randAngle) * targetSpeed;
+              }
+            }
+
             if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled)) {
               ball.x += ball.vx * dt * slowMult;
               ball.y += ball.vy * dt * slowMult;
@@ -2278,6 +2291,23 @@ export default function App() {
                       const nextSpeed = Math.min(maxBounceSpeed, Math.max(230, speed * boost));
                       ball.vx = (ball.vx / speed) * nextSpeed;
                       ball.vy = (ball.vy / speed) * nextSpeed;
+                    }
+                  }
+                  if ((ball.hammerBouncesLeft || 0) > 0) {
+                    ball.hammerBouncesLeft -= 1;
+                    if (ball.hammerBouncesLeft > 0) {
+                      const speed = Math.hypot(ball.vx, ball.vy);
+                      const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+                      if (speed > 0) {
+                        ball.vx = (ball.vx / speed) * targetSpeed;
+                        ball.vy = (ball.vy / speed) * targetSpeed;
+                      }
+                    } else {
+                      const speed = Math.hypot(ball.vx, ball.vy);
+                      if (speed > 220) {
+                        ball.vx = (ball.vx / speed) * 220;
+                        ball.vy = (ball.vy / speed) * 220;
+                      }
                     }
                   }
                 }
@@ -4248,6 +4278,23 @@ export default function App() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        if ((ball.hammerBouncesLeft || 0) > 0) {
+          ball.hammerBouncesLeft -= 1;
+          if (ball.hammerBouncesLeft > 0) {
+            const speed = Math.hypot(ball.vx, ball.vy);
+            const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+            if (speed > 0) {
+              ball.vx = (ball.vx / speed) * targetSpeed;
+              ball.vy = (ball.vy / speed) * targetSpeed;
+            }
+          } else {
+            const speed = Math.hypot(ball.vx, ball.vy);
+            if (speed > 220) {
+              ball.vx = (ball.vx / speed) * 220;
+              ball.vy = (ball.vy / speed) * 220;
+            }
+          }
+        }
         if ((ball.shieldBashBouncesLeft || 0) > 0) {
           ball.shieldBashBouncesLeft -= 1;
           const speed = Math.hypot(ball.vx, ball.vy);
@@ -16862,6 +16909,19 @@ export default function App() {
             if (ball.type === "gazerBall" && ball.gazerRecoilUntil && game.simTime < ball.gazerRecoilUntil) slowMult *= 0.55;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
+            
+            if ((ball.hammerBouncesLeft || 0) > 0) {
+              const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+              const speed = Math.hypot(ball.vx, ball.vy);
+              if (speed > 0) {
+                ball.vx = (ball.vx / speed) * targetSpeed;
+                ball.vy = (ball.vy / speed) * targetSpeed;
+              } else {
+                const randAngle = Math.random() * Math.PI * 2;
+                ball.vx = Math.cos(randAngle) * targetSpeed;
+                ball.vy = Math.sin(randAngle) * targetSpeed;
+              }
+            }
 
             if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isFishermanPulled && !isVampireMistAction && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
               const previousX = ball.x;
@@ -16890,6 +16950,7 @@ export default function App() {
                 (ball.type === "mazeChomper" && (ball.chomperState === "lunging" || game.simTime < (ball.chomperPoweredUntil || 0))) ||
                 (ball.chomperKnockbackBouncesLeft || 0) > 0 ||
                 (ball.yoYoRicochetBouncesLeft || 0) > 0 ||
+                (ball.hammerBouncesLeft || 0) > 0 ||
                 ball.type === "cueBall") {
               // bypass base speed limits
             } else {
