@@ -71,37 +71,37 @@ const BALL_TYPES = {
     color: "#dc2626",
     stroke: "#facc15",
     radius: 30,
-    description: "Exo-repulsor brawler. Gathers scattered armor parts to fire a massive ultimate laser beam.",
+    description: "Exo-repulsor brawler. Fires normal lasers while gathering five armor plates for an explosive wide beam.",
     emoji: "🤖",
     visualTheme: "Stark-tech / Cybernetic Exo-Soldier",
     colorPalette: "Crimson Red, Gold Plating, Arc White",
     facialAge: "Mid 30s (Manicured goatee, smug smirk, digital HUD overlay)",
     personality: "Egotistical, flashy, genius inventor",
     primaryWeapon: "Wrist-Mounted Repulsor Core",
-    signatureAbility: "Charged Repulsor Beam & Huge Beam Scatter",
+    signatureAbility: "Five-Plate Wide Laser",
     companion: "None",
-    specialVisualEffects: "Bright white laser beams, gold armor collection, huge energy beam",
+    specialVisualEffects: "Gold armor assembly, bright normal lasers, explosive wide beam",
     animeStyle: "High-tech sci-fi superhero anime with bright cell shading",
-    gameStyle: "Heavy artillery zoner utilizing armor assembly mechanics",
+    gameStyle: "Mobile laser zoner that assembles five armor plates into a stationary heavy blast",
   },
   shield: {
     id: "shield",
     name: "Shielder Ball",
     shortName: "SHLD",
-    color: "#ca8a04",
-    stroke: "#facc15",
+    color: "#3b82f6",
+    stroke: "#ef4444",
     radius: 32,
-    description: "Defends with a golden crown and glowing gold core. Secondary: Bash & Neon Yellow Shield.",
+    description: "Throws a round shield. Secondary: Bash & Emergency Recall.",
     emoji: "🛡️",
-    visualTheme: "Golden Bastion / Crowned Guardian",
-    colorPalette: "Neon Yellow, Gold Plating, Brushed Brass",
-    facialAge: "Early 40s (Battle-scarred brow, golden crown, resolute expression)",
-    personality: "Protective, unyielding, majestic",
-    primaryWeapon: "Neon Yellow Energy Shield",
-    signatureAbility: "Golden Shield Bash & Laser-Deflecting Shield",
+    visualTheme: "Heavy Bastion / Combat Warden",
+    colorPalette: "Cobalt Blue, Hazard Red, Brushed Steel",
+    facialAge: "Early 40s (Battle-scarred brow, square jawline, resolute expression)",
+    personality: "Protective, unyielding, patriotic",
+    primaryWeapon: "Circular Vibranium Alloy Shield",
+    signatureAbility: "Shield Bash & Recall Shield (with barrier window)",
     companion: "None",
-    specialVisualEffects: "Yellow neon forcefields, gold spark particles on block",
-    animeStyle: "Golden mecha commander / heroic crowned guardian",
+    specialVisualEffects: "Blue hexagonal shield forcefields, metal spark particles on block",
+    animeStyle: "Mecha armor commander / heroic guardian anime",
     gameStyle: "High-density defensive tank with bounce shield control",
   },
   spider: {
@@ -654,8 +654,8 @@ const SHIELD_PICKUP_RADIUS = 30;
 const SHIELD_DROP_COOLDOWN = 1000;
 const SHIELD_BASH_READY_THROWS = 3;
 const SHIELD_BASH_CLOSE_RADIUS = 95;
-const SHIELD_BASH_LUNGE_SPEED = 720;
-const SHIELD_BASH_LUNGE_DURATION = 430;
+const SHIELD_BASH_LUNGE_SPEED = 920;
+const SHIELD_BASH_LUNGE_DURATION = 560;
 const MOTHER_TOOLS = [
   { name: "SLIPPER", damageMult: 1, knockbackMult: 1.05, color: "#f59e0b" },
   { name: "DUSTER", damageMult: 0.8, knockbackMult: 1.2, color: "#a78bfa" },
@@ -671,7 +671,7 @@ const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 150;
 const MAX_PARTICLES = 420;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman"];
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 13;
 const MAX_EXPLOSIONS = 12;
@@ -681,14 +681,14 @@ const FIGHT_INTRO_IMPACT_AT = 1550;
 
 const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
-  gun: { bulletDamage: 1, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
+  gun: { bulletDamage: 2, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 900, latchCooldown: 3200, latchDistance: 10, secCooldown: 6200, mistWindup: 260, mistDuration: 520, mistSpeed: 920, mistDamage: 7, mistHeal: 4, mistKnockback: 420, cloneRadius: 17, cloneLife: 7000 },
-  laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, pulseDamage: 10, pulseSpeed: 620, pulseStunDuration: 950, recoilForce: 180 },
+  laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, recoilForce: 180, armorRequired: 5 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, throwWindup: 150, shieldSpeed: 800, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
-  spider: { fangDamage: 2, biteCooldown: 720, biteSpeed: 980, webSpeed: 900, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 44, trapDuration: 7000, trapLockDuration: 2400, secDamage: 1 },
-  bomber: { mineDamage: 10, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
+  spider: { fangDamage: 1, webSpeed: 900, pullSpeed: 700, bounceSpeed: 470, pullDuration: 900, cooldown: 3400, secCooldown: 7700, secPoolRadius: 44, trapDuration: 7000, trapLockDuration: 2400, secDamage: 1 },
+  bomber: { mineDamage: 40, mineRadius: 70, mineTriggerDist: 15, cooldown: 2200, maxMines: 3, knockback: 16, secCooldown: 7000 },
   spore: { cactusDamage: 2, growthDuration: 1000, speedBoost: 2, cactusLife: 5000, cooldown: 6000 },
-  hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 580, launchDuration: 580, cooldown: 1500 },
+  hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.05, chargeDuration: 900, launchSpeed: 780, launchDuration: 580, cooldown: 1500 },
   stringWeb: { stringDamage: 3, stringLifetime: 9000, maxStrings: 14, stringHitPadding: 10, trampolineCooldown: 1100, trampolineBoost: 1.45, trampolineMinSpeed: 310 },
   arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 55, punchCooldown: 600, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
@@ -704,7 +704,7 @@ const BALANCE = {
   fisherman: { cooldown: 6200, hookSpeed: 900, pullSpeed: 840, releaseRecoil: 720, hookDamage: 3, tipRadius: 6, maxBounces: 8, castLife: 4200, spinWindup: 520 },
   blackSpider: { cooldown: 7000, secCooldown: 10000, pullSpeed: 1200,
     // String Pull Slam
-    slamCooldown: 7000, slamStringSpeed: 900, slamPullDuration: 600, slamSpinDuration: 700, slamSpinRadius: 75, slamLaunchSpeed: 1150, slamWallDamage: 12, slamHitDamage: 4,
+    slamCooldown: 7000, slamStringSpeed: 900, slamPullDuration: 600, slamSpinDuration: 700, slamSpinRadius: 75, slamLaunchSpeed: 1150, slamWallDamage: 2, slamHitDamage: 4,
     // Tendril Trap
     trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
   },
@@ -797,6 +797,8 @@ const EIGHT_BALL_SILHOUETTE_SVG = `
 const EIGHT_BALL_SILHOUETTE_URI = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(EIGHT_BALL_SILHOUETTE_SVG)}`;
 const isWreckerJumpInvulnerable = (ball) => (ball?.type === "wrecker" && ball.wreckerState === "leaping") || (ball?.type === "dragon" && ball.dragonState === "dashing");
 const isEightBallBreakInvulnerable = (ball, currentTime) => false;
+const isBomberSelfDestructInvulnerable = (ball) => ball?.type === "bomber" &&
+  (ball.bomberSelfDestructAt || 0) > 0 && !ball.bomberSelfDestructSpent;
 
 const interruptSkills = (ball) => {
   if (!ball) return;
@@ -808,10 +810,10 @@ const interruptSkills = (ball) => {
   if (ball.knifeBladeState && ball.knifeBladeState !== "rotating") ball.knifeBladeState = "rotating";
   if (ball.tridentDiveState && ball.tridentDiveState !== "idle") ball.tridentDiveState = "idle";
   if (ball.type === "shield" && (ball.shieldState === "held" || ball.shieldState === "windup")) {
-    ball.shieldState = "dropped";
+    ball.shieldState = "held";
     ball.shieldGuardHits = 0;
-    ball.shieldX = ball.x;
-    ball.shieldY = ball.y;
+    ball.shieldX = ball.x + Math.cos(ball.shieldAngle || 0) * (ball.r + 8);
+    ball.shieldY = ball.y + Math.sin(ball.shieldAngle || 0) * (ball.r + 8);
     ball.shieldVx = 0;
     ball.shieldVy = 0;
     ball.shieldThrownUntil = 0;
@@ -862,6 +864,20 @@ const cancelActiveMovementStates = (ball) => {
   if (ball.armState === "elbow_dropping") {
     ball.armState = "idle";
     ball.armStateUntil = 0;
+  }
+  if (ball.type === "spider") {
+    ball.webState = "idle";
+    ball.webTargetId = null;
+    ball.webBouncesLeft = 0;
+    ball.webStateUntil = 0;
+    ball.webVx = 0;
+    ball.webVy = 0;
+    ball.bsSkillState = "idle";
+    ball.bsHookedTargetId = null;
+    ball.bsPullUntil = 0;
+    ball.bsSpinUntil = 0;
+    ball.bsStringVx = 0;
+    ball.bsStringVy = 0;
   }
 };
 
@@ -1094,7 +1110,7 @@ const StaticBallCanvas = ({ type, color, stroke, drawBallProxyRef, proxyReady })
 };
 
 export default function App() {
-  const { playSound, playAudioFile, getAudioStream, startMatchMusic, stopMatchMusic } = useSoundEngine();
+  const { playSound, playAudioFile, toggleMute, getAudioStream, startMatchMusic, stopMatchMusic } = useSoundEngine();
   const canvasRef = useRef(null);
   const drawBallProxyRef = useRef(null);
   const animationRef = useRef(null);
@@ -1113,6 +1129,7 @@ export default function App() {
   const [balanceSaveStatus, setBalanceSaveStatus] = useState("");
   const [recordingStatus, setRecordingStatus] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [audioMuted, setAudioMuted] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [activeTab, setActiveTab] = useState("simulator");
   const [proxyReady, setProxyReady] = useState(false);
@@ -1140,6 +1157,12 @@ export default function App() {
   });
 
   const [tournamentResults, setTournamentResults] = useState(null);
+
+  const handleToggleMute = () => {
+    const nextMuted = toggleMute();
+    setAudioMuted(nextMuted);
+    if (!nextMuted && gameState.running) startMatchMusic();
+  };
   const [simulatingTournament, setSimulatingTournament] = useState(false);
 
   const makeBall = (type, side, speedJitter = 0, teamSlot = null) => {
@@ -1211,17 +1234,20 @@ export default function App() {
       vampireMistSecondCloneDropped: false,
       trail: [],
       nextBombAt: 0,
+      bomberSelfDestructAt: 0,
+      bomberSelfDestructSpent: false,
+      bomberCountdownShown: 4,
       laserState: "idle",
       laserStateUntil: 0,
       laserTargetAngle: 0,
       laserNextTickAt: 0,
       laserReflect: null,
       laserShotCount: 0,
+      laserBounceWallBouncesLeft: 0,
       shieldAngle: side === "left" ? 0 : Math.PI,
-      shieldState: "held", shieldX: 0, shieldY: 0, shieldVx: 0, shieldVy: 0, shieldThrownUntil: 0, shieldNextHitAt: 0, nextThrowAt: 0, shieldSpinAngle: 0, shieldWindupAngle: 0, shieldWindupUntil: 0, shieldThrowAngle: 0, shieldGuardHits: 0, shieldBonusDamage: 0,
+      shieldState: "held", shieldX: 0, shieldY: 0, shieldVx: 0, shieldVy: 0, shieldThrownUntil: 0, shieldNextHitAt: 0, nextThrowAt: 0, shieldSpinAngle: 0, shieldWindupAngle: 0, shieldWindupUntil: 0, shieldCatchSpinUntil: 0, shieldThrowAngle: 0, shieldGuardHits: 0, shieldBonusDamage: 0,
       // Spider Specific
       webState: "idle", webX: 0, webY: 0, webVx: 0, webVy: 0, webStateUntil: 0, webTargetId: null, webBouncesLeft: 0, webLastTargetX: 0, webLastTargetY: 0, fangFlashUntil: 0,
-      spiderBiteState: "idle", spiderBiteX: 0, spiderBiteY: 0, spiderBiteVx: 0, spiderBiteVy: 0, spiderBiteCount: 0, spiderNextBiteAt: 0,
       // Black Spider Specific
       blackSpiderMarkedTargetId: null,
       blackSpiderMarkUntil: 0,
@@ -1246,6 +1272,9 @@ export default function App() {
       bsSkillState: "idle",
       bsSlamWallUntil: 0,
       bsSlamWallSourceId: null,
+      spiderSlamBouncesLeft: 0,
+      webShieldActive: false,
+      webSplatterStuckUntil: 0,
       bsSpinAngle: 0,
       bsSpinUntil: 0,
       bsPullUntil: 0,
@@ -1394,13 +1423,16 @@ export default function App() {
   const getBallSkillStatus = (ball, currentTime = 0) => {
     if (!ball) return "SKILL READY";
     if (ball.type === "spider") {
+      if (ball.webShieldActive) return "WEB SHIELD · SPEED UP";
       const labels = { throwing: "WEB THROW", pulling: "WEB PULL", spinning: "WEB SPIN" };
       if (labels[ball.bsSkillState]) return labels[ball.bsSkillState];
       const trapReady = (gameRef.current?.venomPools || []).some((pool) => pool.ownerId === ball.id && pool.isSpiderTrap);
-      return trapReady ? "WEB TRAP ARMED" : `WEB BITES ${ball.spiderBiteCount || 0}/3`;
+      const bitesLanded = ball.webState === "pulling" || ball.webState === "webBouncing" ? Math.max(0, 3 - (ball.webBouncesLeft || 0)) : 0;
+      return trapReady ? "WEB TRAP ARMED" : `WEB BITES ${bitesLanded}/3`;
     }
     if (ball.type === "shield") {
       if ((ball.shieldBashUntil || 0) > currentTime) return "SHIELD BASH";
+      if (ball.shieldState === "catch_spin") return "CATCH SPIN · RETHROW";
       return `BASH ${Math.min(SHIELD_BASH_READY_THROWS, ball.shieldBashThrows || 0)}/${SHIELD_BASH_READY_THROWS}`;
     }
     if (ball.type === "hammer") {
@@ -1413,6 +1445,13 @@ export default function App() {
       return labels[ball.eightCueState] || "CUE READY";
     }
     if (ball.type === "gun") return ball.gunReloading ? "RELOADING" : "GUN READY";
+    if (ball.type === "laser") {
+      if (ball.laserState === "huge_charging") return "ARMOR CHARGING";
+      if (ball.laserState === "huge_firing") return "WIDE LASER";
+      if (ball.laserState === "charging") return "LASER CHARGING";
+      if (ball.laserState === "firing") return "NORMAL LASER";
+      return `ARMOR ${ball.collectedArmorCount || 0}/${gameRef.current?.balance?.laser?.armorRequired || BALANCE.laser.armorRequired}`;
+    }
     if (ball.type === "chaos") return `TRAPS ${(gameRef.current?.chaosCircles || []).filter((trap) => trap.ownerId === ball.id).length}`;
     return "SKILL READY";
   };
@@ -1437,6 +1476,7 @@ export default function App() {
     jokerThreads: [],
     fishingLines: [],
     venomPools: [],
+    webSplatters: [],
     webStrands: [],
     fireCars: [],
     vampireClones: [],
@@ -1513,6 +1553,7 @@ export default function App() {
       jokerThreads: [],
       fishingLines: [],
       venomPools: [],
+      webSplatters: [],
       webStrands: [],
       fireCars: [],
       vampireClones: [],
@@ -2256,7 +2297,7 @@ export default function App() {
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
 
             if ((ball.hammerBouncesLeft || 0) > 0) {
-              const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+              const targetSpeed = ball.hammerHitType === "charge" ? 1050 : 760;
               const speed = Math.hypot(ball.vx, ball.vy);
               if (speed > 0) {
                 ball.vx = (ball.vx / speed) * targetSpeed;
@@ -2298,7 +2339,7 @@ export default function App() {
                     ball.hammerBouncesLeft -= 1;
                     if (ball.hammerBouncesLeft > 0) {
                       const speed = Math.hypot(ball.vx, ball.vy);
-                      const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+                      const targetSpeed = ball.hammerHitType === "charge" ? 1050 : 760;
                       if (speed > 0) {
                         ball.vx = (ball.vx / speed) * targetSpeed;
                         ball.vy = (ball.vy / speed) * targetSpeed;
@@ -2463,15 +2504,6 @@ export default function App() {
                   b.shieldGuardHits = (b.shieldGuardHits || 0) + 1;
                   if (b.shieldGuardHits >= SHIELD_GUARD_HITS) {
                     b.shieldGuardHits = 0;
-                    b.shieldState = "dropped";
-                    b.shieldX = b.x + Math.cos(angle) * (b.r + 8);
-                    b.shieldY = b.y + Math.sin(angle) * (b.r + 8);
-                    b.shieldVx = 0;
-                    b.shieldVy = 0;
-                    b.shieldThrownUntil = 0;
-                    b.shieldNextHitAt = 0;
-                    b.shieldSpinAngle = 0;
-                    b.nextThrowAt = simTime + balance.shield.cooldown;
                   }
                 }
               }
@@ -2845,16 +2877,11 @@ export default function App() {
                   ball.shieldNextHitAt = 0;
                 }
               } else if (ball.shieldState === "dropped") {
-                ball.shieldVx = 0;
-                ball.shieldVy = 0;
-                const pickupDist = Math.hypot(ball.x - ball.shieldX, ball.y - ball.shieldY);
-                if (pickupDist < ball.r + SHIELD_PICKUP_RADIUS) {
-                  ball.shieldState = "held";
-                  ball.shieldGuardHits = 0;
-                  ball.shieldBonusDamage = 0;
-                  ball.shieldLaserPierceHits = 0;
-                  ball.nextThrowAt = simTime + balance.shield.cooldown;
-                }
+                ball.shieldState = "held";
+                ball.shieldGuardHits = 0;
+                ball.shieldBonusDamage = 0;
+                ball.shieldLaserPierceHits = 0;
+                ball.nextThrowAt = simTime;
               } else {
                 ball.shieldX += ball.shieldVx * dt;
                 ball.shieldY += ball.shieldVy * dt;
@@ -3612,15 +3639,6 @@ export default function App() {
                     shieldBall.shieldGuardHits = (shieldBall.shieldGuardHits || 0) + 1;
                     if (shieldBall.shieldGuardHits >= SHIELD_GUARD_HITS) {
                       shieldBall.shieldGuardHits = 0;
-                      shieldBall.shieldState = "dropped";
-                      shieldBall.shieldX = shieldBall.x + Math.cos(angle) * (shieldBall.r + 8);
-                      shieldBall.shieldY = shieldBall.y + Math.sin(angle) * (shieldBall.r + 8);
-                      shieldBall.shieldVx = 0;
-                      shieldBall.shieldVy = 0;
-                      shieldBall.shieldThrownUntil = 0;
-                      shieldBall.shieldNextHitAt = 0;
-                      shieldBall.shieldSpinAngle = 0;
-                      shieldBall.nextThrowAt = simTime + balance.shield.cooldown;
                     }
                     return true;
                   }
@@ -3936,6 +3954,7 @@ export default function App() {
     }
 
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
+      if (isBomberSelfDestructInvulnerable(defender)) return;
       if (defender.constellationShieldedUntil && currentTime < defender.constellationShieldedUntil) return;
       if (isChessCrownActive(defender) && !cooldownKey.includes("chess-attack")) return;
       if (isWreckerJumpInvulnerable(defender)) return;
@@ -4259,19 +4278,28 @@ export default function App() {
       if (shieldBall.shieldGuardHits < SHIELD_GUARD_HITS) return;
 
       shieldBall.shieldGuardHits = 0;
-      shieldBall.shieldState = "dropped";
-      shieldBall.shieldX = shieldBall.x + Math.cos(impactAngle) * (shieldBall.r + 8);
-      shieldBall.shieldY = shieldBall.y + Math.sin(impactAngle) * (shieldBall.r + 8);
-      shieldBall.shieldVx = 0;
-      shieldBall.shieldVy = 0;
-      shieldBall.shieldThrownUntil = 0;
-      shieldBall.shieldNextHitAt = 0;
-      shieldBall.shieldSpinAngle = 0;
-      shieldBall.shieldBonusDamage = 0;
-      shieldBall.shieldLaserPierceHits = 0;
-      shieldBall.nextThrowAt = currentTime + game.balance.shield.cooldown;
-      spawnSparks(shieldBall.shieldX, shieldBall.shieldY, "#facc15", 10);
-      spawnDust(shieldBall.shieldX, shieldBall.shieldY, 6);
+      spawnSparks(shieldBall.x + Math.cos(impactAngle) * shieldBall.r, shieldBall.y + Math.sin(impactAngle) * shieldBall.r, "#60a5fa", 6);
+    };
+
+    const leaveSpiderWebSplatter = (owner, x, y, wall, impactAngle = 0, activationDelay = 0) => {
+      if (!owner || owner.type !== "spider") return;
+      const splatX = wall === "left" ? 0 : wall === "right" ? game.width : clamp(x, 0, game.width);
+      const splatY = wall === "top" ? 0 : wall === "bottom" ? game.height : clamp(y, 0, game.height);
+      game.webSplatters = game.webSplatters || [];
+      game.webSplatters.push({
+        id: `${owner.id}-web-splatter-${game.simTime}-${game.webSplatters.length}`,
+        ownerId: owner.id,
+        ownerSide: owner.side,
+        x: splatX,
+        y: splatY,
+        wall,
+        r: 42,
+        createdAt: game.simTime,
+        activeAt: game.simTime + activationDelay,
+      });
+      spawnSparks(splatX, splatY, "#ffffff", 18);
+      spawnImpactBurst(splatX, splatY, impactAngle, ["#ffffff", "#dbeafe", "#60a5fa"], 1.05);
+      playSound("webHit", 1.08, 80);
     };
 
 
@@ -4289,7 +4317,7 @@ export default function App() {
           ball.hammerBouncesLeft -= 1;
           if (ball.hammerBouncesLeft > 0) {
             const speed = Math.hypot(ball.vx, ball.vy);
-            const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+            const targetSpeed = ball.hammerHitType === "charge" ? 1050 : 760;
             if (speed > 0) {
               ball.vx = (ball.vx / speed) * targetSpeed;
               ball.vy = (ball.vy / speed) * targetSpeed;
@@ -4302,12 +4330,34 @@ export default function App() {
             }
           }
         }
+        if ((ball.laserBounceWallBouncesLeft || 0) > 0) {
+          ball.laserBounceWallBouncesLeft -= 1;
+          const speed = Math.hypot(ball.vx, ball.vy);
+          if (ball.laserBounceWallBouncesLeft > 0 && speed > 0) {
+            const ricochetSpeed = Math.max(780, speed);
+            ball.vx = (ball.vx / speed) * ricochetSpeed;
+            ball.vy = (ball.vy / speed) * ricochetSpeed;
+          } else if (speed > 240) {
+            ball.vx = (ball.vx / speed) * 240;
+            ball.vy = (ball.vy / speed) * 240;
+          }
+          spawnImpactBurst(ball.x, ball.y, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#facc15", "#f97316"], 1.35);
+          spawnSparks(ball.x, ball.y, "#facc15", 22);
+          game.screenShake = Math.max(game.screenShake, 14);
+          playSound("wallSlam", 1.15, 120, { pan: (ball.x / game.width) * 2 - 1, depth: 0.04, room: 0.68 });
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 20, vy: -50,
+            text: ball.laserBounceWallBouncesLeft > 0 ? `LASER BOUNCE ${ball.laserBounceWallBouncesLeft}` : "SKILLS RESTORED",
+            color: "#fde047", life: 0.72, maxLife: 0.72
+          });
+        }
         if ((ball.shieldBashBouncesLeft || 0) > 0) {
           ball.shieldBashBouncesLeft -= 1;
           const speed = Math.hypot(ball.vx, ball.vy);
-          if (ball.shieldBashBouncesLeft > 0 && speed > 0 && speed < 820) {
-            ball.vx = (ball.vx / speed) * 820;
-            ball.vy = (ball.vy / speed) * 820;
+          if (ball.shieldBashBouncesLeft > 0 && speed > 0 && speed < 980) {
+            ball.vx = (ball.vx / speed) * 980;
+            ball.vy = (ball.vy / speed) * 980;
           }
           spawnSparks(ball.x, ball.y, "#60a5fa", 24);
           spawnImpactBurst(ball.x, ball.y, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#93c5fd", "#3b82f6"], 1.25);
@@ -4316,7 +4366,7 @@ export default function App() {
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: ball.x, y: ball.y - ball.r - 18, vy: -48,
-            text: ball.shieldBashBouncesLeft > 0 ? "BASH RICOCHET · 1" : "DOUBLE BOUNCE!",
+            text: ball.shieldBashBouncesLeft > 0 ? `BASH RICOCHET · ${ball.shieldBashBouncesLeft}` : "SKILLS RESTORED",
             color: "#93c5fd", life: 0.68, maxLife: 0.68
           });
         }
@@ -4499,18 +4549,32 @@ export default function App() {
           }
         }
         // Wall goo trigger removed. Black Spider now spits a slime web pool via its secondary skill.
-        if (ball.bsSlamWallUntil && game.simTime <= ball.bsSlamWallUntil) {
-          const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
-          applyDamage(ball, bsBal.slamWallDamage || 18, `${ball.bsSlamWallSourceId || ball.id}-bs-slam-wall`, game.simTime, 500);
-          ball.bsSlamWallUntil = 0;
-          ball.bsSlamWallSourceId = null;
-          spawnSparks(ball.x, ball.y, "#0f172a", 20);
+        if ((ball.spiderSlamBouncesLeft || 0) > 0 && ball.bsSlamWallUntil && game.simTime <= ball.bsSlamWallUntil) {
+          const isFirstSlam = ball.spiderSlamBouncesLeft === 2;
+          if (isFirstSlam) {
+            applyDamage(ball, 2, `${ball.bsSlamWallSourceId || ball.id}-bs-slam-wall`, game.simTime, 500);
+            const slamOwner = game.balls.find((candidate) => candidate.id === ball.bsSlamWallSourceId);
+            leaveSpiderWebSplatter(slamOwner, bx, by, sideHit, Math.atan2(ball.vy, ball.vx), 300);
+          }
+          ball.spiderSlamBouncesLeft -= 1;
+          const slamSpeed = Math.hypot(ball.vx, ball.vy);
+          if (ball.spiderSlamBouncesLeft > 0 && slamSpeed > 0) {
+            const retainedSpeed = Math.max(900, slamSpeed);
+            ball.vx = (ball.vx / slamSpeed) * retainedSpeed;
+            ball.vy = (ball.vy / slamSpeed) * retainedSpeed;
+          } else {
+            ball.bsSlamWallUntil = 0;
+            ball.bsSlamWallSourceId = null;
+          }
+          spawnSparks(ball.x, ball.y, "#ffffff", 20);
+          spawnImpactBurst(ball.x, ball.y, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#f8fafc", "#e2e8f0"], 1.15);
           game.screenShake = Math.max(game.screenShake, 18);
           playSound("explosion", 1.0, 90);
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: ball.x, y: ball.y - ball.r - 22, vy: -55,
-            text: "SLAMMED!", color: "#cbd5e1", life: 1.0, maxLife: 1.0
+            text: ball.spiderSlamBouncesLeft > 0 ? "WEB SLAM BOUNCE 1" : "WEB SLAM BOUNCE 2",
+            color: "#cbd5e1", life: 1.0, maxLife: 1.0
           });
         }
         if (ball.armThrowWallUntil && game.simTime <= ball.armThrowWallUntil) {
@@ -4535,10 +4599,14 @@ export default function App() {
             ball.chaosControlledUntil = 0;
             ball.chaosControlHoldUntil = 0;
             const radiusBounce = chaosBal.radiusBounce || 140;
-            const tangent = sideHit === "top" || sideHit === "bottom" ? (Math.random() > 0.5 ? 1 : -1) : 0;
-            const verticalTangent = sideHit === "left" || sideHit === "right" ? (Math.random() > 0.5 ? 1 : -1) : 0;
-            if (tangent) ball.vx += tangent * radiusBounce;
-            if (verticalTangent) ball.vy += verticalTangent * radiusBounce;
+            const tangentSign = ball.chaosSlamTangentSign || 1;
+            if (sideHit === "top" || sideHit === "bottom") {
+              const tangentSpeed = Math.max(radiusBounce, Math.abs(ball.vy) * 0.55);
+              ball.vx = tangentSign * tangentSpeed;
+            } else {
+              const tangentSpeed = Math.max(radiusBounce, Math.abs(ball.vx) * 0.55);
+              ball.vy = tangentSign * tangentSpeed;
+            }
             ball.chaosDraggedUntil = game.simTime + 220;
             game.screenShake = Math.max(game.screenShake, 24);
             spawnSparks(ball.x, ball.y, "#fdba74", 38);
@@ -5244,6 +5312,10 @@ export default function App() {
       vampire.vx = target.vx; vampire.vy = target.vy;
 
       if (vampire.nextDrainAt <= currentTime) {
+        if (isBomberSelfDestructInvulnerable(target)) {
+          vampire.nextDrainAt = currentTime + bal.tickCooldown;
+          return;
+        }
         if (isWreckerJumpInvulnerable(target)) {
           vampire.nextDrainAt = currentTime + bal.tickCooldown;
           return;
@@ -6134,9 +6206,9 @@ export default function App() {
           targetArray.splice(i, 1);
         }
       }
-      for (let i = 0; i < 4; i++) {
-        const angle = (i * Math.PI * 2 / 4) + (Math.random() - 0.5) * 0.45;
-        const speed = 250 + Math.random() * 150;
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * Math.PI * 2 / 5) + (Math.random() - 0.5) * 0.45;
+        const speed = 480 + Math.random() * 220;
         targetArray.push({
           id: `${laserBall.id}-part-${i}-${Math.random()}`,
           ownerId: laserBall.id,
@@ -6147,7 +6219,9 @@ export default function App() {
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           r: 10,
-          collected: false
+          collected: false,
+          grabbing: false,
+          grabbableAt: game.simTime + 700
         });
       }
     };
@@ -6163,12 +6237,12 @@ export default function App() {
         if (part.x + part.r > width - pad) { part.x = width - pad - part.r; part.vx = -part.vx * 0.7; }
         if (part.y - part.r < pad) { part.y = pad + part.r; part.vy = -part.vy * 0.7; }
         if (part.y + part.r > height - pad) { part.y = height - pad - part.r; part.vy = -part.vy * 0.7; }
-        part.vx *= 0.94;
-        part.vy *= 0.94;
+        part.vx *= 0.985;
+        part.vy *= 0.985;
       });
     };
 
-    const updateLaser = (laserBall, target, currentTime, stepDt) => {
+    const updateLaserLegacy = (laserBall, target, currentTime, stepDt) => {
       const bal = game.balance;
 
       if (!laserBall.armorParts) {
@@ -6180,35 +6254,71 @@ export default function App() {
         scatterArmorParts(laserBall, laserBall.armorParts);
       }
 
-      if ((laserBall.collectedArmorCount || 0) < 4) {
+      if ((laserBall.collectedArmorCount || 0) < 5) {
+        let hasActiveGrab = laserBall.armorParts.some(part => part.grabbing && !part.collected);
         laserBall.armorParts.forEach(part => {
           if (!part.collected) {
             const dist = Math.hypot(part.x - laserBall.x, part.y - laserBall.y);
-            if (dist < laserBall.r + part.r) {
+            if (!hasActiveGrab && !part.grabbing && currentTime >= (part.grabbableAt || 0) && dist < 150) {
+              part.grabbing = true;
+              part.grabbedAt = currentTime;
+              part.vx = 0;
+              part.vy = 0;
+              hasActiveGrab = true;
+              playSound("shieldThrow", 0.82, 50, { pan: (part.x / game.width) * 2 - 1, depth: 0.12, room: 0.3 });
+            }
+
+            if (part.grabbing) {
+              const facing = laserBall.laserTargetAngle || 0;
+              const slotAngle = facing - Math.PI / 2 + (part.index * Math.PI * 2 / 5);
+              const mountX = laserBall.x + Math.cos(slotAngle) * (laserBall.r + 3);
+              const mountY = laserBall.y + Math.sin(slotAngle) * (laserBall.r + 3);
+              const pull = clamp(stepDt * 14, 0, 1);
+              part.x += (mountX - part.x) * pull;
+              part.y += (mountY - part.y) * pull;
+              part.vx = 0;
+              part.vy = 0;
+
+              if (canSpawnParticle() && Math.random() < 0.32) {
+                game.particles.push({
+                  x: part.x, y: part.y,
+                  vx: (laserBall.x - part.x) * 0.35,
+                  vy: (laserBall.y - part.y) * 0.35,
+                  color: Math.random() < 0.65 ? "#facc15" : "#ffffff",
+                  radius: 1.8, life: 0.18, maxLife: 0.18
+                });
+              }
+
+              const mountDistance = Math.hypot(part.x - mountX, part.y - mountY);
+              if (mountDistance > 4) return;
               part.collected = true;
+              part.grabbing = false;
+              part.attachedAt = currentTime;
               laserBall.collectedArmorCount = (laserBall.collectedArmorCount || 0) + 1;
-              playSound("shieldPickup", 1.25, 80);
+              playSound("shieldCatch", 0.92 + laserBall.collectedArmorCount * 0.07, 45, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.04, room: 0.46 });
+              spawnSparks(part.x, part.y, "#facc15", 10);
               game.floatingTexts = game.floatingTexts || [];
               game.floatingTexts.push({
                 x: part.x, y: part.y - part.r - 10, vy: -40,
-                text: `ARMOR ${laserBall.collectedArmorCount}/4`, color: "#facc15", life: 0.65, maxLife: 0.65
+                text: `ARMOR ${laserBall.collectedArmorCount}/5`, color: "#facc15", life: 0.65, maxLife: 0.65
               });
               
-              if (laserBall.collectedArmorCount >= 4) {
+              if (laserBall.collectedArmorCount >= 5) {
+                playSound("gunReload", 1.2, 80, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.02, room: 0.52 });
                 laserBall.laserState = "huge_charging";
                 laserBall.laserStateUntil = currentTime + 1200;
                 laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
                 laserBall.vx = 0;
                 laserBall.vy = 0;
-                playSound("laserCharge", 0.85, 140);
+                playSound("laserCharge", 1.12, 140, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.04, room: 0.5 });
               }
             }
           }
         });
       }
 
-      if ((laserBall.collectedArmorCount || 0) < 4 && laserBall.laserState !== "huge_charging" && laserBall.laserState !== "huge_firing") {
-        const nearestPart = laserBall.armorParts.filter(p => !p.collected)
+      if ((laserBall.collectedArmorCount || 0) < 5 && laserBall.laserState === "idle") {
+        const nearestPart = laserBall.armorParts.filter(p => !p.collected && !p.grabbing)
                                   .sort((a, b) => Math.hypot(a.x - laserBall.x, a.y - laserBall.y) - Math.hypot(b.x - laserBall.x, b.y - laserBall.y))[0];
         if (nearestPart) {
           const angle = Math.atan2(nearestPart.y - laserBall.y, nearestPart.x - laserBall.x);
@@ -6241,7 +6351,9 @@ export default function App() {
         if (currentTime >= laserBall.laserStateUntil) {
           laserBall.laserState = "huge_firing";
           laserBall.laserStateUntil = currentTime + 2000;
-          playSound("laserFire", 0.9, 130);
+          laserBall.hugeLaserDamageDealt = 0;
+          laserBall.hugeLaserBounceApplied = false;
+          playSound("laserFire", 1.25, 130, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.01, room: 0.68 });
           laserBall.laserNextTickAt = currentTime;
           game.screenShake = Math.max(game.screenShake, 12);
         }
@@ -6268,7 +6380,7 @@ export default function App() {
             y: mY + Math.sin(laserBall.laserTargetAngle) * dst,
             vx: (Math.random() - 0.5) * 45,
             vy: (Math.random() - 0.5) * 45,
-            color: Math.random() < 0.6 ? "#ffffff" : "#facc15",
+            color: "#facc15",
             radius: 2.5,
             life: 0.18,
             maxLife: 0.18
@@ -6277,9 +6389,12 @@ export default function App() {
 
         const d = linePointDist(target.x, target.y, mX, mY, eX, eY);
         if (d < target.r + 27.5 && currentTime >= laserBall.laserNextTickAt) {
-          const beamDamage = 10;
-          if (!isChessCrownActive(target) && !isWreckerJumpInvulnerable(target)) {
-            target.health = clamp(target.health - beamDamage, 0, MAX_HEALTH);
+          const damageRemaining = Math.max(0, 15 - (laserBall.hugeLaserDamageDealt || 0));
+          const beamDamage = Math.min(3, damageRemaining);
+          if (!isChessCrownActive(target) && !isWreckerJumpInvulnerable(target) && !isBomberSelfDestructInvulnerable(target)) {
+            if (beamDamage > 0) {
+              target.health = clamp(target.health - beamDamage, 0, MAX_HEALTH);
+              laserBall.hugeLaserDamageDealt = (laserBall.hugeLaserDamageDealt || 0) + beamDamage;
             
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({
@@ -6292,36 +6407,73 @@ export default function App() {
               maxLife: 0.8
             });
 
-            if (laserBall.side === "left") { game.stats.left.damageDealt += beamDamage; game.stats.left.hitsLanded++; }
-            else { game.stats.right.damageDealt += beamDamage; game.stats.right.hitsLanded++; }
+              if (laserBall.side === "left") { game.stats.left.damageDealt += beamDamage; game.stats.left.hitsLanded++; }
+              else { game.stats.right.damageDealt += beamDamage; game.stats.right.hitsLanded++; }
 
-            const pushAngle = laserBall.laserTargetAngle;
-            if (!hasStringBounceGuard(target)) {
-              target.vx += Math.cos(pushAngle) * 550 * stepDt;
-              target.vy += Math.sin(pushAngle) * 550 * stepDt;
-            }
+              const pushAngle = laserBall.laserTargetAngle;
+              if (!hasStringBounceGuard(target)) {
+                if (!laserBall.hugeLaserBounceApplied) {
+                  laserBall.hugeLaserBounceApplied = true;
+                  const interruptedHammerCharge = target.type === "hammer" &&
+                    (target.hammerState === "charging" || target.hammerState === "launching");
+                  cancelActiveMovementStates(target);
+                  if (interruptedHammerCharge) {
+                    target.hammerAngle = 0;
+                  }
+                  target.laserBounceWallBouncesLeft = 5;
+                  target.vx = Math.cos(pushAngle) * 920;
+                  target.vy = Math.sin(pushAngle) * 920;
+                  game.floatingTexts = game.floatingTexts || [];
+                  game.floatingTexts.push({
+                    x: target.x, y: target.y - target.r - 28, vy: -58,
+                    text: "5-BOUNCE SKILL LOCK", color: "#fde047", life: 1.05, maxLife: 1.05
+                  });
+                  if (interruptedHammerCharge) {
+                    game.floatingTexts.push({
+                      x: target.x, y: target.y - target.r - 46, vy: -54,
+                      text: "CHARGE BROKEN", color: "#fb923c", life: 0.9, maxLife: 0.9
+                    });
+                  }
+                  spawnImpactBurst(target.x, target.y, pushAngle, ["#fef08a", "#facc15", "#eab308"], 1.6);
+                  game.screenShake = Math.max(game.screenShake, 18);
+                  playSound("hammerHit", 1.12, 120, { pan: (target.x / game.width) * 2 - 1, depth: 0.03, room: 0.64 });
+                }
+              }
 
-            const beamHitParticles = getParticleBudget(4);
-            for (let i = 0; i < beamHitParticles; i++) {
-              const sa = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 80;
-              game.particles.push({
-                x: target.x + (Math.random() - 0.5) * target.r,
-                y: target.y + (Math.random() - 0.5) * target.r,
-                vx: Math.cos(sa) * spd,
-                vy: Math.sin(sa) * spd,
-                color: "#facc15",
-                radius: 2.5,
-                life: 0.22,
-                maxLife: 0.22
-              });
+              const beamHitParticles = getParticleBudget(4);
+              for (let i = 0; i < beamHitParticles; i++) {
+                const sa = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 80;
+                game.particles.push({
+                  x: target.x + (Math.random() - 0.5) * target.r,
+                  y: target.y + (Math.random() - 0.5) * target.r,
+                  vx: Math.cos(sa) * spd,
+                  vy: Math.sin(sa) * spd,
+                  color: "#facc15",
+                  radius: 2.5,
+                  life: 0.22,
+                  maxLife: 0.22
+                });
+              }
+              spawnImpactBurst(target.x, target.y, laserBall.laserTargetAngle, ["#fef08a", "#facc15", "#eab308"], 0.7);
+              playSound("bulletHit", 1.1, 70, { pan: (target.x / game.width) * 2 - 1, depth: 0.03, room: 0.52 });
             }
           }
           laserBall.laserNextTickAt = currentTime + 80;
         }
 
         if (currentTime >= laserBall.laserStateUntil) {
+          game.explosions.push({
+            ownerId: laserBall.id, x: laserBall.x, y: laserBall.y, r: 0,
+            maxRadius: 105, duration: 520, life: 520
+          });
+          spawnExplosionParticles(laserBall.x, laserBall.y);
+          spawnImpactBurst(laserBall.x, laserBall.y, laserBall.laserTargetAngle || 0, ["#ffffff", "#facc15", "#ef4444"], 1.65);
+          playSound("explosion", 1.2, 120, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.02, room: 0.62 });
+          game.screenShake = Math.max(game.screenShake, 20);
           laserBall.laserState = "idle";
           laserBall.collectedArmorCount = 0;
+          laserBall.hugeLaserDamageDealt = 0;
+          laserBall.hugeLaserBounceApplied = false;
           scatterArmorParts(laserBall, laserBall.armorParts);
           laserBall.nextShotAt = currentTime + 1000;
         }
@@ -6335,7 +6487,7 @@ export default function App() {
           laserBall.laserFireAngle = laserBall.laserTargetAngle;
           laserBall.laserShieldBlockCount = 0;
           laserBall.laserReflect = null;
-          playSound("laserCharge");
+          playSound("laserCharge", 1.02, 120, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.08, room: 0.44 });
         }
       } 
       else if (laserBall.laserState === "charging") {
@@ -6359,7 +6511,7 @@ export default function App() {
           laserBall.laserStateUntil = currentTime + bal.laser.fireDuration;
           laserBall.laserFireAngle = laserBall.laserTargetAngle;
           laserBall.laserShieldBlockCount = 0;
-          playSound("laserFire");
+          playSound("laserFire", 1.08, 90, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.03, room: 0.54 });
           laserBall.laserNextTickAt = currentTime;
           game.screenShake = Math.max(game.screenShake, 5);
         }
@@ -6415,6 +6567,9 @@ export default function App() {
             if (piercesShield) {
               const pierceDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
               applyDamage(target, pierceDamage, `${laserBall.id}-laser-pierce`, currentTime, bal.laser.tickCooldown);
+              spawnSparks(target.x, target.y, "#facc15", 12);
+              spawnImpactBurst(target.x, target.y, laserBall.laserTargetAngle, ["#fef08a", "#facc15", "#eab308"], 0.65);
+              playSound("bulletHit", 0.95, 80, { pan: (target.x / game.width) * 2 - 1, depth: 0.05, room: 0.48 });
               target.shieldLaserPierceHits = 0;
               game.floatingTexts = game.floatingTexts || [];
               game.floatingTexts.push({
@@ -6448,6 +6603,10 @@ export default function App() {
         if (!beamClone && d < target.r + bal.laser.beamWidth / 2 && currentTime >= laserBall.laserNextTickAt) {
           const beamDamage = Math.max(MIN_DAMAGE, bal.laser.damagePerTick);
           if (isChessCrownActive(target)) return;
+          if (isBomberSelfDestructInvulnerable(target)) {
+            laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
+            return;
+          }
           if (isWreckerJumpInvulnerable(target)) {
             laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
             return;
@@ -6468,9 +6627,11 @@ export default function App() {
             const sa = Math.random() * Math.PI * 2, spd = 40 + Math.random() * 60;
             game.particles.push({
               x: target.x + (Math.random() - 0.5) * target.r, y: target.y + (Math.random() - 0.5) * target.r,
-              vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd, color: Math.random() < 0.7 ? "#ffffff" : "#facc15", radius: 2, life: 0.2, maxLife: 0.2
+              vx: Math.cos(sa) * spd, vy: Math.sin(sa) * spd, color: "#facc15", radius: 2, life: 0.2, maxLife: 0.2
             });
           }
+          spawnImpactBurst(target.x, target.y, laserBall.laserTargetAngle, ["#fef08a", "#facc15", "#eab308"], 0.55);
+          playSound("bulletHit", 0.88, 80, { pan: (target.x / game.width) * 2 - 1, depth: 0.06, room: 0.46 });
           laserBall.laserNextTickAt = currentTime + bal.laser.tickCooldown;
         }
 
@@ -6480,6 +6641,168 @@ export default function App() {
           laserBall.laserReflect = null;
           laserBall.laserShieldBlockCount = 0;
         }
+      }
+    };
+
+    const updateLaser = (laserBall, target, currentTime, stepDt) => {
+      const bal = game.balance.laser || BALANCE.laser;
+      const armorRequired = bal.armorRequired || 4;
+
+      if (!laserBall.armorParts) laserBall.armorParts = [];
+      if (!Number.isFinite(laserBall.collectedArmorCount)) laserBall.collectedArmorCount = 0;
+      if (!laserBall.armorParts.length && laserBall.collectedArmorCount === 0) {
+        scatterArmorParts(laserBall, laserBall.armorParts);
+      }
+
+      const traceFanRay = (angle) => {
+        const pad = 18;
+        let x = laserBall.x + Math.cos(angle) * laserBall.r;
+        let y = laserBall.y + Math.sin(angle) * laserBall.r;
+        let dx = Math.cos(angle);
+        let dy = Math.sin(angle);
+        const points = [{ x, y }];
+        for (let bounce = 0; bounce <= (bal.fanBounces || 5); bounce++) {
+          const tx = dx > 0 ? (game.width - pad - x) / dx : dx < 0 ? (pad - x) / dx : Infinity;
+          const ty = dy > 0 ? (game.height - pad - y) / dy : dy < 0 ? (pad - y) / dy : Infinity;
+          const hitXWall = tx < ty;
+          const travel = Math.max(0, Math.min(tx, ty));
+          x += dx * travel;
+          y += dy * travel;
+          points.push({ x, y });
+          if (hitXWall) dx *= -1;
+          else dy *= -1;
+          x += dx * 0.5;
+          y += dy * 0.5;
+        }
+        return points;
+      };
+
+      if (laserBall.laserState === "fan_charging") {
+        laserBall.vx = 0;
+        laserBall.vy = 0;
+        laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+        if (canSpawnParticle() && Math.random() < 0.65) {
+          const a = Math.random() * Math.PI * 2;
+          const distance = laserBall.r + 18 + Math.random() * 36;
+          game.particles.push({
+            x: laserBall.x + Math.cos(a) * distance,
+            y: laserBall.y + Math.sin(a) * distance,
+            vx: -Math.cos(a) * 145,
+            vy: -Math.sin(a) * 145,
+            color: Math.random() < 0.5 ? "#ffffff" : "#facc15",
+            radius: 2 + Math.random() * 2.5,
+            life: 0.28,
+            maxLife: 0.28
+          });
+        }
+        if (currentTime >= laserBall.laserStateUntil) {
+          laserBall.laserState = "fan_firing";
+          laserBall.laserStateUntil = currentTime + (bal.fanDuration || 720);
+          laserBall.laserFanAngle = laserBall.laserTargetAngle;
+          laserBall.laserNextTickAt = currentTime;
+          playSound("laserFire", 1.28, 120, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.03, room: 0.62 });
+          game.screenShake = Math.max(game.screenShake, 16);
+        }
+        return;
+      }
+
+      if (laserBall.laserState === "fan_firing") {
+        laserBall.vx = 0;
+        laserBall.vy = 0;
+        const rayCount = bal.fanRays || 5;
+        const spread = bal.fanSpread || 0.64;
+        laserBall.laserFanPaths = Array.from({ length: rayCount }, (_, index) => {
+          const offset = rayCount === 1 ? 0 : -spread / 2 + spread * (index / (rayCount - 1));
+          return traceFanRay((laserBall.laserFanAngle || 0) + offset);
+        });
+
+        if (currentTime >= (laserBall.laserNextTickAt || 0)) {
+          let hitAngle = null;
+          for (const path of laserBall.laserFanPaths) {
+            for (let segment = 0; segment < path.length - 1; segment++) {
+              const start = path[segment];
+              const end = path[segment + 1];
+              if (linePointDist(target.x, target.y, start.x, start.y, end.x, end.y) < target.r + bal.beamWidth * 0.7) {
+                hitAngle = Math.atan2(end.y - start.y, end.x - start.x);
+                break;
+              }
+            }
+            if (hitAngle !== null) break;
+          }
+
+          if (hitAngle !== null && !isChessCrownActive(target) && !isWreckerJumpInvulnerable(target)) {
+            const damage = Math.max(MIN_DAMAGE, bal.fanDamage || 4);
+            applyDamage(target, damage, `${laserBall.id}-armor-fan`, currentTime, bal.tickCooldown || 110);
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(hitAngle) * (bal.fanKnockback || 720);
+              target.vy += Math.sin(hitAngle) * (bal.fanKnockback || 720);
+            }
+            const stats = laserBall.side === "left" ? game.stats.left : game.stats.right;
+            stats.damageDealt += damage;
+            stats.hitsLanded++;
+            spawnSparks(target.x, target.y, "#facc15", 22);
+            spawnImpactBurst(target.x, target.y, hitAngle, ["#ffffff", "#facc15", "#38bdf8"], 1.2);
+            game.screenShake = Math.max(game.screenShake, 10);
+          }
+          laserBall.laserNextTickAt = currentTime + (bal.tickCooldown || 110);
+        }
+
+        if (currentTime >= laserBall.laserStateUntil) {
+          game.explosions.push({
+            ownerId: laserBall.id, x: laserBall.x, y: laserBall.y, r: 0,
+            maxRadius: 105, duration: 520, life: 520
+          });
+          spawnExplosionParticles(laserBall.x, laserBall.y);
+          spawnImpactBurst(laserBall.x, laserBall.y, laserBall.laserTargetAngle || 0, ["#ffffff", "#facc15", "#ef4444"], 1.65);
+          playSound("explosion", 1.2, 120, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.02, room: 0.62 });
+          game.screenShake = Math.max(game.screenShake, 20);
+          laserBall.laserState = "idle";
+          laserBall.laserFanPaths = [];
+          laserBall.collectedArmorCount = 0;
+          scatterArmorParts(laserBall, laserBall.armorParts);
+        }
+        return;
+      }
+
+      laserBall.laserState = "idle";
+      laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+      laserBall.armorParts.forEach((part) => {
+        if (part.collected || part.grabbing) return;
+        if (Math.hypot(part.x - laserBall.x, part.y - laserBall.y) < laserBall.r + part.r) {
+          part.collected = true;
+          laserBall.collectedArmorCount += 1;
+          playSound("shieldCatch", 1.08, 75, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.05, room: 0.42 });
+          spawnSparks(part.x, part.y, "#facc15", 14);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: part.x, y: part.y - part.r - 10, vy: -44,
+            text: `ARMOR ${laserBall.collectedArmorCount}/${armorRequired}`,
+            color: "#facc15", life: 0.7, maxLife: 0.7
+          });
+        }
+      });
+
+      if (laserBall.collectedArmorCount >= armorRequired) {
+        laserBall.laserState = "fan_charging";
+        laserBall.laserStateUntil = currentTime + (bal.fanChargeTime || 1100);
+        laserBall.vx = 0;
+        laserBall.vy = 0;
+        playSound("laserCharge", 1.15, 160, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.08, room: 0.5 });
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: laserBall.x, y: laserBall.y - laserBall.r - 24, vy: -48,
+          text: "ARMOR FAN CHARGE!", color: "#facc15", life: 0.9, maxLife: 0.9
+        });
+        return;
+      }
+
+      const nearestPart = laserBall.armorParts
+        .filter((part) => !part.collected)
+        .sort((a, b) => Math.hypot(a.x - laserBall.x, a.y - laserBall.y) - Math.hypot(b.x - laserBall.x, b.y - laserBall.y))[0];
+      if (nearestPart) {
+        const angle = Math.atan2(nearestPart.y - laserBall.y, nearestPart.x - laserBall.x);
+        laserBall.vx += Math.cos(angle) * 380 * stepDt;
+        laserBall.vy += Math.sin(angle) * 380 * stepDt;
       }
     };
 
@@ -6500,8 +6823,9 @@ export default function App() {
           ownerSide: bomberBall.side,
           x: mX,
           y: mY,
-          r: 10,
-          triggerRadius: 45,
+          r: 16,
+          triggerRadius: 60,
+          explosionRadius: game.balance.bomber.mineRadius + 25,
           isAboutToDetonate: false,
           triggerTime: null,
           isHoming: false,
@@ -6537,18 +6861,110 @@ export default function App() {
           vy: Math.sin(angle) * 30,
         });
 
+        spawnSparks(mX, mY, "#ef4444", 18);
+        spawnImpactBurst(mX, mY, angle, ["#fee2e2", "#ef4444", "#991b1b"], 0.9);
+
         game.floatingTexts = game.floatingTexts || [];
         game.floatingTexts.push({
           x: bomberBall.x, y: bomberBall.y - bomberBall.r - 20, vy: -50,
-          text: "HOMING MINE", color: "#38bdf8", life: 0.8, maxLife: 0.8
+          text: "HOMING MINE", color: "#ef4444", life: 0.8, maxLife: 0.8
         });
         playSound("spikePlant");
       }
     };
 
+    const updateBomberLastStand = (bomberBall, currentTime) => {
+      if (bomberBall.type !== "bomber" || bomberBall.bomberSelfDestructSpent) return false;
+
+      if (!bomberBall.bomberSelfDestructAt && bomberBall.health <= 1) {
+        bomberBall.health = 1;
+        bomberBall.bomberSelfDestructAt = currentTime + 2400;
+        bomberBall.bomberCountdownShown = 4;
+        bomberBall.skillLockedUntil = Math.max(bomberBall.skillLockedUntil || 0, bomberBall.bomberSelfDestructAt);
+        cancelActiveMovementStates(bomberBall);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({
+          x: bomberBall.x, y: bomberBall.y - bomberBall.r - 24, vy: -42,
+          text: "SELF-DESTRUCT ARMED", color: "#ef4444", life: 0.95, maxLife: 0.95
+        });
+        spawnImpactBurst(bomberBall.x, bomberBall.y, 0, ["#ffffff", "#ef4444", "#7f1d1d"], 1.15);
+        playSound("bombFuse", 1.15, 80);
+      }
+
+      if (!bomberBall.bomberSelfDestructAt) return false;
+      bomberBall.health = 1;
+      bomberBall.skillLockedUntil = Math.max(bomberBall.skillLockedUntil || 0, bomberBall.bomberSelfDestructAt);
+
+      const remaining = Math.max(0, bomberBall.bomberSelfDestructAt - currentTime);
+      const countdown = Math.max(1, Math.ceil(remaining / 800));
+      if (countdown < (bomberBall.bomberCountdownShown || 4)) {
+        bomberBall.bomberCountdownShown = countdown;
+        game.floatingTexts.push({
+          x: bomberBall.x, y: bomberBall.y - bomberBall.r - 24, vy: -48,
+          text: String(countdown), color: "#fee2e2", life: 0.72, maxLife: 0.72
+        });
+        spawnSparks(bomberBall.x, bomberBall.y, "#ef4444", 14);
+        playSound("bombFuse", 1 + (3 - countdown) * 0.08, 100 + (3 - countdown) * 55);
+      }
+
+      if (currentTime < bomberBall.bomberSelfDestructAt) return true;
+
+      const blastRadius = Math.hypot(game.width, game.height) + 80;
+      game.explosions.push({
+        ownerId: bomberBall.id, x: bomberBall.x, y: bomberBall.y, r: 0,
+        maxRadius: blastRadius, duration: 650, life: 650
+      });
+      game.balls.forEach((enemy) => {
+        if (enemy.id === bomberBall.id || enemy.side === bomberBall.side || enemy.health <= 0) return;
+        const dist = Math.hypot(enemy.x - bomberBall.x, enemy.y - bomberBall.y);
+        if (dist >= blastRadius + enemy.r) return;
+        const falloff = clamp(1 - dist / (blastRadius + enemy.r), 0.35, 1);
+        const damage = Math.max(6, Math.round(18 * falloff));
+        const healthBefore = enemy.health;
+        applyDamage(enemy, damage, `${bomberBall.id}-last-stand-${enemy.id}`, currentTime, 0);
+        const dealt = Math.max(0, healthBefore - enemy.health);
+        const angle = Math.atan2(enemy.y - bomberBall.y, enemy.x - bomberBall.x);
+        if (!hasStringBounceGuard(enemy)) {
+          enemy.vx += Math.cos(angle) * 1000 * falloff;
+          enemy.vy += Math.sin(angle) * 1000 * falloff;
+        }
+        const stats = bomberBall.side === "left" ? game.stats.left : game.stats.right;
+        if (stats && dealt > 0) { stats.damageDealt += dealt; stats.hitsLanded++; }
+      });
+      spawnExplosionParticles(bomberBall.x, bomberBall.y);
+      spawnExplosionParticles(bomberBall.x, bomberBall.y);
+      spawnSparks(bomberBall.x, bomberBall.y, "#ef4444", 46);
+      spawnImpactBurst(bomberBall.x, bomberBall.y, 0, ["#ffffff", "#fca5a5", "#ef4444", "#7f1d1d"], 2.6);
+      game.screenShake = Math.max(game.screenShake, 30);
+      playSound("explosion", 1.35, 80, { pan: (bomberBall.x / game.width) * 2 - 1, depth: 0.01, room: 0.75 });
+      bomberBall.bomberSelfDestructAt = 0;
+      bomberBall.bomberSelfDestructSpent = true;
+      bomberBall.health = 1;
+      bomberBall.lastDamageTakenAt = currentTime;
+      game.floatingTexts.push({
+        x: bomberBall.x, y: bomberBall.y - bomberBall.r - 26, vy: -48,
+        text: "1 HP · VULNERABLE", color: "#fee2e2", life: 1.05, maxLife: 1.05
+      });
+      return false;
+    };
+
+    const consumeSpiderWebShield = (spiderBall, x, y) => {
+      if (!spiderBall.webShieldActive) return;
+      spiderBall.webShieldActive = false;
+      spawnSparks(x, y, "#ffffff", 18);
+      spawnImpactBurst(x, y, Math.atan2(y - spiderBall.y, x - spiderBall.x), ["#ffffff", "#bfdbfe", "#60a5fa"], 0.95);
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({
+        x: spiderBall.x, y: spiderBall.y - spiderBall.r - 24, vy: -46,
+        text: "WEB SHIELD RELEASE", color: "#dbeafe", life: 0.75, maxLife: 0.75
+      });
+      playSound("webHit", 1.05, 90);
+    };
+
     const updateSpider = (spiderBall, target, currentTime, stepDt) => {
       const bal = game.balance;
-      const hasActiveWebTrap = () => (game.venomPools || []).some((pool) => pool.ownerId === spiderBall.id);
+      const webShieldSkillMult = spiderBall.webShieldActive ? 1.4 : 1;
+      const hasActiveWebTrap = () => (game.venomPools || []).some((pool) => pool.ownerId === spiderBall.id && pool.isSpiderTrap);
       const dropWebTrap = (x, y) => {
         if (hasActiveWebTrap()) return false;
         game.venomPools = game.venomPools || [];
@@ -6559,14 +6975,15 @@ export default function App() {
           r: bal.spider.secPoolRadius,
           ownerSide: spiderBall.side,
           createdTime: currentTime,
-          duration: 4000
+          duration: bal.spider.trapDuration || 7000,
+          isSpiderTrap: true,
         });
         return true;
       };
 
       // Venomous Web Spit Trigger
       const dist = Math.hypot(target.x - spiderBall.x, target.y - spiderBall.y);
-      if (dist < 240 && currentTime >= (spiderBall.nextSecondaryAt || 0) && !hasActiveWebTrap()) {
+      if (false && dist < 240 && currentTime >= (spiderBall.nextSecondaryAt || 0) && !hasActiveWebTrap()) {
         spiderBall.nextSecondaryAt = currentTime + bal.spider.secCooldown;
         const spitX = clamp(spiderBall.x + (target.x - spiderBall.x) * 0.4 + (Math.random() - 0.5) * 20, 30, game.width - 30);
         const spitY = clamp(spiderBall.y + (target.y - spiderBall.y) * 0.4 + (Math.random() - 0.5) * 20, 30, game.height - 30);
@@ -6588,13 +7005,13 @@ export default function App() {
           spiderBall.webY = spiderBall.y;
           
           const angle = Math.atan2(target.y - spiderBall.y, target.x - spiderBall.x);
-          spiderBall.webVx = Math.cos(angle) * bal.spider.webSpeed;
-          spiderBall.webVy = Math.sin(angle) * bal.spider.webSpeed;
+          spiderBall.webVx = Math.cos(angle) * bal.spider.webSpeed * webShieldSkillMult;
+          spiderBall.webVy = Math.sin(angle) * bal.spider.webSpeed * webShieldSkillMult;
           
           if (spiderBall.side === "left") game.stats.left.totalShots++;
           else game.stats.right.totalShots++;
 
-          spiderBall.nextShotAt = currentTime + bal.spider.cooldown;
+          spiderBall.nextShotAt = currentTime + bal.spider.cooldown / webShieldSkillMult;
           playSound("webShoot");
         }
       } else if (spiderBall.webState === "shooting") {
@@ -6604,7 +7021,6 @@ export default function App() {
           spiderBall.webState = "idle";
           spiderBall.webTargetId = null;
           spiderBall.webBouncesLeft = 0;
-          dropWebTrap(target.x, target.y);
           return;
         }
         const targetDx = target.x - (spiderBall.webLastTargetX ?? target.x);
@@ -6615,8 +7031,8 @@ export default function App() {
         spiderBall.y += targetDy;
         const angle = Math.atan2(target.y - spiderBall.y, target.x - spiderBall.x);
         
-        spiderBall.x += Math.cos(angle) * bal.spider.pullSpeed * stepDt;
-        spiderBall.y += Math.sin(angle) * bal.spider.pullSpeed * stepDt;
+        spiderBall.x += Math.cos(angle) * bal.spider.pullSpeed * webShieldSkillMult * stepDt;
+        spiderBall.y += Math.sin(angle) * bal.spider.pullSpeed * webShieldSkillMult * stepDt;
         handleWallBounce(spiderBall);
         
         spiderBall.webX = target.x;
@@ -6632,6 +7048,7 @@ export default function App() {
           spiderBall.vx = Math.cos(bounceAngle) * bal.spider.bounceSpeed;
           spiderBall.vy = Math.sin(bounceAngle) * bal.spider.bounceSpeed;
           applyDamage(target, bal.spider.fangDamage, `${spiderBall.id}-fang-${spiderBall.webBouncesLeft}`, currentTime, 120);
+          consumeSpiderWebShield(spiderBall, target.x, target.y);
           if (spiderBall.side === "left") {
             game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bal.spider.fangDamage);
             game.stats.left.hitsLanded++;
@@ -6645,11 +7062,12 @@ export default function App() {
             x: target.x, y: target.y - target.r - 20, vy: -60,
             text: "FANG", color: "#f8fafc", life: 0.7, maxLife: 0.7
           });
-          spawnSparks(spiderBall.x, spiderBall.y, "#cbd5e1", 5);
+          spawnSparks(target.x, target.y, "#ffffff", 14);
+          spawnImpactBurst(target.x, target.y, pushAngle, ["#ffffff", "#f8fafc", "#e2e8f0"], 0.9);
           spiderBall.webBouncesLeft -= 1;
           if (spiderBall.webBouncesLeft > 0) {
             spiderBall.webState = "webBouncing";
-            spiderBall.webStateUntil = currentTime + 300;
+            spiderBall.webStateUntil = currentTime + 300 / webShieldSkillMult;
           } else {
             spiderBall.webState = "idle";
             spiderBall.webTargetId = null;
@@ -7442,7 +7860,7 @@ export default function App() {
           }
         }
 
-        if (ball.bsSkillState === "idle") {
+        if (false && ball.bsSkillState === "idle") {
           if (ball.spiderBiteState === "idle" && currentTime >= (ball.spiderNextBiteAt || 0)) {
             const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
             ball.spiderBiteState = "flying";
@@ -7555,7 +7973,8 @@ export default function App() {
           target.webHitFlashUntil = currentTime + (bsBal.slamPullDuration || 600);
           target.webHitFlashColor = "#000000";
           playSound("webShoot", 0.9, 70);
-          spawnSparks(target.x, target.y, "#334155", 8);
+          spawnSparks(target.x, target.y, "#ffffff", 14);
+          spawnImpactBurst(target.x, target.y, Math.atan2(ball.bsStringVy, ball.bsStringVx), ["#ffffff", "#f8fafc", "#e2e8f0"], 0.75);
         } else {
           const distFromSelf = Math.hypot(ball.bsStringX - ball.x, ball.bsStringY - ball.y);
           const pad = 18;
@@ -7612,32 +8031,42 @@ export default function App() {
         target.vy = Math.cos(ball.bsSpinAngle) * orbitRadius * spinSpeed;
         
         if (currentTime >= ball.bsSpinUntil) {
-          const corners = [
-            { x: pad + 30, y: pad + 30 },
-            { x: game.width - pad - 30, y: pad + 30 },
-            { x: pad + 30, y: game.height - pad - 30 },
-            { x: game.width - pad - 30, y: game.height - pad - 30 },
+          const wallTargets = [
+            { x: pad + target.r, y: target.y },
+            { x: game.width - pad - target.r, y: target.y },
+            { x: target.x, y: pad + target.r },
+            { x: target.x, y: game.height - pad - target.r },
           ];
-          
-          let bestCorner = corners[0];
-          let maxDist = 0;
-          for (const c of corners) {
-            const d = Math.hypot(c.x - target.x, c.y - target.y);
-            if (d > maxDist) {
-              maxDist = d;
-              bestCorner = c;
-            }
+          const nearestWallTarget = wallTargets.reduce((best, wall) =>
+            Math.hypot(wall.x - target.x, wall.y - target.y) > Math.hypot(best.x - target.x, best.y - target.y) ? wall : best
+          );
+          const throwWall = { ...nearestWallTarget };
+          const wallIsVertical = throwWall.x === pad + target.r || throwWall.x === game.width - pad - target.r;
+          const crossPosition = wallIsVertical ? target.y : target.x;
+          const crossCenter = wallIsVertical ? game.height * 0.5 : game.width * 0.5;
+          const tangentSign = Math.abs(crossPosition - crossCenter) < 24
+            ? (Math.floor(currentTime / 500) % 2 === 0 ? 1 : -1)
+            : (crossPosition < crossCenter ? 1 : -1);
+          const tangentOffset = Math.min(140, (wallIsVertical ? game.height : game.width) * 0.22);
+          if (wallIsVertical) {
+            throwWall.y = clamp(target.y + tangentSign * tangentOffset, pad + target.r, game.height - pad - target.r);
+          } else {
+            throwWall.x = clamp(target.x + tangentSign * tangentOffset, pad + target.r, game.width - pad - target.r);
           }
-          
-          const angle = Math.atan2(bestCorner.y - target.y, bestCorner.x - target.x);
+          const angle = Math.atan2(throwWall.y - target.y, throwWall.x - target.x);
           const launchSpeed = bsBal.slamLaunchSpeed || 1150;
           target.vx = Math.cos(angle) * launchSpeed;
           target.vy = Math.sin(angle) * launchSpeed;
+          target.webTrappedUntil = 0;
           
-          target.bsSlamWallUntil = currentTime + 800;
+          target.bsSlamWallUntil = currentTime + 2400;
           target.bsSlamWallSourceId = ball.id;
+          target.spiderSlamBouncesLeft = 2;
           
           applyDamage(target, bsBal.slamHitDamage || 4, `${ball.id}-bs-slam-hit-${currentTime}`, currentTime, 300);
+          if (ball.type === "spider") consumeSpiderWebShield(ball, target.x, target.y);
+          spawnSparks(target.x, target.y, "#ffffff", 22);
+          spawnImpactBurst(target.x, target.y, angle, ["#ffffff", "#f8fafc", "#e2e8f0"], 1.25);
           if (ball.side === "left") {
             game.stats.left.damageDealt += Math.max(MIN_DAMAGE, bsBal.slamHitDamage || 4);
             game.stats.left.hitsLanded++;
@@ -7658,7 +8087,7 @@ export default function App() {
             text: "SLAM SHOT!", color: "#f1f5f9", life: 0.9, maxLife: 0.9
           });
           
-          spawnSparks(target.x, target.y, "#334155", 16);
+          spawnSparks(target.x, target.y, "#ffffff", 16);
         }
       }
     };
@@ -7691,15 +8120,20 @@ export default function App() {
       // Update active Shield Bash
       if (shieldBall.shieldBashUntil && currentTime < shieldBall.shieldBashUntil) {
         shieldBall.shieldBashFlashUntil = Math.max(shieldBall.shieldBashFlashUntil || 0, currentTime + 90);
+        const trackingAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
+        shieldBall.shieldAngle = trackingAngle;
+        shieldBall.vx = Math.cos(trackingAngle) * SHIELD_BASH_LUNGE_SPEED;
+        shieldBall.vy = Math.sin(trackingAngle) * SHIELD_BASH_LUNGE_SPEED;
         const dist = Math.hypot(target.x - shieldBall.x, target.y - shieldBall.y);
         if (dist < shieldBall.r + target.r + 5) {
           applyDamage(target, bal.shield.secBashDamage, `${shieldBall.id}-shield-bash`, currentTime, 250);
           const pushAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
           if (!hasStringBounceGuard(target)) {
-            const bashRecoil = 1050;
+            cancelActiveMovementStates(target);
+            const bashRecoil = 1180;
             target.vx = Math.cos(pushAngle) * bashRecoil;
             target.vy = Math.sin(pushAngle) * bashRecoil;
-            target.shieldBashBouncesLeft = 2;
+            target.shieldBashBouncesLeft = 4;
           }
           spawnSparks(target.x, target.y, "#3b82f6", 24);
           spawnImpactBurst(target.x, target.y, pushAngle, ["#ffffff", "#60a5fa", "#2563eb"], 1.45);
@@ -7722,10 +8156,11 @@ export default function App() {
           if (dist <= SHIELD_BASH_CLOSE_RADIUS) {
             applyDamage(target, bal.shield.secBashDamage, `${shieldBall.id}-shield-bash-ready`, currentTime, 250);
             if (!hasStringBounceGuard(target)) {
-              const bashRecoil = 1050;
+              cancelActiveMovementStates(target);
+              const bashRecoil = 1180;
               target.vx = Math.cos(bashAngle) * bashRecoil;
               target.vy = Math.sin(bashAngle) * bashRecoil;
-              target.shieldBashBouncesLeft = 2;
+              target.shieldBashBouncesLeft = 4;
             }
             spawnSparks(target.x, target.y, "#60a5fa", 30);
             spawnImpactBurst(target.x, target.y, bashAngle, ["#ffffff", "#93c5fd", "#3b82f6"], 1.65);
@@ -7790,19 +8225,38 @@ export default function App() {
           else game.stats.right.totalShots++;
           playSound("shieldThrow", 1.05, 60, { pan: (shieldBall.x / game.width) * 2 - 1, depth: 0.18, room: 0.34 });
         }
-      } else if (shieldBall.shieldState === "dropped") {
+      } else if (shieldBall.shieldState === "catch_spin") {
+        shieldBall.shieldSpinAngle = (shieldBall.shieldSpinAngle || 0) + 0.58;
+        const orbitAngle = shieldBall.shieldSpinAngle * 0.72;
+        shieldBall.shieldX = shieldBall.x + Math.cos(orbitAngle) * (shieldBall.r + 8);
+        shieldBall.shieldY = shieldBall.y + Math.sin(orbitAngle) * (shieldBall.r + 8);
         shieldBall.shieldVx = 0;
         shieldBall.shieldVy = 0;
-        const pickupDist = Math.hypot(shieldBall.x - shieldBall.shieldX, shieldBall.y - shieldBall.shieldY);
-        if (pickupDist < shieldBall.r + SHIELD_PICKUP_RADIUS) {
-          shieldBall.shieldState = "held";
-          shieldBall.shieldGuardHits = 0;
+
+        if (currentTime >= shieldBall.shieldCatchSpinUntil) {
+          const rethrowAngle = Math.atan2(target.y - shieldBall.y, target.x - shieldBall.x);
+          shieldBall.shieldState = "thrown";
+          shieldBall.shieldThrowAngle = rethrowAngle;
+          shieldBall.shieldAngle = rethrowAngle;
+          shieldBall.shieldX = shieldBall.x + Math.cos(rethrowAngle) * (shieldBall.r + 5);
+          shieldBall.shieldY = shieldBall.y + Math.sin(rethrowAngle) * (shieldBall.r + 5);
+          shieldBall.shieldVx = Math.cos(rethrowAngle) * bal.shield.shieldSpeed;
+          shieldBall.shieldVy = Math.sin(rethrowAngle) * bal.shield.shieldSpeed;
+          shieldBall.shieldThrownUntil = currentTime + bal.shield.duration;
+          shieldBall.shieldNextHitAt = 0;
           shieldBall.shieldBonusDamage = 0;
-          shieldBall.shieldLaserPierceHits = 0;
-          shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
-          spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 8);
-          playSound("shieldCatch");
+          shieldBall.shieldBashThrows = Math.min(SHIELD_BASH_READY_THROWS, (shieldBall.shieldBashThrows || 0) + 1);
+          if (shieldBall.side === "left") game.stats.left.totalShots++;
+          else game.stats.right.totalShots++;
+          spawnImpactBurst(shieldBall.x, shieldBall.y, rethrowAngle, ["#ffffff", "#93c5fd", "#3b82f6"], 1.05);
+          playSound("shieldThrow", 1.1, 60);
         }
+      } else if (shieldBall.shieldState === "dropped") {
+        shieldBall.shieldState = "held";
+        shieldBall.shieldGuardHits = 0;
+        shieldBall.shieldBonusDamage = 0;
+        shieldBall.shieldLaserPierceHits = 0;
+        shieldBall.nextThrowAt = currentTime;
       } else {
         shieldBall.shieldX += shieldBall.shieldVx * stepDt;
         shieldBall.shieldY += shieldBall.shieldVy * stepDt;
@@ -7905,12 +8359,25 @@ export default function App() {
 
           const distToOwner = Math.hypot(shieldBall.x - shieldBall.shieldX, shieldBall.y - shieldBall.shieldY);
           if (distToOwner < shieldBall.r + 10) {
-            shieldBall.shieldState = "held";
             shieldBall.shieldGuardHits = 0;
             shieldBall.shieldBonusDamage = 0;
             shieldBall.shieldLaserPierceHits = 0;
-            shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
-            spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 6);
+            if ((shieldBall.shieldBashThrows || 0) === 2) {
+              shieldBall.shieldState = "catch_spin";
+              shieldBall.shieldCatchSpinUntil = currentTime + 480;
+              shieldBall.shieldVx = 0;
+              shieldBall.shieldVy = 0;
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: shieldBall.x, y: shieldBall.y - shieldBall.r - 22, vy: -46,
+                text: "CATCH SPIN!", color: "#bfdbfe", life: 0.75, maxLife: 0.75
+              });
+              spawnImpactBurst(shieldBall.x, shieldBall.y, shieldBall.shieldAngle || 0, ["#ffffff", "#60a5fa", "#2563eb"], 0.9);
+            } else {
+              shieldBall.shieldState = "held";
+              shieldBall.nextThrowAt = currentTime + bal.shield.cooldown;
+              spawnSparks(shieldBall.x, shieldBall.y, "#60a5fa", 6);
+            }
             playSound("shieldCatch");
           }
         }
@@ -7999,9 +8466,11 @@ export default function App() {
           applyDamage(target, bal.hammer.spinDamage, `${hammerBall.id}-hammer-spin-hit`, currentTime, 250);
           const hitAngle = Math.atan2(target.y - hy, target.x - hx);
           if (!hasStringBounceGuard(target)) {
-            const spinRecoil = 520;
+            const spinRecoil = 720;
             target.vx = Math.cos(hitAngle) * spinRecoil;
             target.vy = Math.sin(hitAngle) * spinRecoil;
+            target.hammerBouncesLeft = 2;
+            target.hammerHitType = "spin";
             hammerBall.vx = -Math.cos(hitAngle) * spinRecoil;
             hammerBall.vy = -Math.sin(hitAngle) * spinRecoil;
           }
@@ -8116,6 +8585,8 @@ export default function App() {
               const chargedRecoil = 1180;
               target.vx = Math.cos(hammerBall.hammerLaunchAngle) * chargedRecoil;
               target.vy = Math.sin(hammerBall.hammerLaunchAngle) * chargedRecoil;
+              target.hammerBouncesLeft = 4;
+              target.hammerHitType = "charge";
               hammerBall.vx = -Math.cos(hammerBall.hammerLaunchAngle) * chargedRecoil;
               hammerBall.vy = -Math.sin(hammerBall.hammerLaunchAngle) * chargedRecoil;
             }
@@ -9668,6 +10139,10 @@ export default function App() {
         ball.webY += ball.webVy * stepDt;
         const pad = 18;
         if (ball.webX < pad || ball.webX > game.width - pad || ball.webY < pad || ball.webY > game.height - pad) {
+          const splatX = clamp(ball.webX, pad, game.width - pad);
+          const splatY = clamp(ball.webY, pad, game.height - pad);
+          const wall = ball.webX <= pad ? "left" : ball.webX >= game.width - pad ? "right" : ball.webY <= pad ? "top" : "bottom";
+          leaveSpiderWebSplatter(ball, splatX, splatY, wall, Math.atan2(ball.webVy, ball.webVx));
           ball.webState = "idle";
           return;
         }
@@ -9685,9 +10160,59 @@ export default function App() {
           ball.webLastTargetX = target.x;
           ball.webLastTargetY = target.y;
           ball.webStateUntil = game.simTime + game.balance.spider.pullDuration;
-          spawnSparks(ball.webX, ball.webY, "#818cf8", 8);
+          spawnSparks(ball.webX, ball.webY, "#ffffff", 14);
+          spawnImpactBurst(ball.webX, ball.webY, Math.atan2(ball.webVy, ball.webVx), ["#ffffff", "#f8fafc", "#e2e8f0"], 0.7);
           playSound("webHit");
         }
+      });
+    };
+
+    const updateWebSplatters = () => {
+      game.webSplatters = (game.webSplatters || []).filter((splat) => {
+        if (splat.wall === "left") splat.x = 0;
+        else if (splat.wall === "right") splat.x = game.width;
+        else if (splat.wall === "top") splat.y = 0;
+        else if (splat.wall === "bottom") splat.y = game.height;
+        if (game.simTime < (splat.activeAt || 0)) return true;
+        let consumed = false;
+        game.balls.forEach((ball) => {
+          if (consumed || ball.health <= 0 || ball.type === "cueBall") return;
+          if (Math.hypot(ball.x - splat.x, ball.y - splat.y) >= ball.r + splat.r * 0.72) return;
+
+          if (ball.id === splat.ownerId && ball.type === "spider") {
+            ball.webShieldActive = true;
+            consumed = true;
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 24, vy: -48,
+              text: "WEB SHIELD · SPEED UP", color: "#dbeafe", life: 0.95, maxLife: 0.95
+            });
+            spawnImpactBurst(ball.x, ball.y, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#bfdbfe", "#3b82f6"], 1.25);
+            playSound("shieldBlock", 0.9, 100);
+          } else if (ball.side !== splat.ownerSide) {
+            ball.webSplatterStuckUntil = Math.max(ball.webSplatterStuckUntil || 0, game.simTime + 1600);
+            ball.vx = 0;
+            ball.vy = 0;
+            const spiderOwner = game.balls.find((candidate) => candidate.id === splat.ownerId && candidate.type === "spider");
+            if (spiderOwner) {
+              spiderOwner.nextShotAt = game.simTime;
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: spiderOwner.x, y: spiderOwner.y - spiderOwner.r - 22, vy: -42,
+                text: "WEB READY", color: "#bfdbfe", life: 0.75, maxLife: 0.75
+              });
+            }
+            consumed = true;
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 22, vy: -45,
+              text: "WEB STUCK", color: "#ffffff", life: 0.85, maxLife: 0.85
+            });
+            spawnSparks(ball.x, ball.y, "#ffffff", 18);
+            playSound("webHit", 1.1, 100);
+          }
+        });
+        return !consumed;
       });
     };
 
@@ -9808,6 +10333,7 @@ export default function App() {
     const updateMines = (stepDt, balls) => {
       game.mines = game.mines.filter((mine) => {
         const enemy = balls.find(b => b.side !== mine.ownerSide);
+        const explosionRadius = mine.explosionRadius || game.balance.bomber.mineRadius;
         
         if (mine.isHoming && !mine.triggerTime) {
           const targetDx = enemy.x - mine.x;
@@ -9821,6 +10347,18 @@ export default function App() {
           }
           mine.x += mine.vx * stepDt;
           mine.y += mine.vy * stepDt;
+          if (canSpawnParticle() && Math.random() < 0.45) {
+            game.particles.push({
+              x: mine.x - (mine.vx || 0) * 0.035 + (Math.random() - 0.5) * 5,
+              y: mine.y - (mine.vy || 0) * 0.035 + (Math.random() - 0.5) * 5,
+              vx: -(mine.vx || 0) * 0.18 + (Math.random() - 0.5) * 30,
+              vy: -(mine.vy || 0) * 0.18 + (Math.random() - 0.5) * 30,
+              color: Math.random() < 0.65 ? "#ef4444" : "#fee2e2",
+              radius: 1.8 + Math.random() * 1.8,
+              life: 0.22,
+              maxLife: 0.22
+            });
+          }
           const pad = 18;
           if (mine.x < pad) { mine.x = pad; mine.vx = Math.abs(mine.vx); }
           if (mine.x > game.width - pad) { mine.x = game.width - pad; mine.vx = -Math.abs(mine.vx); }
@@ -9834,16 +10372,21 @@ export default function App() {
           if (game.simTime >= mine.triggerTime) {
             game.explosions.push({
               ownerId: mine.ownerId, x: mine.x, y: mine.y, r: 0,
-              maxRadius: game.balance.bomber.mineRadius, duration: 400, life: 400
+              maxRadius: explosionRadius, duration: 400, life: 400
             });
             game.screenShake = Math.max(game.screenShake, mine.isHoming ? 15 : 12);
             spawnExplosionParticles(mine.x, mine.y);
+            if (mine.isHoming) {
+              spawnSparks(mine.x, mine.y, "#ef4444", 30);
+              spawnImpactBurst(mine.x, mine.y, Math.atan2(mine.vy || 0, mine.vx || 0), ["#ffffff", "#ef4444", "#991b1b"], 1.8);
+            }
             playSound("explosion");
 
             balls.forEach(ball => {
               const db = Math.hypot(ball.x - mine.x, ball.y - mine.y);
-              if (db < game.balance.bomber.mineRadius + ball.r) {
+              if (db < explosionRadius + ball.r) {
                 if (isChessCrownActive(ball)) return;
+                if (isBomberSelfDestructInvulnerable(ball)) return;
                 
                 let dmg;
                 let force;
@@ -9855,9 +10398,9 @@ export default function App() {
                   if (!hasStringBounceGuard(ball)) {
                     ball.vx += Math.cos(angle) * force; ball.vy += Math.sin(angle) * force;
                   }
-                  floatColor = "#38bdf8";
+                  floatColor = "#ef4444";
                 } else {
-                  const falloff = 1 - (db / (game.balance.bomber.mineRadius + ball.r));
+                  const falloff = 1 - (db / (explosionRadius + ball.r));
                   dmg = Math.max(MIN_DAMAGE, Math.round(game.balance.bomber.mineDamage * falloff));
                   const angle = Math.atan2(ball.y - mine.y, ball.x - mine.x);
                   force = game.balance.bomber.knockback * 20 * falloff;
@@ -9885,10 +10428,10 @@ export default function App() {
             (game.vampireClones || []).forEach((clone) => {
               if (clone.side === mine.ownerSide || clone.health <= 0) return;
               const cloneDist = Math.hypot(clone.x - mine.x, clone.y - mine.y);
-              if (cloneDist >= game.balance.bomber.mineRadius + clone.r) return;
-              const falloff = 1 - cloneDist / (game.balance.bomber.mineRadius + clone.r);
+              if (cloneDist >= explosionRadius + clone.r) return;
+              const falloff = 1 - cloneDist / (explosionRadius + clone.r);
               const cloneDamage = mine.isHoming ? 2 : Math.max(MIN_DAMAGE, Math.round(game.balance.bomber.mineDamage * falloff));
-              damageVampireClone(clone, cloneDamage, mine.isHoming ? "#38bdf8" : "#f97316");
+              damageVampireClone(clone, cloneDamage, mine.isHoming ? "#ef4444" : "#f97316");
               const angle = Math.atan2(clone.y - mine.y, clone.x - mine.x);
               clone.vx += Math.cos(angle) * game.balance.bomber.knockback * 14;
               clone.vy += Math.sin(angle) * game.balance.bomber.knockback * 14;
@@ -9901,7 +10444,7 @@ export default function App() {
         if (dist < enemy.r + game.balance.bomber.mineTriggerDist) {
           mine.triggerTime = game.simTime + 150;
           mine.isAboutToDetonate = true;
-          spawnSparks(mine.x, mine.y, mine.isHoming ? "#38bdf8" : "#ef4444", 4);
+          spawnSparks(mine.x, mine.y, "#ef4444", mine.isHoming ? 12 : 4);
           playSound("bombFuse");
         }
         return true;
@@ -10249,6 +10792,7 @@ export default function App() {
         }
         if (target && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
           if (isChessCrownActive(target)) return false;
+          if (isBomberSelfDestructInvulnerable(target)) return false;
           if (isWreckerJumpInvulnerable(target)) return false;
           target.health = clamp(target.health - bullet.damage, 0, MAX_HEALTH);
           if (bullet.stunDuration) {
@@ -11597,8 +12141,8 @@ export default function App() {
     const drawLaserBall = (ball, target) => {
       const config = BALL_TYPES.laser;
       const facing = ball.laserTargetAngle || 0;
-      const charging = ball.laserState === "charging";
-      const firing = ball.laserState === "firing";
+      const charging = ball.laserState === "charging" || ball.laserState === "huge_charging";
+      const firing = ball.laserState === "firing" || ball.laserState === "huge_firing";
       const glow = firing ? 18 : charging ? 12 : 5;
 
       ctx.save();
@@ -11640,23 +12184,121 @@ export default function App() {
       ctx.strokeRect(ball.r - 6, -11, 15, 22);
       ctx.restore();
 
-      const collectedCount = ball.collectedArmorCount || 0;
-      for (let i = 0; i < collectedCount; i++) {
-        const orbitAngle = game.simTime * 0.005 + (i * Math.PI * 2 / 4);
-        const ox = Math.cos(orbitAngle) * (ball.r + 8);
-        const oy = Math.sin(orbitAngle) * (ball.r + 8);
+      // Five fixed mounting rails make every collected plate read as a physical attachment.
+      for (let slot = 0; slot < 5; slot++) {
+        const slotAngle = facing - Math.PI / 2 + (slot * Math.PI * 2 / 5);
+        const sx = ball.x + Math.cos(slotAngle) * (ball.r + 3);
+        const sy = ball.y + Math.sin(slotAngle) * (ball.r + 3);
         ctx.save();
-        ctx.fillStyle = "#facc15";
-        ctx.strokeStyle = "#b45309";
-        ctx.lineWidth = 1;
+        ctx.translate(sx, sy);
+        ctx.rotate(slotAngle + Math.PI / 2);
+        ctx.strokeStyle = "rgba(254, 240, 138, 0.28)";
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(-10, -8, 20, 15);
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      const attachedParts = (ball.armorParts || [])
+        .filter((part) => part.collected)
+        .sort((a, b) => a.index - b.index);
+      attachedParts.forEach((part) => {
+        const slot = part.index;
+        const orbitAngle = facing - Math.PI / 2 + (slot * Math.PI * 2 / 5);
+        const attachProgress = clamp((game.simTime - (part.attachedAt ?? game.simTime - 180)) / 150, 0, 1);
+        const snap = 1 - Math.pow(1 - attachProgress, 3);
+        const mountDistance = ball.r + 3 + (1 - snap) * 24;
+        const ox = ball.x + Math.cos(orbitAngle) * mountDistance;
+        const oy = ball.y + Math.sin(orbitAngle) * mountDistance;
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.rotate(orbitAngle + Math.PI / 2);
+        ctx.scale(0.62 + snap * 0.38, 0.62 + snap * 0.38);
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 8 + (1 - attachProgress) * 18;
+        const plateGradient = ctx.createLinearGradient(0, -8, 0, 8);
+        plateGradient.addColorStop(0, "#fff7b2");
+        plateGradient.addColorStop(0.38, "#facc15");
+        plateGradient.addColorStop(1, "#a16207");
+        ctx.fillStyle = plateGradient;
+        ctx.strokeStyle = "#713f12";
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(ox, oy, 4, 0, Math.PI * 2);
+        ctx.moveTo(-10, -7);
+        ctx.lineTo(10, -7);
+        ctx.lineTo(8, 7);
+        ctx.lineTo(-8, 7);
+        ctx.closePath();
         ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(255,255,255,0.75)";
+        ctx.lineWidth = 1.25;
+        ctx.beginPath();
+        ctx.moveTo(-7, -3.5);
+        ctx.lineTo(7, -3.5);
         ctx.stroke();
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(ox, oy, 1.5, 0, Math.PI * 2);
+        ctx.arc(0, 1.5, 2.4, 0, Math.PI * 2);
         ctx.fill();
+        ctx.fillStyle = "#713f12";
+        ctx.font = "bold 7px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(slot + 1), 0, -2.5);
+        ctx.restore();
+      });
+
+      if (ball.laserState === "fan_charging" && target) {
+        const progress = 1 - clamp((ball.laserStateUntil - game.simTime) / (game.balance.laser.fanChargeTime || 1100), 0, 1);
+        const spread = game.balance.laser.fanSpread || 0.64;
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.rotate(ball.laserTargetAngle || 0);
+        ctx.strokeStyle = `rgba(250, 204, 21, ${0.35 + progress * 0.6})`;
+        ctx.fillStyle = `rgba(250, 204, 21, ${0.05 + progress * 0.1})`;
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 18 + progress * 18;
+        ctx.lineWidth = 2 + progress * 3;
+        ctx.beginPath();
+        ctx.moveTo(ball.r, 0);
+        ctx.lineTo(Math.cos(-spread / 2) * 180, Math.sin(-spread / 2) * 180);
+        ctx.arc(0, 0, 180, -spread / 2, spread / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + 34 * (1 - progress), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (ball.laserState === "fan_firing" && ball.laserFanPaths?.length) {
+        ctx.save();
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 24;
+        const traceFanPaths = () => {
+          ball.laserFanPaths.forEach((path) => {
+            if (!path?.length) return;
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            path.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+            ctx.stroke();
+          });
+        };
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.24)";
+        ctx.lineWidth = (game.balance.laser.beamWidth || 14) + 10;
+        traceFanPaths();
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.62)";
+        ctx.lineWidth = (game.balance.laser.beamWidth || 14) * 0.68;
+        traceFanPaths();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.98)";
+        ctx.lineWidth = Math.max(3, (game.balance.laser.beamWidth || 14) * 0.28);
+        traceFanPaths();
         ctx.restore();
       }
 
@@ -11813,6 +12455,25 @@ export default function App() {
         if (ball.type === "laser" && ball.armorParts) {
           ball.armorParts.forEach(part => {
             if (!part.collected) {
+              if (part.grabbing) {
+                ctx.save();
+                const tether = ctx.createLinearGradient(ball.x, ball.y, part.x, part.y);
+                tether.addColorStop(0, "rgba(255,255,255,0.92)");
+                tether.addColorStop(0.45, "rgba(250,204,21,0.82)");
+                tether.addColorStop(1, "rgba(250,204,21,0.2)");
+                ctx.strokeStyle = tether;
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = "#facc15";
+                ctx.shadowBlur = 12;
+                ctx.setLineDash([7, 5]);
+                ctx.lineDashOffset = -game.simTime * 0.04;
+                ctx.beginPath();
+                ctx.moveTo(ball.x, ball.y);
+                ctx.lineTo(part.x, part.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+              }
               drawArmorPart(part);
             }
           });
@@ -11845,62 +12506,31 @@ export default function App() {
         ctx.restore();
       }
 
-      // Draw the Shielder body (remodelled with golden theme & core)
+      // Shielder body: restore the original patriotic red, white, and blue form.
       ctx.save();
       ctx.translate(ball.x, ball.y);
-      
-      // Draw Golden Crown on top
-      ctx.fillStyle = "#fbbf24";
-      ctx.strokeStyle = "#d97706";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.5, -ball.r + 2);
-      ctx.lineTo(-ball.r * 0.6, -ball.r - 12);
-      ctx.lineTo(-ball.r * 0.25, -ball.r - 4);
-      ctx.lineTo(0, -ball.r - 16);
-      ctx.lineTo(ball.r * 0.25, -ball.r - 4);
-      ctx.lineTo(ball.r * 0.6, -ball.r - 12);
-      ctx.lineTo(ball.r * 0.5, -ball.r + 2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
 
-      // Jewels on crown
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(-ball.r * 0.6, -ball.r - 12, 2, 0, Math.PI * 2);
-      ctx.arc(0, -ball.r - 16, 2.5, 0, Math.PI * 2);
-      ctx.arc(ball.r * 0.6, -ball.r - 12, 2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Outer gold body
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = "#ca8a04";
+      ctx.fillStyle = "#ef4444";
       ctx.fill();
-      ctx.strokeStyle = "#854d0e";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      
-      // Inner metallic ring
+
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.7, 0, Math.PI * 2);
-      ctx.fillStyle = "#fef08a";
+      ctx.fillStyle = "#ffffff";
       ctx.fill();
-      
-      // Golden core inside
+
       ctx.beginPath();
       ctx.arc(0, 0, ball.r * 0.45, 0, Math.PI * 2);
-      const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, ball.r * 0.45);
-      coreGrad.addColorStop(0, "#ffffff");
-      coreGrad.addColorStop(0.4, "#facc15");
-      coreGrad.addColorStop(1, "#b45309");
-      ctx.fillStyle = coreGrad;
+      ctx.fillStyle = "#1e3a8a";
       ctx.fill();
-      ctx.strokeStyle = "#ca8a04";
-      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.strokeStyle = "#1e3a8a";
+      ctx.lineWidth = 3;
       ctx.stroke();
-      
+
       ctx.restore();
 
       // If the shield is held, draw the protective shield arc
@@ -11925,14 +12555,14 @@ export default function App() {
         }
 
         ctx.save();
-        ctx.shadowColor = "#facc15";
+        ctx.shadowColor = "#3b82f6";
         ctx.shadowBlur = 15;
-        ctx.strokeStyle = "rgba(250, 204, 21, 0.9)"; // Neon yellow main arc
+        ctx.strokeStyle = "rgba(59, 130, 246, 0.95)";
         ctx.lineWidth = 6;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 8, ball.shieldAngle - game.balance.shield.arcWidth / 2, ball.shieldAngle + game.balance.shield.arcWidth / 2);
         ctx.stroke();
-        ctx.strokeStyle = "#fffbeb"; // Core white/pale yellow accent line
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 8, ball.shieldAngle - game.balance.shield.arcWidth / 2, ball.shieldAngle + game.balance.shield.arcWidth / 2);
@@ -12074,6 +12704,24 @@ export default function App() {
 
     const drawSpiderBall = (ball) => {
       const config = BALL_TYPES.spider;
+      if (ball.webShieldActive) {
+        const pulse = 0.5 + Math.sin(game.simTime * 0.018) * 0.5;
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.strokeStyle = `rgba(219,234,254,${0.72 + pulse * 0.24})`;
+        ctx.shadowColor = "#60a5fa";
+        ctx.shadowBlur = 14 + pulse * 8;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, 0, ball.r + 10 + pulse * 3, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+          const angle = i * Math.PI / 4;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(angle) * ball.r, Math.sin(angle) * ball.r);
+          ctx.lineTo(Math.cos(angle) * (ball.r + 12), Math.sin(angle) * (ball.r + 12));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
       ctx.save(); ctx.translate(ball.x, ball.y);
       ctx.strokeStyle = config.stroke; ctx.lineWidth = 3; ctx.lineCap = "round";
       
@@ -12177,25 +12825,6 @@ export default function App() {
             ctx.lineTo(ball.webX + Math.cos(a) * 9, ball.webY + Math.sin(a) * 9); ctx.stroke();
           }
         }
-        ctx.restore();
-      }
-
-      if (ball.spiderBiteState === "flying") {
-        ctx.save();
-        ctx.strokeStyle = "#93c5fd";
-        ctx.shadowColor = "#3b82f6";
-        ctx.shadowBlur = 9;
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([7, 4]);
-        ctx.beginPath();
-        ctx.moveTo(ball.x, ball.y);
-        ctx.lineTo(ball.spiderBiteX, ball.spiderBiteY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle = "#f8fafc";
-        ctx.beginPath();
-        ctx.arc(ball.spiderBiteX, ball.spiderBiteY, 6, 0, Math.PI * 2);
-        ctx.fill();
         ctx.restore();
       }
 
@@ -12414,6 +13043,17 @@ export default function App() {
 
     const drawBomberBall = (ball) => {
       const config = BALL_TYPES.bomber;
+      const selfDestructActive = ball.bomberSelfDestructAt && game.simTime < ball.bomberSelfDestructAt;
+      if (selfDestructActive) {
+        const pulse = 0.5 + Math.sin(game.simTime * 0.035) * 0.5;
+        ctx.save();
+        const warningGlow = ctx.createRadialGradient(ball.x, ball.y, ball.r * 0.5, ball.x, ball.y, ball.r + 35 + pulse * 14);
+        warningGlow.addColorStop(0, `rgba(239,68,68,${0.28 + pulse * 0.22})`);
+        warningGlow.addColorStop(1, "rgba(127,29,29,0)");
+        ctx.fillStyle = warningGlow;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r + 50, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
       ctx.save(); ctx.translate(ball.x, ball.y);
       ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = config.color; ctx.fill();
@@ -12429,7 +13069,16 @@ export default function App() {
       ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
       ctx.fillStyle = "#1e293b"; ctx.beginPath(); ctx.arc(0, 2, 8, 0, Math.PI * 2); ctx.fill();
-      ctx.fillRect(-2, -8, 4, 6); ctx.restore();
+      ctx.fillRect(-2, -8, 4, 6);
+      if (selfDestructActive) {
+        const remaining = Math.max(1, Math.ceil((ball.bomberSelfDestructAt - game.simTime) / 800));
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 15px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(remaining), 0, 2);
+      }
+      ctx.restore();
       drawHealthInsideBall(ball);
     };
 
@@ -15501,6 +16150,48 @@ export default function App() {
         ctx.restore();
       }
 
+      if (ball.webSplatterStuckUntil && game.simTime < ball.webSplatterStuckUntil) {
+        const remaining = clamp((ball.webSplatterStuckUntil - game.simTime) / 1600, 0, 1);
+        const pulse = 1 + Math.sin(game.simTime * 0.025) * 0.06;
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.globalAlpha = 0.68 + remaining * 0.22;
+        ctx.strokeStyle = "#ffffff";
+        ctx.fillStyle = "rgba(219, 234, 254, 0.13)";
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = "#93c5fd";
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, (ball.r + 6) * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        for (let ring = 0; ring < 3; ring++) {
+          const radius = ball.r * (0.38 + ring * 0.27) * pulse;
+          ctx.globalAlpha = 0.42 + remaining * 0.3;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.globalAlpha = 0.78;
+        for (let i = 0; i < 8; i++) {
+          const angle = (i * Math.PI) / 4 + Math.sin(game.simTime * 0.008) * 0.08;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(angle) * ball.r * 0.16, Math.sin(angle) * ball.r * 0.16);
+          ctx.lineTo(Math.cos(angle) * (ball.r + 7), Math.sin(angle) * (ball.r + 7));
+          ctx.stroke();
+        }
+
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("WEBBED", 0, -ball.r - 15);
+        ctx.restore();
+      }
+
       if (ball.shadowMarkedUntil && game.simTime < ball.shadowMarkedUntil) {
         const progress = clamp((ball.shadowMarkedUntil - game.simTime) / 1400, 0, 1);
         ctx.save();
@@ -15841,20 +16532,20 @@ export default function App() {
       game.mines.forEach((mine) => {
         ctx.save();
         if (mine.isHoming) {
-          ctx.shadowColor = "#38bdf8"; ctx.shadowBlur = 8;
-          ctx.strokeStyle = "#1e3a8a"; ctx.lineWidth = 2.5; ctx.fillStyle = "#1e293b";
+          ctx.shadowColor = "#ef4444"; ctx.shadowBlur = 12;
+          ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 2.5; ctx.fillStyle = "#2b0b0b";
           ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-          ctx.fillStyle = "#38bdf8";
+          ctx.fillStyle = "#ef4444";
           ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r - 2, 0, Math.PI / 2); ctx.lineTo(mine.x, mine.y); ctx.fill();
           ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r - 2, Math.PI, Math.PI * 1.5); ctx.lineTo(mine.x, mine.y); ctx.fill();
 
           const rate = mine.isAboutToDetonate ? 0.05 : 0.015;
           const pulse = Math.abs(Math.sin(game.simTime * rate));
-          ctx.fillStyle = `rgba(59, 130, 246, ${0.4 + 0.6 * pulse})`;
+          ctx.fillStyle = `rgba(254, 226, 226, ${0.4 + 0.6 * pulse})`;
           ctx.beginPath(); ctx.arc(mine.x, mine.y, 4, 0, Math.PI * 2); ctx.fill();
 
-          ctx.strokeStyle = `rgba(56, 189, 248, 0.12)`; ctx.lineWidth = 1;
+          ctx.strokeStyle = `rgba(239, 68, 68, 0.22)`; ctx.lineWidth = 1;
           ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.triggerRadius, 0, Math.PI * 2); ctx.stroke();
         } else {
           ctx.shadowColor = "#f59e0b"; ctx.shadowBlur = 6;
@@ -16289,18 +16980,26 @@ export default function App() {
             const topDistance = ball.y - pad;
             const bottomDistance = game.height - pad - ball.y;
             const dir = bottomDistance >= topDistance ? 1 : -1;
+            const tangentSign = Math.abs(ball.x - game.width * 0.5) < 24
+              ? (Math.floor(game.simTime / 500) % 2 === 0 ? 1 : -1)
+              : (ball.x < game.width * 0.5 ? 1 : -1);
             ball.vx = 0;
             ball.vy = 0;
-            ball.chaosDragX = ball.x;
+            ball.chaosSlamTangentSign = tangentSign;
+            ball.chaosDragX = clamp(ball.x + tangentSign * Math.min(140, game.width * 0.22), pad, game.width - pad);
             ball.chaosDragY = dir > 0 ? game.height - pad : pad;
           } else {
             const leftDistance = ball.x - pad;
             const rightDistance = game.width - pad - ball.x;
             const dir = rightDistance >= leftDistance ? 1 : -1;
+            const tangentSign = Math.abs(ball.y - game.height * 0.5) < 24
+              ? (Math.floor(game.simTime / 500) % 2 === 0 ? 1 : -1)
+              : (ball.y < game.height * 0.5 ? 1 : -1);
             ball.vx = 0;
             ball.vy = 0;
+            ball.chaosSlamTangentSign = tangentSign;
             ball.chaosDragX = dir > 0 ? game.width - pad : pad;
-            ball.chaosDragY = ball.y;
+            ball.chaosDragY = clamp(ball.y + tangentSign * Math.min(140, game.height * 0.22), pad, game.height - pad);
           }
 
           circle.triggeredAtByBall[ball.id] = game.simTime + (bal.triggerCooldown || 1000);
@@ -16582,6 +17281,42 @@ export default function App() {
         drawEndpoint(str.x1, str.y1);
         drawEndpoint(str.x2, str.y2);
 
+        ctx.restore();
+      });
+    };
+
+    const drawWebSplatters = () => {
+      (game.webSplatters || []).forEach((splat) => {
+        const arcByWall = {
+          left: [-Math.PI / 2, Math.PI / 2],
+          right: [Math.PI / 2, Math.PI * 1.5],
+          top: [0, Math.PI],
+          bottom: [Math.PI, Math.PI * 2],
+        };
+        const [startAngle, endAngle] = arcByWall[splat.wall] || [0, Math.PI];
+        const arming = game.simTime < (splat.activeAt || 0);
+        ctx.save();
+        ctx.translate(splat.x, splat.y);
+        ctx.globalAlpha = arming ? 0.48 : 0.92;
+        ctx.shadowColor = "#60a5fa";
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = "rgba(219,234,254,0.28)";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, splat.r, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        for (let i = 0; i <= 6; i++) {
+          const angle = startAngle + (endAngle - startAngle) * (i / 6);
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(angle) * splat.r, Math.sin(angle) * splat.r); ctx.stroke();
+        }
+        ctx.lineWidth = 1.4;
+        [0.35, 0.62, 0.84].forEach((scale) => {
+          ctx.beginPath(); ctx.arc(0, 0, splat.r * scale, startAngle, endAngle); ctx.stroke();
+        });
         ctx.restore();
       });
     };
@@ -17237,13 +17972,19 @@ export default function App() {
 
             if (ball.dragonScorchedUntil && game.simTime < ball.dragonScorchedUntil) slowMult *= 0.75;
             if (ball.shadowSlowedUntil && game.simTime < ball.shadowSlowedUntil) slowMult *= 0.6;
+            if (ball.webShieldActive) slowMult *= 1.35;
+            if (ball.webSplatterStuckUntil && game.simTime < ball.webSplatterStuckUntil) {
+              slowMult = 0;
+              ball.vx = 0;
+              ball.vy = 0;
+            }
             if (ball.type === "gazerBall" && ball.gazerState === "charging") slowMult *= 0.4;
             if (ball.type === "gazerBall" && ball.gazerRecoilUntil && game.simTime < ball.gazerRecoilUntil) slowMult *= 0.55;
             if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) slowMult = 0;
             if (ball.type === "dragon" && ball.dragonState === "dashing") slowMult = 1.0;
             
             if ((ball.hammerBouncesLeft || 0) > 0) {
-              const targetSpeed = ball.hammerHitType === "charge" ? 950 : 650;
+              const targetSpeed = ball.hammerHitType === "charge" ? 1050 : 760;
               const speed = Math.hypot(ball.vx, ball.vy);
               if (speed > 0) {
                 ball.vx = (ball.vx / speed) * targetSpeed;
@@ -17252,6 +17993,13 @@ export default function App() {
                 const randAngle = Math.random() * Math.PI * 2;
                 ball.vx = Math.cos(randAngle) * targetSpeed;
                 ball.vy = Math.sin(randAngle) * targetSpeed;
+              }
+            }
+            if ((ball.shieldBashBouncesLeft || 0) > 0) {
+              const speed = Math.hypot(ball.vx, ball.vy);
+              if (speed > 0) {
+                ball.vx = (ball.vx / speed) * 980;
+                ball.vy = (ball.vy / speed) * 980;
               }
             }
 
@@ -17283,6 +18031,8 @@ export default function App() {
                 (ball.chomperKnockbackBouncesLeft || 0) > 0 ||
                 (ball.yoYoRicochetBouncesLeft || 0) > 0 ||
                 (ball.hammerBouncesLeft || 0) > 0 ||
+                (ball.shieldBashBouncesLeft || 0) > 0 ||
+                (ball.spiderSlamBouncesLeft || 0) > 0 ||
                 ball.type === "cueBall") {
               // bypass base speed limits
             } else {
@@ -17382,6 +18132,7 @@ export default function App() {
           game.balls = game.balls.filter((ball) => !ball.pendingRemoval);
 
           game.balls.forEach((ball) => {
+            if (ball.type === "bomber") updateBomberLastStand(ball, game.simTime);
             if (ball.health <= 0 && ball.type !== "cueBall" && !ball.shattered) {
               const team = game.balls.filter((b) => b.side === ball.side && b.type !== "cueBall");
               const teamAlive = team.some((b) => b.health > 0 && b.id !== ball.id);
@@ -17394,7 +18145,7 @@ export default function App() {
             if (!target) return;
             const isGrabbedByArm = game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime);
             if (game.simTime >= OPENING_SKILL_DELAY) {
-                if (ball.burnUntil && game.simTime < ball.burnUntil && game.simTime >= (ball.nextBurnTickAt || 0)) {
+                if (!isBomberSelfDestructInvulnerable(ball) && ball.burnUntil && game.simTime < ball.burnUntil && game.simTime >= (ball.nextBurnTickAt || 0)) {
                   const burnDamage = Math.max(MIN_DAMAGE, 1);
                   ball.health = clamp(ball.health - burnDamage, 0, MAX_HEALTH);
                   ball.nextBurnTickAt = game.simTime + 450;
@@ -17466,15 +18217,20 @@ export default function App() {
                   }
                 }
                 const isParalyzed = ball.paralyzedUntil && game.simTime < ball.paralyzedUntil;
-                const skillsLocked = ball.skillLockedUntil && game.simTime < ball.skillLockedUntil;
+                const skillsLocked = (ball.skillLockedUntil && game.simTime < ball.skillLockedUntil) ||
+                  (ball.laserBounceWallBouncesLeft || 0) > 0 ||
+                  (ball.shieldBashBouncesLeft || 0) > 0;
                 if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !isFishermanPulled && !skillsLocked) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime, stepDt);
-                  if (ball.type === "laser") updateLaser(ball, target, game.simTime, stepDt);
+                  if (ball.type === "laser") updateLaserLegacy(ball, target, game.simTime, stepDt);
                   
                   // New Weapon Ticks
-                  if (ball.type === "spider") updateBlackSpider(ball, target, game.simTime, stepDt);
+                  if (ball.type === "spider") {
+                    updateSpider(ball, target, game.simTime, stepDt);
+                    updateBlackSpider(ball, target, game.simTime, stepDt);
+                  }
                   if (ball.type === "bomber") updateBomber(ball, target, game.simTime);
                   if (ball.type === "spore") updateSpore(ball, target, game.simTime);
                   if (ball.type === "hammer") updateHammer(ball, target, game.simTime);
@@ -17512,6 +18268,7 @@ export default function App() {
           updateVampireClones(stepDt);
           updateBullets(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
+          updateWebSplatters();
           updateMines(stepDt, game.balls);
           updateFireCars(stepDt, game.balls);
           pruneShadowMinions();
@@ -17564,7 +18321,8 @@ export default function App() {
             const target = ball.side === "left" ? right : left;
             ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
           }
-          if (ball.type === "knife" && (!ball.spinLockedUntil || game.simTime >= ball.spinLockedUntil)) ball.spinAngle += 0.02;
+          if (ball.type === "knife" && (!ball.spinLockedUntil || game.simTime >= ball.spinLockedUntil) &&
+              (ball.laserBounceWallBouncesLeft || 0) <= 0) ball.spinAngle += 0.02;
         });
         for (let i = 0; i < game.balls.length; i++) {
           for (let j = i + 1; j < game.balls.length; j++) {
@@ -17599,7 +18357,7 @@ export default function App() {
 
       game.balls.forEach(drawBallTrail);
       drawFireRoads();
-      drawStrings(); drawJokerThreads(); drawFishingLines(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
+      drawStrings(); drawJokerThreads(); drawFishingLines(); drawWebSplatters(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawArmorParts(); drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawFireCarEntities();
       drawVampireClones();
@@ -18286,7 +19044,7 @@ export default function App() {
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-6 gap-1.5 pt-1">
+                        <div className="grid grid-cols-7 gap-1.5 pt-1">
                           {REMODEL_ROSTER.map((id) => BALL_TYPES[id]).map((ball) => {
                             const isSelected = selectedId === ball.id;
                             return (
@@ -18317,7 +19075,7 @@ export default function App() {
                   })}
                 </div>
                 
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <Button onClick={startFight} className="rounded-xl py-5 text-sm font-bold bg-sky-600 hover:bg-sky-500 shadow-lg shadow-sky-500/25">
                     Launch Fight
                   </Button>
@@ -18331,6 +19089,18 @@ export default function App() {
                     }`}
                   >
                     {isRecording ? "Stop Recording" : `Launch + Record ${battleMode === "1v1" ? "Short" : "Longform"}`}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleToggleMute}
+                    aria-pressed={audioMuted}
+                    className={`rounded-xl py-5 text-sm font-bold shadow-lg ${
+                      audioMuted
+                        ? "bg-amber-600 hover:bg-amber-500 shadow-amber-500/20"
+                        : "bg-slate-700 hover:bg-slate-600 shadow-slate-950/30"
+                    }`}
+                  >
+                    {audioMuted ? "Unmute Audio" : "Mute Audio"}
                   </Button>
                 </div>
                 {fightIntroActive && (
