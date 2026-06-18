@@ -6,8 +6,21 @@ import { useRef, useCallback } from "react";
  *
  * Usage:
  *   const { playSound, toggleMute, muted } = useSoundEngine();
- *   playSound("wallBounce");
+ *   playSound("wallBounce", 1.0, 0, { pan: 0, depth: 0, room: 0.5 });
  */
+
+const HEAVY_HITS = new Set([
+  "explosion",
+  "hammerHit",
+  "armSlam",
+  "chessSlam",
+  "wallSlam",
+  "shieldBashBoom",
+  "warpSlam",
+  "laserFire",
+  "bigLaserFire"
+]);
+
 export function useSoundEngine() {
   const ctxRef = useRef(null);
   const mutedRef = useRef(false);
@@ -19,6 +32,10 @@ export function useSoundEngine() {
   const audioBufferCacheRef = useRef({});
   // cooldown map: soundKey -> earliest next play time (AudioContext time)
   const cooldowns = useRef({});
+
+  // Spatial & Saturation cache refs
+  const reverbBufferRef = useRef(null);
+  const waveshaperCurveRef = useRef(null);
 
   const getCtx = useCallback(() => {
     if (!ctxRef.current) {
@@ -57,11 +74,11 @@ export function useSoundEngine() {
     o.connect(g);
     g.connect(dest);
     o.start(startAt);
-    o.stop(startAt + dur + 0.01);
+    o.stop(startAt + dur + 0.02);
   }, []);
 
-  /** White-noise burst */
-  const noise = useCallback((ctx, dest, vol, startAt, dur, filterFreq = 2000, filterQ = 1) => {
+  /** White-noise burst with selectable filter type */
+  const noise = useCallback((ctx, dest, vol, startAt, dur, filterFreq = 2000, filterQ = 1, filterType = "bandpass") => {
     const bufLen = Math.ceil(ctx.sampleRate * dur);
     const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
     const data = buf.getChannelData(0);
@@ -69,7 +86,7 @@ export function useSoundEngine() {
     const src = ctx.createBufferSource();
     src.buffer = buf;
     const f = ctx.createBiquadFilter();
-    f.type = "bandpass";
+    f.type = filterType;
     f.frequency.value = filterFreq;
     f.Q.value = filterQ;
     const g = ctx.createGain();
@@ -79,251 +96,423 @@ export function useSoundEngine() {
     f.connect(g);
     g.connect(dest);
     src.start(startAt);
-    src.stop(startAt + dur + 0.01);
+    src.stop(startAt + dur + 0.02);
   }, []);
+
+  // ─── Cache helpers for dynamic spatial/distortion effects ─────────────────
+
+  const getReverbBuffer = useCallback((ctx) => {
+    if (!reverbBufferRef.current) {
+      const duration = 1.4;
+      const decay = 2.4;
+      const sampleRate = ctx.sampleRate;
+      const length = Math.ceil(sampleRate * duration);
+      const buffer = ctx.createBuffer(2, length, sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
+
+      for (let i = 0; i < length; i++) {
+        const percent = i / length;
+        const envelope = Math.pow(1 - percent, decay);
+        left[i] = (Math.random() * 2 - 1) * envelope;
+        right[i] = (Math.random() * 2 - 1) * envelope;
+      }
+      reverbBufferRef.current = buffer;
+    }
+    return reverbBufferRef.current;
+  }, []);
+
+  const getDistortionCurve = useCallback(() => {
+    if (!waveshaperCurveRef.current) {
+      const n_samples = 44100;
+      const curve = new Float32Array(n_samples);
+      for (let i = 0; i < n_samples; ++i) {
+        const x = (i * 2) / n_samples - 1;
+        // Warm saturation curve using hyperbolic tangent
+        curve[i] = Math.tanh(x * 1.6) / Math.tanh(1.6);
+      }
+      waveshaperCurveRef.current = curve;
+    }
+    return waveshaperCurveRef.current;
+  }, []);
+
+  const duckMusic = useCallback((dur = 0.12, targetGain = 0.03) => {
+    const ctx = ctxRef.current;
+    if (!ctx || !musicGainRef.current || mutedRef.current) return;
+    const gNode = musicGainRef.current;
+    const now = ctx.currentTime;
+
+    gNode.gain.cancelScheduledValues(now);
+    gNode.gain.setValueAtTime(gNode.gain.value, now);
+    gNode.gain.setTargetAtTime(targetGain, now, 0.02);
+    gNode.gain.setTargetAtTime(0.18, now + dur, 0.15);
+  }, []);
+
+  const triggerHammerHitSound = useCallback((ctx, dest, t) => {
+    // 1. Initial Hammer Strike (heavy wooden/metal crack)
+    noise(ctx, dest, 0.75, t, 0.12, 1200, 1.5, "bandpass");
+    osc(ctx, dest, "sine", 60, 0.85, t, 0.25, 25);
+    osc(ctx, dest, "sawtooth", 110, 0.5, t, 0.2, 35);
+    osc(ctx, dest, "triangle", 260, 0.4, t, 0.18, 90);
+
+    // 2. Exaggerated Thunder crack (Lightning strike)
+    noise(ctx, dest, 0.85, t, 0.18, 150, 0.5, "lowpass");
+    noise(ctx, dest, 0.65, t, 0.15, 4500, 2.5, "highpass"); // bright lightning bolt crack
+
+    // 3. Rolling thunder rumble (long decaying low-frequency rumble)
+    const rumbleDur = 1.6;
+    noise(ctx, dest, 0.45, t + 0.08, rumbleDur, 70, 0.4, "lowpass");
+    
+    // detuned sub-bass oscillators for rolling effect
+    osc(ctx, dest, "sine", 48, 0.65, t + 0.05, rumbleDur - 0.2, 22);
+    osc(ctx, dest, "sine", 52, 0.55, t + 0.1, rumbleDur - 0.1, 20);
+    osc(ctx, dest, "sine", 38, 0.45, t + 0.15, rumbleDur, 18);
+  }, [osc, noise]);
 
   // ─── Sound definitions ──────────────────────────────────────────────────────
 
   const sounds = useRef({
     // Generic
     wallBounce: (ctx, dest, t) => {
-      noise(ctx, dest, 0.35, t, 0.1, 150, 0.6);
-      osc(ctx, dest, "sine", 90, 0.3, t, 0.12, 40);
-      osc(ctx, dest, "triangle", 160, 0.15, t, 0.08, 80);
+      noise(ctx, dest, 0.4, t, 0.08, 400, 0.8, "bandpass");
+      osc(ctx, dest, "sine", 95, 0.35, t, 0.1, 45);
+      osc(ctx, dest, "triangle", 180, 0.2, t, 0.06, 90);
     },
     ballCollision: (ctx, dest, t) => {
-      noise(ctx, dest, 0.4, t, 0.15, 600, 0.5);
-      osc(ctx, dest, "sine", 180, 0.3, t, 0.14, 60);
-      osc(ctx, dest, "triangle", 350, 0.15, t, 0.06, 120);
+      noise(ctx, dest, 0.45, t, 0.1, 1000, 1.2, "highpass");
+      osc(ctx, dest, "sine", 250, 0.35, t, 0.1, 120);
+      osc(ctx, dest, "triangle", 500, 0.2, t, 0.05, 200);
     },
     damage: (ctx, dest, t) => {
-      noise(ctx, dest, 0.3, t, 0.08, 800, 1.2);
-      osc(ctx, dest, "sawtooth", 140, 0.18, t, 0.08, 50);
+      noise(ctx, dest, 0.45, t, 0.12, 1200, 1.5, "bandpass");
+      osc(ctx, dest, "sawtooth", 220, 0.28, t, 0.1, 60);
+      osc(ctx, dest, "square", 110, 0.18, t, 0.08, 30);
     },
 
     // Knife Ball
     knifeHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.5, t, 0.14, 5000, 1.8);
-      osc(ctx, dest, "sawtooth", 1200, 0.2, t, 0.12, 400);
-      osc(ctx, dest, "sine", 800, 0.15, t, 0.1, 900);
+      noise(ctx, dest, 0.6, t, 0.18, 6000, 2.0, "highpass");
+      osc(ctx, dest, "sawtooth", 1400, 0.25, t, 0.14, 300);
+      osc(ctx, dest, "sine", 900, 0.2, t, 0.12, 800);
     },
 
     // Spike Ball
     spikeHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.45, t, 0.15, 1000, 1.0);
-      osc(ctx, dest, "sawtooth", 220, 0.25, t, 0.15, 60);
-      osc(ctx, dest, "triangle", 90, 0.3, t, 0.18, 30);
+      noise(ctx, dest, 0.5, t, 0.18, 1200, 1.0, "bandpass");
+      osc(ctx, dest, "sawtooth", 280, 0.35, t, 0.18, 50);
+      osc(ctx, dest, "triangle", 95, 0.4, t, 0.2, 25);
     },
 
     // Gun Ball
     gunShot: (ctx, dest, t) => {
-      noise(ctx, dest, 0.7, t, 0.25, 1200, 0.4);
-      osc(ctx, dest, "sawtooth", 160, 0.5, t, 0.2, 30);
-      osc(ctx, dest, "sine", 80, 0.6, t, 0.28, 20);
+      noise(ctx, dest, 0.95, t, 0.28, 450, 0.6, "lowpass");
+      noise(ctx, dest, 0.65, t, 0.12, 3800, 2.0, "highpass");
+      osc(ctx, dest, "sine", 75, 0.85, t, 0.26, 10);
+      osc(ctx, dest, "sawtooth", 190, 0.65, t, 0.16, 40);
+      osc(ctx, dest, "square", 120, 0.35, t, 0.1, 30);
     },
     bulletHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.4, t, 0.1, 2500, 1.0);
-      osc(ctx, dest, "sawtooth", 300, 0.25, t, 0.08, 90);
-      osc(ctx, dest, "sine", 120, 0.3, t, 0.12, 40);
+      noise(ctx, dest, 0.5, t, 0.08, 3500, 1.2, "highpass");
+      osc(ctx, dest, "sawtooth", 400, 0.3, t, 0.06, 120);
+      osc(ctx, dest, "sine", 150, 0.35, t, 0.1, 50);
     },
     gunReload: (ctx, dest, t) => {
       // Magazine insert / reload rustle
-      noise(ctx, dest, 0.2, t, 0.08, 3000, 1.5);
-      osc(ctx, dest, "triangle", 200, 0.15, t, 0.06, 300);
-      osc(ctx, dest, "triangle", 400, 0.12, t + 0.08, 0.07, 250);
-      noise(ctx, dest, 0.16, t + 0.3, 0.14, 2000, 1.2);
-      osc(ctx, dest, "triangle", 250, 0.15, t + 0.3, 0.12, 150);
+      noise(ctx, dest, 0.22, t, 0.08, 3000, 1.5);
+      osc(ctx, dest, "triangle", 200, 0.18, t, 0.06, 300);
+      osc(ctx, dest, "triangle", 400, 0.14, t + 0.08, 0.07, 250);
+      noise(ctx, dest, 0.18, t + 0.3, 0.14, 2000, 1.2);
+      osc(ctx, dest, "triangle", 250, 0.18, t + 0.3, 0.12, 150);
 
       // Cocking / slide release (chambering round) at t + 1.2s
       const tCock = t + 1.2;
       // Pull back
-      noise(ctx, dest, 0.18, tCock, 0.06, 2800, 1.5);
-      osc(ctx, dest, "triangle", 500, 0.2, tCock, 0.05, 900);
+      noise(ctx, dest, 0.22, tCock, 0.06, 2800, 1.5);
+      osc(ctx, dest, "triangle", 500, 0.24, tCock, 0.05, 900);
       // Let go (clack)
-      noise(ctx, dest, 0.22, tCock + 0.12, 0.08, 3200, 1.8);
-      osc(ctx, dest, "triangle", 800, 0.22, tCock + 0.12, 0.06, 1400);
-      osc(ctx, dest, "sine", 1200, 0.15, tCock + 0.12, 0.05, 1800);
+      noise(ctx, dest, 0.26, tCock + 0.12, 0.08, 3200, 1.8);
+      osc(ctx, dest, "triangle", 800, 0.26, tCock + 0.12, 0.06, 1400);
+      osc(ctx, dest, "sine", 1200, 0.18, tCock + 0.12, 0.05, 1800);
     },
 
     // Vampire Ball
     vampireLatch: (ctx, dest, t) => {
-      noise(ctx, dest, 0.35, t, 0.4, 1500, 2);
-      osc(ctx, dest, "sawtooth", 140, 0.2, t, 0.45, 70);
-      osc(ctx, dest, "sine", 60, 0.3, t, 0.45, 50);
+      noise(ctx, dest, 0.4, t, 0.4, 1800, 1.8, "bandpass");
+      osc(ctx, dest, "sawtooth", 120, 0.25, t, 0.45, 60);
+      osc(ctx, dest, "sine", 50, 0.35, t, 0.45, 40);
     },
     vampireDrain: (ctx, dest, t) => {
-      noise(ctx, dest, 0.15, t, 0.25, 400, 1.0);
-      osc(ctx, dest, "triangle", 100, 0.15, t, 0.25, 130);
+      noise(ctx, dest, 0.22, t, 0.2, 500, 1.5, "bandpass");
+      osc(ctx, dest, "triangle", 110, 0.22, t, 0.2, 140);
     },
 
     // Bomb Ball
     bombFuse: (ctx, dest, t) => {
-      noise(ctx, dest, 0.2, t, 0.08, 4500, 3);
-      osc(ctx, dest, "square", 800, 0.05, t, 0.05, 900);
+      noise(ctx, dest, 0.26, t, 0.08, 5500, 4.0, "bandpass");
+      osc(ctx, dest, "square", 900, 0.07, t, 0.04, 1000);
     },
     explosion: (ctx, dest, t) => {
-      noise(ctx, dest, 0.95, t, 0.6, 200, 0.4);
-      noise(ctx, dest, 0.4, t, 0.3, 1500, 0.8);
-      osc(ctx, dest, "sine", 60, 0.8, t, 0.5, 20);
-      osc(ctx, dest, "sawtooth", 45, 0.6, t, 0.55, 10);
-      osc(ctx, dest, "triangle", 120, 0.5, t, 0.4, 30);
+      osc(ctx, dest, "sine", 55, 0.95, t, 0.6, 15);
+      osc(ctx, dest, "triangle", 90, 0.65, t, 0.5, 25);
+      osc(ctx, dest, "sawtooth", 40, 0.55, t, 0.5, 10);
+      noise(ctx, dest, 0.95, t, 0.65, 180, 0.4, "lowpass");
+      noise(ctx, dest, 0.55, t, 0.35, 1200, 0.8, "bandpass");
     },
 
     // Laser Ball
     laserCharge: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 200, 0.15, t, 0.8, 1000);
-      osc(ctx, dest, "square", 100, 0.08, t, 0.8, 500);
-      noise(ctx, dest, 0.1, t, 0.8, 3000, 1.5);
+      osc(ctx, dest, "sawtooth", 140, 0.3, t, 1.0, 1600);
+      osc(ctx, dest, "square", 80, 0.18, t, 1.0, 800);
+      osc(ctx, dest, "sine", 280, 0.25, t, 1.0, 2400);
+      noise(ctx, dest, 0.18, t, 1.0, 3200, 1.5, "highpass");
     },
     laserFire: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 120, 0.4, t, 0.65, 80);
-      osc(ctx, dest, "square", 400, 0.25, t, 0.6, 200);
-      noise(ctx, dest, 0.4, t, 0.65, 2500, 0.6);
+      osc(ctx, dest, "sawtooth", 110, 0.45, t, 0.65, 55);
+      osc(ctx, dest, "square", 350, 0.3, t, 0.6, 150);
+      noise(ctx, dest, 0.45, t, 0.6, 2200, 0.5, "bandpass");
+      osc(ctx, dest, "sine", 75, 0.4, t, 0.5, 30);
     },
 
     // Shield Ball
     shieldThrow: (ctx, dest, t) => {
-      noise(ctx, dest, 0.25, t, 0.2, 1800, 1.5);
-      osc(ctx, dest, "triangle", 350, 0.2, t, 0.18, 480);
+      noise(ctx, dest, 0.3, t, 0.2, 2200, 1.8, "bandpass");
+      osc(ctx, dest, "triangle", 380, 0.22, t, 0.18, 520);
     },
     shieldBlock: (ctx, dest, t) => {
-      noise(ctx, dest, 0.45, t, 0.2, 1000, 0.7);
-      osc(ctx, dest, "triangle", 220, 0.35, t, 0.22, 90);
-      osc(ctx, dest, "sine", 950, 0.25, t, 0.18, 800);
+      noise(ctx, dest, 0.5, t, 0.15, 1500, 0.8, "bandpass");
+      osc(ctx, dest, "triangle", 240, 0.4, t, 0.2, 100);
+      osc(ctx, dest, "sine", 850, 0.28, t, 0.25, 800);
+      osc(ctx, dest, "sine", 1250, 0.18, t, 0.18, 1200);
     },
     shieldCatch: (ctx, dest, t) => {
-      noise(ctx, dest, 0.25, t, 0.1, 800, 1);
-      osc(ctx, dest, "triangle", 400, 0.2, t, 0.12, 250);
+      noise(ctx, dest, 0.3, t, 0.08, 1200, 1.5, "bandpass");
+      osc(ctx, dest, "triangle", 420, 0.25, t, 0.1, 280);
+      osc(ctx, dest, "sine", 680, 0.18, t, 0.1, 650);
     },
 
     // Spider Ball
     webShoot: (ctx, dest, t) => {
-      noise(ctx, dest, 0.3, t, 0.18, 1500, 1.2);
-      osc(ctx, dest, "sine", 500, 0.15, t, 0.15, 180);
+      noise(ctx, dest, 0.35, t, 0.15, 1800, 1.5, "bandpass");
+      osc(ctx, dest, "sine", 550, 0.18, t, 0.14, 220);
     },
     webHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.35, t, 0.28, 700, 0.9);
-      osc(ctx, dest, "triangle", 180, 0.2, t, 0.25, 80);
+      noise(ctx, dest, 0.4, t, 0.25, 900, 0.8, "bandpass");
+      osc(ctx, dest, "triangle", 200, 0.25, t, 0.22, 90);
     },
 
     // Spore Ball
     sporeShoot: (ctx, dest, t) => {
-      noise(ctx, dest, 0.25, t, 0.15, 2000, 1.5);
-      osc(ctx, dest, "triangle", 320, 0.15, t, 0.12, 550);
+      noise(ctx, dest, 0.3, t, 0.12, 2500, 2.0, "bandpass");
+      osc(ctx, dest, "triangle", 360, 0.18, t, 0.1, 600);
     },
     cactusHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.35, t, 0.12, 1200, 1.8);
-      osc(ctx, dest, "sawtooth", 280, 0.2, t, 0.1, 140);
+      noise(ctx, dest, 0.4, t, 0.1, 1500, 2.0, "bandpass");
+      osc(ctx, dest, "sawtooth", 300, 0.22, t, 0.08, 160);
     },
 
     // Hammer Ball
     hammerSpin: (ctx, dest, t) => {
-      noise(ctx, dest, 0.25, t, 0.12, 350, 0.6);
-      osc(ctx, dest, "sine", 110, 0.15, t, 0.12, 90);
+      noise(ctx, dest, 0.3, t, 0.1, 400, 0.5, "lowpass");
+      osc(ctx, dest, "sine", 120, 0.2, t, 0.1, 95);
     },
     hammerCharge: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 150, 0.2, t, 0.35, 450);
-      osc(ctx, dest, "triangle", 90, 0.15, t, 0.35, 180);
+      osc(ctx, dest, "sawtooth", 160, 0.22, t, 0.35, 520);
+      osc(ctx, dest, "triangle", 95, 0.18, t, 0.35, 200);
     },
     hammerLaunch: (ctx, dest, t) => {
-      noise(ctx, dest, 0.65, t, 0.45, 600, 0.4);
-      osc(ctx, dest, "sawtooth", 180, 0.45, t, 0.4, 40);
-      osc(ctx, dest, "sine", 70, 0.5, t, 0.45, 30);
+      noise(ctx, dest, 0.75, t, 0.4, 700, 0.3, "bandpass");
+      osc(ctx, dest, "sawtooth", 200, 0.5, t, 0.35, 50);
+      osc(ctx, dest, "sine", 80, 0.55, t, 0.4, 35);
     },
     hammerHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.8, t, 0.38, 250, 0.3);
-      osc(ctx, dest, "sine", 55, 0.8, t, 0.35, 25);
-      osc(ctx, dest, "sawtooth", 100, 0.5, t, 0.3, 35);
-      osc(ctx, dest, "triangle", 220, 0.4, t, 0.25, 110);
+      triggerHammerHitSound(ctx, dest, t);
     },
 
     // Wall Spike Ball
     spikePlant: (ctx, dest, t) => {
-      noise(ctx, dest, 0.4, t, 0.16, 600, 0.8);
-      osc(ctx, dest, "triangle", 150, 0.3, t, 0.14, 50);
+      noise(ctx, dest, 0.45, t, 0.14, 800, 1.0, "bandpass");
+      osc(ctx, dest, "triangle", 160, 0.32, t, 0.12, 60);
     },
     wallSpikeHit: (ctx, dest, t) => {
-      noise(ctx, dest, 0.4, t, 0.15, 1500, 1.2);
-      osc(ctx, dest, "sawtooth", 350, 0.25, t, 0.12, 100);
+      noise(ctx, dest, 0.45, t, 0.14, 1800, 1.2, "bandpass");
+      osc(ctx, dest, "sawtooth", 380, 0.28, t, 0.1, 110);
     },
 
     // String Web Ball
     stringTwang: (ctx, dest, t) => {
-      osc(ctx, dest, "triangle", 480, 0.25, t, 0.45, 60);
-      osc(ctx, dest, "sine", 200, 0.18, t, 0.45, 30);
-      noise(ctx, dest, 0.12, t, 0.15, 2000, 1.5);
+      osc(ctx, dest, "triangle", 520, 0.28, t, 0.4, 70);
+      osc(ctx, dest, "sine", 220, 0.22, t, 0.4, 35);
+      noise(ctx, dest, 0.15, t, 0.12, 2200, 1.5, "bandpass");
     },
     stringHit: (ctx, dest, t) => {
-      osc(ctx, dest, "triangle", 550, 0.25, t, 0.15, 120);
-      noise(ctx, dest, 0.25, t, 0.1, 3000, 1.8);
+      osc(ctx, dest, "triangle", 580, 0.28, t, 0.12, 130);
+      noise(ctx, dest, 0.28, t, 0.08, 3200, 1.8, "highpass");
     },
 
     // Arm Ball
     armGrab: (ctx, dest, t) => {
-      noise(ctx, dest, 0.35, t, 0.16, 800, 1.5);
-      osc(ctx, dest, "triangle", 300, 0.25, t, 0.14, 150);
+      noise(ctx, dest, 0.4, t, 0.14, 900, 1.5, "bandpass");
+      osc(ctx, dest, "triangle", 320, 0.28, t, 0.12, 160);
     },
     armSlam: (ctx, dest, t) => {
-      noise(ctx, dest, 0.75, t, 0.32, 250, 0.3);
-      osc(ctx, dest, "sine", 65, 0.75, t, 0.3, 30);
-      osc(ctx, dest, "triangle", 130, 0.5, t, 0.25, 50);
+      noise(ctx, dest, 0.8, t, 0.3, 300, 0.3, "lowpass");
+      osc(ctx, dest, "sine", 60, 0.8, t, 0.3, 25);
+      osc(ctx, dest, "triangle", 140, 0.55, t, 0.22, 45);
     },
 
     // Fire Driver
     carRev: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 48, 0.3, t, 0.72, 118);
-      osc(ctx, dest, "square", 72, 0.1, t + 0.03, 0.66, 168);
-      osc(ctx, dest, "sine", 38, 0.38, t, 0.78, 76);
-      noise(ctx, dest, 0.14, t, 0.72, 260, 0.7);
-      osc(ctx, dest, "sawtooth", 125, 0.12, t + 0.44, 0.3, 185);
+      osc(ctx, dest, "sawtooth", 50, 0.35, t, 0.7, 125);
+      osc(ctx, dest, "square", 75, 0.12, t + 0.02, 0.65, 175);
+      osc(ctx, dest, "sine", 40, 0.42, t, 0.75, 80);
+      noise(ctx, dest, 0.16, t, 0.7, 280, 0.7, "lowpass");
+      osc(ctx, dest, "sawtooth", 130, 0.15, t + 0.4, 0.3, 190);
     },
 
     // Eight Ball
     cueReady: (ctx, dest, t) => {
-      osc(ctx, dest, "triangle", 180, 0.12, t, 0.28, 260);
-      noise(ctx, dest, 0.08, t, 0.22, 900, 1.8);
+      osc(ctx, dest, "triangle", 190, 0.15, t, 0.25, 270);
+      noise(ctx, dest, 0.1, t, 0.2, 1000, 1.8, "bandpass");
     },
     cueStrike: (ctx, dest, t) => {
-      noise(ctx, dest, 0.45, t, 0.09, 1700, 1.4);
-      osc(ctx, dest, "triangle", 520, 0.3, t, 0.12, 170);
-      osc(ctx, dest, "sine", 115, 0.32, t, 0.24, 55);
+      noise(ctx, dest, 0.5, t, 0.08, 2000, 1.4, "bandpass");
+      osc(ctx, dest, "triangle", 540, 0.35, t, 0.1, 180);
+      osc(ctx, dest, "sine", 120, 0.36, t, 0.22, 60);
     },
     cueImpact: (ctx, dest, t) => {
-      noise(ctx, dest, 0.34, t, 0.1, 1200, 1.1);
-      osc(ctx, dest, "triangle", 360, 0.24, t, 0.12, 105);
-      osc(ctx, dest, "sine", 92, 0.27, t, 0.18, 42);
+      noise(ctx, dest, 0.38, t, 0.08, 1400, 1.2, "bandpass");
+      osc(ctx, dest, "triangle", 380, 0.28, t, 0.1, 110);
+      osc(ctx, dest, "sine", 96, 0.3, t, 0.15, 45);
     },
 
     // Chess Ball
     chessMove: (ctx, dest, t) => {
-      noise(ctx, dest, 0.25, t, 0.22, 500, 0.8);
-      osc(ctx, dest, "triangle", 180, 0.2, t, 0.22, 350);
+      noise(ctx, dest, 0.28, t, 0.2, 600, 1.0, "bandpass");
+      osc(ctx, dest, "triangle", 190, 0.22, t, 0.2, 370);
     },
     chessSlam: (ctx, dest, t) => {
-      noise(ctx, dest, 0.8, t, 0.35, 200, 0.4);
-      osc(ctx, dest, "sine", 50, 0.85, t, 0.38, 20);
-      osc(ctx, dest, "sawtooth", 90, 0.45, t, 0.32, 30);
-      osc(ctx, dest, "triangle", 280, 0.4, t, 0.28, 90);
+      noise(ctx, dest, 0.85, t, 0.32, 220, 0.4, "lowpass");
+      osc(ctx, dest, "sine", 50, 0.9, t, 0.35, 20);
+      osc(ctx, dest, "sawtooth", 95, 0.5, t, 0.3, 35);
+      osc(ctx, dest, "triangle", 290, 0.45, t, 0.25, 100);
     },
 
-    // Round result
+    // Round results
     roundWin: (ctx, dest, t) => {
-      noise(ctx, dest, 0.95, t, 1.2, 350, 0.4);
-      noise(ctx, dest, 0.65, t + 0.1, 2.0, 1800, 0.8);
+      noise(ctx, dest, 0.95, t, 1.2, 350, 0.4, "lowpass");
+      noise(ctx, dest, 0.65, t + 0.1, 2.0, 1800, 0.8, "bandpass");
       osc(ctx, dest, "sine", 70, 0.9, t, 0.8, 20);
       osc(ctx, dest, "sawtooth", 45, 0.7, t, 0.9, 10);
     },
     roundLose: (ctx, dest, t) => {
-      noise(ctx, dest, 0.95, t, 1.2, 350, 0.4);
-      noise(ctx, dest, 0.65, t + 0.1, 2.0, 1800, 0.8);
+      noise(ctx, dest, 0.95, t, 1.2, 350, 0.4, "lowpass");
+      noise(ctx, dest, 0.65, t + 0.1, 2.0, 1800, 0.8, "bandpass");
       osc(ctx, dest, "sine", 70, 0.9, t, 0.8, 20);
       osc(ctx, dest, "sawtooth", 45, 0.7, t, 0.9, 10);
     },
+
+    // ─── Newly Implemented Missing Sounds ────────────────────────────────────
+    jump: (ctx, dest, t) => {
+      osc(ctx, dest, "triangle", 150, 0.22, t, 0.15, 650);
+      osc(ctx, dest, "sine", 150, 0.15, t, 0.15, 650);
+    },
+    repulsorCharge: (ctx, dest, t) => {
+      osc(ctx, dest, "sine", 120, 0.25, t, 0.6, 950);
+      osc(ctx, dest, "triangle", 120, 0.18, t, 0.6, 950);
+      noise(ctx, dest, 0.12, t, 0.55, 3000, 1.2, "highpass");
+    },
+    shieldBashBoom: (ctx, dest, t) => {
+      osc(ctx, dest, "sine", 65, 0.8, t, 0.45, 20);
+      osc(ctx, dest, "triangle", 120, 0.4, t, 0.35, 30);
+      noise(ctx, dest, 0.65, t, 0.35, 300, 0.6, "lowpass");
+      noise(ctx, dest, 0.4, t, 0.15, 1200, 1.0, "bandpass");
+      osc(ctx, dest, "sine", 230, 0.25, t, 0.28, 180);
+      osc(ctx, dest, "sine", 420, 0.18, t, 0.22, 350);
+    },
+    shieldMetalHit: (ctx, dest, t) => {
+      triggerHammerHitSound(ctx, dest, t);
+    },
+    wallHit: (ctx, dest, t) => {
+      noise(ctx, dest, 0.25, t, 0.12, 1800, 1.2, "bandpass");
+      osc(ctx, dest, "triangle", 180, 0.25, t, 0.1, 80);
+      osc(ctx, dest, "sine", 90, 0.2, t, 0.12, 50);
+    },
+    wallSlam: (ctx, dest, t) => {
+      osc(ctx, dest, "sine", 58, 0.85, t, 0.4, 20);
+      osc(ctx, dest, "triangle", 110, 0.45, t, 0.3, 40);
+      noise(ctx, dest, 0.75, t, 0.35, 180, 0.5, "lowpass");
+    },
+    warpCapture: (ctx, dest, t) => {
+      noise(ctx, dest, 0.22, t, 0.45, 1500, 1.8, "bandpass");
+      osc(ctx, dest, "sine", 700, 0.25, t, 0.4, 150);
+      osc(ctx, dest, "triangle", 350, 0.18, t, 0.45, 900);
+    },
+    warpCast: (ctx, dest, t) => {
+      noise(ctx, dest, 0.28, t, 0.35, 2200, 0.8, "bandpass");
+      osc(ctx, dest, "sine", 400, 0.28, t, 0.3, 100);
+      osc(ctx, dest, "sawtooth", 220, 0.12, t, 0.25, 50);
+    },
+    warpDrag: (ctx, dest, t) => {
+      osc(ctx, dest, "sawtooth", 90, 0.16, t, 0.22, 130);
+      osc(ctx, dest, "sine", 180, 0.22, t, 0.25, 90);
+      noise(ctx, dest, 0.08, t, 0.2, 800, 2.0, "bandpass");
+    },
+    warpSlam: (ctx, dest, t) => {
+      osc(ctx, dest, "sine", 70, 0.85, t, 0.5, 20);
+      osc(ctx, dest, "triangle", 180, 0.4, t, 0.38, 40);
+      osc(ctx, dest, "sawtooth", 600, 0.22, t, 0.3, 150);
+      noise(ctx, dest, 0.8, t, 0.45, 280, 0.5, "lowpass");
+      noise(ctx, dest, 0.35, t, 0.25, 2000, 1.5, "bandpass");
+    },
+    spiderSplatterStep: (ctx, dest, t) => {
+      // Exaggerated wet splat (low-pass noise burst + organic squelch)
+      noise(ctx, dest, 0.65, t, 0.25, 450, 0.8, "lowpass");
+      noise(ctx, dest, 0.45, t, 0.12, 1200, 1.2, "bandpass");
+
+      // Slimy bubble squelches (multiple quick pitch-modulated bubble pops)
+      const pops = [
+        { delay: 0.00, freq: 280, end: 390, vol: 0.32, dur: 0.10 },
+        { delay: 0.03, freq: 190, end: 270, vol: 0.28, dur: 0.12 },
+        { delay: 0.06, freq: 420, end: 150, vol: 0.24, dur: 0.08 }, // suction release
+        { delay: 0.09, freq: 310, end: 460, vol: 0.20, dur: 0.11 }
+      ];
+      pops.forEach(p => {
+        osc(ctx, dest, "sine", p.freq, p.vol, t + p.delay, p.dur, p.end);
+      });
+
+      // Suction thud (low frequency pull)
+      osc(ctx, dest, "triangle", 110, 0.35, t, 0.22, 40);
+
+      // Sticky web thread snaps
+      osc(ctx, dest, "sine", 1900, 0.2, t + 0.02, 0.04, 1400);
+      osc(ctx, dest, "sine", 2600, 0.14, t + 0.04, 0.03, 1800);
+    },
+    bigLaserFire: (ctx, dest, t) => {
+      // Exaggerated massive sustained beam sound
+      noise(ctx, dest, 0.95, t, 0.4, 300, 0.4, "lowpass");
+      noise(ctx, dest, 0.65, t, 0.2, 1800, 0.8, "bandpass");
+      const beamDur = 1.8;
+      osc(ctx, dest, "sawtooth", 85, 0.65, t, beamDur, 40);
+      osc(ctx, dest, "square", 185, 0.35, t, beamDur - 0.2, 95);
+      osc(ctx, dest, "sawtooth", 135, 0.45, t, beamDur - 0.1, 75);
+      osc(ctx, dest, "sine", 350, 0.3, t, 0.8, 150);
+      osc(ctx, dest, "sine", 55, 0.85, t, 0.6, 15);
+      noise(ctx, dest, 0.28, t + 0.1, beamDur - 0.2, 4500, 2.0, "highpass");
+    },
+    armorLock: (ctx, dest, t) => {
+      // Exaggerated mechanical locking / latching sound
+      noise(ctx, dest, 0.38, t, 0.08, 1500, 2.0, "bandpass");
+      noise(ctx, dest, 0.25, t + 0.05, 0.06, 2800, 1.8, "bandpass");
+      osc(ctx, dest, "triangle", 380, 0.32, t, 0.08, 220);
+      osc(ctx, dest, "sine", 750, 0.28, t + 0.04, 0.05, 900);
+      osc(ctx, dest, "sawtooth", 900, 0.16, t + 0.04, 0.04, 1100);
+      osc(ctx, dest, "sine", 120, 0.35, t + 0.05, 0.1, 45);
+    }
   });
 
   // ─── Public API ─────────────────────────────────────────────────────────────
 
-  const playSound = useCallback((name, volume = 1, cooldownMs = 0) => {
+  const playSound = useCallback((name, volume = 1, cooldownMs = 0, spatialOpts = null) => {
     if (mutedRef.current) return;
     const fn = sounds.current[name];
     if (!fn) return;
@@ -341,16 +530,79 @@ export function useSoundEngine() {
     const dest = masterGainRef.current;
     const t = ctx.currentTime;
 
-    // Volume scaling wrapper: inject a temporary gain node
-    if (volume !== 1) {
-      const g = ctx.createGain();
-      g.gain.value = Math.max(0, Math.min(2, volume));
-      g.connect(dest);
-      fn(ctx, g, t);
-    } else {
-      fn(ctx, dest, t);
+    // Setup local volume gain node
+    const volGainNode = ctx.createGain();
+    volGainNode.gain.setValueAtTime(Math.max(0, Math.min(2.5, volume)), t);
+    volGainNode.connect(dest);
+
+    let nodeDest = volGainNode;
+
+    // Apply spatial audio effects if options are present
+    if (spatialOpts) {
+      const { pan, depth, room } = spatialOpts;
+
+      // 1. Distance/Depth lowpass filter and attenuation
+      if (typeof depth === "number" && depth > 0) {
+        const depthFilter = ctx.createBiquadFilter();
+        depthFilter.type = "lowpass";
+        const cutoff = Math.max(800, 20000 - depth * 19200);
+        depthFilter.frequency.setValueAtTime(cutoff, t);
+        depthFilter.connect(nodeDest);
+        nodeDest = depthFilter;
+
+        const depthGain = ctx.createGain();
+        const dVol = Math.max(0.3, 1.0 - depth * 0.7);
+        depthGain.gain.setValueAtTime(dVol, t);
+        depthGain.connect(nodeDest);
+        nodeDest = depthGain;
+      }
+
+      // 2. Stereo Panner
+      if (typeof pan === "number" && ctx.createStereoPanner) {
+        const panner = ctx.createStereoPanner();
+        panner.pan.setValueAtTime(Math.max(-1, Math.min(1, pan)), t);
+        panner.connect(nodeDest);
+        nodeDest = panner;
+      }
+
+      // 3. Room Reverb (parallel wet/dry mix via Convolver)
+      if (typeof room === "number" && room > 0) {
+        const convolver = ctx.createConvolver();
+        convolver.buffer = getReverbBuffer(ctx);
+
+        const dryGain = ctx.createGain();
+        const wetGain = ctx.createGain();
+        const wetVal = Math.min(0.45, room * 0.45);
+
+        wetGain.gain.setValueAtTime(wetVal, t);
+        dryGain.gain.setValueAtTime(1.0 - wetVal, t);
+
+        dryGain.connect(nodeDest);
+        convolver.connect(wetGain);
+        wetGain.connect(nodeDest);
+
+        const splitter = ctx.createGain();
+        splitter.connect(dryGain);
+        splitter.connect(convolver);
+        nodeDest = splitter;
+      }
     }
-  }, [getCtx]);
+
+    // Apply Waveshaper Saturation and Music Ducking for heavy hit impacts
+    const isHeavy = HEAVY_HITS.has(name) || (volume >= 1.2 && (name.includes("Hit") || name.includes("Slam") || name.includes("Bounce")));
+    if (isHeavy) {
+      const saturator = ctx.createWaveShaper();
+      saturator.curve = getDistortionCurve();
+      saturator.oversample = "4x";
+      saturator.connect(nodeDest);
+      nodeDest = saturator;
+
+      duckMusic(0.16, 0.02);
+    }
+
+    // Trigger procedural sound synthesis
+    fn(ctx, nodeDest, t);
+  }, [getCtx, getReverbBuffer, getDistortionCurve, duckMusic]);
 
   const toggleMute = useCallback(() => {
     mutedRef.current = !mutedRef.current;
@@ -370,6 +622,8 @@ export function useSoundEngine() {
 
   const playAudioFile = useCallback(async (url, volume = 1, delay = 0) => {
     if (mutedRef.current) return;
+    // Strictly restrict audio file playback to the intro file
+    if (!url.includes("Balls%20Ready.%20Fight!")) return;
     const ctx = getCtx();
     if (!ctx || !masterGainRef.current) return;
     try {

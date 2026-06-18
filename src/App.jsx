@@ -6314,7 +6314,7 @@ export default function App() {
               part.grabbing = false;
               part.attachedAt = currentTime;
               laserBall.collectedArmorCount = (laserBall.collectedArmorCount || 0) + 1;
-              playSound("shieldCatch", 0.92 + laserBall.collectedArmorCount * 0.07, 45, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.04, room: 0.46 });
+              playSound("armorLock", 0.92 + laserBall.collectedArmorCount * 0.07, 45, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.04, room: 0.46 });
               spawnSparks(part.x, part.y, "#facc15", 10);
               game.floatingTexts = game.floatingTexts || [];
               game.floatingTexts.push({
@@ -6372,7 +6372,7 @@ export default function App() {
           laserBall.laserStateUntil = currentTime + 2000;
           laserBall.hugeLaserDamageDealt = 0;
           laserBall.hugeLaserBounceApplied = false;
-          playSound("laserFire", 1.25, 130, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.01, room: 0.68 });
+          playSound("bigLaserFire", 1.45, 130, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.01, room: 0.68 });
           laserBall.laserNextTickAt = currentTime;
           game.screenShake = Math.max(game.screenShake, 12);
         }
@@ -6717,7 +6717,7 @@ export default function App() {
           laserBall.laserStateUntil = currentTime + (bal.fanDuration || 720);
           laserBall.laserFanAngle = laserBall.laserTargetAngle;
           laserBall.laserNextTickAt = currentTime;
-          playSound("laserFire", 1.28, 120, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.03, room: 0.62 });
+          playSound("bigLaserFire", 1.48, 120, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.03, room: 0.62 });
           game.screenShake = Math.max(game.screenShake, 16);
         }
         return;
@@ -6788,7 +6788,7 @@ export default function App() {
         if (Math.hypot(part.x - laserBall.x, part.y - laserBall.y) < laserBall.r + part.r) {
           part.collected = true;
           laserBall.collectedArmorCount += 1;
-          playSound("shieldCatch", 1.08, 75, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.05, room: 0.42 });
+          playSound("armorLock", 1.08, 75, { pan: (laserBall.x / game.width) * 2 - 1, depth: 0.05, room: 0.42 });
           spawnSparks(part.x, part.y, "#facc15", 14);
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
