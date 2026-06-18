@@ -10297,184 +10297,273 @@ export default function App() {
     const drawGunBall = (ball, currentTime) => {
       const R = ball.r;
       
-      // 1. Draw the base ball suit shell (a black base circle)
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, R, 0, Math.PI * 2);
-      const metalGrad = ctx.createRadialGradient(
-        ball.x - R * 0.2, ball.y - R * 0.2, 2,
-        ball.x, ball.y, R
-      );
-      metalGrad.addColorStop(0, "#1c1917");
-      metalGrad.addColorStop(0.55, "#0c0a09");
-      metalGrad.addColorStop(1, "#020617");
-      ctx.fillStyle = metalGrad;
-      ctx.fill();
-
-      // Suit border
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = "#292524";
-      ctx.stroke();
-
-      // 2. Draw rotated face details (hair, face, scars, beard, suit V-neck, and tie)
+      // 1. Setup transformed context for drawing the complete John Wick portrait from the SVG
       ctx.save();
       ctx.translate(ball.x, ball.y);
       ctx.rotate(ball.angle);
+      
+      const scale = R / 200;
+      ctx.transform(0, -scale, scale, 0, -285 * scale, 256 * scale);
 
-      // A. Suit Jacket base at the front
-      ctx.fillStyle = "#09090b";
+      // Gradients definition in SVG space
+      const skinGrad = ctx.createRadialGradient(256, 179, 0, 256, 179, 358);
+      skinGrad.addColorStop(0, "#d69a62");
+      skinGrad.addColorStop(1, "#a86f42");
+
+      const suitGrad = ctx.createRadialGradient(256, 128, 0, 256, 128, 410);
+      suitGrad.addColorStop(0, "#171717");
+      suitGrad.addColorStop(1, "#030303");
+
+      const hairGrad = ctx.createLinearGradient(0, 0, 512, 512);
+      hairGrad.addColorStop(0, "#202020");
+      hairGrad.addColorStop(1, "#020202");
+
+      const shirtGrad = ctx.createLinearGradient(0, 0, 512, 512);
+      shirtGrad.addColorStop(0, "#ffffff");
+      shirtGrad.addColorStop(1, "#bfc0c2");
+
+      // body ball
       ctx.beginPath();
-      ctx.arc(0, 0, R, -Math.PI * 0.28, Math.PI * 0.28);
-      ctx.lineTo(0.3 * R, 0.3 * R);
-      ctx.lineTo(0.3 * R, -0.3 * R);
-      ctx.closePath();
+      ctx.arc(256, 285, 200, 0, Math.PI * 2);
+      ctx.fillStyle = suitGrad;
       ctx.fill();
-
-      // B. White Shirt Collar V-shape
-      ctx.fillStyle = "#fafafa";
-      ctx.beginPath();
-      ctx.moveTo(0.25 * R, 0);
-      ctx.lineTo(0.72 * R, -0.35 * R);
-      ctx.lineTo(0.92 * R, -0.32 * R);
-      ctx.lineTo(0.52 * R, 0);
-      ctx.lineTo(0.92 * R, 0.32 * R);
-      ctx.lineTo(0.72 * R, 0.35 * R);
-      ctx.closePath();
-      ctx.fill();
-
-      // C. Black Tie
-      ctx.fillStyle = "#18181b";
-      ctx.beginPath();
-      ctx.moveTo(0.35 * R, -0.06 * R);
-      ctx.lineTo(0.35 * R, 0.06 * R);
-      ctx.lineTo(0.55 * R, 0.1 * R);
-      ctx.lineTo(0.98 * R, 0.07 * R);
-      ctx.lineTo(1.02 * R, 0);
-      ctx.lineTo(0.98 * R, -0.07 * R);
-      ctx.lineTo(0.55 * R, -0.1 * R);
-      ctx.closePath();
-      ctx.fill();
-
-      // Tie knot
-      ctx.fillStyle = "#09090b";
-      ctx.beginPath();
-      ctx.moveTo(0.35 * R, -0.07 * R);
-      ctx.lineTo(0.35 * R, 0.07 * R);
-      ctx.lineTo(0.48 * R, 0.09 * R);
-      ctx.lineTo(0.48 * R, -0.09 * R);
-      ctx.closePath();
-      ctx.fill();
-
-      // Jacket Lapels highlight lines
-      ctx.strokeStyle = "#3f3f46";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(0.72 * R, -0.35 * R);
-      ctx.lineTo(0.3 * R, -0.35 * R);
-      ctx.lineTo(0.3 * R, 0.35 * R);
-      ctx.lineTo(0.72 * R, 0.35 * R);
+      ctx.strokeStyle = "#050505";
+      ctx.lineWidth = 8;
       ctx.stroke();
 
-      // D. Face area (skin tone)
+      // skin face area
       ctx.beginPath();
-      ctx.ellipse(-0.08 * R, 0, 0.65 * R, 0.58 * R, 0, 0, Math.PI * 2);
-      ctx.fillStyle = "#d69f69";
-      ctx.fill();
-
-      // E. Beard path
-      ctx.fillStyle = "#1c1917";
-      ctx.beginPath();
-      ctx.moveTo(-0.25 * R, -0.5 * R);
-      ctx.quadraticCurveTo(0.1 * R, -0.48 * R, 0.5 * R, -0.2 * R);
-      ctx.lineTo(0.5 * R, 0.2 * R);
-      ctx.quadraticCurveTo(0.1 * R, 0.48 * R, -0.25 * R, 0.5 * R);
-      ctx.lineTo(-0.15 * R, 0.35 * R);
-      ctx.quadraticCurveTo(0.2 * R, 0.3 * R, 0.35 * R, 0.15 * R);
-      ctx.lineTo(0.35 * R, -0.15 * R);
-      ctx.quadraticCurveTo(0.2 * R, -0.3 * R, -0.15 * R, -0.35 * R);
+      ctx.moveTo(160, 145);
+      ctx.bezierCurveTo(175, 75, 225, 70, 256, 110);
+      ctx.bezierCurveTo(287, 70, 337, 75, 352, 145);
+      ctx.lineTo(375, 285);
+      ctx.bezierCurveTo(340, 345, 300, 360, 256, 355);
+      ctx.bezierCurveTo(212, 360, 172, 345, 137, 285);
       ctx.closePath();
+      ctx.fillStyle = skinGrad;
       ctx.fill();
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 6;
+      ctx.stroke();
 
-      // Mustache
-      ctx.fillStyle = "#1c1917";
+      // hair mass (with no clipping so it extends like spider off ball)
       ctx.beginPath();
-      ctx.moveTo(0.1 * R, -0.25 * R);
-      ctx.quadraticCurveTo(0.35 * R, -0.2 * R, 0.42 * R, 0);
-      ctx.quadraticCurveTo(0.35 * R, 0.2 * R, 0.1 * R, 0.25 * R);
-      ctx.quadraticCurveTo(0.25 * R, 0.12 * R, 0.25 * R, 0);
-      ctx.quadraticCurveTo(0.25 * R, -0.12 * R, 0.1 * R, -0.25 * R);
-      ctx.fill();
-
-      // Soul patch
-      ctx.beginPath();
-      ctx.moveTo(0.25 * R, -0.08 * R);
-      ctx.lineTo(0.35 * R, 0);
-      ctx.lineTo(0.25 * R, 0.08 * R);
-      ctx.lineTo(0.28 * R, 0);
+      ctx.moveTo(86, 235);
+      ctx.bezierCurveTo(95, 105, 175, 48, 250, 60);
+      ctx.bezierCurveTo(265, 60, 276, 64, 286, 72);
+      ctx.bezierCurveTo(385, 45, 445, 120, 466, 235);
+      ctx.bezierCurveTo(445, 225, 438, 205, 432, 185);
+      ctx.bezierCurveTo(428, 270, 395, 310, 365, 332);
+      ctx.bezierCurveTo(372, 260, 346, 155, 318, 120);
+      ctx.bezierCurveTo(286, 88, 260, 125, 256, 125);
+      ctx.bezierCurveTo(252, 125, 226, 88, 194, 120);
+      ctx.bezierCurveTo(166, 155, 140, 260, 147, 332);
+      ctx.bezierCurveTo(117, 310, 84, 270, 80, 185);
+      ctx.bezierCurveTo(74, 205, 67, 225, 46, 235);
       ctx.closePath();
+      ctx.fillStyle = hairGrad;
       ctx.fill();
-
-      // F. Scars
-      ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 1.8;
-      ctx.lineCap = "round";
-
-      // Scar 1 (top-left / back-left)
-      ctx.beginPath();
-      ctx.moveTo(-0.28 * R, -0.32 * R);
-      ctx.lineTo(-0.16 * R, -0.16 * R);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(-0.25 * R, -0.28 * R);
-      ctx.lineTo(-0.23 * R, -0.22 * R);
+      ctx.strokeStyle = "#050505";
+      ctx.lineWidth = 7;
       ctx.stroke();
 
-      // Scar 2 (top-right / back-right)
+      // hair center part
       ctx.beginPath();
-      ctx.moveTo(-0.18 * R, 0.18 * R);
-      ctx.lineTo(-0.06 * R, 0.32 * R);
+      ctx.moveTo(256, 65);
+      ctx.bezierCurveTo(248, 115, 238, 140, 220, 165);
+      ctx.strokeStyle = "#0a0a0a";
+      ctx.lineWidth = 8;
       ctx.stroke();
 
-      // Scar 3 (bottom-left / front-left)
       ctx.beginPath();
-      ctx.moveTo(0.08 * R, -0.26 * R);
-      ctx.lineTo(0.18 * R, -0.12 * R);
+      ctx.moveTo(256, 65);
+      ctx.bezierCurveTo(264, 115, 274, 140, 292, 165);
+      ctx.strokeStyle = "#0a0a0a";
+      ctx.lineWidth = 8;
       ctx.stroke();
 
-      // Scar 4 (bottom-right / front-right)
+      // hair strand lines
       ctx.beginPath();
-      ctx.moveTo(0.06 * R, 0.14 * R);
-      ctx.lineTo(0.18 * R, 0.26 * R);
-      ctx.moveTo(0.18 * R, 0.14 * R);
-      ctx.lineTo(0.06 * R, 0.26 * R);
+      ctx.moveTo(130, 230);
+      ctx.bezierCurveTo(145, 140, 180, 90, 238, 80);
+      ctx.strokeStyle = "#2a2a2a";
+      ctx.lineWidth = 4;
       ctx.stroke();
 
-      // G. Hair
-      ctx.fillStyle = "#0c0a09";
       ctx.beginPath();
-      ctx.arc(0, 0, R, Math.PI * 0.5, Math.PI * 1.5);
-      ctx.bezierCurveTo(-0.2 * R, -0.9 * R, 0.1 * R, -0.8 * R, 0.2 * R, -0.5 * R);
-      ctx.bezierCurveTo(0.05 * R, -0.4 * R, -0.15 * R, -0.35 * R, -0.32 * R, 0);
-      ctx.bezierCurveTo(-0.15 * R, 0.35 * R, 0.05 * R, 0.4 * R, 0.2 * R, 0.5 * R);
-      ctx.bezierCurveTo(0.1 * R, 0.8 * R, -0.2 * R, 0.9 * R, 0, R);
+      ctx.moveTo(100, 255);
+      ctx.bezierCurveTo(120, 155, 165, 85, 232, 70);
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(382, 230);
+      ctx.bezierCurveTo(367, 140, 332, 90, 274, 80);
+      ctx.strokeStyle = "#2a2a2a";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(412, 255);
+      ctx.bezierCurveTo(392, 155, 347, 85, 280, 70);
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      // beard
+      ctx.beginPath();
+      ctx.moveTo(110, 270);
+      ctx.bezierCurveTo(145, 330, 190, 355, 256, 355);
+      ctx.bezierCurveTo(322, 355, 367, 330, 402, 270);
+      ctx.bezierCurveTo(360, 302, 318, 315, 288, 292);
+      ctx.bezierCurveTo(273, 280, 239, 280, 224, 292);
+      ctx.bezierCurveTo(194, 315, 152, 302, 110, 270);
       ctx.closePath();
+      ctx.fillStyle = "#111";
+      ctx.strokeStyle = "#0b0b0b";
+      ctx.lineWidth = 6;
+      ctx.fill();
+      ctx.stroke();
+
+      // moustache
+      ctx.beginPath();
+      ctx.moveTo(190, 278);
+      ctx.bezierCurveTo(220, 245, 245, 262, 256, 278);
+      ctx.bezierCurveTo(267, 262, 292, 245, 322, 278);
+      ctx.bezierCurveTo(292, 268, 275, 282, 256, 292);
+      ctx.bezierCurveTo(237, 282, 220, 268, 190, 278);
+      ctx.closePath();
+      ctx.fillStyle = "#171717";
+      ctx.strokeStyle = "#090909";
+      ctx.lineWidth = 5;
+      ctx.fill();
+      ctx.stroke();
+
+      // mouth gap
+      ctx.beginPath();
+      ctx.moveTo(210, 306);
+      ctx.bezierCurveTo(232, 286, 280, 286, 302, 306);
+      ctx.strokeStyle = "#d29a63";
+      ctx.lineWidth = 8;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(215, 310);
+      ctx.bezierCurveTo(235, 295, 277, 295, 297, 310);
+      ctx.strokeStyle = "#090909";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      // white collar
+      ctx.beginPath();
+      ctx.moveTo(85, 290);
+      ctx.bezierCurveTo(135, 340, 190, 370, 245, 378);
+      ctx.lineTo(216, 438);
+      ctx.bezierCurveTo(165, 410, 120, 365, 85, 290);
+      ctx.closePath();
+      ctx.fillStyle = shirtGrad;
+      ctx.fill();
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(427, 290);
+      ctx.bezierCurveTo(377, 340, 322, 370, 267, 378);
+      ctx.lineTo(296, 438);
+      ctx.bezierCurveTo(347, 410, 392, 365, 427, 290);
+      ctx.closePath();
+      ctx.fillStyle = shirtGrad;
+      ctx.fill();
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // collar shadows
+      ctx.beginPath();
+      ctx.moveTo(218, 380);
+      ctx.lineTo(246, 378);
+      ctx.lineTo(226, 438);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(156, 156, 156, 0.6)";
       ctx.fill();
 
-      // Hair strands
-      ctx.strokeStyle = "#292524";
-      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(-0.4 * R, -0.8 * R);
-      ctx.quadraticCurveTo(-0.1 * R, -0.75 * R, 0.12 * R, -0.48 * R);
-      ctx.moveTo(-0.6 * R, -0.6 * R);
-      ctx.quadraticCurveTo(-0.2 * R, -0.6 * R, 0.05 * R, -0.45 * R);
-      ctx.moveTo(-0.4 * R, 0.8 * R);
-      ctx.quadraticCurveTo(-0.1 * R, 0.75 * R, 0.12 * R, 0.48 * R);
-      ctx.moveTo(-0.6 * R, 0.6 * R);
-      ctx.quadraticCurveTo(-0.2 * R, 0.6 * R, 0.05 * R, 0.45 * R);
-      ctx.moveTo(-0.6 * R, 0);
-      ctx.quadraticCurveTo(-0.4 * R, -0.15 * R, -0.28 * R, -0.05 * R);
-      ctx.moveTo(-0.6 * R, 0);
-      ctx.quadraticCurveTo(-0.4 * R, 0.15 * R, -0.28 * R, 0.05 * R);
+      ctx.moveTo(294, 380);
+      ctx.lineTo(266, 378);
+      ctx.lineTo(286, 438);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(156, 156, 156, 0.6)";
+      ctx.fill();
+
+      // tie knot
+      ctx.beginPath();
+      ctx.moveTo(234, 372);
+      ctx.lineTo(278, 372);
+      ctx.lineTo(292, 395);
+      ctx.lineTo(278, 418);
+      ctx.lineTo(234, 418);
+      ctx.lineTo(220, 395);
+      ctx.closePath();
+      ctx.fillStyle = "#141414";
+      ctx.strokeStyle = "#050505";
+      ctx.lineWidth = 6;
+      ctx.fill();
+      ctx.stroke();
+
+      // tie
+      ctx.beginPath();
+      ctx.moveTo(238, 414);
+      ctx.lineTo(274, 414);
+      ctx.lineTo(290, 485);
+      ctx.lineTo(256, 504);
+      ctx.lineTo(222, 485);
+      ctx.closePath();
+      ctx.fillStyle = "#111";
+      ctx.strokeStyle = "#050505";
+      ctx.lineWidth = 6;
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(256, 420);
+      ctx.lineTo(256, 485);
+      ctx.strokeStyle = "#222";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // suit lower shape
+      ctx.beginPath();
+      ctx.moveTo(75, 304);
+      ctx.bezierCurveTo(115, 410, 175, 480, 256, 485);
+      ctx.bezierCurveTo(337, 480, 397, 410, 437, 304);
+      ctx.bezierCurveTo(395, 365, 334, 420, 256, 424);
+      ctx.bezierCurveTo(178, 420, 117, 365, 75, 304);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(6, 6, 6, 0.55)";
+      ctx.fill();
+
+      // highlights
+      ctx.beginPath();
+      ctx.moveTo(110, 420);
+      ctx.bezierCurveTo(150, 470, 210, 492, 256, 492);
+      ctx.strokeStyle = "rgba(28, 28, 28, 0.8)";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(125, 132);
+      ctx.bezierCurveTo(150, 85, 200, 65, 238, 70);
+      ctx.strokeStyle = "rgba(51, 51, 51, 0.7)";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(392, 132);
+      ctx.bezierCurveTo(362, 82, 310, 65, 276, 70);
+      ctx.strokeStyle = "rgba(51, 51, 51, 0.7)";
+      ctx.lineWidth = 4;
       ctx.stroke();
 
       ctx.restore();
