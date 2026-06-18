@@ -71,37 +71,37 @@ const BALL_TYPES = {
     color: "#dc2626",
     stroke: "#facc15",
     radius: 30,
-    description: "Iron-style repulsor brawler. Charges white beams and periodic stun pulses.",
+    description: "Exo-repulsor brawler. Gathers scattered armor parts to fire a massive ultimate laser beam.",
     emoji: "🤖",
     visualTheme: "Stark-tech / Cybernetic Exo-Soldier",
     colorPalette: "Crimson Red, Gold Plating, Arc White",
     facialAge: "Mid 30s (Manicured goatee, smug smirk, digital HUD overlay)",
     personality: "Egotistical, flashy, genius inventor",
     primaryWeapon: "Wrist-Mounted Repulsor Core",
-    signatureAbility: "Charged Repulsor Beam & Energy Stun Pulse",
+    signatureAbility: "Charged Repulsor Beam & Huge Beam Scatter",
     companion: "None",
-    specialVisualEffects: "Bright white laser beams, electrical spark arcs, expanding blue stun rings",
+    specialVisualEffects: "Bright white laser beams, gold armor collection, huge energy beam",
     animeStyle: "High-tech sci-fi superhero anime with bright cell shading",
-    gameStyle: "Heavy artillery zoner with crowd control stun burst",
+    gameStyle: "Heavy artillery zoner utilizing armor assembly mechanics",
   },
   shield: {
     id: "shield",
     name: "Shielder Ball",
     shortName: "SHLD",
-    color: "#3b82f6",
-    stroke: "#ef4444",
+    color: "#ca8a04",
+    stroke: "#facc15",
     radius: 32,
-    description: "Throws a round shield. Secondary: Bash & Emergency Recall.",
+    description: "Defends with a golden crown and glowing gold core. Secondary: Bash & Neon Yellow Shield.",
     emoji: "🛡️",
-    visualTheme: "Heavy Bastion / Combat Warden",
-    colorPalette: "Cobalt Blue, Hazard Red, Brushed Steel",
-    facialAge: "Early 40s (Battle-scarred brow, square jawline, resolute expression)",
-    personality: "Protective, unyielding, patriotic",
-    primaryWeapon: "Circular Vibranium Alloy Shield",
-    signatureAbility: "Shield Bash & Recall Shield (with barrier window)",
+    visualTheme: "Golden Bastion / Crowned Guardian",
+    colorPalette: "Neon Yellow, Gold Plating, Brushed Brass",
+    facialAge: "Early 40s (Battle-scarred brow, golden crown, resolute expression)",
+    personality: "Protective, unyielding, majestic",
+    primaryWeapon: "Neon Yellow Energy Shield",
+    signatureAbility: "Golden Shield Bash & Laser-Deflecting Shield",
     companion: "None",
-    specialVisualEffects: "Blue hexagonal shield forcefields, metal spark particles on block",
-    animeStyle: "Mecha armor commander / heroic guardian anime",
+    specialVisualEffects: "Yellow neon forcefields, gold spark particles on block",
+    animeStyle: "Golden mecha commander / heroic crowned guardian",
     gameStyle: "High-density defensive tank with bounce shield control",
   },
   spider: {
@@ -1516,6 +1516,7 @@ export default function App() {
       webStrands: [],
       fireCars: [],
       vampireClones: [],
+      armorParts: [],
       screenShake: 0,
       deathEffectStarted: false,
       deathSlowMoUntil: 0,
@@ -2220,7 +2221,7 @@ export default function App() {
         const leftBall = makeBall(leftType, "left", 20);
         const rightBall = makeBall(rightType, "right", 20);
         const balls = [leftBall, rightBall];
-        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [], localPortalProjectiles = [], localPortals = [], localVenomPools = [];
+        let localBullets = [], localBombs = [], localMines = [], localCacti = [], localWallSpikes = [], localStrings = [], localPortalProjectiles = [], localPortals = [], localVenomPools = [], localArmorParts = [];
         let damageCooldowns = {};
         let simTime = 0, dt = 0.016, maxTicks = 10000;
 
@@ -3797,6 +3798,12 @@ export default function App() {
               }
             });
           }
+
+          balls.forEach(ball => {
+            if (ball.type === "laser" && ball.armorParts) {
+              updateArmorParts(dt, ball.armorParts, ARENA_SIZE, ARENA_SIZE);
+            }
+          });
 
           localVenomPools = localVenomPools.filter((pool) => {
             if (simTime >= pool.createdTime + pool.duration) return false;
@@ -6120,44 +6127,208 @@ export default function App() {
       });
     };
 
+    const scatterArmorParts = (laserBall, targetArray) => {
+      if (!targetArray) return;
+      for (let i = targetArray.length - 1; i >= 0; i--) {
+        if (targetArray[i].ownerId === laserBall.id) {
+          targetArray.splice(i, 1);
+        }
+      }
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI * 2 / 4) + (Math.random() - 0.5) * 0.45;
+        const speed = 250 + Math.random() * 150;
+        targetArray.push({
+          id: `${laserBall.id}-part-${i}-${Math.random()}`,
+          ownerId: laserBall.id,
+          ownerSide: laserBall.side,
+          index: i,
+          x: laserBall.x,
+          y: laserBall.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          r: 10,
+          collected: false
+        });
+      }
+    };
+
+    const updateArmorParts = (dt, targetArray, width = ARENA_SIZE, height = ARENA_SIZE) => {
+      if (!targetArray) return;
+      targetArray.forEach(part => {
+        if (part.collected) return;
+        part.x += part.vx * dt;
+        part.y += part.vy * dt;
+        const pad = 18;
+        if (part.x - part.r < pad) { part.x = pad + part.r; part.vx = -part.vx * 0.7; }
+        if (part.x + part.r > width - pad) { part.x = width - pad - part.r; part.vx = -part.vx * 0.7; }
+        if (part.y - part.r < pad) { part.y = pad + part.r; part.vy = -part.vy * 0.7; }
+        if (part.y + part.r > height - pad) { part.y = height - pad - part.r; part.vy = -part.vy * 0.7; }
+        part.vx *= 0.94;
+        part.vy *= 0.94;
+      });
+    };
+
     const updateLaser = (laserBall, target, currentTime, stepDt) => {
       const bal = game.balance;
 
-      if (laserBall.laserState === "idle") {
+      if (!laserBall.armorParts) {
+        laserBall.armorParts = [];
+        laserBall.collectedArmorCount = 0;
+      }
+
+      if (laserBall.armorParts.length === 0 && laserBall.collectedArmorCount === 0) {
+        scatterArmorParts(laserBall, laserBall.armorParts);
+      }
+
+      if ((laserBall.collectedArmorCount || 0) < 4) {
+        laserBall.armorParts.forEach(part => {
+          if (!part.collected) {
+            const dist = Math.hypot(part.x - laserBall.x, part.y - laserBall.y);
+            if (dist < laserBall.r + part.r) {
+              part.collected = true;
+              laserBall.collectedArmorCount = (laserBall.collectedArmorCount || 0) + 1;
+              playSound("shieldPickup", 1.25, 80);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: part.x, y: part.y - part.r - 10, vy: -40,
+                text: `ARMOR ${laserBall.collectedArmorCount}/4`, color: "#facc15", life: 0.65, maxLife: 0.65
+              });
+              
+              if (laserBall.collectedArmorCount >= 4) {
+                laserBall.laserState = "huge_charging";
+                laserBall.laserStateUntil = currentTime + 1200;
+                laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+                laserBall.vx = 0;
+                laserBall.vy = 0;
+                playSound("laserCharge", 0.85, 140);
+              }
+            }
+          }
+        });
+      }
+
+      if ((laserBall.collectedArmorCount || 0) < 4 && laserBall.laserState !== "huge_charging" && laserBall.laserState !== "huge_firing") {
+        const nearestPart = laserBall.armorParts.filter(p => !p.collected)
+                                  .sort((a, b) => Math.hypot(a.x - laserBall.x, a.y - laserBall.y) - Math.hypot(b.x - laserBall.x, b.y - laserBall.y))[0];
+        if (nearestPart) {
+          const angle = Math.atan2(nearestPart.y - laserBall.y, nearestPart.x - laserBall.x);
+          const accel = 350;
+          laserBall.vx += Math.cos(angle) * accel * stepDt;
+          laserBall.vy += Math.sin(angle) * accel * stepDt;
+        }
+      }
+
+      if (laserBall.laserState === "huge_charging") {
+        laserBall.vx = 0;
+        laserBall.vy = 0;
         laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-        if (laserBall.nextShotAt <= currentTime) {
-          if ((laserBall.laserShotCount || 0) >= 3) {
-            const pulseAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
-            const pulseX = laserBall.x + Math.cos(pulseAngle) * (laserBall.r + 12);
-            const pulseY = laserBall.y + Math.sin(pulseAngle) * (laserBall.r + 12);
-            game.bullets.push({
-              ownerId: laserBall.id,
-              targetSide: target.side,
-              x: pulseX,
-              y: pulseY,
-              vx: Math.cos(pulseAngle) * bal.laser.pulseSpeed,
-              vy: Math.sin(pulseAngle) * bal.laser.pulseSpeed,
-              r: 12,
-              damage: bal.laser.pulseDamage,
-              life: 3.0,
-              kind: "laserPulse",
-              stunDuration: bal.laser.pulseStunDuration,
-              bouncesLeft: 4,
-              piercesDefense: true,
-              cannotReflect: true,
-            });
-            laserBall.laserShotCount = 0;
-            laserBall.nextShotAt = currentTime + bal.laser.cooldown;
-            laserBall.laserTargetAngle = pulseAngle;
+        
+        if (canSpawnParticle() && Math.random() < 0.45) {
+          const a = Math.random() * Math.PI * 2;
+          const dst = laserBall.r + 35 * Math.random() + 10;
+          game.particles.push({
+            x: laserBall.x + Math.cos(a) * dst,
+            y: laserBall.y + Math.sin(a) * dst,
+            vx: -Math.cos(a) * 110,
+            vy: -Math.sin(a) * 110,
+            color: "#facc15",
+            radius: 2.2,
+            life: 0.2,
+            maxLife: 0.2
+          });
+        }
+
+        if (currentTime >= laserBall.laserStateUntil) {
+          laserBall.laserState = "huge_firing";
+          laserBall.laserStateUntil = currentTime + 2000;
+          playSound("laserFire", 0.9, 130);
+          laserBall.laserNextTickAt = currentTime;
+          game.screenShake = Math.max(game.screenShake, 12);
+        }
+      } 
+      else if (laserBall.laserState === "huge_firing") {
+        laserBall.vx = 0;
+        laserBall.vy = 0;
+
+        const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+        let angleDiff = targetAngle - (laserBall.laserTargetAngle ?? targetAngle);
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        laserBall.laserTargetAngle = (laserBall.laserTargetAngle ?? targetAngle) + angleDiff * 0.025;
+
+        const mX = laserBall.x + Math.cos(laserBall.laserTargetAngle) * laserBall.r;
+        const mY = laserBall.y + Math.sin(laserBall.laserTargetAngle) * laserBall.r;
+        const eX = mX + Math.cos(laserBall.laserTargetAngle) * 1500;
+        const eY = mY + Math.sin(laserBall.laserTargetAngle) * 1500;
+
+        if (canSpawnParticle() && Math.random() < 0.6) {
+          const dst = Math.random() * 600;
+          game.particles.push({
+            x: mX + Math.cos(laserBall.laserTargetAngle) * dst,
+            y: mY + Math.sin(laserBall.laserTargetAngle) * dst,
+            vx: (Math.random() - 0.5) * 45,
+            vy: (Math.random() - 0.5) * 45,
+            color: Math.random() < 0.6 ? "#ffffff" : "#facc15",
+            radius: 2.5,
+            life: 0.18,
+            maxLife: 0.18
+          });
+        }
+
+        const d = linePointDist(target.x, target.y, mX, mY, eX, eY);
+        if (d < target.r + 27.5 && currentTime >= laserBall.laserNextTickAt) {
+          const beamDamage = 10;
+          if (!isChessCrownActive(target) && !isWreckerJumpInvulnerable(target)) {
+            target.health = clamp(target.health - beamDamage, 0, MAX_HEALTH);
+            
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({
-              x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -50,
-              text: "CANNON SHOT", color: "#facc15", life: 0.8, maxLife: 0.8
+              x: target.x + (Math.random() - 0.5) * 20,
+              y: target.y - target.r - 5,
+              vy: -60,
+              text: `-${beamDamage}`,
+              color: "#fbbf24",
+              life: 0.8,
+              maxLife: 0.8
             });
-            spawnSparks(pulseX, pulseY, "#facc15", 14);
-            playSound("laserFire");
-            return;
+
+            if (laserBall.side === "left") { game.stats.left.damageDealt += beamDamage; game.stats.left.hitsLanded++; }
+            else { game.stats.right.damageDealt += beamDamage; game.stats.right.hitsLanded++; }
+
+            const pushAngle = laserBall.laserTargetAngle;
+            if (!hasStringBounceGuard(target)) {
+              target.vx += Math.cos(pushAngle) * 550 * stepDt;
+              target.vy += Math.sin(pushAngle) * 550 * stepDt;
+            }
+
+            const beamHitParticles = getParticleBudget(4);
+            for (let i = 0; i < beamHitParticles; i++) {
+              const sa = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 80;
+              game.particles.push({
+                x: target.x + (Math.random() - 0.5) * target.r,
+                y: target.y + (Math.random() - 0.5) * target.r,
+                vx: Math.cos(sa) * spd,
+                vy: Math.sin(sa) * spd,
+                color: "#facc15",
+                radius: 2.5,
+                life: 0.22,
+                maxLife: 0.22
+              });
+            }
           }
+          laserBall.laserNextTickAt = currentTime + 80;
+        }
+
+        if (currentTime >= laserBall.laserStateUntil) {
+          laserBall.laserState = "idle";
+          laserBall.collectedArmorCount = 0;
+          scatterArmorParts(laserBall, laserBall.armorParts);
+          laserBall.nextShotAt = currentTime + 1000;
+        }
+      }
+      else if (laserBall.laserState === "idle") {
+        laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
+        if (laserBall.nextShotAt <= currentTime) {
           laserBall.laserState = "charging";
           laserBall.laserStateUntil = currentTime + bal.laser.chargeTime;
           laserBall.laserTargetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
@@ -6166,7 +6337,8 @@ export default function App() {
           laserBall.laserReflect = null;
           playSound("laserCharge");
         }
-      } else if (laserBall.laserState === "charging") {
+      } 
+      else if (laserBall.laserState === "charging") {
         laserBall.laserReflect = null;
         const targetAngle = Math.atan2(target.y - laserBall.y, target.x - laserBall.x);
         let angleDiff = targetAngle - (laserBall.laserTargetAngle ?? targetAngle);
@@ -6191,7 +6363,8 @@ export default function App() {
           laserBall.laserNextTickAt = currentTime;
           game.screenShake = Math.max(game.screenShake, 5);
         }
-      } else if (laserBall.laserState === "firing") {
+      } 
+      else if (laserBall.laserState === "firing") {
         const recoilAngle = Math.atan2(laserBall.y - target.y, laserBall.x - target.x);
         const recoilF = bal.laser.recoilForce || 180;
         laserBall.vx += Math.cos(recoilAngle) * recoilF * stepDt;
@@ -6252,7 +6425,6 @@ export default function App() {
           }
           if (currentTime >= laserBall.laserStateUntil) {
             laserBall.laserState = "idle";
-            laserBall.laserShotCount = (laserBall.laserShotCount || 0) + 1;
             laserBall.nextShotAt = currentTime + bal.laser.cooldown;
             laserBall.laserReflect = null;
             laserBall.laserShieldBlockCount = 0;
@@ -6304,7 +6476,6 @@ export default function App() {
 
         if (currentTime >= laserBall.laserStateUntil) {
           laserBall.laserState = "idle";
-          laserBall.laserShotCount = (laserBall.laserShotCount || 0) + 1;
           laserBall.nextShotAt = currentTime + bal.laser.cooldown;
           laserBall.laserReflect = null;
           laserBall.laserShieldBlockCount = 0;
@@ -11469,6 +11640,26 @@ export default function App() {
       ctx.strokeRect(ball.r - 6, -11, 15, 22);
       ctx.restore();
 
+      const collectedCount = ball.collectedArmorCount || 0;
+      for (let i = 0; i < collectedCount; i++) {
+        const orbitAngle = game.simTime * 0.005 + (i * Math.PI * 2 / 4);
+        const ox = Math.cos(orbitAngle) * (ball.r + 8);
+        const oy = Math.sin(orbitAngle) * (ball.r + 8);
+        ctx.save();
+        ctx.fillStyle = "#facc15";
+        ctx.strokeStyle = "#b45309";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(ox, oy, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       if (ball.laserState === "charging" && target) {
         const timeLeft = ball.laserStateUntil - game.simTime;
         const progress = 1 - Math.max(0, timeLeft / game.balance.laser.chargeTime);
@@ -11479,6 +11670,29 @@ export default function App() {
         ctx.strokeStyle = "#facc15"; ctx.lineWidth = 2 + progress * 2; ctx.shadowColor = "#facc15"; ctx.shadowBlur = 14;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 20 * (1 - progress), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      }
+
+      if (ball.laserState === "huge_charging" && target) {
+        const timeLeft = ball.laserStateUntil - game.simTime;
+        const progress = 1 - Math.max(0, timeLeft / 1200);
+        ctx.save(); 
+        ctx.strokeStyle = `rgba(250, 204, 21, ${0.3 + progress * 0.7})`; 
+        ctx.lineWidth = 3 + progress * 5;
+        ctx.setLineDash([12, 12]);
+        ctx.beginPath(); 
+        ctx.moveTo(ball.x + Math.cos(ball.laserTargetAngle) * ball.r, ball.y + Math.sin(ball.laserTargetAngle) * ball.r);
+        ctx.lineTo(target.x, target.y); 
+        ctx.stroke(); 
+        ctx.setLineDash([]);
+        
+        ctx.strokeStyle = "#facc15"; 
+        ctx.lineWidth = 3 + progress * 3; 
+        ctx.shadowColor = "#facc15"; 
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 40 * (1 - progress), 0, Math.PI * 2); 
+        ctx.stroke(); 
+        ctx.restore();
       }
 
       if (ball.laserState === "firing") {
@@ -11516,7 +11730,94 @@ export default function App() {
         ctx.restore();
       }
 
+      if (ball.laserState === "huge_firing") {
+        const mX = ball.x + Math.cos(ball.laserTargetAngle) * ball.r;
+        const mY = ball.y + Math.sin(ball.laserTargetAngle) * ball.r;
+        ctx.save();
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 35;
+        const tracePath = () => {
+          ctx.beginPath();
+          ctx.moveTo(mX, mY);
+          const eX = mX + Math.cos(ball.laserTargetAngle) * 1500;
+          const eY = mY + Math.sin(ball.laserTargetAngle) * 1500;
+          ctx.lineTo(eX, eY);
+        };
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.25)";
+        ctx.lineWidth = 90;
+        tracePath();
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(249, 115, Orange, 0.75)".replace("Orange", "22");
+        ctx.lineWidth = 55;
+        tracePath();
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.98)";
+        ctx.lineWidth = 25;
+        tracePath();
+        ctx.stroke();
+        ctx.restore();
+      }
+
       drawHealthInsideBall(ball);
+    };
+
+    const drawArmorPart = (part) => {
+      ctx.save();
+      ctx.translate(part.x, part.y);
+      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, part.r + 4);
+      glow.addColorStop(0, "rgba(250, 204, 21, 0.6)");
+      glow.addColorStop(1, "rgba(250, 204, 21, 0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, part.r + 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#b45309";
+      ctx.lineWidth = 1.5;
+      ctx.fillStyle = "#facc15";
+      ctx.beginPath();
+      if (part.index === 0) {
+        ctx.arc(0, 2, 6, Math.PI, 0);
+        ctx.lineTo(6, 6);
+        ctx.lineTo(-6, 6);
+        ctx.closePath();
+      } else if (part.index === 1) {
+        ctx.moveTo(0, -6);
+        ctx.lineTo(6, -2);
+        ctx.lineTo(4, 4);
+        ctx.lineTo(0, 8);
+        ctx.lineTo(-4, 4);
+        ctx.lineTo(-6, -2);
+        ctx.closePath();
+      } else if (part.index === 2) {
+        ctx.arc(-2, 0, 5, -Math.PI / 2, Math.PI / 2);
+        ctx.lineTo(-5, 5);
+        ctx.lineTo(-5, -5);
+        ctx.closePath();
+      } else {
+        ctx.arc(2, 0, 5, Math.PI / 2, -Math.PI / 2);
+        ctx.lineTo(5, -5);
+        ctx.lineTo(5, 5);
+        ctx.closePath();
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#fffbeb";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const drawArmorParts = () => {
+      game.balls.forEach(ball => {
+        if (ball.type === "laser" && ball.armorParts) {
+          ball.armorParts.forEach(part => {
+            if (!part.collected) {
+              drawArmorPart(part);
+            }
+          });
+        }
+      });
     };
 
     const drawShieldBall = (ball) => {
@@ -17203,6 +17504,11 @@ export default function App() {
             }
           });
 
+          game.balls.forEach(ball => {
+            if (ball.type === "laser" && ball.armorParts) {
+              updateArmorParts(stepDt, ball.armorParts, game.width, game.height);
+            }
+          });
           updateVampireClones(stepDt);
           updateBullets(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
@@ -17294,7 +17600,7 @@ export default function App() {
       game.balls.forEach(drawBallTrail);
       drawFireRoads();
       drawStrings(); drawJokerThreads(); drawFishingLines(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
-      drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
+      drawArmorParts(); drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
       drawFireCarEntities();
       drawVampireClones();
       game.balls.forEach((ball) => {
