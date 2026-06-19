@@ -1529,6 +1529,89 @@ export default function App() {
     return "SKILL READY";
   };
 
+  const getBallSkillList = (ball, currentTime = 0) => {
+    if (!ball) return "STATUS: READY\nSKILLS: READY";
+    const game = gameRef.current;
+    const cooldown = (readyAt = 0) => {
+      if (!Number.isFinite(readyAt)) return "SETUP";
+      const remaining = Math.max(0, readyAt - currentTime);
+      return remaining ? `CD ${(remaining / 1000).toFixed(1)}S` : "READY";
+    };
+    let condition = "READY";
+    if (ball.health <= 0) condition = "KO";
+    else if ((ball.ragdollUntil || 0) > currentTime) condition = "RAGDOLL";
+    else if ((ball.fishermanPulledUntil || 0) > currentTime) condition = "REELED";
+    else if ((ball.webSplatterStuckUntil || 0) > currentTime) condition = "WEB STUCK";
+    else if ((ball.skillLockedUntil || 0) > currentTime) condition = `SKILL LOCK ${((ball.skillLockedUntil - currentTime) / 1000).toFixed(1)}S`;
+    const lines = [`STATUS: ${condition}`];
+
+    if (ball.type === "hammer") {
+      const build = Math.min(100, Math.round(((ball.hammerAngle || 0) / (10 * Math.PI)) * 100));
+      lines.push(`HAMMER SPIN: ${ball.hammerState === "spinning" ? "ACTIVE" : "READY"}`);
+      lines.push(`CHARGE HIT: ${ball.hammerState === "charging" ? "CHARGING" : ball.hammerState === "launching" ? "LAUNCHING" : `BUILD ${build}%`}`);
+    } else if (ball.type === "shield") {
+      const states = { held: "HELD", windup: "WINDUP", thrown: "THROWN", returning: "RETURNING", catch_spin: "CATCH SPIN - RETHROW" };
+      lines.push(`SHIELD THROW: ${states[ball.shieldState] || String(ball.shieldState || "READY").toUpperCase()}`);
+      lines.push(`SHIELD BASH: ${(ball.shieldBashUntil || 0) > currentTime ? "ACTIVE" : `${Math.min(SHIELD_BASH_READY_THROWS, ball.shieldBashThrows || 0)}/${SHIELD_BASH_READY_THROWS}`}`);
+      lines.push(`GUARD: ${ball.shieldGuardHits || 0} BLOCKS`);
+    } else if (ball.type === "chaos") {
+      const traps = (game?.chaosCircles || []).filter((trap) => trap.ownerId === ball.id).length;
+      lines.push(`WARP SLAM: ${(ball.chaosControlledUntil || 0) > currentTime ? "DRAGGING" : cooldown(ball.nextChaosAt)}`);
+      lines.push(`VOID TRAPS: ${traps} ACTIVE`);
+      lines.push(`PORTAL GUARD: ${(ball.chaosFlashUntil || 0) > currentTime ? "ACTIVE" : "READY"}`);
+    } else if (ball.type === "gun") {
+      const reloading = ball.gunReloading || (ball.reloadUntil || 0) > currentTime;
+      lines.push(`PISTOL: ${reloading ? "RELOADING" : `${ball.ammo ?? 0}/${ball.maxAmmo ?? 6} AMMO`}`);
+      lines.push(`RAPID FIRE: ${ball.permanentRapidFire || (ball.rapidFireUntil || 0) > currentTime ? "ACTIVE" : "READY"}`);
+      lines.push(`HEAVY RIFLE: ${ball.dogDied ? "UNLOCKED" : "LOCKED"}`);
+    } else if (ball.type === "eightBall") {
+      const states = { aiming: "AIMING", pullback: "CHARGING", striking: "STRIKING" };
+      lines.push(`CUE STRIKE: ${states[ball.eightCueState] || cooldown(ball.eightNextCueAt)}`);
+      lines.push(`BANK SHOT: ${ball.eightCueBankShot ? "ACTIVE" : "READY"}`);
+      lines.push(`POWER: ${ball.eightPowerStacks || 0} STACKS`);
+    } else if (ball.type === "spider") {
+      const slamStates = { throwing: "THROWING", pulling: "PULLING", spinning: "SPINNING" };
+      const trapArmed = (game?.venomPools || []).some((pool) => pool.ownerId === ball.id && pool.isSpiderTrap);
+      const bites = ball.webState === "pulling" || ball.webState === "webBouncing" ? Math.max(0, 3 - (ball.webBouncesLeft || 0)) : 0;
+      lines.push(`WEB BITES: ${bites}/3 ${ball.webState === "idle" ? "READY" : ball.webState.toUpperCase()}`);
+      lines.push(`SPIN SLAM: ${slamStates[ball.bsSkillState] || "READY"}`);
+      lines.push(`WEB TRAP: ${trapArmed ? "ARMED" : "READY"}`);
+      lines.push(`WEB SHIELD: ${ball.webShieldActive ? "ACTIVE - SPEED UP" : "INACTIVE"}`);
+    } else if (ball.type === "laser") {
+      const armorRequired = game?.balance?.laser?.armorRequired || BALANCE.laser.armorRequired;
+      const normal = ball.laserState === "charging" ? "CHARGING" : ball.laserState === "firing" ? "FIRING" : "READY";
+      const big = ball.laserState === "huge_charging" ? "CHARGING" : ball.laserState === "huge_firing" ? "FIRING" : (ball.collectedArmorCount || 0) >= armorRequired ? "READY" : "LOCKED";
+      lines.push(`NORMAL LASER: ${normal}`);
+      lines.push(`ARMOR GATHER: ${ball.collectedArmorCount || 0}/${armorRequired}`);
+      lines.push(`BIG LASER: ${big}`);
+    } else if (ball.type === "bomber") {
+      const mines = (game?.mines || []).filter((mine) => mine.ownerId === ball.id && !mine.isHoming).length;
+      const homing = (game?.mines || []).some((mine) => mine.ownerId === ball.id && mine.isHoming);
+      let lastStand = ball.bomberSelfDestructSpent ? "SPENT" : "READY AT 1 HP";
+      if ((ball.bomberSelfDestructAt || 0) > currentTime) lastStand = `EXPLODES IN ${((ball.bomberSelfDestructAt - currentTime) / 1000).toFixed(1)}S`;
+      lines.push(`STATIONARY MINES: ${mines}/${game?.balance?.bomber?.maxMines || BALANCE.bomber.maxMines}`);
+      lines.push(`HOMING MINE: ${homing ? "ACTIVE" : cooldown(ball.nextSecondaryAt)}`);
+      lines.push(`LAST STAND: ${lastStand}`);
+    } else if (ball.type === "fisherman") {
+      const line = (game?.fishingLines || []).find((entry) => entry.ownerId === ball.id);
+      const maxBounces = game?.balance?.fisherman?.maxBounces || BALANCE.fisherman.maxBounces;
+      const hook = (ball.fishermanSpinUntil || 0) > currentTime ? "WINDUP" : line ? String(line.state || "ACTIVE").toUpperCase() : cooldown(ball.fishermanNextCastAt);
+      lines.push(`RICOCHET HOOK: ${hook}`);
+      lines.push(`PATH REEL: ${line?.state === "pulling" ? "PULLING" : "READY"}`);
+      lines.push(`WALL BOUNCES: ${line ? Math.max(0, maxBounces - (line.bouncesLeft || 0)) : 0}/${maxBounces}`);
+    } else if (ball.type === "wrecker") {
+      const rage = Math.min(BALANCE.wrecker.megaRageRequired, ball.rageStacks || 0);
+      const rushActive = ["rush_windup", "rushing", "combo"].includes(ball.wreckerState);
+      lines.push(`RAGE: ${rage}/${BALANCE.wrecker.megaRageRequired}`);
+      lines.push(`RAMPAGE RUSH: ${rushActive ? (ball.wreckerState === "combo" ? `COMBO ${Math.min(3, ball.wreckerComboHits || 0)}/3` : "ACTIVE") : rage >= 2 ? "READY" : "NEEDS 2 RAGE"}`);
+      lines.push(`RAGE LEAP: ${ball.wreckerState === "leaping" && !ball.isMegaLeap ? "ACTIVE" : rage >= BALANCE.wrecker.rageRequired ? cooldown(ball.wreckerNextLeapAllowedUntil) : `NEEDS ${BALANCE.wrecker.rageRequired} RAGE`}`);
+      lines.push(`METEOR SMASH: ${ball.wreckerState === "leaping" && ball.isMegaLeap ? "ACTIVE" : rage >= BALANCE.wrecker.megaRageRequired ? cooldown(ball.wreckerNextLeapAllowedUntil) : `NEEDS ${BALANCE.wrecker.megaRageRequired} RAGE`}`);
+    } else {
+      lines.push("PRIMARY SKILL: READY");
+    }
+    return lines.join("\n");
+  };
+
   const gameRef = useRef({
     width: ARENA_SIZE,
     height: ARENA_SIZE,
@@ -1718,8 +1801,8 @@ export default function App() {
       rightHealth: MAX_HEALTH * balls.filter((ball) => ball.side === "right").length,
       leftName: getTeamLabel(balls, "left"),
       rightName: getTeamLabel(balls, "right"),
-      leftSkill: getBallSkillStatus(balls.find((ball) => ball.side === "left"), 0),
-      rightSkill: getBallSkillStatus(balls.find((ball) => ball.side === "right"), 0),
+      leftSkill: getBallSkillList(balls.find((ball) => ball.side === "left"), 0),
+      rightSkill: getBallSkillList(balls.find((ball) => ball.side === "right"), 0),
       winner: null,
       running: false,
       leftScore: 0,
@@ -1873,7 +1956,11 @@ export default function App() {
     ctx.shadowColor = config.stroke || config.color;
     ctx.shadowBlur = 12;
     ctx.font = "900 28px Arial, sans-serif";
-    ctx.fillText(getBallSkillStatus(ball, gameRef.current.simTime), x, y);
+    const skillLines = getBallSkillList(ball, gameRef.current.simTime).split("\n");
+    const fontSize = skillLines.length > 3 ? 18 : 20;
+    const lineHeight = fontSize + 7;
+    ctx.font = `900 ${fontSize}px Arial, sans-serif`;
+    skillLines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight));
     ctx.restore();
   };
 
@@ -18863,8 +18950,8 @@ export default function App() {
             rightHealth: Math.ceil(rightTeam.reduce((sum, ball) => sum + Math.max(0, ball.health), 0)),
             leftName: getTeamLabel(leftTeam, "left"),
             rightName: getTeamLabel(rightTeam, "right"),
-            leftSkill: getBallSkillStatus(leftTeam[0], game.simTime),
-            rightSkill: getBallSkillStatus(rightTeam[0], game.simTime),
+            leftSkill: getBallSkillList(leftTeam[0], game.simTime),
+            rightSkill: getBallSkillList(rightTeam[0], game.simTime),
             winner,
             running: combatActive && !winner
           };
@@ -19401,7 +19488,7 @@ export default function App() {
                 <div className="truncate text-[26px] font-black" style={{ color: selectedBalls[0] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[0]]?.color, fontFamily: '"Arial Black", Impact, sans-serif', WebkitTextStroke: `2px ${selectedBalls[0] === "eightBall" ? "#000000" : "#020617"}`, paintOrder: "stroke fill", textShadow: `0 0 ${selectedBalls[0] === "eightBall" ? 22 : 14}px ${selectedBalls[0] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[0]]?.color}` }}>
                   {gameState.leftName}
                 </div>
-                <div className="mt-2 text-xs font-black uppercase tracking-[0.2em]" style={{ color: BALL_TYPES[selectedBalls[0]]?.stroke || BALL_TYPES[selectedBalls[0]]?.color }}>
+                <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em]" style={{ color: BALL_TYPES[selectedBalls[0]]?.stroke || BALL_TYPES[selectedBalls[0]]?.color }}>
                   {gameState.leftSkill}
                 </div>
               </Card>
@@ -19410,7 +19497,7 @@ export default function App() {
                 <div className="truncate text-[26px] font-black" style={{ color: selectedBalls[1] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[1]]?.color, fontFamily: '"Arial Black", Impact, sans-serif', WebkitTextStroke: `2px ${selectedBalls[1] === "eightBall" ? "#000000" : "#020617"}`, paintOrder: "stroke fill", textShadow: `0 0 ${selectedBalls[1] === "eightBall" ? 22 : 14}px ${selectedBalls[1] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[1]]?.color}` }}>
                   {gameState.rightName}
                 </div>
-                <div className="mt-2 text-xs font-black uppercase tracking-[0.2em]" style={{ color: BALL_TYPES[selectedBalls[1]]?.stroke || BALL_TYPES[selectedBalls[1]]?.color }}>
+                <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em]" style={{ color: BALL_TYPES[selectedBalls[1]]?.stroke || BALL_TYPES[selectedBalls[1]]?.color }}>
                   {gameState.rightSkill}
                 </div>
               </Card>
