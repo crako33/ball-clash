@@ -15,21 +15,78 @@ const HEAVY_HITS = new Set([
   "armSlam",
   "chessSlam",
   "wallSlam",
-  "shieldBashBoom",
   "warpSlam",
   "laserFire",
   "bigLaserFire"
 ]);
+
+const ALLOWED_AUDIO_FILES = new Set([
+  "/Balls%20Ready.%20Fight!.mp3",
+  "/gun.mp3",
+  "/shield%20hit%201.mp3",
+  "/shield%20hit%202.mp3",
+  "/spider%20bite.mp3",
+  "/spider%20splatter%20opponent%20step.mp3",
+  "/Gun%20Reload.mp3",
+  "/Gun%20Shot.mp3",
+  "/hammer%20hit%20new.mp3",
+  "/mine%20bomb.mp3",
+  "/laser%20armor%20connect%20sound.mp3",
+  "/laser%20charge.mp3",
+  "/laser%20fire.mp3",
+  "/big%20laser.mp3",
+  "/fisher%20reeling.mp3",
+  "/big%20laser%20charge%20sound.mp3",
+  "/laser%20sound%20charge.mp3",
+]);
+
+const AUDIO_FILE_COOLDOWNS = Object.freeze({
+  "/gun.mp3": 0.2,
+  "/shield%20hit%201.mp3": 0.11,
+  "/shield%20hit%202.mp3": 0.11,
+  "/spider%20bite.mp3": 0.1,
+  "/spider%20splatter%20opponent%20step.mp3": 0.18,
+  "/Gun%20Reload.mp3": 0.3,
+  "/Gun%20Shot.mp3": 0.14,
+  "/hammer%20hit%20new.mp3": 0.16,
+  "/mine%20bomb.mp3": 0.2,
+  "/laser%20armor%20connect%20sound.mp3": 0.12,
+  "/laser%20charge.mp3": 0.4,
+  "/laser%20fire.mp3": 0.18,
+  "/big%20laser.mp3": 0.4,
+  "/fisher%20reeling.mp3": 0.9,
+  "/big%20laser%20charge%20sound.mp3": 0.5,
+  "/laser%20sound%20charge.mp3": 0.35,
+});
+
+const DEFAULT_SOUND_COOLDOWNS = Object.freeze({
+  ballCollision: 90,
+  wallBounce: 100,
+  damage: 90,
+  bulletHit: 90,
+  webHit: 120,
+  spiderSplatterStep: 130,
+  hammerSpin: 180,
+  warpDrag: 170,
+  wallSlam: 160,
+  explosion: 180,
+  gunShot: 90,
+  laserFire: 140,
+});
 
 export function useSoundEngine() {
   const ctxRef = useRef(null);
   const mutedRef = useRef(false);
   const mutedStateRef = useRef(false); // for react-less read
   const masterGainRef = useRef(null);
+  const masterCompressorRef = useRef(null);
   const musicGainRef = useRef(null);
   const musicTimerRef = useRef(null);
   const musicStepRef = useRef(0);
   const audioBufferCacheRef = useRef({});
+  const audioBufferPromiseCacheRef = useRef({});
+  const audioFileCooldownsRef = useRef({});
+  const activeAudioSourcesRef = useRef({});
   // cooldown map: soundKey -> earliest next play time (AudioContext time)
   const cooldowns = useRef({});
 
@@ -43,15 +100,22 @@ export function useSoundEngine() {
       if (!AudioCtx) return null;
       ctxRef.current = new AudioCtx();
       masterGainRef.current = ctxRef.current.createGain();
-      masterGainRef.current.gain.value = 0.55;
-      masterGainRef.current.connect(ctxRef.current.destination);
+      masterGainRef.current.gain.value = 0.52;
+      masterCompressorRef.current = ctxRef.current.createDynamicsCompressor();
+      masterCompressorRef.current.threshold.value = -14;
+      masterCompressorRef.current.knee.value = 8;
+      masterCompressorRef.current.ratio.value = 6;
+      masterCompressorRef.current.attack.value = 0.004;
+      masterCompressorRef.current.release.value = 0.18;
+      masterGainRef.current.connect(masterCompressorRef.current);
+      masterCompressorRef.current.connect(ctxRef.current.destination);
       musicGainRef.current = ctxRef.current.createGain();
       musicGainRef.current.gain.value = 0.18;
       musicGainRef.current.connect(masterGainRef.current);
 
       // Create stream destination node to allow recording audio
       ctxRef.current.recStreamDestination = ctxRef.current.createMediaStreamDestination();
-      masterGainRef.current.connect(ctxRef.current.recStreamDestination);
+      masterCompressorRef.current.connect(ctxRef.current.recStreamDestination);
     }
     // Resume if suspended (browsers require user gesture first)
     if (ctxRef.current.state === "suspended") {
@@ -260,11 +324,13 @@ export function useSoundEngine() {
     },
 
     // Laser Ball
-    laserCharge: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 140, 0.3, t, 1.0, 1600);
-      osc(ctx, dest, "square", 80, 0.18, t, 1.0, 800);
-      osc(ctx, dest, "sine", 280, 0.25, t, 1.0, 2400);
-      noise(ctx, dest, 0.18, t, 1.0, 3200, 1.5, "highpass");
+    laserCharge: (ctx, dest, t, playbackRate = 1) => {
+      const rate = Math.max(0.5, Math.min(2.5, playbackRate));
+      const pitchScale = Math.sqrt(rate);
+      const duration = 0.9 / rate;
+      osc(ctx, dest, "sine", 88 * pitchScale, 0.38, t, duration, 1050 * pitchScale);
+      osc(ctx, dest, "triangle", 46 * pitchScale, 0.22, t, duration * 0.94, 520 * pitchScale);
+      noise(ctx, dest, 0.1, t + 0.04 / rate, duration * 0.82, 1450 * pitchScale, 1.2, "bandpass");
     },
     laserFire: (ctx, dest, t) => {
       osc(ctx, dest, "sawtooth", 110, 0.45, t, 0.65, 55);
@@ -421,17 +487,6 @@ export function useSoundEngine() {
       osc(ctx, dest, "triangle", 120, 0.18, t, 0.6, 950);
       noise(ctx, dest, 0.12, t, 0.55, 3000, 1.2, "highpass");
     },
-    shieldBashBoom: (ctx, dest, t) => {
-      osc(ctx, dest, "sine", 65, 0.8, t, 0.45, 20);
-      osc(ctx, dest, "triangle", 120, 0.4, t, 0.35, 30);
-      noise(ctx, dest, 0.65, t, 0.35, 300, 0.6, "lowpass");
-      noise(ctx, dest, 0.4, t, 0.15, 1200, 1.0, "bandpass");
-      osc(ctx, dest, "sine", 230, 0.25, t, 0.28, 180);
-      osc(ctx, dest, "sine", 420, 0.18, t, 0.22, 350);
-    },
-    shieldMetalHit: (ctx, dest, t) => {
-      triggerHammerHitSound(ctx, dest, t);
-    },
     wallHit: (ctx, dest, t) => {
       noise(ctx, dest, 0.25, t, 0.12, 1800, 1.2, "bandpass");
       osc(ctx, dest, "triangle", 180, 0.25, t, 0.1, 80);
@@ -453,9 +508,13 @@ export function useSoundEngine() {
       osc(ctx, dest, "sawtooth", 220, 0.12, t, 0.25, 50);
     },
     warpDrag: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 90, 0.16, t, 0.22, 130);
-      osc(ctx, dest, "sine", 180, 0.22, t, 0.25, 90);
-      noise(ctx, dest, 0.08, t, 0.2, 800, 2.0, "bandpass");
+      // Exaggerated dimensional pull: a long sub drop, tearing midrange, and vacuum tail.
+      osc(ctx, dest, "sine", 72, 0.72, t, 0.62, 24);
+      osc(ctx, dest, "triangle", 165, 0.42, t, 0.5, 46);
+      osc(ctx, dest, "sawtooth", 310, 0.2, t, 0.42, 78);
+      noise(ctx, dest, 0.34, t, 0.46, 520, 0.72, "lowpass");
+      noise(ctx, dest, 0.16, t + 0.035, 0.34, 1450, 1.45, "bandpass");
+      osc(ctx, dest, "sine", 46, 0.5, t + 0.12, 0.58, 20);
     },
     warpSlam: (ctx, dest, t) => {
       osc(ctx, dest, "sine", 70, 0.85, t, 0.5, 20);
@@ -488,16 +547,12 @@ export function useSoundEngine() {
       osc(ctx, dest, "sine", 2600, 0.14, t + 0.04, 0.03, 1800);
     },
     bigLaserFire: (ctx, dest, t) => {
-      // Exaggerated massive sustained beam sound
-      noise(ctx, dest, 0.95, t, 0.4, 300, 0.4, "lowpass");
-      noise(ctx, dest, 0.65, t, 0.2, 1800, 0.8, "bandpass");
-      const beamDur = 1.8;
-      osc(ctx, dest, "sawtooth", 85, 0.65, t, beamDur, 40);
-      osc(ctx, dest, "square", 185, 0.35, t, beamDur - 0.2, 95);
-      osc(ctx, dest, "sawtooth", 135, 0.45, t, beamDur - 0.1, 75);
-      osc(ctx, dest, "sine", 350, 0.3, t, 0.8, 150);
-      osc(ctx, dest, "sine", 55, 0.85, t, 0.6, 15);
-      noise(ctx, dest, 0.28, t + 0.1, beamDur - 0.2, 4500, 2.0, "highpass");
+      // Lightweight deep sustain: four voices, long tail, little high-frequency clutter.
+      const beamDur = 2.15;
+      noise(ctx, dest, 0.42, t, 0.42, 240, 0.45, "lowpass");
+      osc(ctx, dest, "sine", 48, 0.62, t, beamDur, 24);
+      osc(ctx, dest, "triangle", 92, 0.28, t, beamDur - 0.12, 44);
+      noise(ctx, dest, 0.14, t + 0.08, beamDur - 0.2, 760, 0.8, "bandpass");
     },
     armorLock: (ctx, dest, t) => {
       // Exaggerated mechanical locking / latching sound
@@ -519,12 +574,13 @@ export function useSoundEngine() {
     const ctx = getCtx();
     if (!ctx) return;
 
-    // Cooldown check (avoid sound spam)
-    if (cooldownMs > 0) {
+    // Enforce a small per-cue floor even when a caller omits a cooldown.
+    const effectiveCooldownMs = Math.max(cooldownMs, DEFAULT_SOUND_COOLDOWNS[name] || 0);
+    if (effectiveCooldownMs > 0) {
       const key = name;
       const now = ctx.currentTime;
       if (cooldowns.current[key] && cooldowns.current[key] > now) return;
-      cooldowns.current[key] = now + cooldownMs / 1000;
+      cooldowns.current[key] = now + effectiveCooldownMs / 1000;
     }
 
     const dest = masterGainRef.current;
@@ -601,14 +657,15 @@ export function useSoundEngine() {
     }
 
     // Trigger procedural sound synthesis
-    fn(ctx, nodeDest, t);
+    fn(ctx, nodeDest, t, spatialOpts?.playbackRate || 1);
+    window.setTimeout(() => volGainNode.disconnect(), 3000);
   }, [getCtx, getReverbBuffer, getDistortionCurve, duckMusic]);
 
   const toggleMute = useCallback(() => {
     mutedRef.current = !mutedRef.current;
     mutedStateRef.current = mutedRef.current;
     if (masterGainRef.current) {
-      masterGainRef.current.gain.value = mutedRef.current ? 0 : 0.55;
+      masterGainRef.current.gain.value = mutedRef.current ? 0 : 0.52;
     }
     return mutedRef.current;
   }, []);
@@ -620,29 +677,75 @@ export function useSoundEngine() {
     return ctxRef.current ? ctxRef.current.recStreamDestination?.stream : null;
   }, [getCtx]);
 
-  const playAudioFile = useCallback(async (url, volume = 1, delay = 0) => {
+  const playAudioFile = useCallback(async (url, volume = 1, delay = 0, playbackRate = 1, instanceKey = url) => {
     if (mutedRef.current) return;
-    // Strictly restrict audio file playback to the intro file
-    if (!url.includes("Balls%20Ready.%20Fight!")) return;
+    if (!ALLOWED_AUDIO_FILES.has(url)) return;
     const ctx = getCtx();
     if (!ctx || !masterGainRef.current) return;
+    const nextAllowedAt = audioFileCooldownsRef.current[url] || 0;
+    if (ctx.currentTime < nextAllowedAt) return;
+    audioFileCooldownsRef.current[url] = ctx.currentTime + (AUDIO_FILE_COOLDOWNS[url] || 0.06);
     try {
       if (!audioBufferCacheRef.current[url]) {
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
-        audioBufferCacheRef.current[url] = await ctx.decodeAudioData(arrayBuffer);
+        if (!audioBufferPromiseCacheRef.current[url]) {
+          audioBufferPromiseCacheRef.current[url] = fetch(url)
+            .then((response) => {
+              if (!response.ok) throw new Error(`Audio request failed: ${response.status}`);
+              return response.arrayBuffer();
+            })
+            .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
+            .then((buffer) => {
+              audioBufferCacheRef.current[url] = buffer;
+              delete audioBufferPromiseCacheRef.current[url];
+              return buffer;
+            })
+            .catch((error) => {
+              delete audioBufferPromiseCacheRef.current[url];
+              throw error;
+            });
+        }
+        await audioBufferPromiseCacheRef.current[url];
       }
+      if (mutedRef.current) return;
       const source = ctx.createBufferSource();
       const gain = ctx.createGain();
       source.buffer = audioBufferCacheRef.current[url];
+      source.playbackRate.value = Math.max(0.5, Math.min(2.5, playbackRate));
       gain.gain.value = Math.max(0, Math.min(2, volume));
       source.connect(gain);
       gain.connect(masterGainRef.current);
+      if (!activeAudioSourcesRef.current[instanceKey]) activeAudioSourcesRef.current[instanceKey] = new Set();
+      const activeEntry = { source, gain };
+      activeAudioSourcesRef.current[instanceKey].add(activeEntry);
+      source.onended = () => {
+        activeAudioSourcesRef.current[instanceKey]?.delete(activeEntry);
+        if (activeAudioSourcesRef.current[instanceKey]?.size === 0) delete activeAudioSourcesRef.current[instanceKey];
+        source.disconnect();
+        gain.disconnect();
+      };
       source.start(ctx.currentTime + Math.max(0, delay));
     } catch {
-      // Ignore announcer/music file failures; procedural SFX should continue.
+      // Keep procedural SFX running if an optional recorded clip fails.
     }
   }, [getCtx]);
+
+  const stopAudioFile = useCallback((url) => {
+    const ctx = ctxRef.current;
+    const active = activeAudioSourcesRef.current[url];
+    if (!ctx || !active?.size) return;
+    const stopAt = ctx.currentTime + 0.04;
+    active.forEach(({ source, gain }) => {
+      try {
+        gain.gain.cancelScheduledValues(ctx.currentTime);
+        gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+        source.stop(stopAt);
+      } catch {
+        // Source may already have ended.
+      }
+    });
+    delete activeAudioSourcesRef.current[url];
+  }, []);
 
   const stopMatchMusic = useCallback(() => {
     if (musicTimerRef.current) {
@@ -696,5 +799,5 @@ export function useSoundEngine() {
     musicTimerRef.current = setInterval(scheduleStep, tempo * 1000);
   }, [getCtx, noise, osc]);
 
-  return { playSound, playAudioFile, toggleMute, isMuted, getAudioStream, startMatchMusic, stopMatchMusic };
+  return { playSound, playAudioFile, stopAudioFile, toggleMute, isMuted, getAudioStream, startMatchMusic, stopMatchMusic };
 }
