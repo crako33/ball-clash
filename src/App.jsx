@@ -669,7 +669,7 @@ const ARM_RAGDOLL_WALL_DAMAGE = 7;
 const ARM_THROW_WALL_DAMAGE = 10;
 const CHESS_CROWN_HITBOX_MULTIPLIER = 1.5;
 const BOUNCE_SPEED_MULTIPLIER = 1;
-let MAX_HEALTH = 120;
+let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
 const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker"];
@@ -1948,13 +1948,12 @@ export default function App() {
   };
 
   const drawRecordingSkillStatus = (ctx, ball, x, y, align = "left") => {
-    const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
     ctx.save();
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
-    ctx.fillStyle = config.stroke || config.color;
-    ctx.shadowColor = config.stroke || config.color;
-    ctx.shadowBlur = 12;
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#020617";
+    ctx.shadowBlur = 10;
     ctx.font = "900 28px Arial, sans-serif";
     const skillLines = getBallSkillList(ball, gameRef.current.simTime).split("\n");
     const fontSize = skillLines.length > 3 ? 18 : 20;
@@ -19488,7 +19487,7 @@ export default function App() {
                 <div className="truncate text-[26px] font-black" style={{ color: selectedBalls[0] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[0]]?.color, fontFamily: '"Arial Black", Impact, sans-serif', WebkitTextStroke: `2px ${selectedBalls[0] === "eightBall" ? "#000000" : "#020617"}`, paintOrder: "stroke fill", textShadow: `0 0 ${selectedBalls[0] === "eightBall" ? 22 : 14}px ${selectedBalls[0] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[0]]?.color}` }}>
                   {gameState.leftName}
                 </div>
-                <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em]" style={{ color: BALL_TYPES[selectedBalls[0]]?.stroke || BALL_TYPES[selectedBalls[0]]?.color }}>
+                <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em] text-white">
                   {gameState.leftSkill}
                 </div>
               </Card>
@@ -19497,7 +19496,7 @@ export default function App() {
                 <div className="truncate text-[26px] font-black" style={{ color: selectedBalls[1] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[1]]?.color, fontFamily: '"Arial Black", Impact, sans-serif', WebkitTextStroke: `2px ${selectedBalls[1] === "eightBall" ? "#000000" : "#020617"}`, paintOrder: "stroke fill", textShadow: `0 0 ${selectedBalls[1] === "eightBall" ? 22 : 14}px ${selectedBalls[1] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[1]]?.color}` }}>
                   {gameState.rightName}
                 </div>
-                <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em]" style={{ color: BALL_TYPES[selectedBalls[1]]?.stroke || BALL_TYPES[selectedBalls[1]]?.color }}>
+                <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em] text-white">
                   {gameState.rightSkill}
                 </div>
               </Card>
