@@ -1928,7 +1928,7 @@ export default function App() {
     ctx.closePath();
   };
 
-  const drawRecordingHudCard = (ctx, ball, x, y, w, align = "left") => {
+  const drawRecordingHudCard = (ctx, ball, x, y, w, align = "left", nameFontSize = 42) => {
     const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
     const blackGlow = ball?.type === "eightBall";
     ctx.save();
@@ -1937,7 +1937,6 @@ export default function App() {
     ctx.fillStyle = blackGlow ? "#ffffff" : config.color;
     ctx.shadowColor = blackGlow ? "#000000" : config.color;
     ctx.shadowBlur = blackGlow ? 22 : 14;
-    const nameFontSize = 40;
     ctx.font = `900 ${nameFontSize}px Arial Black, Impact, sans-serif`;
     const nameX = align === "left" ? x + 22 : x + w - 22;
     ctx.lineWidth = blackGlow ? Math.max(6, nameFontSize * 0.16) : Math.max(5, nameFontSize * 0.12);
@@ -2207,8 +2206,8 @@ export default function App() {
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, width, height);
 
-      drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left");
-      drawRecordingHudCard(ctx, right, arenaX + arenaSize - cardW, hudY, cardW, "right");
+      drawRecordingHudCard(ctx, left, arenaX, hudY, cardW, "left", 58);
+      drawRecordingHudCard(ctx, right, arenaX + arenaSize - cardW, hudY, cardW, "right", 58);
 
       ctx.save();
       ctx.shadowColor = "rgba(15, 23, 42, 0.32)";
