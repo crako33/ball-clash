@@ -51,18 +51,18 @@ const BALL_TYPES = {
     color: "#1e1b4b",
     stroke: "#b91c1c",
     radius: 30,
-    description: "Gothic duelist. Siphons health at close range and dissolves into a Blood Mist Rush.",
+    description: "Gothic duelist whose single Lifesteal Bite latches onto an opponent, drains health, and heals itself.",
     emoji: "🧛",
     visualTheme: "Gothic Aristocracy / Vampire Lord",
     colorPalette: "Royal Indigo, Blood Crimson, Pale Alabaster",
     facialAge: "Ageless (looks 25, sharp cheekbones, ruby pupils)",
     personality: "Melancholic, predatory, dramatic",
-    primaryWeapon: "Crimson Siphon and Living Shadow Cape",
-    signatureAbility: "Blood Mist Rush (bat-cloud phase dash)",
-    companion: "Two vulnerable Mist Echo duplicates",
-    specialVisualEffects: "Crimson mist trails, bat outlines on dash, floating red life particles",
+    primaryWeapon: "Crimson Lifesteal Fangs",
+    signatureAbility: "Lifesteal Bite (latch, drain, and heal)",
+    companion: "None",
+    specialVisualEffects: "Crimson siphon link and floating red life particles",
     animeStyle: "Dark fantasy gothic anime antagonist/anti-hero",
-    gameStyle: "Mobile lifesteal duelist alternating between siphon pressure and a phasing burst dash",
+    gameStyle: "Close-range lifesteal duelist built entirely around landing its bite",
   },
   laser: {
     id: "laser",
@@ -692,7 +692,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb", "vampire"];
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 13;
 const MAX_RECORDING_TRAIL_POINTS = 9;
@@ -704,7 +704,7 @@ const FIGHT_INTRO_IMPACT_AT = 1550;
 
 const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
-  gun: { bulletDamage: 2, bulletSpeed: 420, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
+  gun: { bulletDamage: 2, bulletSpeed: 550, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 900, latchCooldown: 3200, latchDistance: 10, secCooldown: 6200, mistWindup: 260, mistDuration: 520, mistSpeed: 920, mistDamage: 7, mistHeal: 4, mistKnockback: 420, cloneRadius: 17, cloneLife: 7000 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, recoilForce: 180, armorRequired: 5 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, throwWindup: 150, shieldSpeed: 800, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
@@ -785,6 +785,7 @@ const mergeBalanceSettings = (base, saved = {}) => {
     }
     if (type === "blackSpider") merged[type].slamHitDamage = 1;
     if (type === "chaos") merged[type].slamDamage = 4;
+    if (type === "gun") merged[type].bulletSpeed = 550;
     if (type === "hammer") {
       merged[type].spinSpeed = 0.02;
       merged[type].launchSpeed = 980;
@@ -1556,6 +1557,9 @@ export default function App() {
       return labels[ball.eightCueState] || "CUE READY";
     }
     if (ball.type === "gun") return ball.gunReloading ? "RELOADING" : "GUN READY";
+    if (ball.type === "vampire") {
+      return ball.latchedTo && ball.latchUntil > currentTime ? "LIFESTEAL BITE" : "BITE READY";
+    }
     if (ball.type === "laser") {
       if (ball.laserState === "huge_charging") return "ARMOR CHARGING";
       if (ball.laserState === "huge_firing") return "WIDE LASER";
@@ -1632,6 +1636,11 @@ export default function App() {
       lines.push(`PISTOL: ${reloading ? "RELOADING" : `${ball.ammo ?? 0}/${ball.maxAmmo ?? 6} AMMO`}`);
       lines.push(`RAPID FIRE: ${ball.permanentRapidFire || (ball.rapidFireUntil || 0) > currentTime ? "ACTIVE" : "READY"}`);
       lines.push(`HEAVY RIFLE: ${ball.dogDied ? "UNLOCKED" : "LOCKED"}`);
+    } else if (ball.type === "vampire") {
+      const biting = ball.latchedTo && ball.latchUntil > currentTime;
+      lines.push(`LIFESTEAL BITE: ${biting ? "DRAINING" : cooldown(ball.nextLatchAt)}`);
+      lines.push(`DRAIN: ${game?.balance?.vampire?.drainPerTick || BALANCE.vampire.drainPerTick} HP PER BITE`);
+      lines.push(`HEAL: ${game?.balance?.vampire?.healPerTick || BALANCE.vampire.healPerTick} HP PER BITE`);
     } else if (ball.type === "eightBall") {
       const states = { aiming: "AIMING", pullback: "CHARGING", striking: "STRIKING" };
       lines.push(`CUE STRIKE: ${states[ball.eightCueState] || cooldown(ball.eightNextCueAt)}`);
@@ -5608,6 +5617,15 @@ export default function App() {
     const updateVampire = (vampire, target, currentTime, stepDt) => {
       const bal = game.balance.vampire || BALANCE.vampire;
       const targetProtected = isChessCrownActive(target);
+      vampire.angle = Math.atan2(target.y - vampire.y, target.x - vampire.x);
+
+      // Vamper's remodeled kit is intentionally bite-only. Clear any stale mist
+      // state or echoes left behind by hot reloads or older saved matches.
+      vampire.vampireMistState = "idle";
+      vampire.vampireMistTrail = [];
+      if (game.vampireClones?.length) {
+        game.vampireClones = game.vampireClones.filter((clone) => clone.ownerId !== vampire.id);
+      }
 
       if (vampire.vampireMistState === "charging") {
         vampire.vx = 0;
@@ -5704,28 +5722,23 @@ export default function App() {
           vampire.latchedTo = null;
           vampire.nextLatchAt = currentTime + bal.latchCooldown;
           const pushAngle = Math.atan2(vampire.y - target.y, vampire.x - target.x);
-          const pushForce = 480;
+          const pushForce = 720;
           vampire.vx = Math.cos(pushAngle) * pushForce;
           vampire.vy = Math.sin(pushAngle) * pushForce;
           target.vx = -Math.cos(pushAngle) * pushForce;
           target.vy = -Math.sin(pushAngle) * pushForce;
-          spawnSparks(vampire.x, vampire.y, "#f87171", 10);
-          spawnDust(vampire.x, vampire.y, 6);
+          vampire.spinAngle = (vampire.spinAngle || 0) + 0.7;
+          target.spinAngle = (target.spinAngle || 0) - 0.7;
+          const impactX = (vampire.x + target.x) * 0.5;
+          const impactY = (vampire.y + target.y) * 0.5;
+          spawnSparks(impactX, impactY, "#f87171", 24);
+          spawnImpactBurst(impactX, impactY, pushAngle, ["#fff7ed", "#fb7185", "#be123c", "#4c0519"], 1.5);
+          spawnDust(vampire.x, vampire.y, 9);
+          game.screenShake = Math.max(game.screenShake || 0, 9);
+          playSound("vampireDrain", 0.92, -60);
         }
 
         const dist = distance(vampire, target);
-        if (!targetProtected && currentTime >= (vampire.vampireNextMistAt || 0) && dist > vampire.r + target.r + 55 && dist < 360 &&
-            canStartSkillConnection(vampire, target, game.balls, currentTime)) {
-          vampire.vampireMistState = "charging";
-          vampire.vampireMistUntil = currentTime + bal.mistWindup;
-          vampire.vampireNextMistAt = currentTime + bal.secCooldown;
-          vampire.vampireMistAngle = Math.atan2(target.y - vampire.y, target.x - vampire.x);
-          vampire.vx = 0;
-          vampire.vy = 0;
-          game.floatingTexts.push({ x: vampire.x, y: vampire.y - vampire.r - 18, vy: -35, text: "MIST RUSH", color: "#f43f5e", life: 0.6, maxLife: 0.6 });
-          playSound("repulsorCharge", 0.55, 60);
-          return;
-        }
 
         const latchLimit = vampire.r + target.r + bal.latchDistance;
         if (dist >= latchLimit) {
@@ -11632,7 +11645,7 @@ export default function App() {
       const isMistDashing = ball.vampireMistState === "dashing";
       const facingAngle = isMistCharging || isMistDashing
         ? ball.vampireMistAngle
-        : isLatched ? Math.atan2(target.y - ball.y, target.x - ball.x) : ball.angle;
+        : target ? Math.atan2(target.y - ball.y, target.x - ball.x) : ball.angle;
 
       if (ball.vampireMistTrail?.length) {
         ball.vampireMistTrail.forEach((point, index) => {
@@ -12060,21 +12073,24 @@ export default function App() {
       const dogEnraged = Boolean(ball.dogDied || ball.permanentRapidFire);
 
       ctx.save();
-      const gunnerGlow = ctx.createRadialGradient(ball.x, ball.y, R * 0.55, ball.x, ball.y, R + 30);
+      const glowPulse = 0.5 + Math.sin(currentTime * 0.012) * 0.5;
+      const gunnerGlow = ctx.createRadialGradient(ball.x, ball.y, R * 0.82, ball.x, ball.y, R + 14);
       if (dogEnraged) {
-        gunnerGlow.addColorStop(0, "rgba(239,68,68,0.42)");
-        gunnerGlow.addColorStop(0.55, "rgba(220,38,38,0.24)");
+        gunnerGlow.addColorStop(0, `rgba(239,68,68,${0.18 + glowPulse * 0.08})`);
+        gunnerGlow.addColorStop(0.62, "rgba(220,38,38,0.13)");
         gunnerGlow.addColorStop(1, "rgba(127,29,29,0)");
       } else {
-        gunnerGlow.addColorStop(0, "rgba(255,255,255,0.34)");
-        gunnerGlow.addColorStop(0.55, "rgba(248,250,252,0.20)");
+        gunnerGlow.addColorStop(0, "rgba(255,255,255,0.16)");
+        gunnerGlow.addColorStop(0.62, "rgba(248,250,252,0.09)");
         gunnerGlow.addColorStop(1, "rgba(255,255,255,0)");
       }
       ctx.fillStyle = gunnerGlow;
-      ctx.beginPath(); ctx.arc(ball.x, ball.y, R + 32, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = dogEnraged ? "rgba(248,113,113,0.88)" : "rgba(255,255,255,0.82)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(ball.x, ball.y, R + 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, R + 15, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = dogEnraged ? "rgba(248,113,113,0.68)" : "rgba(255,255,255,0.54)";
+      ctx.shadowColor = dogEnraged ? "#ef4444" : "#ffffff";
+      ctx.shadowBlur = dogEnraged ? 9 + glowPulse * 4 : 6;
+      ctx.lineWidth = dogEnraged ? 2 : 1.5;
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, R + 2.5, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
       
       // 1. Setup transformed context for drawing the complete John Wick portrait from the SVG
@@ -12701,13 +12717,10 @@ export default function App() {
       }
       if (dogEnraged) {
         ctx.save();
-        const ragePulse = 0.13 + (Math.sin(currentTime * 0.018) + 1) * 0.055;
+        const ragePulse = 0.07 + (Math.sin(currentTime * 0.018) + 1) * 0.025;
         ctx.globalCompositeOperation = "screen";
         ctx.fillStyle = `rgba(239,38,38,${ragePulse})`;
         ctx.beginPath(); ctx.arc(ball.x, ball.y, R + 2, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "rgba(255,90,90,0.9)";
-        ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, R + 2, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
       drawHealthInsideBall(ball);
@@ -19439,19 +19452,12 @@ export default function App() {
           )}
           {type === "vampire" && (
             <>
-              {renderSlider("Drain Rate", "vampire", "drainPerTick", 1, 10, 1, "/tick")}
-              {renderSlider("Heal Rate", "vampire", "healPerTick", 1, 8, 1, "/tick")}
-              {renderSlider("Drain Cooldown", "vampire", "tickCooldown", 50, 800, 10, "ms")}
-              {renderSlider("Latch Duration", "vampire", "latchDuration", 200, 3000, 50, "ms")}
-              {renderSlider("Latch Cooldown", "vampire", "latchCooldown", 1000, 6000, 100, "ms")}
-              {renderSlider("Latch Distance", "vampire", "latchDistance", 0, 60, 1, "px")}
-              {renderSlider("Mist Rush Cooldown", "vampire", "secCooldown", 2000, 12000, 100, "ms")}
-              {renderSlider("Mist Rush Speed", "vampire", "mistSpeed", 400, 1400, 20, "px/s")}
-              {renderSlider("Mist Rush Damage", "vampire", "mistDamage", 1, 20, 1)}
-              {renderSlider("Mist Rush Heal", "vampire", "mistHeal", 0, 12, 1)}
-              {renderSlider("Mist Rush Knockback", "vampire", "mistKnockback", 100, 900, 20, "px/s")}
-              {renderSlider("Mist Echo Size", "vampire", "cloneRadius", 10, 26, 1, "px")}
-              {renderSlider("Mist Echo Lifetime", "vampire", "cloneLife", 2000, 12000, 500, "ms")}
+              {renderSlider("Bite Damage", "vampire", "drainPerTick", 1, 10, 1, "/tick")}
+              {renderSlider("Bite Lifesteal", "vampire", "healPerTick", 1, 8, 1, "/tick")}
+              {renderSlider("Bite Tick Rate", "vampire", "tickCooldown", 50, 800, 10, "ms")}
+              {renderSlider("Bite Duration", "vampire", "latchDuration", 200, 3000, 50, "ms")}
+              {renderSlider("Bite Cooldown", "vampire", "latchCooldown", 1000, 6000, 100, "ms")}
+              {renderSlider("Bite Range", "vampire", "latchDistance", 0, 60, 1, "px")}
             </>
           )}
           {type === "laser" && (
