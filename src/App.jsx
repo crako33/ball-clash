@@ -1937,7 +1937,7 @@ export default function App() {
     ctx.fillStyle = blackGlow ? "#ffffff" : config.color;
     ctx.shadowColor = blackGlow ? "#000000" : config.color;
     ctx.shadowBlur = blackGlow ? 22 : 14;
-    const nameFontSize = 26;
+    const nameFontSize = 40;
     ctx.font = `900 ${nameFontSize}px Arial Black, Impact, sans-serif`;
     const nameX = align === "left" ? x + 22 : x + w - 22;
     ctx.lineWidth = blackGlow ? Math.max(6, nameFontSize * 0.16) : Math.max(5, nameFontSize * 0.12);
@@ -19506,7 +19506,7 @@ export default function App() {
                   <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Combat Status</div>
                   <div className="mt-1 text-lg font-bold text-sky-400">
                     {gameState.winner
-                      ? `${gameState.winner} Wins!`
+                      ? null
                       : fightIntroActive
                         ? "Intro..."
                       : gameState.running && elapsedTime < OPENING_SKILL_DELAY / 1000
