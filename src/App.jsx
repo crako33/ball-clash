@@ -737,7 +737,7 @@ const BALANCE = {
   stringWeb: { stringDamage: 1, stringLifetime: 9000, maxStrings: 14, stringHitPadding: 10, trampolineCooldown: 1100, trampolineBoost: 1.8, trampolineMinSpeed: 480 },
   arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 55, punchCooldown: 600, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
-  wrecker: { cooldown: 3200, chargeDuration: 550, swingDuration: 320, damage: 25, range: 160, lungeSpeed: 950, launchSpeed: 1200, wallBounces: 11, skillLockDuration: 4000, maxBounceSpeed: 350, leapDamage: 12, megaLeapDamage: 18, shockwaveRadius: 78, megaShockwaveRadius: 124, knockbackForce: 500, rageRequired: 6, megaRageRequired: 10, pushCooldown: 2600, pushRange: 210, pushForce: 950, pushDamage: 4, leapCooldown: 7200, leapDuration: 680, leapLeadTime: 0.38, landingRecoil: 240, recoverySpeed: 230, bounceBoost: 1.14, sizePerRage: 0.015, maxRageSizeScale: 1.16, megaSizeScale: 1.3 },
+  wrecker: { cooldown: 3200, chargeDuration: 850, swingDuration: 320, damage: 25, range: 160, lungeSpeed: 950, launchSpeed: 1200, wallBounces: 11, skillLockDuration: 4000, maxBounceSpeed: 350, leapDamage: 12, megaLeapDamage: 18, shockwaveRadius: 78, megaShockwaveRadius: 124, knockbackForce: 500, rageRequired: 6, megaRageRequired: 10, pushCooldown: 2600, pushRange: 210, pushForce: 950, pushDamage: 4, leapCooldown: 7200, leapDuration: 680, leapLeadTime: 0.38, landingRecoil: 240, recoverySpeed: 230, bounceBoost: 1.14, sizePerRage: 0.015, maxRageSizeScale: 1.16, megaSizeScale: 1.3 },
   dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300, secCooldown: 5000, secDamage: 8, secDashForce: 650 },
   psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
   chaos: { circleRadius: 52, launchSpeed: 1080, slamDamage: 4, controlHold: 260, controlDuration: 1250, radiusBounce: 360, cooldown: 5200, circleLife: 7200, triggerCooldown: 900, trapCount: 3 },
@@ -5503,9 +5503,9 @@ export default function App() {
       }
 
       if (ball.wreckerState === "rage_dashing") {
-        // Check collision/distance to punch target
+        // Check collision/distance to punch target (tighter range)
         const dist = distance(ball, target);
-        if (dist <= ball.r + target.r + 20 && target.health > 0) {
+        if (dist <= ball.r + target.r + 2 && target.health > 0) {
           // Punch success!
           applyDamage(target, 35, `${ball.id}-rage-punch`, currentTime, 100);
           
@@ -5717,7 +5717,7 @@ export default function App() {
         if (currentTime >= (ball.wreckerNextAttackAt || 0) && targetDistance <= 420 && canStartSkillConnection(ball, target, game.balls, currentTime)) {
           if (hasMaxRage) {
             ball.wreckerState = "rage_charging";
-            ball.wreckerStateUntil = currentTime + 700; // 0.7s charge
+            ball.wreckerStateUntil = currentTime + 1200; // 1.2s charge (longer charge duration)
             ball.wreckerChargeStartedAt = currentTime;
             ball.wreckerSwingHit = false;
             
@@ -13304,9 +13304,9 @@ export default function App() {
 
       const drawR = ball.r;
       const rRatio = Math.min(10, ball.rageStacks || 0) / 10;
-      const h = 84 - rRatio * 84;
-      const s = 80 + rRatio * 5;
-      const l = 50 - rRatio * 5;
+      const h = 84; // Keep the green hue constant!
+      const s = 80;
+      const l = 50;
 
       // Helper to draw arm at the side
       const drawArmAtSide = (side, armAngleOffset = 0, jitterScale = 0) => {
@@ -13522,9 +13522,9 @@ export default function App() {
       ctx.save();
       ctx.translate(drawR * 0.32, -drawR * 0.32);
       
-      // Dark green/blackish outline color when calm, turns into pulsing red as rage builds
-      const veinH = h - rRatio * 84;
-      const veinL = Math.max(12, l - 22 - rRatio * 8);
+      // Dark green/blackish outline color when calm, stays dark green/blackish as rage builds
+      const veinH = 84;
+      const veinL = Math.max(10, l - 22 - rRatio * 12);
       ctx.strokeStyle = `hsl(${veinH}, ${s}%, ${veinL}%)`;
       ctx.lineWidth = drawR * 0.12;
       ctx.lineCap = "round";
