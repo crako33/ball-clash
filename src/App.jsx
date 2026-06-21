@@ -64,6 +64,26 @@ const BALL_TYPES = {
     animeStyle: "Dark fantasy gothic anime antagonist/anti-hero",
     gameStyle: "Close-range lifesteal duelist built entirely around landing its bite",
   },
+  ninja: {
+    id: "ninja",
+    name: "Ninja Ball",
+    shortName: "NJIN",
+    color: "#f97316",
+    stroke: "#111827",
+    radius: 29,
+    description: "A clone fighter that confuses targeting, ricochets shuriken, and substitutes out of heavy attacks.",
+    emoji: "🥷",
+    visualTheme: "Anime Shadow Ninja",
+    colorPalette: "Burnt Orange, Midnight Black, Smoke White",
+    facialAge: "Young adult",
+    personality: "Tricky, energetic, impossible to pin down",
+    primaryWeapon: "Ricochet Shuriken and Shadow Clones",
+    signatureAbility: "Substitution into Clone Rush",
+    companion: "Two identical shadow clones",
+    specialVisualEffects: "Expanding smoke clouds, white flashes, wind trails, and rapid clone dashes",
+    animeStyle: "High-speed ninja anime fighter",
+    gameStyle: "Evasive target-confusion specialist with a substitution-powered finisher",
+  },
   laser: {
     id: "laser",
     name: "Laser Ball",
@@ -692,7 +712,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb", "vampire"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb", "vampire", "ninja"];
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 13;
 const MAX_RECORDING_TRAIL_POINTS = 9;
@@ -705,6 +725,7 @@ const FIGHT_INTRO_IMPACT_AT = 1550;
 const BALANCE = {
   knife: { damage: 2, cooldown: 390, bladeLength: 60, spinSpeed: 0.09, secCooldown: 3500, secDamage: 5 },
   gun: { bulletDamage: 2, bulletSpeed: 550, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
+  ninja: { cloneCooldown: 6200, cloneLife: 6500, shurikenCooldown: 2400, shurikenSpeed: 620, shurikenDamage: 3, substitutionCooldown: 6500, substitutionThreshold: 4, counterDamage: 4, counterKnockback: 680, rushRequired: 3, rushCloneDamage: 2, rushFinalDamage: 8 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 900, latchCooldown: 3200, latchDistance: 10, secCooldown: 6200, mistWindup: 260, mistDuration: 520, mistSpeed: 920, mistDamage: 7, mistHeal: 4, mistKnockback: 420, cloneRadius: 17, cloneLife: 7000 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, recoilForce: 180, armorRequired: 5 },
   shield: { damage: 2, arcWidth: 1.57, knockback: 14, cooldown: 1000, throwWindup: 150, shieldSpeed: 800, returnSpeed: 650, duration: 1200, secCooldownHeld: 3000, secBashDamage: 4 },
@@ -818,7 +839,9 @@ const loadSavedBalanceSettings = () => {
   }
 };
 
-const hasStringBounceGuard = (ball) => ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
+const hasStringBounceGuard = (ball) =>
+  (ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0) ||
+  (ball?.type === "ninja" && Boolean(ball.ninjaSubstitutionGuard));
 
 const EIGHT_BALL_SILHOUETTE_SVG = `
 <svg width="1200" height="1200" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
@@ -1320,6 +1343,21 @@ export default function App() {
       vampireMistHitDone: false,
       vampireMistTrail: [],
       vampireMistSecondCloneDropped: false,
+      ninjaClones: [],
+      ninjaDummies: [],
+      ninjaCloneState: "idle",
+      ninjaCloneStateUntil: 0,
+      ninjaNextCloneAt: type === "ninja" ? 2200 : 0,
+      ninjaNextShurikenAt: type === "ninja" ? 1300 : 0,
+      ninjaNextSubstitutionAt: 0,
+      ninjaSubstitutionCount: 0,
+      ninjaRushReady: false,
+      ninjaRushState: "idle",
+      ninjaRushStartedAt: 0,
+      ninjaRushHitMask: 0,
+      ninjaRushTargetId: null,
+      ninjaSmokeUntil: 0,
+      ninjaFlashUntil: 0,
       trail: [],
       nextBombAt: 0,
       bomberSelfDestructAt: 0,
@@ -1557,6 +1595,12 @@ export default function App() {
       return labels[ball.eightCueState] || "CUE READY";
     }
     if (ball.type === "gun") return ball.gunReloading ? "RELOADING" : "GUN READY";
+    if (ball.type === "ninja") {
+      if (ball.ninjaRushState !== "idle") return "CLONE RUSH";
+      if (ball.ninjaRushReady) return "CLONE RUSH READY";
+      if (ball.ninjaCloneState === "smoke") return "SHADOW CLONES";
+      return `SUBSTITUTIONS ${ball.ninjaSubstitutionCount || 0}/${BALANCE.ninja.rushRequired}`;
+    }
     if (ball.type === "vampire") {
       return ball.latchedTo && ball.latchUntil > currentTime ? "LIFESTEAL BITE" : "BITE READY";
     }
@@ -1641,6 +1685,12 @@ export default function App() {
       lines.push(`LIFESTEAL BITE: ${biting ? "DRAINING" : cooldown(ball.nextLatchAt)}`);
       lines.push(`DRAIN: ${game?.balance?.vampire?.drainPerTick || BALANCE.vampire.drainPerTick} HP PER BITE`);
       lines.push(`HEAL: ${game?.balance?.vampire?.healPerTick || BALANCE.vampire.healPerTick} HP PER BITE`);
+    } else if (ball.type === "ninja") {
+      const ninjaBal = game?.balance?.ninja || BALANCE.ninja;
+      lines.push(`SHADOW CLONES: ${ball.ninjaCloneState === "smoke" ? "FORMING" : `${(ball.ninjaClones || []).length}/2 ACTIVE`}`);
+      lines.push(`RICOCHET SHURIKEN: ${cooldown(ball.ninjaNextShurikenAt)}`);
+      lines.push(`SUBSTITUTION: ${cooldown(ball.ninjaNextSubstitutionAt)}`);
+      lines.push(`CLONE RUSH: ${ball.ninjaRushState !== "idle" ? "ACTIVE" : ball.ninjaRushReady ? "READY" : `${ball.ninjaSubstitutionCount || 0}/${ninjaBal.rushRequired}`}`);
     } else if (ball.type === "eightBall") {
       const states = { aiming: "AIMING", pullback: "CHARGING", striking: "STRIKING" };
       lines.push(`CUE STRIKE: ${states[ball.eightCueState] || cooldown(ball.eightNextCueAt)}`);
@@ -4214,6 +4264,76 @@ export default function App() {
       playAudioFile(clip, volume, 0, game.simulationSpeed || 1);
     };
 
+    const triggerNinjaSubstitution = (defender, amount, cooldownKey, currentTime) => {
+      if (defender?.type !== "ninja" || defender.ninjaRushState !== "idle") return false;
+      const bal = game.balance.ninja || BALANCE.ninja;
+      const heavyKey = /charge|slam|bash|big.?laser|explosion|mine|pounce|meteor|grand/i.test(cooldownKey || "");
+      if (amount < (bal.substitutionThreshold || 4) && !heavyKey) return false;
+      if (currentTime < (defender.ninjaNextSubstitutionAt || 0)) return false;
+
+      const attacker = game.balls.find((candidate) => candidate.id !== defender.id && cooldownKey?.startsWith(candidate.id)) ||
+        game.balls.find((candidate) => candidate.side !== defender.side && candidate.type !== "cueBall");
+      if (!attacker) return false;
+
+      const oldX = defender.x;
+      const oldY = defender.y;
+      const toNinja = Math.atan2(oldY - attacker.y, oldX - attacker.x);
+      const reappearDistance = attacker.r + defender.r + 18;
+      defender.x = clamp(attacker.x - Math.cos(toNinja) * reappearDistance, defender.r + 20, game.width - defender.r - 20);
+      defender.y = clamp(attacker.y - Math.sin(toNinja) * reappearDistance, defender.r + 20, game.height - defender.r - 20);
+      defender.angle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
+      defender.ninjaFlashUntil = currentTime + 260;
+      defender.ninjaSmokeUntil = currentTime + 520;
+      defender.ninjaSubstitutionGuard = true;
+      defender.ninjaSubstitutionGuardUntil = currentTime + 180;
+      defender.ninjaNextSubstitutionAt = currentTime + (bal.substitutionCooldown || 6500);
+      defender.ninjaSubstitutionCount = Math.min(bal.rushRequired || 3, (defender.ninjaSubstitutionCount || 0) + 1);
+      defender.ninjaRushReady = defender.ninjaSubstitutionCount >= (bal.rushRequired || 3);
+      defender.ninjaDummies = defender.ninjaDummies || [];
+      defender.ninjaDummies.push({
+        x: oldX, y: oldY, vx: Math.cos(toNinja) * 260, vy: Math.sin(toNinja) * 260 - 180,
+        angle: 0, spin: (Math.random() < 0.5 ? -1 : 1) * 14, life: 0.9, maxLife: 0.9
+      });
+
+      const counterAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
+      const counterDamage = bal.counterDamage || 4;
+      if (!isChessCrownActive(attacker) && !isBomberSelfDestructInvulnerable(attacker) && !isWreckerJumpInvulnerable(attacker)) {
+        attacker.health = clamp(attacker.health - counterDamage, 0, MAX_HEALTH);
+        attacker.lastDamageTakenAt = currentTime;
+        attacker.vx = Math.cos(counterAngle) * (bal.counterKnockback || 680);
+        attacker.vy = Math.sin(counterAngle) * (bal.counterKnockback || 680);
+        const stats = defender.side === "left" ? game.stats.left : game.stats.right;
+        if (stats) { stats.damageDealt += counterDamage; stats.hitsLanded++; }
+      }
+
+      game.damageCooldowns[cooldownKey] = currentTime + 360;
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({ x: oldX, y: oldY - 24, vy: -52, text: "SUBSTITUTION!", color: "#ffffff", life: 0.85, maxLife: 0.85 });
+      game.floatingTexts.push({ x: attacker.x, y: attacker.y - attacker.r - 16, vy: -48, text: "SHADOW KICK", color: "#fb923c", life: 0.72, maxLife: 0.72 });
+      spawnSparks(oldX, oldY, "#ffffff", 30);
+      spawnImpactBurst(oldX, oldY, toNinja, ["#ffffff", "#cbd5e1", "#64748b"], 1.7);
+      spawnImpactBurst(attacker.x, attacker.y, counterAngle, ["#ffffff", "#fb923c", "#111827"], 1.25);
+      game.screenShake = Math.max(game.screenShake || 0, 14);
+      playSound("webShoot", 1.1, 180);
+      return true;
+    };
+
+    const triggerNinjaCloneIntercept = (defender, cooldownKey, currentTime) => {
+      if (defender?.type !== "ninja" || !defender.ninjaClones?.length || Math.random() > 0.5) return false;
+      const cloneIndex = Math.floor(Math.random() * defender.ninjaClones.length);
+      const [clone] = defender.ninjaClones.splice(cloneIndex, 1);
+      defender.ninjaSubstitutionGuard = true;
+      defender.ninjaSubstitutionGuardUntil = currentTime + 140;
+      defender.ninjaDummies = defender.ninjaDummies || [];
+      defender.ninjaDummies.push({ x: clone.x, y: clone.y, vx: clone.vx * 0.45, vy: clone.vy * 0.45 - 120, angle: 0, spin: 16, life: 0.72, maxLife: 0.72, clonePoof: true });
+      game.damageCooldowns[cooldownKey] = currentTime + 220;
+      spawnSparks(clone.x, clone.y, "#ffffff", 22);
+      spawnImpactBurst(clone.x, clone.y, Math.atan2(clone.vy, clone.vx), ["#ffffff", "#94a3b8", "#111827"], 1.25);
+      game.floatingTexts.push({ x: clone.x, y: clone.y - 20, vy: -44, text: "CLONE!", color: "#e2e8f0", life: 0.62, maxLife: 0.62 });
+      playSound("webShoot", 0.8, 120);
+      return true;
+    };
+
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
       if (isBomberSelfDestructInvulnerable(defender)) return;
       if (defender.constellationShieldedUntil && currentTime < defender.constellationShieldedUntil) return;
@@ -4223,6 +4343,8 @@ export default function App() {
       if (game.damageCooldowns[cooldownKey] > currentTime) return;
       
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
+      if (triggerNinjaSubstitution(defender, finalAmount, cooldownKey, currentTime)) return;
+      if (triggerNinjaCloneIntercept(defender, cooldownKey, currentTime)) return;
 
       defender.health = clamp(defender.health - finalAmount, 0, MAX_HEALTH);
       defender.lastDamageTakenAt = currentTime;
@@ -4905,6 +5027,15 @@ export default function App() {
           ball.armThrowWallSourceId = null;
           spawnSparks(ball.x, ball.y, "#ef4444", 14);
           game.screenShake = Math.max(game.screenShake, 14);
+        }
+        if ((ball.ninjaFloorSlamUntil || 0) > game.simTime && sideHit === "bottom") {
+          ball.ninjaFloorSlamUntil = 0;
+          spawnSparks(ball.x, ball.y, "#fb923c", 36);
+          spawnDust(ball.x, ball.y, 24);
+          spawnImpactBurst(ball.x, ball.y, Math.PI / 2, ["#ffffff", "#fb923c", "#111827"], 2.1);
+          game.screenShake = Math.max(game.screenShake || 0, 24);
+          playSound("explosion", 1.12, 120);
+          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 18, vy: -54, text: "FLOOR SLAM!", color: "#fed7aa", life: 0.72, maxLife: 0.72 });
         }
         if (ball.chaosControlledUntil && game.simTime <= ball.chaosControlledUntil + 250 && !ball.chaosSlamDone) {
           const axisMatched = (ball.chaosControlAxis === "vertical" && (sideHit === "top" || sideHit === "bottom")) ||
@@ -5612,6 +5743,157 @@ export default function App() {
         });
         return clone.health > 0;
       });
+    };
+
+    const updateNinja = (ninja, target, currentTime, stepDt) => {
+      const bal = game.balance.ninja || BALANCE.ninja;
+      ninja.angle = Math.atan2(target.y - ninja.y, target.x - ninja.x);
+      if (ninja.ninjaSubstitutionGuard && currentTime >= (ninja.ninjaSubstitutionGuardUntil || 0)) {
+        ninja.ninjaSubstitutionGuard = false;
+      }
+
+      ninja.ninjaDummies = (ninja.ninjaDummies || []).filter((dummy) => {
+        dummy.life -= stepDt;
+        dummy.x += dummy.vx * stepDt;
+        dummy.y += dummy.vy * stepDt;
+        dummy.vy += 420 * stepDt;
+        dummy.angle += dummy.spin * stepDt;
+        return dummy.life > 0;
+      });
+
+      ninja.ninjaClones = (ninja.ninjaClones || []).filter((clone) => {
+        clone.life -= stepDt * 1000;
+        if (clone.life <= 0) return false;
+        const desiredAngle = Math.atan2(target.y - clone.y, target.x - clone.x) + clone.orbitSign * 0.65;
+        clone.vx += Math.cos(desiredAngle) * 85 * stepDt;
+        clone.vy += Math.sin(desiredAngle) * 85 * stepDt;
+        const cloneSpeed = Math.hypot(clone.vx, clone.vy);
+        const maxCloneSpeed = Math.max(220, Math.hypot(ninja.vx, ninja.vy));
+        if (cloneSpeed > maxCloneSpeed) {
+          clone.vx = clone.vx / cloneSpeed * maxCloneSpeed;
+          clone.vy = clone.vy / cloneSpeed * maxCloneSpeed;
+        }
+        clone.x += clone.vx * stepDt;
+        clone.y += clone.vy * stepDt;
+        clone.angle = Math.atan2(target.y - clone.y, target.x - clone.x);
+        const pad = 18 + ninja.r;
+        if (clone.x < pad) { clone.x = pad; clone.vx = Math.abs(clone.vx); }
+        if (clone.x > game.width - pad) { clone.x = game.width - pad; clone.vx = -Math.abs(clone.vx); }
+        if (clone.y < pad) { clone.y = pad; clone.vy = Math.abs(clone.vy); }
+        if (clone.y > game.height - pad) { clone.y = game.height - pad; clone.vy = -Math.abs(clone.vy); }
+        return true;
+      });
+
+      if (ninja.ninjaRushState === "active") {
+        ninja.vx = 0;
+        ninja.vy = 0;
+        const elapsed = currentTime - ninja.ninjaRushStartedAt;
+        const rushTarget = game.balls.find((candidate) => candidate.id === ninja.ninjaRushTargetId) || target;
+        const strike = (mask, damage, angle, label) => {
+          if (ninja.ninjaRushHitMask & mask) return;
+          ninja.ninjaRushHitMask |= mask;
+          const healthBefore = rushTarget.health;
+          applyDamage(rushTarget, damage, `${ninja.id}-clone-rush-${mask}`, currentTime, 80);
+          const dealt = Math.max(0, healthBefore - rushTarget.health);
+          const stats = ninja.side === "left" ? game.stats.left : game.stats.right;
+          if (stats && dealt > 0) { stats.damageDealt += dealt; stats.hitsLanded++; }
+          spawnSparks(rushTarget.x, rushTarget.y, "#fb923c", mask === 4 ? 34 : 18);
+          spawnImpactBurst(rushTarget.x, rushTarget.y, angle, ["#ffffff", "#fb923c", "#111827"], mask === 4 ? 2 : 1.05);
+          game.floatingTexts.push({ x: rushTarget.x, y: rushTarget.y - rushTarget.r - 18, vy: -48, text: label, color: "#fed7aa", life: 0.58, maxLife: 0.58 });
+        };
+
+        if (elapsed < 260) {
+          ninja.ninjaSmokeUntil = currentTime + 180;
+          ninja.ninjaClones = [-1, 1].map((sign, index) => ({
+            x: rushTarget.x + sign * 78, y: rushTarget.y + (index ? 42 : -42), vx: 0, vy: 0,
+            angle: Math.atan2(rushTarget.y - ninja.y, rushTarget.x - ninja.x), orbitSign: sign, life: 1600
+          }));
+        }
+        if (elapsed >= 300 && elapsed < 520) {
+          const clone = ninja.ninjaClones[0];
+          if (clone) { clone.x = rushTarget.x - 62 + (elapsed - 300) * 0.7; clone.y = rushTarget.y - 24; }
+          strike(1, bal.rushCloneDamage || 2, 0, "CLONE STRIKE 1");
+        }
+        if (elapsed >= 560 && elapsed < 780) {
+          const clone = ninja.ninjaClones[1];
+          if (clone) { clone.x = rushTarget.x + 62 - (elapsed - 560) * 0.7; clone.y = rushTarget.y + 24; }
+          strike(2, bal.rushCloneDamage || 2, Math.PI, "CLONE STRIKE 2");
+        }
+        if (elapsed >= 860 && !(ninja.ninjaRushHitMask & 4)) {
+          ninja.x = clamp(rushTarget.x, ninja.r + 20, game.width - ninja.r - 20);
+          ninja.y = clamp(rushTarget.y - 82, ninja.r + 20, game.height - ninja.r - 20);
+          strike(4, bal.rushFinalDamage || 8, Math.PI / 2, "SHADOW DROP!");
+          if (!hasStringBounceGuard(rushTarget)) {
+            rushTarget.vx *= 0.25;
+            rushTarget.vy = 1180;
+            rushTarget.skillLockedUntil = Math.max(rushTarget.skillLockedUntil || 0, currentTime + 1200);
+            rushTarget.ninjaFloorSlamUntil = currentTime + 1500;
+          }
+          game.screenShake = Math.max(game.screenShake || 0, 24);
+          playSound("hammerHit", 1.08, 160);
+        }
+        if (elapsed >= 1250) {
+          ninja.ninjaRushState = "idle";
+          ninja.ninjaRushReady = false;
+          ninja.ninjaSubstitutionCount = 0;
+          ninja.ninjaClones = [];
+          ninja.ninjaNextCloneAt = currentTime + 1200;
+        }
+        return;
+      }
+
+      if (ninja.ninjaRushReady && canStartSkillConnection(ninja, target, game.balls, currentTime)) {
+        ninja.ninjaRushState = "active";
+        ninja.ninjaRushStartedAt = currentTime;
+        ninja.ninjaRushHitMask = 0;
+        ninja.ninjaRushTargetId = target.id;
+        ninja.ninjaSmokeUntil = currentTime + 400;
+        game.floatingTexts.push({ x: ninja.x, y: ninja.y - ninja.r - 24, vy: -52, text: "CLONE RUSH!", color: "#fb923c", life: 0.9, maxLife: 0.9 });
+        spawnImpactBurst(ninja.x, ninja.y, ninja.angle, ["#ffffff", "#cbd5e1", "#111827"], 1.8);
+        playSound("webShoot", 1.15, 220);
+        return;
+      }
+
+      if (ninja.ninjaCloneState === "smoke") {
+        ninja.spinAngle = (ninja.spinAngle || 0) + 0.38;
+        ninja.vx *= 0.88;
+        ninja.vy *= 0.88;
+        ninja.ninjaSmokeUntil = currentTime + 160;
+        if (currentTime >= ninja.ninjaCloneStateUntil) {
+          const baseSpeed = Math.max(240, Math.hypot(ninja.vx, ninja.vy));
+          ninja.ninjaClones = [-1, 1].map((sign) => {
+            const angle = ninja.angle + sign * 1.15;
+            return { x: ninja.x, y: ninja.y, vx: Math.cos(angle) * baseSpeed, vy: Math.sin(angle) * baseSpeed, angle, orbitSign: sign, life: bal.cloneLife || 6500 };
+          });
+          ninja.ninjaCloneState = "idle";
+          ninja.ninjaNextCloneAt = currentTime + (bal.cloneCooldown || 6200);
+          spawnImpactBurst(ninja.x, ninja.y, ninja.angle, ["#ffffff", "#cbd5e1", "#475569"], 1.7);
+        }
+        return;
+      }
+
+      if (currentTime >= (ninja.ninjaNextCloneAt || 0) && ninja.ninjaClones.length < 2) {
+        ninja.ninjaCloneState = "smoke";
+        ninja.ninjaCloneStateUntil = currentTime + 520;
+        ninja.ninjaSmokeUntil = currentTime + 620;
+        playSound("webShoot", 0.95, 160);
+        return;
+      }
+
+      if (currentTime >= (ninja.ninjaNextShurikenAt || 0)) {
+        const angle = Math.atan2(target.y - ninja.y, target.x - ninja.x) + (Math.random() < 0.5 ? -0.42 : 0.42);
+        game.bullets.push({
+          ownerId: ninja.id, targetSide: target.side, kind: "ninjaShuriken",
+          x: ninja.x + Math.cos(angle) * (ninja.r + 10), y: ninja.y + Math.sin(angle) * (ninja.r + 10),
+          vx: Math.cos(angle) * (bal.shurikenSpeed || 620), vy: Math.sin(angle) * (bal.shurikenSpeed || 620),
+          r: 8, damage: bal.shurikenDamage || 3, life: 4.5, angle: 0, spinSpeed: 22,
+          bouncesLeft: 1, homingAfterBounce: false
+        });
+        ninja.ninjaShurikenFlashUntil = currentTime + 180;
+        ninja.ninjaNextShurikenAt = currentTime + (bal.shurikenCooldown || 2400);
+        spawnSparks(ninja.x, ninja.y, "#cbd5e1", 9);
+        playSound("shieldThrow", 0.78, 160);
+      }
     };
 
     const updateVampire = (vampire, target, currentTime, stepDt) => {
@@ -6890,6 +7172,11 @@ export default function App() {
           const damageRemaining = Math.max(0, 15 - (laserBall.hugeLaserDamageDealt || 0));
           const beamDamage = Math.min(1, damageRemaining);
           if (!isChessCrownActive(target) && !isWreckerJumpInvulnerable(target) && !isBomberSelfDestructInvulnerable(target)) {
+            if (!laserBall.hugeLaserBounceApplied && triggerNinjaSubstitution(target, 15, `${laserBall.id}-big-laser`, currentTime)) {
+              laserBall.hugeLaserBounceApplied = true;
+              laserBall.laserNextTickAt = currentTime + 80;
+              return;
+            }
             if (beamDamage > 0) {
               target.health = clamp(target.health - beamDamage, 0, MAX_HEALTH);
               laserBall.hugeLaserDamageDealt = (laserBall.hugeLaserDamageDealt || 0) + beamDamage;
@@ -11065,7 +11352,15 @@ export default function App() {
                 }
 
                 if (isWreckerJumpInvulnerable(ball)) return;
-                ball.health = clamp(ball.health - dmg, 0, MAX_HEALTH);
+                const mineHealthBefore = ball.health;
+                if (ball.type === "ninja") {
+                  applyDamage(ball, dmg, `${mine.ownerId}-mine-explosion-${mine.id || game.simTime}`, game.simTime, 100);
+                } else {
+                  ball.health = clamp(ball.health - dmg, 0, MAX_HEALTH);
+                }
+                const mineDamageDealt = Math.max(0, mineHealthBefore - ball.health);
+                if (mineDamageDealt <= 0) return;
+                dmg = mineDamageDealt;
 
                 game.floatingTexts = game.floatingTexts || [];
                 game.floatingTexts.push({
@@ -11348,12 +11643,30 @@ export default function App() {
           return true;
         }
 
+        if (bullet.kind === "ninjaShuriken") {
+          bullet.angle = (bullet.angle || 0) + (bullet.spinSpeed || 22) * dt;
+          if (bullet.homingAfterBounce && bullet.targetSide) {
+            const shurikenTarget = balls.find((candidate) => candidate.side === bullet.targetSide && candidate.type !== "cueBall");
+            if (shurikenTarget) {
+              const speed = Math.max(1, Math.hypot(bullet.vx, bullet.vy));
+              const desired = Math.atan2(shurikenTarget.y - bullet.y, shurikenTarget.x - bullet.x);
+              const current = Math.atan2(bullet.vy, bullet.vx);
+              let turn = desired - current;
+              while (turn > Math.PI) turn -= Math.PI * 2;
+              while (turn < -Math.PI) turn += Math.PI * 2;
+              const curved = current + clamp(turn, -2.8 * dt, 2.8 * dt);
+              bullet.vx = Math.cos(curved) * speed;
+              bullet.vy = Math.sin(curved) * speed;
+            }
+          }
+        }
+
         bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
         if (bullet.kind !== "dragonFireball") {
           bullet.life -= dt;
         }
         if (bullet.life <= 0) return false;
-        if (bullet.kind === "laserPulse" || bullet.kind === "dragonFireball") {
+        if (bullet.kind === "laserPulse" || bullet.kind === "dragonFireball" || bullet.kind === "ninjaShuriken") {
           let bounced = false;
           const pad = 18 + bullet.r;
           if (bullet.x < pad) { bullet.x = pad; bullet.vx = Math.abs(bullet.vx); bounced = true; }
@@ -11361,12 +11674,14 @@ export default function App() {
           if (bullet.y < pad) { bullet.y = pad; bullet.vy = Math.abs(bullet.vy); bounced = true; }
           if (bullet.y > game.height - pad) { bullet.y = game.height - pad; bullet.vy = -Math.abs(bullet.vy); bounced = true; }
           if (bounced) {
+            if (bullet.kind === "ninjaShuriken") bullet.homingAfterBounce = true;
             if (bullet.kind !== "dragonFireball") {
-              const defaultBounces = bullet.kind === "laserPulse" ? 4 : 3;
+              const defaultBounces = bullet.kind === "laserPulse" ? 4 : bullet.kind === "ninjaShuriken" ? 1 : 3;
               bullet.bouncesLeft = (bullet.bouncesLeft ?? defaultBounces) - 1;
               if (bullet.bouncesLeft < 0) return false;
             }
-            spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : "#facc15", 8);
+            spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : bullet.kind === "ninjaShuriken" ? "#e2e8f0" : "#facc15", bullet.kind === "ninjaShuriken" ? 14 : 8);
+            if (bullet.kind === "ninjaShuriken") playSound("wallBounce", 0.78, 180);
           }
         } else if (bullet.x < 18 || bullet.x > game.width - 18 || bullet.y < 18 || bullet.y > game.height - 18) {
           return false;
@@ -11449,7 +11764,13 @@ export default function App() {
           if (isChessCrownActive(target)) return false;
           if (isBomberSelfDestructInvulnerable(target)) return false;
           if (isWreckerJumpInvulnerable(target)) return false;
-          target.health = clamp(target.health - bullet.damage, 0, MAX_HEALTH);
+          if (target.type === "ninja") {
+            const healthBefore = target.health;
+            applyDamage(target, bullet.damage, `${bullet.ownerId || "projectile"}-${bullet.kind || "bullet"}-${game.simTime}`, game.simTime, 80);
+            if (target.health === healthBefore) return false;
+          } else {
+            target.health = clamp(target.health - bullet.damage, 0, MAX_HEALTH);
+          }
           if (bullet.stunDuration) {
             target.paralyzedUntil = Math.max(target.paralyzedUntil || 0, game.simTime + bullet.stunDuration);
           }
@@ -11633,6 +11954,112 @@ export default function App() {
         ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(tipX - 4, 0); ctx.stroke();
         ctx.fillStyle = "#374151"; ctx.fillRect(-16, -5, 18, 10);
         ctx.fillStyle = "#d1d5db"; ctx.fillRect(-13, -3, 5, 6);
+        ctx.restore();
+      }
+      drawHealthInsideBall(ball);
+    };
+
+    const drawNinjaBall = (ball, currentTime) => {
+      const config = BALL_TYPES.ninja;
+      const target = game.balls.find((candidate) => candidate.side !== ball.side && candidate.type !== "cueBall");
+      const drawBody = (entity, alpha = 1, clone = false) => {
+        const r = ball.r;
+        const facing = target ? Math.atan2(target.y - entity.y, target.x - entity.x) : (entity.angle || 0);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(entity.x, entity.y);
+        ctx.rotate(facing);
+        if (clone) {
+          ctx.shadowColor = "#cbd5e1";
+          ctx.shadowBlur = 10;
+        }
+        const body = ctx.createRadialGradient(r * 0.3, -r * 0.25, 2, 0, 0, r);
+        body.addColorStop(0, "#fdba74");
+        body.addColorStop(0.48, config.color);
+        body.addColorStop(1, "#9a3412");
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = body; ctx.fill();
+        ctx.strokeStyle = config.stroke; ctx.lineWidth = 4; ctx.stroke();
+
+        ctx.fillStyle = "#111827";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.82, -1.15, 1.15);
+        ctx.lineTo(-r * 0.15, r * 0.76);
+        ctx.arc(0, 0, r * 0.82, 1.75, 4.55, true);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#fed7aa";
+        ctx.beginPath(); ctx.roundRect(r * 0.05, -r * 0.38, r * 0.68, r * 0.76, 7); ctx.fill();
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath(); ctx.moveTo(r * 0.28, -7); ctx.lineTo(r * 0.62, -5); ctx.lineTo(r * 0.32, -2); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(r * 0.28, 7); ctx.lineTo(r * 0.62, 5); ctx.lineTo(r * 0.32, 2); ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = "#475569";
+        ctx.fillRect(-r * 0.12, -r * 0.92, r * 0.72, 7);
+        ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1.5;
+        ctx.strokeRect(-r * 0.12, -r * 0.92, r * 0.72, 7);
+        ctx.beginPath(); ctx.arc(r * 0.23, -r * 0.8, 4, 0, Math.PI * 2); ctx.stroke();
+        const panelOpen = entity === ball && (ball.ninjaShurikenFlashUntil || 0) > currentTime;
+        ctx.fillStyle = panelOpen ? "#f8fafc" : "#1f2937";
+        ctx.strokeStyle = "#020617"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(-4, r * 0.58, 18, 8, 3); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      };
+
+      (ball.ninjaClones || []).forEach((clone) => drawBody(clone, 0.76, true));
+
+      (ball.ninjaDummies || []).forEach((dummy) => {
+        ctx.save();
+        ctx.globalAlpha = clamp(dummy.life / dummy.maxLife, 0, 1);
+        ctx.translate(dummy.x, dummy.y);
+        ctx.rotate(dummy.angle);
+        ctx.fillStyle = dummy.clonePoof ? "#64748b" : "#92400e";
+        ctx.strokeStyle = "#451a03";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.roundRect(-10, -25, 20, 50, 7); ctx.fill(); ctx.stroke();
+        if (!dummy.clonePoof) {
+          ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-8, -11); ctx.lineTo(8, -4); ctx.moveTo(-8, 4); ctx.lineTo(8, 11); ctx.stroke();
+        }
+        ctx.restore();
+      });
+
+      if ((ball.ninjaSmokeUntil || 0) > currentTime || ball.ninjaCloneState === "smoke") {
+        const pulse = 0.5 + Math.sin(currentTime * 0.03) * 0.5;
+        ctx.save();
+        for (let i = 0; i < 9; i++) {
+          const angle = i * Math.PI * 2 / 9 + currentTime * 0.002;
+          const radius = ball.r + 10 + (i % 3) * 8 + pulse * 5;
+          ctx.globalAlpha = 0.18 + (i % 3) * 0.08;
+          ctx.fillStyle = i % 2 ? "#f8fafc" : "#94a3b8";
+          ctx.beginPath(); ctx.arc(ball.x + Math.cos(angle) * radius, ball.y + Math.sin(angle) * radius, 10 + (i % 3) * 4, 0, Math.PI * 2); ctx.fill();
+        }
+        if (ball.ninjaCloneState === "smoke") {
+          [-1, 0, 1].forEach((offset) => {
+            ctx.globalAlpha = 0.22 + pulse * 0.12;
+            ctx.fillStyle = "#0f172a";
+            ctx.beginPath(); ctx.arc(ball.x + offset * (ball.r + 10), ball.y, ball.r * 0.82, 0, Math.PI * 2); ctx.fill();
+          });
+        }
+        ctx.restore();
+      }
+
+      if (ball.ninjaRushState === "active" && target) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(248,250,252,0.38)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 8]);
+        (ball.ninjaClones || []).forEach((clone) => {
+          ctx.beginPath(); ctx.moveTo(clone.x, clone.y); ctx.lineTo(target.x, target.y); ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      drawBody(ball, 1, false);
+      if ((ball.ninjaFlashUntil || 0) > currentTime) {
+        ctx.save();
+        ctx.globalAlpha = clamp((ball.ninjaFlashUntil - currentTime) / 260, 0, 1) * 0.8;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r + 5, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
       drawHealthInsideBall(ball);
@@ -16938,6 +17365,7 @@ export default function App() {
       if (ball.type === "knife") drawKnifeBall(ball);
       else if (ball.type === "wrecker") drawWreckerBall(ball);
       else if (ball.type === "gun") drawGunBall(ball, currentTime);
+      else if (ball.type === "ninja") drawNinjaBall(ball, currentTime);
       else if (ball.type === "vampire") {
         const target = game.balls.find((o) => o.id === ball.latchedTo) || game.balls.find((o) => o.side !== ball.side);
         drawVampireBall(ball, currentTime, target);
@@ -17239,7 +17667,36 @@ export default function App() {
     const drawBullets = () => {
       game.bullets.forEach((bullet) => {
         ctx.save();
-        if (bullet.kind === "laserPulse") {
+        if (bullet.kind === "ninjaShuriken") {
+          const travelAngle = Math.atan2(bullet.vy, bullet.vx);
+          const trail = ctx.createLinearGradient(
+            bullet.x - Math.cos(travelAngle) * 34, bullet.y - Math.sin(travelAngle) * 34,
+            bullet.x, bullet.y
+          );
+          trail.addColorStop(0, "rgba(226,232,240,0)");
+          trail.addColorStop(1, "rgba(248,250,252,0.65)");
+          ctx.strokeStyle = trail;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(bullet.x - Math.cos(travelAngle) * 34, bullet.y - Math.sin(travelAngle) * 34);
+          ctx.lineTo(bullet.x, bullet.y);
+          ctx.stroke();
+          ctx.translate(bullet.x, bullet.y);
+          ctx.rotate(bullet.angle || 0);
+          ctx.shadowColor = bullet.homingAfterBounce ? "#fb923c" : "#e2e8f0";
+          ctx.shadowBlur = 10;
+          ctx.fillStyle = "#cbd5e1";
+          ctx.strokeStyle = "#111827";
+          ctx.lineWidth = 1.5;
+          for (let i = 0; i < 4; i++) {
+            ctx.rotate(Math.PI / 2);
+            ctx.beginPath();
+            ctx.moveTo(0, 0); ctx.lineTo(13, -4); ctx.lineTo(8, 3); ctx.closePath();
+            ctx.fill(); ctx.stroke();
+          }
+          ctx.fillStyle = "#111827";
+          ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+        } else if (bullet.kind === "laserPulse") {
           ctx.shadowColor = "#facc15";
           ctx.shadowBlur = 16;
           const pulse = 0.75 + Math.sin(game.simTime * 0.018) * 0.25;
@@ -19189,6 +19646,7 @@ export default function App() {
                   (ball.wreckerComboBouncesLeft || 0) > 0;
                 if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !isFishermanPulled && !skillsLocked) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
+                  if (ball.type === "ninja") updateNinja(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
                   if (ball.type === "vampire") updateVampire(ball, target, game.simTime, stepDt);
                   if (ball.type === "laser") updateLaserLegacy(ball, target, game.simTime, stepDt);
@@ -19448,6 +19906,18 @@ export default function App() {
               {renderSlider("Dog Respawn", "gun", "dogCooldown", 2000, 20000, 500, "ms")}
               {renderSlider("Rapid Fire Cooldown", "gun", "rapidFireCooldown", 50, 500, 10, "ms")}
               {renderSlider("Rapid Pierce Shots", "gun", "rapidPierceShots", 0, 6, 1)}
+            </>
+          )}
+          {type === "ninja" && (
+            <>
+              {renderSlider("Clone Cooldown", "ninja", "cloneCooldown", 2000, 12000, 100, "ms")}
+              {renderSlider("Clone Lifetime", "ninja", "cloneLife", 2000, 12000, 250, "ms")}
+              {renderSlider("Shuriken Damage", "ninja", "shurikenDamage", 1, 12, 1)}
+              {renderSlider("Shuriken Speed", "ninja", "shurikenSpeed", 300, 1000, 20, "px/s")}
+              {renderSlider("Shuriken Cooldown", "ninja", "shurikenCooldown", 800, 6000, 100, "ms")}
+              {renderSlider("Substitution Cooldown", "ninja", "substitutionCooldown", 2000, 12000, 100, "ms")}
+              {renderSlider("Counter Damage", "ninja", "counterDamage", 1, 15, 1)}
+              {renderSlider("Clone Rush Final", "ninja", "rushFinalDamage", 3, 20, 1)}
             </>
           )}
           {type === "vampire" && (
@@ -20255,7 +20725,7 @@ ${ball.description}`;
         
       const matchesArchetype =
         selectedArchetype === "All" ||
-        (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker", "mazeChomper"].includes(ball.id)) ||
+        (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker", "mazeChomper", "ninja"].includes(ball.id)) ||
         (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall", "yoYo", "slipper"].includes(ball.id)) ||
         (selectedArchetype === "Summoner" && ["spore", "shadow"].includes(ball.id)) ||
         (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull", "fisherman"].includes(ball.id)) ||
