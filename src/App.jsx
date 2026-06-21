@@ -5519,7 +5519,7 @@ export default function App() {
           const launchAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
           target.vx = Math.cos(launchAngle) * 1400;
           target.vy = Math.sin(launchAngle) * 1400;
-          target.wreckerComboBouncesLeft = 6; // 6 bounces
+          target.wreckerComboBouncesLeft = 5; // 5 bounces
           target.wreckerSlammedByPunch = true; // Mark to spawn crater on wall bounce!
           target.skillLockedUntil = currentTime + 1600;
           target.ragdollUntil = currentTime + 1600;
