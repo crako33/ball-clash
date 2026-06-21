@@ -2627,7 +2627,6 @@ export default function App() {
                 if (bounced) {
                   if (ball.type === "wrecker") {
                     ball.consecutiveWallBounces = (ball.consecutiveWallBounces || 0) + 1;
-                    ball.rageStacks = (ball.rageStacks || 0) + 1;
                     const boost = balance.wrecker.bounceBoost || 1.14;
                     const maxBounceSpeed = balance.wrecker.maxBounceSpeed || 330;
                     const speed = Math.hypot(ball.vx, ball.vy);
@@ -2748,6 +2747,11 @@ export default function App() {
               if (isEightBallBreakInvulnerable(defender, simTime)) return;
               if (damageCooldowns[cooldownKey] > simTime) return;
               let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
+              if (defender.type === "wrecker") {
+                finalAmount = Math.max(1, Math.round(finalAmount * 0.65)); // 35% passive damage reduction for Wrecker Ball
+                defender.rageStacks = Math.min(10, (defender.rageStacks || 0) + 2);
+                defender.wreckerLastRageHitAt = simTime;
+              }
               defender.health = Math.max(0, defender.health - finalAmount);
               defender.lastDamageTakenAt = simTime;
               damageCooldowns[cooldownKey] = simTime + cd;
@@ -4343,6 +4347,8 @@ export default function App() {
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
       if (defender.type === "wrecker") {
         finalAmount = Math.max(1, Math.round(finalAmount * 0.65)); // 35% passive damage reduction for Wrecker Ball
+        defender.rageStacks = Math.min(10, (defender.rageStacks || 0) + 2);
+        defender.wreckerLastRageHitAt = currentTime;
       }
       if (triggerNinjaSubstitution(defender, finalAmount, cooldownKey, currentTime)) return;
       if (triggerNinjaCloneIntercept(defender, cooldownKey, currentTime)) return;
@@ -5665,8 +5671,6 @@ export default function App() {
           const dealt = healthBefore - target.health;
           
           if (dealt > 0) {
-            ball.rageStacks = Math.min(10, (ball.rageStacks || 0) + 3);
-            ball.wreckerLastRageHitAt = currentTime;
             cancelActiveMovementStates(target);
             const launchAngle = Math.atan2(target.y - ball.y, target.x - ball.x) + direction * 0.2;
             target.vx = Math.cos(launchAngle) * bal.launchSpeed;
