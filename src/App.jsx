@@ -644,6 +644,26 @@ const BALL_TYPES = {
     animeStyle: "Fast household-comedy arena striker",
     gameStyle: "Cycling returning-projectile zoner with varied damage and knockback",
   },
+  loki: {
+    id: "loki",
+    name: "Trickster Ball",
+    shortName: "TRCK",
+    color: "#047857", // Emerald Green
+    stroke: "#fbbf24", // Golden trim
+    radius: 30,
+    description: "Trickster Mage. Conjures 2 bouncing greyed illusions, fires fireballs, and swaps places with them to avoid attacks.",
+    emoji: "🧙",
+    visualTheme: "Asgardian Sorcerer / Trickster God",
+    colorPalette: "Emerald Green, Deep Jade, Asgardian Gold, Grey Illusion",
+    facialAge: "Ageless (handsome Asgardian prince with slick back hair, green cape, and gold horns)",
+    personality: "Deceptive, cunning, playful",
+    primaryWeapon: "Scepter of Illusions & Hellfire Magic",
+    signatureAbility: "Illusionary Conjuration & Teleportation Swap",
+    companion: "Two greyed illusionary clones",
+    specialVisualEffects: "Green smoke bursts, greyed doppelgangers, gold/emerald fireball spells",
+    animeStyle: "Elegant magical trickster / anti-hero anime character",
+    gameStyle: "Evasive spellcaster utilizing decoy illusions and fire projectiles to zone and outmaneuver targets",
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -712,7 +732,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb", "vampire", "ninja"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb", "vampire", "ninja", "loki"];
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 13;
 const MAX_RECORDING_TRAIL_POINTS = 9;
@@ -760,6 +780,7 @@ const BALANCE = {
   mazeChomper: { biteDamage: 4, biteCooldown: 1050, biteRange: 150, lungeSpeed: 700, lungeDuration: 360, biteKnockback: 360, powerCooldown: 7200, powerDuration: 3200, powerSpeed: 520, powerDamage: 7, powerKnockback: 620 },
   yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
   slipper: { cooldown: 3300, windup: 260, throwSpeed: 840, returnSpeed: 980, duration: 2600, damage: 5, knockback: 560, hitCooldown: 360, projectileRadius: 22, maxBounces: 3 },
+  loki: { cooldown: 3400, fireballCooldown: 1200, fireballSpeed: 950, fireballDamage: 6, illusionDuration: 6000, illusionFireballCooldown: 1400 },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -1523,6 +1544,8 @@ export default function App() {
       chessWaypointIndex: 0,
       // Secondary Skills State
       nextSecondaryAt: 0,
+      lokiIllusions: [],
+      lokiNextFireballAt: 0,
       knifeBladeState: "rotating",
       knifeBladeX: 0,
       knifeBladeY: 0,
@@ -7557,6 +7580,21 @@ export default function App() {
         scatterArmorParts(laserBall, laserBall.armorParts);
       }
 
+      // Random armor shatter on damage:
+      if (laserBall.health < (laserBall.prevHealth ?? laserBall.health)) {
+        if ((laserBall.collectedArmorCount || 0) > 0 && Math.random() < 0.35) {
+          laserBall.collectedArmorCount = 0;
+          scatterArmorParts(laserBall, laserBall.armorParts);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: laserBall.x, y: laserBall.y - laserBall.r - 20, vy: -55,
+            text: "ARMOR SHATTER!", color: "#facc15", life: 0.9, maxLife: 0.9
+          });
+          playSound("explosion", 0.7, 90);
+        }
+      }
+      laserBall.prevHealth = laserBall.health;
+
       const traceFanRay = (angle) => {
         const pad = 18;
         let x = laserBall.x + Math.cos(angle) * laserBall.r;
@@ -11129,6 +11167,270 @@ export default function App() {
       }
     };
 
+    const updateLoki = (loki, target, currentTime, stepDt) => {
+      const bal = game.balance.loki || BALANCE.loki;
+
+      // Initialize/filter illusions
+      loki.lokiIllusions = (loki.lokiIllusions || []).filter((illusion) => {
+        illusion.life -= stepDt * 1000;
+        if (illusion.life <= 0) {
+          spawnImpactBurst(illusion.x, illusion.y, illusion.angle || 0, ["#ffffff", "#94a3b8", "#475569"], 1.1);
+          return false;
+        }
+
+        // Orbitting drift algorithm around target
+        const desiredAngle = Math.atan2(target.y - illusion.y, target.x - illusion.x) + illusion.orbitSign * 0.8;
+        illusion.vx += Math.cos(desiredAngle) * 95 * stepDt;
+        illusion.vy += Math.sin(desiredAngle) * 95 * stepDt;
+        
+        const speed = Math.hypot(illusion.vx, illusion.vy);
+        const maxSpeed = Math.max(240, Math.hypot(loki.vx, loki.vy));
+        if (speed > maxSpeed) {
+          illusion.vx = (illusion.vx / speed) * maxSpeed;
+          illusion.vy = (illusion.vy / speed) * maxSpeed;
+        }
+
+        illusion.x += illusion.vx * stepDt;
+        illusion.y += illusion.vy * stepDt;
+        illusion.angle = Math.atan2(target.y - illusion.y, target.x - illusion.x);
+
+        let hitWall = false;
+        const pad = 18 + loki.r;
+        if (illusion.x < pad) { illusion.x = pad; illusion.vx = Math.abs(illusion.vx); hitWall = true; }
+        if (illusion.x > game.width - pad) { illusion.x = game.width - pad; illusion.vx = -Math.abs(illusion.vx); hitWall = true; }
+        if (illusion.y < pad) { illusion.y = pad; illusion.vy = Math.abs(illusion.vy); hitWall = true; }
+        if (illusion.y > game.height - pad) { illusion.y = game.height - pad; illusion.vy = -Math.abs(illusion.vy); hitWall = true; }
+        if (hitWall) {
+          spawnSparks(illusion.x, illusion.y, "#94a3b8", 6);
+          playSound("wallBounce", 0.42, 130);
+        }
+
+        // Bouncing off all other active balls
+        game.balls.forEach((otherBall) => {
+          if (otherBall.shattered) return;
+          const dist = Math.hypot(illusion.x - otherBall.x, illusion.y - otherBall.y);
+          const minDist = loki.r + otherBall.r;
+          if (dist < minDist && dist > 0) {
+            const nx = (illusion.x - otherBall.x) / dist;
+            const ny = (illusion.y - otherBall.y) / dist;
+
+            // Push illusion out of penetration
+            const overlap = minDist - dist;
+            illusion.x += nx * overlap * 0.6;
+            illusion.y += ny * overlap * 0.6;
+
+            // Elastic velocity bounce
+            const kx = illusion.vx - otherBall.vx;
+            const ky = illusion.vy - otherBall.vy;
+            const relVelNormal = kx * nx + ky * ny;
+            if (relVelNormal < 0) {
+              const impulse = relVelNormal * 1.3;
+              illusion.vx -= nx * impulse;
+              illusion.vy -= ny * impulse;
+            }
+
+            // Deal collision damage to enemy
+            if (otherBall.side !== loki.side && currentTime >= (illusion.nextHitAt || 0)) {
+              const damage = 2;
+              applyDamage(otherBall, damage, `${loki.id}-illusion-hit-${game.simTime}`, game.simTime, 80);
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: otherBall.x + (Math.random() - 0.5) * 16, y: otherBall.y - otherBall.r - 8, vy: -52,
+                text: `-${damage}`, color: "#94a3b8", life: 0.75, maxLife: 0.75
+              });
+              const stats = loki.side === "left" ? game.stats.left : game.stats.right;
+              stats.damageDealt += damage;
+              stats.hitsLanded++;
+              illusion.nextHitAt = currentTime + 600;
+            }
+
+            spawnSparks(illusion.x, illusion.y, "#cbd5e1", 5);
+            playSound("wallBounce", 0.48, 140);
+          }
+        });
+
+        // Illusion shoots a fake fireball (0 dmg)
+        if (currentTime >= (illusion.nextFireballAt || 0)) {
+          const angle = Math.atan2(target.y - illusion.y, target.x - illusion.x) + (Math.random() - 0.5) * 0.15;
+          game.bullets.push({
+            ownerId: loki.id,
+            targetSide: target.side,
+            kind: "lokiIllusionFireball",
+            x: illusion.x + Math.cos(angle) * (loki.r + 12),
+            y: illusion.y + Math.sin(angle) * (loki.r + 12),
+            vx: Math.cos(angle) * bal.fireballSpeed,
+            vy: Math.sin(angle) * bal.fireballSpeed,
+            r: 8,
+            damage: 0,
+            life: 3.5
+          });
+          illusion.nextFireballAt = currentTime + bal.illusionFireballCooldown;
+          spawnSparks(illusion.x, illusion.y, "#94a3b8", 8);
+          playSound("webShoot", 0.72, 100);
+        }
+
+        return true;
+      });
+
+      // Loki shoots a real fireball
+      if (currentTime >= (loki.lokiNextFireballAt || 0)) {
+        const angle = Math.atan2(target.y - loki.y, target.x - loki.x);
+        game.bullets.push({
+          ownerId: loki.id,
+          targetSide: target.side,
+          kind: "lokiFireball",
+          x: loki.x + Math.cos(angle) * (loki.r + 12),
+          y: loki.y + Math.sin(angle) * (loki.r + 12),
+          vx: Math.cos(angle) * bal.fireballSpeed,
+          vy: Math.sin(angle) * bal.fireballSpeed,
+          r: 9,
+          damage: bal.fireballDamage,
+          life: 3.5
+        });
+        loki.lokiNextFireballAt = currentTime + bal.fireballCooldown;
+        spawnSparks(loki.x, loki.y, "#10b981", 10);
+        playSound("webShoot", 0.88, 120);
+      }
+
+      // Smart Auto-Swap / Evasion check:
+      if (loki.lokiIllusions.length > 0 && currentTime >= (loki.skillLockedUntil || 0)) {
+        let shouldDodge = false;
+        
+        // 1. Check for incoming hostile bullets
+        const incomingBullet = (game.bullets || []).find((bullet) => {
+          if (bullet.damage <= 0) return false;
+          if (bullet.ownerId === loki.id) return false;
+          if (bullet.targetSide && bullet.targetSide !== loki.side) return false;
+
+          const dist = Math.hypot(bullet.x - loki.x, bullet.y - loki.y);
+          const hitThreshold = loki.r + bullet.r + 55;
+          if (dist > hitThreshold) return false;
+
+          const dx = loki.x - bullet.x;
+          const dy = loki.y - bullet.y;
+          const bulletSpeed = Math.hypot(bullet.vx, bullet.vy);
+          if (bulletSpeed <= 0) return false;
+
+          const dot = (bullet.vx * dx + bullet.vy * dy) / (bulletSpeed * dist);
+          return dot > 0.65;
+        });
+
+        if (incomingBullet) {
+          shouldDodge = true;
+        } else {
+          // 2. Check if opponent is lunging/charging towards us
+          const opponent = game.balls.find((b) => b.side !== loki.side);
+          if (opponent && !opponent.shattered) {
+            const distOpp = Math.hypot(opponent.x - loki.x, opponent.y - loki.y);
+            const oppSpeed = Math.hypot(opponent.vx, opponent.vy);
+            if (distOpp < loki.r + opponent.r + 75 && oppSpeed > 550) {
+              const dx = loki.x - opponent.x;
+              const dy = loki.y - opponent.y;
+              const dot = (opponent.vx * dx + opponent.vy * dy) / (oppSpeed * distOpp);
+              if (dot > 0.72) {
+                shouldDodge = true;
+              }
+            }
+          }
+        }
+
+        if (shouldDodge) {
+          const illusion = loki.lokiIllusions[0];
+
+          const oldLokiX = loki.x;
+          const oldLokiY = loki.y;
+          const oldLokiVx = loki.vx;
+          const oldLokiVy = loki.vy;
+
+          loki.x = illusion.x;
+          loki.y = illusion.y;
+          loki.vx = illusion.vx;
+          loki.vy = illusion.vy;
+
+          illusion.x = oldLokiX;
+          illusion.y = oldLokiY;
+          illusion.vx = oldLokiVx;
+          illusion.vy = oldLokiVy;
+
+          spawnImpactBurst(oldLokiX, oldLokiY, Math.random() * Math.PI * 2, ["#10b981", "#fbbf24", "#047857"], 1.55);
+          spawnImpactBurst(loki.x, loki.y, Math.random() * Math.PI * 2, ["#10b981", "#fbbf24", "#047857"], 1.55);
+          playSound("webShoot", 1.15, 180);
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: loki.x, y: loki.y - loki.r - 20, vy: -50,
+            text: "SMART DODGE SWAP!", color: "#34d399", life: 0.9, maxLife: 0.9
+          });
+
+          loki.skillLockedUntil = currentTime + bal.cooldown;
+        }
+      }
+
+      // Deception trigger
+      if (canStartSkillConnection(loki, target, game.balls, currentTime)) {
+        if (loki.lokiIllusions.length > 0) {
+          // Switch places
+          const illusion = loki.lokiIllusions[0];
+
+          const oldLokiX = loki.x;
+          const oldLokiY = loki.y;
+          const oldLokiVx = loki.vx;
+          const oldLokiVy = loki.vy;
+
+          loki.x = illusion.x;
+          loki.y = illusion.y;
+          loki.vx = illusion.vx;
+          loki.vy = illusion.vy;
+
+          illusion.x = oldLokiX;
+          illusion.y = oldLokiY;
+          illusion.vx = oldLokiVx;
+          illusion.vy = oldLokiVy;
+
+          spawnImpactBurst(oldLokiX, oldLokiY, Math.random() * Math.PI * 2, ["#10b981", "#fbbf24", "#047857"], 1.55);
+          spawnImpactBurst(loki.x, loki.y, Math.random() * Math.PI * 2, ["#10b981", "#fbbf24", "#047857"], 1.55);
+          playSound("webShoot", 1.15, 180);
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: loki.x, y: loki.y - loki.r - 20, vy: -50,
+            text: "TRICKSTER SWAP!", color: "#10b981", life: 0.85, maxLife: 0.85
+          });
+
+          loki.skillLockedUntil = currentTime + bal.cooldown;
+        } else {
+          // Conjure 2 illusions
+          const angle = Math.atan2(target.y - loki.y, target.x - loki.x);
+          const baseSpeed = Math.max(220, Math.hypot(loki.vx, loki.vy));
+
+          loki.lokiIllusions = [-1, 1].map((sign) => {
+            const spawnAngle = angle + sign * 1.2;
+            return {
+              x: loki.x + Math.cos(spawnAngle) * 60,
+              y: loki.y + Math.sin(spawnAngle) * 60,
+              vx: Math.cos(spawnAngle) * baseSpeed,
+              vy: Math.sin(spawnAngle) * baseSpeed,
+              orbitSign: sign,
+              life: bal.illusionDuration,
+              nextFireballAt: currentTime + 500 + Math.random() * 500,
+              angle: spawnAngle
+            };
+          });
+
+          spawnImpactBurst(loki.x, loki.y, angle, ["#10b981", "#cbd5e1", "#047857"], 1.75);
+          playSound("webShoot", 1.1, 150);
+
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: loki.x, y: loki.y - loki.r - 20, vy: -50,
+            text: "MIRAGE COMPANIONS!", color: "#fbbf24", life: 0.85, maxLife: 0.85
+          });
+
+          loki.skillLockedUntil = currentTime + 500; // brief lock before swap becomes available
+        }
+      }
+    };
+
     const updateSpore = (sporeBall, target, currentTime) => {
       const bal = game.balance;
       const sporeBal = bal.spore || BALANCE.spore;
@@ -11811,6 +12113,10 @@ export default function App() {
             if (bullet.kind === "ninjaShuriken") playSound("wallBounce", 0.78, 180);
           }
         } else if (bullet.x < 18 || bullet.x > game.width - 18 || bullet.y < 18 || bullet.y > game.height - 18) {
+          if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
+            spawnSparks(bullet.x, bullet.y, bullet.kind === "lokiFireball" ? "#fbbf24" : "#94a3b8", 12);
+            playSound("explosion", 0.55, 70);
+          }
           return false;
         }
 
@@ -11891,6 +12197,47 @@ export default function App() {
           if (isChessCrownActive(target)) return false;
           if (isBomberSelfDestructInvulnerable(target)) return false;
           if (isWreckerJumpInvulnerable(target)) return false;
+
+          // Loki Illusion Fireball hit
+          if (bullet.kind === "lokiIllusionFireball") {
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x + (Math.random() - 0.5) * 20, y: target.y - target.r - 5, vy: -60,
+              text: "DECEPTION!", color: "#94a3b8", life: 0.8, maxLife: 0.8
+            });
+            spawnSparks(bullet.x, bullet.y, "#94a3b8", 12);
+            spawnImpactBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx), ["#ffffff", "#94a3b8", "#475569"], 1.15);
+            playSound("shieldBlock", 0.65, 80);
+            return false; // consume bullet
+          }
+
+          // Loki Real Fireball hit
+          if (bullet.kind === "lokiFireball") {
+            const damage = bullet.damage || 4;
+            if (target.type === "ninja") {
+              const healthBefore = target.health;
+              applyDamage(target, damage, `${bullet.ownerId}-loki-fireball-${game.simTime}`, game.simTime, 80);
+              if (target.health === healthBefore) return false;
+            } else {
+              target.health = clamp(target.health - damage, 0, MAX_HEALTH);
+            }
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x + (Math.random() - 0.5) * 20, y: target.y - target.r - 5, vy: -60,
+              text: `-${damage}`, color: "#fbbf24", life: 0.8, maxLife: 0.8
+            });
+            
+            const stats = bullet.ownerId?.startsWith("left") ? game.stats.left : bullet.ownerId?.startsWith("right") ? game.stats.right : null;
+            if (stats) {
+              stats.damageDealt += damage;
+              stats.hitsLanded++;
+            }
+            
+            spawnSparks(bullet.x, bullet.y, "#fbbf24", 16);
+            spawnImpactBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx), ["#ffffff", "#fde68a", "#fbbf24", "#d97706"], 1.45);
+            playSound("explosion", 0.8, 100);
+            return false; // consume bullet
+          }
           if (target.type === "ninja") {
             const healthBefore = target.health;
             applyDamage(target, bullet.damage, `${bullet.ownerId || "projectile"}-${bullet.kind || "bullet"}-${game.simTime}`, game.simTime, 80);
@@ -12139,6 +12486,104 @@ export default function App() {
         ctx.fillStyle = "#d1d5db"; ctx.fillRect(-13, -3, 5, 6);
         ctx.restore();
       }
+      drawHealthInsideBall(ball);
+    };
+
+    const drawLokiBall = (ball, currentTime) => {
+      const config = BALL_TYPES.loki;
+      const target = game.balls.find(b => b.side !== ball.side && b.type !== "cueBall");
+
+      const drawSingleLokiEntity = (x, y, angle, isReal) => {
+        const r = ball.r;
+        const facing = target ? Math.atan2(target.y - y, target.x - x) : (angle || 0);
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(facing);
+
+        // 1. Draw Cape (trails behind: extends towards negative X-axis)
+        ctx.save();
+        ctx.fillStyle = isReal ? "#065f46" : "#475569"; // Emerald green vs Slate grey
+        ctx.strokeStyle = isReal ? "#047857" : "#334155";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.5, -r * 0.7);
+        ctx.bezierCurveTo(-r * 1.6, -r * 1.1, -r * 1.6, r * 1.1, -r * 0.5, r * 0.7);
+        ctx.lineTo(-r * 0.8, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. Draw Body
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        const bodyGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.25, 2, 0, 0, r);
+        if (isReal) {
+          bodyGrad.addColorStop(0, "#a7f3d0"); // Pale emerald
+          bodyGrad.addColorStop(0.48, config.color); // Emerald Green
+          bodyGrad.addColorStop(1, "#064e3b"); // Deep dark green
+        } else {
+          bodyGrad.addColorStop(0, "#e2e8f0");
+          bodyGrad.addColorStop(0.48, "#94a3b8"); // Grey
+          bodyGrad.addColorStop(1, "#334155"); // Dark grey
+        }
+        ctx.fillStyle = bodyGrad;
+        ctx.fill();
+        ctx.strokeStyle = isReal ? config.stroke : "#475569";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // 3. Draw Gold Horns (extends forward/outward from front top/bottom)
+        ctx.save();
+        ctx.fillStyle = isReal ? "#f59e0b" : "#94a3b8"; // Gold vs Silver
+        ctx.strokeStyle = isReal ? "#d97706" : "#475569";
+        ctx.lineWidth = 2;
+
+        // Top Horn
+        ctx.beginPath();
+        ctx.moveTo(r * 0.5, -r * 0.5);
+        ctx.bezierCurveTo(r * 1.2, -r * 1.1, r * 1.5, -r * 0.4, r * 0.8, -r * 0.25);
+        ctx.bezierCurveTo(r * 1.1, -r * 0.35, r * 0.9, -r * 0.7, r * 0.5, -r * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Bottom Horn
+        ctx.beginPath();
+        ctx.moveTo(r * 0.5, r * 0.5);
+        ctx.bezierCurveTo(r * 1.2, r * 1.1, r * 1.5, r * 0.4, r * 0.8, r * 0.25);
+        ctx.bezierCurveTo(r * 1.1, r * 0.35, r * 0.9, r * 0.7, r * 0.5, r * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore();
+
+        // 4. Eyes (Glow green for real, faint yellow/white for illusion)
+        ctx.fillStyle = isReal ? "#34d399" : "#cbd5e1";
+        ctx.shadowColor = isReal ? "#34d399" : "transparent";
+        ctx.shadowBlur = isReal ? 8 : 0;
+        ctx.beginPath();
+        ctx.ellipse(r * 0.48, -r * 0.24, r * 0.12, r * 0.06, 0.2, 0, Math.PI * 2);
+        ctx.ellipse(r * 0.48, r * 0.24, r * 0.12, r * 0.06, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+      };
+
+      // Draw real Loki
+      drawSingleLokiEntity(ball.x, ball.y, ball.angle, true);
+
+      // Draw active illusions (greyed out and semi-transparent)
+      (ball.lokiIllusions || []).forEach((illusion) => {
+        ctx.save();
+        ctx.globalAlpha = 0.62 * clamp(illusion.life / (game.balance.loki?.illusionDuration || 6000), 0, 1);
+        drawSingleLokiEntity(illusion.x, illusion.y, illusion.angle, false);
+        ctx.restore();
+      });
+
       drawHealthInsideBall(ball);
     };
 
@@ -17751,6 +18196,7 @@ export default function App() {
       else if (ball.type === "mazeChomper") drawMazeChomperBall(ball);
       else if (ball.type === "yoYo") drawYoYoBall(ball);
       else if (ball.type === "slipper") drawSlipperBall(ball);
+      else if (ball.type === "loki") drawLokiBall(ball, currentTime);
       else if (ball.type === "cueBall") drawCueBall(ball);
 
       if (ball.chaosDraggedUntil && game.simTime < ball.chaosDraggedUntil) {
@@ -18093,6 +18539,67 @@ export default function App() {
           coreGrad.addColorStop(1, "#f97316");
           ctx.fillStyle = coreGrad; ctx.fill();
           ctx.strokeStyle = "#fef3c7"; ctx.lineWidth = 2.5; ctx.stroke();
+        } else if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
+          const isReal = bullet.kind === "lokiFireball";
+          ctx.shadowColor = isReal ? "#10b981" : "#94a3b8"; // Green for real, grey for illusion
+          ctx.shadowBlur = 18;
+          const pulse = 0.8 + Math.sin(game.simTime * 0.02) * 0.2;
+          const speedAngle = Math.atan2(bullet.vy, bullet.vx);
+          const tailLength = 26 + pulse * 10;
+          const tailWidth = bullet.r * (1.4 + pulse * 0.2);
+          const tailGrad = ctx.createLinearGradient(
+            bullet.x - Math.cos(speedAngle) * tailLength,
+            bullet.y - Math.sin(speedAngle) * tailLength,
+            bullet.x,
+            bullet.y
+          );
+          
+          if (isReal) {
+            tailGrad.addColorStop(0, "rgba(4, 120, 87, 0)");
+            tailGrad.addColorStop(0.45, "rgba(16, 185, 129, 0.35)");
+            tailGrad.addColorStop(1, "rgba(253, 224, 71, 0.75)"); // Gold core
+          } else {
+            tailGrad.addColorStop(0, "rgba(71, 85, 105, 0)");
+            tailGrad.addColorStop(0.45, "rgba(148, 163, 184, 0.25)");
+            tailGrad.addColorStop(1, "rgba(241, 245, 249, 0.45)");
+          }
+          
+          ctx.fillStyle = tailGrad;
+          ctx.beginPath();
+          ctx.moveTo(bullet.x + Math.cos(speedAngle) * bullet.r, bullet.y + Math.sin(speedAngle) * bullet.r);
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength - Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength + Math.cos(speedAngle) * tailWidth
+          );
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength + Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength - Math.cos(speedAngle) * tailWidth
+          );
+          ctx.closePath();
+          ctx.fill();
+          
+          ctx.beginPath(); 
+          ctx.arc(bullet.x, bullet.y, bullet.r + 7 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = isReal ? "rgba(16, 185, 129, 0.24)" : "rgba(148, 163, 184, 0.15)"; 
+          ctx.fill();
+          
+          ctx.beginPath(); 
+          ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+          const coreGrad = ctx.createRadialGradient(bullet.x - bullet.r * 0.35, bullet.y - bullet.r * 0.35, 1, bullet.x, bullet.y, bullet.r);
+          if (isReal) {
+            coreGrad.addColorStop(0, "#ffffff");
+            coreGrad.addColorStop(0.35, "#fbbf24"); // Gold
+            coreGrad.addColorStop(1, "#059669"); // Emerald
+          } else {
+            coreGrad.addColorStop(0, "#e2e8f0");
+            coreGrad.addColorStop(0.5, "#94a3b8");
+            coreGrad.addColorStop(1, "#475569");
+          }
+          ctx.fillStyle = coreGrad; 
+          ctx.fill();
+          ctx.strokeStyle = isReal ? "#fde047" : "#cbd5e1"; 
+          ctx.lineWidth = 2.5; 
+          ctx.stroke();
         } else if (bullet.kind === "thrownGun") {
           ctx.globalAlpha = Math.max(0, Math.min(1, bullet.life / bullet.maxLife));
           ctx.translate(bullet.x, bullet.y);
@@ -20057,6 +20564,7 @@ export default function App() {
                   if (ball.type === "constellation") updateConstellation(ball, game.simTime);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
+                  if (ball.type === "loki") updateLoki(ball, target, game.simTime, stepDt);
                 }
             }
           });
@@ -20293,6 +20801,16 @@ export default function App() {
               {renderSlider("Substitution Cooldown", "ninja", "substitutionCooldown", 2000, 12000, 100, "ms")}
               {renderSlider("Counter Damage", "ninja", "counterDamage", 1, 15, 1)}
               {renderSlider("Clone Rush Final", "ninja", "rushFinalDamage", 3, 20, 1)}
+            </>
+          )}
+          {type === "loki" && (
+            <>
+              {renderSlider("Skill Cooldown", "loki", "cooldown", 1000, 10000, 100, "ms")}
+              {renderSlider("Fireball Cooldown", "loki", "fireballCooldown", 500, 5000, 50, "ms")}
+              {renderSlider("Fireball Damage", "loki", "fireballDamage", 1, 15, 1)}
+              {renderSlider("Fireball Speed", "loki", "fireballSpeed", 300, 1200, 20, "px/s")}
+              {renderSlider("Illusion Duration", "loki", "illusionDuration", 2000, 12000, 250, "ms")}
+              {renderSlider("Illusion Fireball Cooldown", "loki", "illusionFireballCooldown", 500, 6000, 100, "ms")}
             </>
           )}
           {type === "vampire" && (
