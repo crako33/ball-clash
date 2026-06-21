@@ -5063,12 +5063,22 @@ export default function App() {
         }
         if ((ball.ninjaFloorSlamUntil || 0) > game.simTime && sideHit === "bottom") {
           ball.ninjaFloorSlamUntil = 0;
+          const sourceId = ball.ninjaFloorSlamSourceId || "ninja";
+          applyDamage(ball, 6, `${sourceId}-ninja-floor-slam`, game.simTime, 500);
+          
+          const sourceBall = game.balls.find(b => b.id === sourceId);
+          const ownerStats = sourceBall?.side === "left" ? game.stats.left : sourceBall?.side === "right" ? game.stats.right : null;
+          if (ownerStats) {
+            ownerStats.damageDealt += 6;
+            ownerStats.hitsLanded++;
+          }
+          
           spawnSparks(ball.x, ball.y, "#fb923c", 36);
           spawnDust(ball.x, ball.y, 24);
           spawnImpactBurst(ball.x, ball.y, Math.PI / 2, ["#ffffff", "#fb923c", "#111827"], 2.1);
           game.screenShake = Math.max(game.screenShake || 0, 24);
           playSound("explosion", 1.12, 120);
-          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 18, vy: -54, text: "FLOOR SLAM!", color: "#fed7aa", life: 0.72, maxLife: 0.72 });
+          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 18, vy: -54, text: "FLOOR SLAM! -6 dmg", color: "#fed7aa", life: 0.72, maxLife: 0.72 });
         }
         if (ball.chaosControlledUntil && game.simTime <= ball.chaosControlledUntil + 250 && !ball.chaosSlamDone) {
           const axisMatched = (ball.chaosControlAxis === "vertical" && (sideHit === "top" || sideHit === "bottom")) ||
@@ -5854,6 +5864,27 @@ export default function App() {
         clone.x += clone.vx * stepDt;
         clone.y += clone.vy * stepDt;
         clone.angle = Math.atan2(target.y - clone.y, target.x - clone.x);
+        
+        // Active clone collision check with opponent target
+        const d = Math.hypot(clone.x - target.x, clone.y - target.y);
+        if (d < ninja.r + target.r && target.health > 0) {
+          applyDamage(target, bal.rushCloneDamage || 2, `${ninja.id}-clone-touch-${clone.orbitSign}`, currentTime, 250);
+          
+          const bounceAngle = Math.atan2(target.y - clone.y, target.x - clone.x);
+          target.vx += Math.cos(bounceAngle) * 280;
+          target.vy += Math.sin(bounceAngle) * 280;
+          
+          spawnImpactBurst(clone.x, clone.y, bounceAngle, ["#ffffff", "#cbd5e1", "#475569"], 1.2);
+          playSound("webShoot", 0.85, 120);
+          
+          const stats = ninja.side === "left" ? game.stats.left : game.stats.right;
+          if (stats) {
+            stats.damageDealt += bal.rushCloneDamage || 2;
+            stats.hitsLanded++;
+          }
+          return false; // Puff/pop the clone on contact!
+        }
+        
         const pad = 18 + ninja.r;
         if (clone.x < pad) { clone.x = pad; clone.vx = Math.abs(clone.vx); }
         if (clone.x > game.width - pad) { clone.x = game.width - pad; clone.vx = -Math.abs(clone.vx); }
@@ -5906,6 +5937,7 @@ export default function App() {
             rushTarget.vy = 1180;
             rushTarget.skillLockedUntil = Math.max(rushTarget.skillLockedUntil || 0, currentTime + 1200);
             rushTarget.ninjaFloorSlamUntil = currentTime + 1500;
+            rushTarget.ninjaFloorSlamSourceId = ninja.id;
           }
           game.screenShake = Math.max(game.screenShake || 0, 24);
           playSound("hammerHit", 1.08, 160);
@@ -5959,17 +5991,21 @@ export default function App() {
       }
 
       if (currentTime >= (ninja.ninjaNextShurikenAt || 0)) {
-        const angle = Math.atan2(target.y - ninja.y, target.x - ninja.x) + (Math.random() < 0.5 ? -0.42 : 0.42);
-        game.bullets.push({
-          ownerId: ninja.id, targetSide: target.side, kind: "ninjaShuriken",
-          x: ninja.x + Math.cos(angle) * (ninja.r + 10), y: ninja.y + Math.sin(angle) * (ninja.r + 10),
-          vx: Math.cos(angle) * (bal.shurikenSpeed || 620), vy: Math.sin(angle) * (bal.shurikenSpeed || 620),
-          r: 8, damage: bal.shurikenDamage || 3, life: 4.5, angle: 0, spinSpeed: 22,
-          bouncesLeft: 1, homingAfterBounce: false
+        const baseAngle = Math.atan2(target.y - ninja.y, target.x - ninja.x);
+        // Throw 3 shurikens in a spread fan: center straight, left (+0.35 rad), right (-0.35 rad)
+        const angles = [baseAngle, baseAngle - 0.35, baseAngle + 0.35];
+        angles.forEach((angle) => {
+          game.bullets.push({
+            ownerId: ninja.id, targetSide: target.side, kind: "ninjaShuriken",
+            x: ninja.x + Math.cos(angle) * (ninja.r + 12), y: ninja.y + Math.sin(angle) * (ninja.r + 12),
+            vx: Math.cos(angle) * (bal.shurikenSpeed || 620), vy: Math.sin(angle) * (bal.shurikenSpeed || 620),
+            r: 8, damage: bal.shurikenDamage || 3, life: 4.5, angle: 0, spinSpeed: 22,
+            bouncesLeft: 1, homingAfterBounce: false
+          });
         });
         ninja.ninjaShurikenFlashUntil = currentTime + 180;
         ninja.ninjaNextShurikenAt = currentTime + (bal.shurikenCooldown || 2400);
-        spawnSparks(ninja.x, ninja.y, "#cbd5e1", 9);
+        spawnSparks(ninja.x, ninja.y, "#cbd5e1", 16);
         playSound("shieldThrow", 0.78, 160);
       }
     };
@@ -9415,7 +9451,14 @@ export default function App() {
         const nearRange = hammerBall.r + target.r + 170;
         const proximity = clamp(1 - Math.max(0, opponentDistance - hammerBall.r - target.r) / 170, 0, 1);
         const swingMultiplier = opponentDistance <= nearRange ? 1 + proximity * 5 : 1;
-        hammerBall.hammerAngle = (hammerBall.hammerAngle || 0) + bal.hammer.spinSpeed * swingMultiplier;
+        
+        // Smoothly accelerate/decelerate spin speed instead of instant jumps
+        const targetSpinSpeed = bal.hammer.spinSpeed * swingMultiplier;
+        hammerBall.hammerCurrentSpinSpeed = hammerBall.hammerCurrentSpinSpeed || bal.hammer.spinSpeed;
+        hammerBall.hammerCurrentSpinSpeed += (targetSpinSpeed - hammerBall.hammerCurrentSpinSpeed) * 0.12;
+        
+        hammerBall.hammerAngle = (hammerBall.hammerAngle || 0) + hammerBall.hammerCurrentSpinSpeed;
+        hammerBall.hammerSpinAccum = (hammerBall.hammerSpinAccum || 0) + hammerBall.hammerCurrentSpinSpeed;
         
         if (!hammerBall.lastSpinSoundAt || currentTime - hammerBall.lastSpinSoundAt >= 180) {
           hammerBall.lastSpinSoundAt = currentTime;
@@ -9456,9 +9499,10 @@ export default function App() {
         }
 
         // 5 rotations = 10 * Math.PI radians
-        if (hammerBall.hammerAngle >= 10 * Math.PI && canStartSkillConnection(hammerBall, target, game.balls, currentTime)) {
+        if (hammerBall.hammerSpinAccum >= 10 * Math.PI && canStartSkillConnection(hammerBall, target, game.balls, currentTime)) {
           hammerBall.hammerState = "charging";
           hammerBall.hammerStateUntil = currentTime + bal.hammer.chargeDuration;
+          hammerBall.hammerSpinAccum = 0;
           hammerBall.vx = 0;
           hammerBall.vy = 0;
           game.floatingTexts = game.floatingTexts || [];
@@ -9476,7 +9520,12 @@ export default function App() {
       } else if (hammerBall.hammerState === "charging") {
         hammerBall.vx = 0;
         hammerBall.vy = 0;
-        hammerBall.hammerAngle = Math.atan2(target.y - hammerBall.y, target.x - hammerBall.x);
+        const targetAngle = Math.atan2(target.y - hammerBall.y, target.x - hammerBall.x);
+        
+        // Smoothly rotate towards target instead of snapping
+        let diff = targetAngle - (hammerBall.hammerAngle || 0);
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        hammerBall.hammerAngle = (hammerBall.hammerAngle || 0) + diff * 0.15;
 
         // Charging sparks visual
         if (canSpawnParticle() && Math.random() < 0.25) {
@@ -9558,7 +9607,7 @@ export default function App() {
             }
             hammerBall.hammerState = "spinning";
             hammerBall.hammerStateUntil = 0;
-            hammerBall.hammerAngle = 0;
+            hammerBall.hammerSpinAccum = 0;
             
             game.screenShake = Math.max(game.screenShake, 28);
             spawnSparks(target.x, target.y, "#f59e0b", 42);
@@ -9573,7 +9622,7 @@ export default function App() {
 
         if (currentTime >= hammerBall.hammerStateUntil) {
           hammerBall.hammerState = "spinning";
-          hammerBall.hammerAngle = 0;
+          hammerBall.hammerSpinAccum = 0;
         }
       }
     };
@@ -14639,6 +14688,35 @@ export default function App() {
       // Draw hammer handle and head
       ctx.save();
       ctx.rotate(ball.hammerAngle || 0);
+      
+      // Motion blur trail behind the hammer head
+      if (ball.hammerState === "spinning" || ball.hammerState === "launching") {
+        ctx.save();
+        const spinSpeed = ball.hammerCurrentSpinSpeed || 0.02;
+        const trailLength = Math.max(0.2, Math.min(1.8, spinSpeed * 18)); // Scale with spin speed
+        const headRadius = ball.r + 50;
+        
+        // Gradient trail
+        const trailGrad = ctx.createRadialGradient(0, 0, headRadius - 18, 0, 0, headRadius + 18);
+        trailGrad.addColorStop(0, "rgba(251, 191, 36, 0)");
+        trailGrad.addColorStop(0.5, ball.hammerState === "launching" ? "rgba(249, 115, 22, 0.28)" : "rgba(251, 191, 36, 0.22)");
+        trailGrad.addColorStop(1, "rgba(251, 191, 36, 0)");
+        
+        ctx.strokeStyle = trailGrad;
+        ctx.lineWidth = 36;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(0, 0, headRadius, -trailLength, 0, false);
+        ctx.stroke();
+        
+        ctx.strokeStyle = ball.hammerState === "launching" ? "rgba(254, 215, 170, 0.45)" : "rgba(254, 240, 138, 0.35)";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, headRadius, -trailLength * 0.7, 0, false);
+        ctx.stroke();
+        
+        ctx.restore();
+      }
       
       // Thunder hammer handle
       ctx.strokeStyle = "#7c2d12";
