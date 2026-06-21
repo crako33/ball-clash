@@ -737,7 +737,7 @@ const BALANCE = {
   stringWeb: { stringDamage: 1, stringLifetime: 9000, maxStrings: 14, stringHitPadding: 10, trampolineCooldown: 1100, trampolineBoost: 1.8, trampolineMinSpeed: 480 },
   arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 6000, punchDamage: 1, punchRange: 55, punchCooldown: 600, punchKnockback: 330, secCooldown: 7000, secSlamDamage: 6 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
-  wrecker: { cooldown: 3200, chargeDuration: 850, swingDuration: 320, damage: 25, range: 160, lungeSpeed: 950, launchSpeed: 1200, wallBounces: 5, skillLockDuration: 1200, maxBounceSpeed: 350, leapDamage: 12, megaLeapDamage: 18, shockwaveRadius: 78, megaShockwaveRadius: 124, knockbackForce: 500, rageRequired: 6, megaRageRequired: 10, pushCooldown: 2600, pushRange: 210, pushForce: 950, pushDamage: 4, leapCooldown: 7200, leapDuration: 680, leapLeadTime: 0.38, landingRecoil: 240, recoverySpeed: 230, bounceBoost: 1.14, sizePerRage: 0.015, maxRageSizeScale: 1.16, megaSizeScale: 1.3 },
+  wrecker: { cooldown: 3200, chargeDuration: 1200, swingDuration: 320, damage: 25, range: 160, lungeSpeed: 950, launchSpeed: 1200, wallBounces: 5, skillLockDuration: 1200, maxBounceSpeed: 350, leapDamage: 12, megaLeapDamage: 18, shockwaveRadius: 78, megaShockwaveRadius: 124, knockbackForce: 500, rageRequired: 6, megaRageRequired: 10, pushCooldown: 2600, pushRange: 210, pushForce: 950, pushDamage: 4, leapCooldown: 7200, leapDuration: 680, leapLeadTime: 0.38, landingRecoil: 240, recoverySpeed: 230, bounceBoost: 1.14, sizePerRage: 0.015, maxRageSizeScale: 1.16, megaSizeScale: 1.3 },
   dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300, secCooldown: 5000, secDamage: 8, secDashForce: 650 },
   psychicer: { circleDamage: 1, circleRadius: 86, circlesPerDrop: 1, maxBounceHits: 5, cooldown: 5600, circleLife: 7000 },
   chaos: { circleRadius: 52, launchSpeed: 1080, slamDamage: 4, controlHold: 260, controlDuration: 1250, radiusBounce: 360, cooldown: 5200, circleLife: 7200, triggerCooldown: 900, trapCount: 3 },
@@ -5551,15 +5551,7 @@ export default function App() {
           return;
         }
 
-        // Steer slightly towards target during dash
-        const targetAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-        ball.vx += Math.cos(targetAngle) * 450 * stepDt;
-        ball.vy += Math.sin(targetAngle) * 450 * stepDt;
-        const speed = Math.hypot(ball.vx, ball.vy);
-        if (speed > 1250) {
-          ball.vx = (ball.vx / speed) * 1250;
-          ball.vy = (ball.vy / speed) * 1250;
-        }
+
 
         if (currentTime >= ball.wreckerStateUntil) {
           // Dash missed!
@@ -5721,7 +5713,7 @@ export default function App() {
         if (currentTime >= (ball.wreckerNextAttackAt || 0) && targetDistance <= 420 && canStartSkillConnection(ball, target, game.balls, currentTime)) {
           if (hasMaxRage) {
             ball.wreckerState = "rage_charging";
-            ball.wreckerStateUntil = currentTime + 1200; // 1.2s charge (longer charge duration)
+            ball.wreckerStateUntil = currentTime + 1800; // 1.8s charge (longer charge duration)
             ball.wreckerChargeStartedAt = currentTime;
             ball.wreckerSwingHit = false;
             
