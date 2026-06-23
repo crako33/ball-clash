@@ -24283,12 +24283,31 @@ export default function App() {
         <div className="space-y-2">
           {type === "knife" && (
             <>
-              {renderSlider("Knife Damage", "knife", "damage", 1, 30)}
-              {renderSlider("Hit Cooldown", "knife", "cooldown", 100, 1500, 10, "ms")}
-              {renderSlider("Blade Length", "knife", "bladeLength", 15, 100, 1, "px")}
-              {renderSlider("Rotation Speed", "knife", "spinSpeed", 0.02, 0.3, 0.01)}
-              {renderSlider("Sec: Throw Cooldown", "knife", "secCooldown", 1000, 8000, 100, "ms")}
-              {renderSlider("Sec: Throw Damage", "knife", "secDamage", 1, 20)}
+              {renderSlider("Saber Body-Hit Damage", "knife", "damage", 1, 30)}
+              {renderSlider("Saber Hit Cooldown", "knife", "cooldown", 100, 1500, 10, "ms")}
+              {renderSlider("Saber Length", "knife", "bladeLength", 15, 130, 1, "px")}
+              {renderSlider("Spin Speed", "knife", "spinSpeed", 0.01, 0.3, 0.01)}
+              {renderSlider("Near Enemy Spin Mult", "knife", "nearSpinMult", 1, 3, 0.05, "x")}
+              {renderSlider("Throw Cooldown", "knife", "secCooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Throw Damage", "knife", "secDamage", 1, 20)}
+            </>
+          )}
+          {type === "fireSword" && (
+            <>
+              {renderSlider("Sword Body-Hit Damage", "fireSword", "swingDamage", 1, 20)}
+              {renderSlider("Swing Cooldown", "fireSword", "swingCooldown", 100, 1500, 10, "ms")}
+              {renderSlider("Swing Duration", "fireSword", "swingDuration", 120, 900, 20, "ms")}
+              {renderSlider("Near Swing Duration", "fireSword", "nearSwingDuration", 80, 600, 10, "ms")}
+              {renderSlider("Sword Length", "fireSword", "bladeLength", 40, 150, 1, "px")}
+              {renderSlider("Swing Range", "fireSword", "swingRange", 60, 240, 5, "px")}
+              {renderSlider("Spin Speed", "fireSword", "spinSpeed", 1, 8, 0.1)}
+              {renderSlider("Near Spin Mult", "fireSword", "nearSpinMult", 1, 3, 0.05, "x")}
+              {renderSlider("Fire Circle Damage", "fireSword", "kaguraDamage", 1, 30)}
+              {renderSlider("Fire Circle Cooldown", "fireSword", "kaguraCooldown", 2000, 16000, 100, "ms")}
+              {renderSlider("Fire Circle Charge", "fireSword", "kaguraChargeDuration", 200, 2000, 50, "ms")}
+              {renderSlider("Fire Circle Duration", "fireSword", "kaguraDuration", 300, 2000, 50, "ms")}
+              {renderSlider("Fire Circle Radius", "fireSword", "kaguraRadius", 50, 220, 5, "px")}
+              {renderSlider("Fire Circle Knockback", "fireSword", "kaguraKnockback", 100, 1600, 20)}
             </>
           )}
           {type === "sorcerer" && (
@@ -24328,22 +24347,34 @@ export default function App() {
             <>
               {renderSlider("Clone Cooldown", "ninja", "cloneCooldown", 2000, 12000, 100, "ms")}
               {renderSlider("Clone Lifetime", "ninja", "cloneLife", 2000, 12000, 250, "ms")}
+              {renderSlider("Shuriken Cooldown", "ninja", "shurikenCooldown", 800, 6000, 100, "ms")}
               {renderSlider("Shuriken Damage", "ninja", "shurikenDamage", 1, 12, 1)}
               {renderSlider("Shuriken Speed", "ninja", "shurikenSpeed", 300, 1000, 20, "px/s")}
-              {renderSlider("Shuriken Cooldown", "ninja", "shurikenCooldown", 800, 6000, 100, "ms")}
               {renderSlider("Substitution Cooldown", "ninja", "substitutionCooldown", 2000, 12000, 100, "ms")}
+              {renderSlider("Substitution Threshold", "ninja", "substitutionThreshold", 1, 8, 1)}
               {renderSlider("Counter Damage", "ninja", "counterDamage", 1, 15, 1)}
+              {renderSlider("Counter Knockback", "ninja", "counterKnockback", 100, 1200, 20)}
+              {renderSlider("Clone Rush Required", "ninja", "rushRequired", 1, 6, 1)}
+              {renderSlider("Clone Rush Hit Damage", "ninja", "rushCloneDamage", 1, 10, 1)}
               {renderSlider("Clone Rush Final", "ninja", "rushFinalDamage", 3, 20, 1)}
             </>
           )}
           {type === "loki" && (
             <>
-              {renderSlider("Skill Cooldown", "loki", "cooldown", 1000, 10000, 100, "ms")}
+              {renderSlider("Illusion Cast Cooldown", "loki", "cooldown", 1000, 10000, 100, "ms")}
+              {renderSlider("Illusion Count", "loki", "illusionCount", 1, 6, 1)}
+              {renderSlider("Illusion Duration", "loki", "illusionDuration", 2000, 12000, 250, "ms")}
+              {renderSlider("Illusion Touch Damage", "loki", "illusionDamage", 1, 10, 1)}
+              {renderSlider("Illusion Knockback", "loki", "illusionKnockback", 50, 600, 10)}
               {renderSlider("Fireball Cooldown", "loki", "fireballCooldown", 500, 5000, 50, "ms")}
               {renderSlider("Fireball Damage", "loki", "fireballDamage", 1, 15, 1)}
               {renderSlider("Fireball Speed", "loki", "fireballSpeed", 300, 1200, 20, "px/s")}
-              {renderSlider("Illusion Duration", "loki", "illusionDuration", 2000, 12000, 250, "ms")}
+              {renderSlider("Fireball Bounces", "loki", "fireballBounces", 0, 5, 1)}
+              {renderSlider("Fireball Homing Turn", "loki", "fireballHomingTurn", 0, 6, 0.1)}
               {renderSlider("Illusion Fireball Cooldown", "loki", "illusionFireballCooldown", 500, 6000, 100, "ms")}
+              {renderSlider("Dodge Swap Cooldown", "loki", "dodgeCooldown", 500, 7000, 100, "ms")}
+              {renderSlider("Swap Strike Damage", "loki", "swapStrikeDamage", 1, 15, 1)}
+              {renderSlider("Swap Strike Knockback", "loki", "swapStrikeKnockback", 100, 1200, 20)}
             </>
           )}
           {type === "vampire" && (
@@ -24358,16 +24389,14 @@ export default function App() {
           )}
           {type === "laser" && (
             <>
-              {renderSlider("Tick Damage", "laser", "damagePerTick", 1, 15)}
-              {renderSlider("Tick Cooldown", "laser", "tickCooldown", 50, 500, 10, "ms")}
-              {renderSlider("Charge Duration", "laser", "chargeTime", 300, 2500, 50, "ms")}
-              {renderSlider("Fire Duration", "laser", "fireDuration", 300, 2000, 50, "ms")}
-              {renderSlider("Beam Width", "laser", "beamWidth", 6, 40, 2, "px")}
-              {renderSlider("Cooldown", "laser", "cooldown", 1000, 5000, 100, "ms")}
-              {renderSlider("Pulse Damage", "laser", "pulseDamage", 1, 40)}
-              {renderSlider("Pulse Speed", "laser", "pulseSpeed", 200, 1000, 20, "px/s")}
-              {renderSlider("Pulse Stun Duration", "laser", "pulseStunDuration", 200, 2500, 50, "ms")}
-
+              {renderSlider("Normal Laser Tick Damage", "laser", "damagePerTick", 1, 15)}
+              {renderSlider("Normal Laser Tick Rate", "laser", "tickCooldown", 50, 500, 10, "ms")}
+              {renderSlider("Armor Charge Time", "laser", "chargeTime", 300, 2500, 50, "ms")}
+              {renderSlider("Big Laser Fire Duration", "laser", "fireDuration", 300, 2000, 50, "ms")}
+              {renderSlider("Big Laser Width", "laser", "beamWidth", 6, 60, 2, "px")}
+              {renderSlider("Laser Cooldown", "laser", "cooldown", 1000, 6000, 100, "ms")}
+              {renderSlider("Laser Recoil Force", "laser", "recoilForce", 50, 700, 10)}
+              {renderSlider("Armor Plates Required", "laser", "armorRequired", 1, 5, 1)}
             </>
           )}
           {type === "shield" && (
@@ -24387,25 +24416,43 @@ export default function App() {
           {type === "spider" && (
             <>
               {renderSlider("Fang Damage", "spider", "fangDamage", 1, 20)}
-              {renderSlider("Web Speed", "spider", "webSpeed", 200, 1000, 20, "px/s")}
-              {renderSlider("Pull Speed", "spider", "pullSpeed", 200, 1000, 20, "px/s")}
-              {renderSlider("Bounce Speed", "spider", "bounceSpeed", 100, 600, 10, "px/s")}
+              {renderSlider("Web String Speed", "spider", "webSpeed", 200, 1200, 20, "px/s")}
+              {renderSlider("Web Pull Speed", "spider", "pullSpeed", 200, 1200, 20, "px/s")}
+              {renderSlider("Wall Throw Bounce Speed", "spider", "bounceSpeed", 100, 800, 10, "px/s")}
               {renderSlider("Pull Duration", "spider", "pullDuration", 300, 1800, 50, "ms")}
-              {renderSlider("Cooldown", "spider", "cooldown", 1000, 6000, 100, "ms")}
-              {renderSlider("Sec: Web Cooldown", "spider", "secCooldown", 1000, 10000, 100, "ms")}
-              {renderSlider("Sec: Web Radius", "spider", "secPoolRadius", 15, 80, 1, "px")}
-              {renderSlider("Sec: Web Damage", "spider", "secDamage", 1, 15)}
+              {renderSlider("Web String Cooldown", "spider", "cooldown", 1000, 7000, 100, "ms")}
+              {renderSlider("Web Splatter Cooldown", "spider", "secCooldown", 1000, 12000, 100, "ms")}
+              {renderSlider("Splatter Radius", "spider", "secPoolRadius", 15, 100, 1, "px")}
+              {renderSlider("Splatter Step Damage", "spider", "secDamage", 1, 15)}
+              {renderSlider("Trap Lifetime", "spider", "trapDuration", 1000, 12000, 250, "ms")}
+              {renderSlider("Trap Lock Duration", "spider", "trapLockDuration", 500, 5000, 100, "ms")}
+            </>
+          )}
+          {type === "blackSpider" && (
+            <>
+              {renderSlider("Slimy Tendril Cooldown", "blackSpider", "blackWebCooldown", 1000, 10000, 100, "ms")}
+              {renderSlider("Tendril Speed", "blackSpider", "blackWebSpeed", 300, 1400, 20, "px/s")}
+              {renderSlider("Tendril Range", "blackSpider", "blackWebRange", 120, 800, 10, "px")}
+              {renderSlider("Pull-In Duration", "blackSpider", "blackWebPullDuration", 200, 1600, 50, "ms")}
+              {renderSlider("Pull-In Speed", "blackSpider", "blackWebPullSpeed", 300, 1400, 20, "px/s")}
+              {renderSlider("Open Jaw Charge", "blackSpider", "venomBiteCharge", 80, 1000, 20, "ms")}
+              {renderSlider("Venom Bite Damage", "blackSpider", "venomBiteDamage", 1, 25)}
+              {renderSlider("Venom Bite Knockback", "blackSpider", "venomBiteKnockback", 100, 1600, 20)}
+              {renderSlider("Venom Bite Lock", "blackSpider", "venomBiteLock", 200, 2500, 50, "ms")}
+              {renderSlider("Goo Puddle Radius", "blackSpider", "livingGooRadius", 20, 120, 2, "px")}
+              {renderSlider("Goo Puddle Duration", "blackSpider", "livingGooDuration", 1000, 10000, 250, "ms")}
             </>
           )}
           {type === "bomber" && (
             <>
-              {renderSlider("Mine Damage", "bomber", "mineDamage", 1, 40)}
-              {renderSlider("Explosion Radius", "bomber", "mineRadius", 30, 150, 5, "px")}
+              {renderSlider("Stationary Mine Damage", "bomber", "mineDamage", 1, 40)}
+              {renderSlider("1 HP Self-Explosion Damage", "bomber", "selfDestructDamage", 10, 80)}
+              {renderSlider("Explosion Radius", "bomber", "mineRadius", 30, 180, 5, "px")}
               {renderSlider("Trigger Range", "bomber", "mineTriggerDist", 5, 40, 1, "px")}
               {renderSlider("Lay Cooldown", "bomber", "cooldown", 500, 4000, 50, "ms")}
               {renderSlider("Max Mines", "bomber", "maxMines", 1, 8, 1)}
               {renderSlider("Knockback Force", "bomber", "knockback", 5, 40, 1)}
-              {renderSlider("Sec: Homing Cooldown", "bomber", "secCooldown", 1000, 12000, 100, "ms")}
+              {renderSlider("Homing Bomb Cooldown", "bomber", "secCooldown", 1000, 12000, 100, "ms")}
             </>
           )}
 
@@ -24416,16 +24463,22 @@ export default function App() {
               {renderSlider("Speed Boost Force", "spore", "speedBoost", 1.1, 2.0, 0.05)}
               {renderSlider("Hydra Lifetime", "spore", "cactusLife", 3000, 12000, 500, "ms")}
               {renderSlider("Drop Cooldown", "spore", "cooldown", 1000, 8000, 100, "ms")}
+              {renderSlider("Spore Burst Count", "spore", "burstCount", 1, 10, 1)}
+              {renderSlider("Max Hydras", "spore", "maxHydras", 1, 14, 1)}
+              {renderSlider("Hydra Charges", "spore", "hydraCharges", 1, 8, 1)}
+              {renderSlider("Target Radius", "spore", "targetRadius", 10, 80, 1, "px")}
+              {renderSlider("Enemy Knockback", "spore", "enemyKnockback", 50, 700, 10)}
             </>
           )}
           {type === "hammer" && (
             <>
-              {renderSlider("Spin Damage", "hammer", "spinDamage", 1, 20)}
-              {renderSlider("Launch Damage", "hammer", "launchDamage", 1, 50)}
+              {renderSlider("Spin Swing Damage", "hammer", "spinDamage", 1, 20)}
+              {renderSlider("Charge Hit Damage", "hammer", "launchDamage", 1, 50)}
               {renderSlider("Spin Speed", "hammer", "spinSpeed", 0.05, 0.35, 0.01)}
               {renderSlider("Charge Duration", "hammer", "chargeDuration", 300, 2500, 50, "ms")}
-              {renderSlider("Launch Speed", "hammer", "launchSpeed", 300, 1500, 20, "px/s")}
-              {renderSlider("Launch Duration", "hammer", "launchDuration", 300, 2000, 50, "ms")}
+              {renderSlider("Charge Speed", "hammer", "launchSpeed", 300, 1800, 20, "px/s")}
+              {renderSlider("Charge Duration Window", "hammer", "launchDuration", 300, 2000, 50, "ms")}
+              {renderSlider("Hammer Skill Cooldown", "hammer", "cooldown", 500, 4000, 50, "ms")}
             </>
           )}
           {type === "stringWeb" && (
@@ -24454,6 +24507,19 @@ export default function App() {
               {renderSlider("Bullet Life", "gun", "bulletLife", 0.4, 4, 0.05, "s")}
               {renderSlider("Reload Dash Cooldown", "gun", "secCooldown", 1000, 8000, 100, "ms")}
               {renderSlider("Reload Dash Force", "gun", "secDashForce", 100, 800, 20, "px/s")}
+            </>
+          )}
+          {type === "batter" && (
+            <>
+              {renderSlider("Grand Slam Damage", "batter", "damage", 1, 30)}
+              {renderSlider("Swing Cooldown", "batter", "cooldown", 1000, 12000, 100, "ms")}
+              {renderSlider("Charge Time", "batter", "chargeDuration", 200, 1800, 20, "ms")}
+              {renderSlider("Swing Duration", "batter", "swingDuration", 100, 800, 20, "ms")}
+              {renderSlider("Hit Range", "batter", "range", 40, 180, 2, "px")}
+              {renderSlider("Lunge Speed", "batter", "lungeSpeed", 100, 1000, 20, "px/s")}
+              {renderSlider("Launch Speed", "batter", "launchSpeed", 300, 1800, 20, "px/s")}
+              {renderSlider("Wall Bounces", "batter", "wallBounces", 1, 14, 1)}
+              {renderSlider("Skill Lock Duration", "batter", "skillLockDuration", 500, 12000, 100, "ms")}
             </>
           )}
           {type === "chess" && (
@@ -24496,15 +24562,15 @@ export default function App() {
           )}
           {type === "chaos" && (
             <>
-              {renderSlider("Circle Radius", "chaos", "circleRadius", 25, 110, 5, "px")}
-              {renderSlider("Launch Speed", "chaos", "launchSpeed", 250, 1100, 20, "px/s")}
-              {renderSlider("Wall Slam Damage", "chaos", "slamDamage", 1, 20)}
-              {renderSlider("Control Hold", "chaos", "controlHold", 0, 800, 50, "ms")}
-              {renderSlider("Control Duration", "chaos", "controlDuration", 300, 2500, 50, "ms")}
-              {renderSlider("Radius Bounce", "chaos", "radiusBounce", 0, 400, 20)}
-              {renderSlider("Drop Cooldown", "chaos", "cooldown", 1000, 12000, 100, "ms")}
-              {renderSlider("Circle Lifetime", "chaos", "circleLife", 1000, 15000, 500, "ms")}
-              {renderSlider("Trigger Cooldown", "chaos", "triggerCooldown", 200, 3000, 100, "ms")}
+              {renderSlider("Warp Trap Radius", "chaos", "circleRadius", 25, 110, 5, "px")}
+              {renderSlider("Warp Slam Launch Speed", "chaos", "launchSpeed", 250, 1300, 20, "px/s")}
+              {renderSlider("Warp Slam Wall Damage", "chaos", "slamDamage", 1, 20)}
+              {renderSlider("Drag Hold", "chaos", "controlHold", 0, 800, 50, "ms")}
+              {renderSlider("Drag Duration", "chaos", "controlDuration", 300, 2500, 50, "ms")}
+              {renderSlider("Angled Wall Bounce Force", "chaos", "radiusBounce", 0, 500, 20)}
+              {renderSlider("Warp Slam Cooldown", "chaos", "cooldown", 1000, 12000, 100, "ms")}
+              {renderSlider("Trap Lifetime", "chaos", "circleLife", 1000, 15000, 500, "ms")}
+              {renderSlider("Trap Trigger Cooldown", "chaos", "triggerCooldown", 200, 3000, 100, "ms")}
               {renderSlider("Trap Count", "chaos", "trapCount", 1, 5, 1)}
             </>
           )}
@@ -24526,12 +24592,13 @@ export default function App() {
             <>
               {renderSlider("Cast Cooldown", "fisherman", "cooldown", 1800, 12000, 100, "ms")}
               {renderSlider("Hook Speed", "fisherman", "hookSpeed", 300, 1400, 20, "px/s")}
-              {renderSlider("Reel Speed", "fisherman", "pullSpeed", 240, 1300, 20, "px/s")}
+              {renderSlider("Reel Pull Speed", "fisherman", "pullSpeed", 240, 1500, 20, "px/s")}
               {renderSlider("Release Recoil", "fisherman", "releaseRecoil", 200, 900, 20, "px/s")}
               {renderSlider("Hook Damage", "fisherman", "hookDamage", 1, 12, 1)}
               {renderSlider("Hook Radius", "fisherman", "tipRadius", 5, 18, 1, "px")}
               {renderSlider("Wall Bounces", "fisherman", "maxBounces", 1, 16, 1)}
               {renderSlider("Cast Lifetime", "fisherman", "castLife", 1200, 9000, 200, "ms")}
+              {renderSlider("Spin Windup", "fisherman", "spinWindup", 100, 1400, 20, "ms")}
             </>
           )}
           {type === "constellation" && (
@@ -24702,7 +24769,17 @@ export default function App() {
           )}
           {type === "wrecker" && (
             <>
-              {renderSlider("Brawl Cooldown", "wrecker", "cooldown", 1500, 9000, 50, "ms")}
+              {renderSlider("Brawl / Hurl Cooldown", "wrecker", "cooldown", 1500, 9000, 50, "ms")}
+              {renderSlider("Brawl Windup", "wrecker", "chargeDuration", 300, 2200, 50, "ms")}
+              {renderSlider("Brawl Swing Duration", "wrecker", "swingDuration", 120, 900, 20, "ms")}
+              {renderSlider("Brawl Hit Damage", "wrecker", "damage", 1, 30)}
+              {renderSlider("Brawl Range", "wrecker", "range", 40, 260, 5, "px")}
+              {renderSlider("Brawl Lunge Speed", "wrecker", "lungeSpeed", 100, 1300, 20, "px/s")}
+              {renderSlider("Hurl Launch Speed", "wrecker", "launchSpeed", 200, 1500, 20, "px/s")}
+              {renderSlider("Hurl Wall Bounces", "wrecker", "wallBounces", 1, 10, 1)}
+              {renderSlider("Hurl Min Speed", "wrecker", "hurlMinSpeed", 100, 1000, 20, "px/s")}
+              {renderSlider("Hurl Max Speed", "wrecker", "hurlMaxSpeed", 200, 1600, 20, "px/s")}
+              {renderSlider("Rage Launch Speed", "wrecker", "rageLaunchSpeed", 300, 1800, 20, "px/s")}
               {renderSlider("Leap Damage", "wrecker", "leapDamage", 1, 60)}
               {renderSlider("Mega Leap Damage", "wrecker", "megaLeapDamage", 1, 80)}
               {renderSlider("Shockwave Radius", "wrecker", "shockwaveRadius", 30, 180, 5, "px")}
@@ -24711,7 +24788,7 @@ export default function App() {
               {renderSlider("Rage Required", "wrecker", "rageRequired", 1, 12, 1)}
               {renderSlider("Mega Rage Required", "wrecker", "megaRageRequired", 2, 18, 1)}
               {renderSlider("Push Cooldown", "wrecker", "pushCooldown", 400, 5000, 50, "ms")}
-              {renderSlider("Push Range", "wrecker", "pushRange", 10, 120, 1, "px")}
+              {renderSlider("Push Range", "wrecker", "pushRange", 10, 240, 1, "px")}
               {renderSlider("Push Force", "wrecker", "pushForce", 100, 1200, 20)}
               {renderSlider("Push Damage", "wrecker", "pushDamage", 1, 30)}
               {renderSlider("Leap Cooldown", "wrecker", "leapCooldown", 1000, 15000, 100, "ms")}
