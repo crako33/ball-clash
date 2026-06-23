@@ -2534,21 +2534,35 @@ export default function App() {
   };
 
   const drawRecordingTeamHudCard = (ctx, team, side, x, y, w, align = "left", nameFontSize = 42) => {
-    const lead = (team || []).find((ball) => ball.health > 0) || (team || [])[0];
-    const config = BALL_TYPES[lead?.type] || BALL_TYPES.knife;
-    const blackGlow = lead?.type === "eightBall";
+    const displayTeam = (team || []).length ? (team || []) : [{ side, name: `${side === "left" ? "Left" : "Right"} Team`, type: "knife" }];
     ctx.save();
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
-    ctx.fillStyle = blackGlow ? "#ffffff" : config.color;
-    ctx.shadowColor = blackGlow ? "#000000" : config.color;
-    ctx.shadowBlur = blackGlow ? 22 : 14;
-    ctx.font = `900 ${nameFontSize}px Arial Black, Impact, sans-serif`;
     const nameX = align === "left" ? x + 22 : x + w - 22;
-    ctx.lineWidth = blackGlow ? Math.max(6, nameFontSize * 0.16) : Math.max(5, nameFontSize * 0.12);
-    ctx.strokeStyle = blackGlow ? "#000000" : "#020617";
-    ctx.strokeText(getTeamLabel(team || [], side), nameX, y + 30);
-    ctx.fillText(getTeamLabel(team || [], side), nameX, y + 30);
+    const maxTextWidth = Math.max(120, w - 44);
+    const lineCount = displayTeam.length;
+    const baseFontSize = lineCount >= 3 ? Math.min(nameFontSize, 34) : lineCount === 2 ? Math.min(nameFontSize, 40) : nameFontSize;
+    const lineHeight = baseFontSize + (lineCount >= 3 ? 4 : 8);
+    const startY = y + 30 - ((lineCount - 1) * lineHeight) / 2;
+    displayTeam.forEach((ball, index) => {
+      const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
+      const blackGlow = ball?.type === "eightBall";
+      const name = getHudBallName(ball);
+      let fontSize = baseFontSize;
+      ctx.font = `900 ${fontSize}px Arial Black, Impact, sans-serif`;
+      while (fontSize > 22 && ctx.measureText(name).width > maxTextWidth) {
+        fontSize -= 2;
+        ctx.font = `900 ${fontSize}px Arial Black, Impact, sans-serif`;
+      }
+      ctx.fillStyle = blackGlow ? "#ffffff" : config.color;
+      ctx.shadowColor = blackGlow ? "#000000" : config.color;
+      ctx.shadowBlur = blackGlow ? 22 : 14;
+      ctx.lineWidth = blackGlow ? Math.max(6, fontSize * 0.16) : Math.max(5, fontSize * 0.12);
+      ctx.strokeStyle = blackGlow ? "#000000" : "#020617";
+      const lineY = startY + index * lineHeight;
+      ctx.strokeText(name, nameX, lineY);
+      ctx.fillText(name, nameX, lineY);
+    });
     ctx.restore();
   };
 
@@ -24826,7 +24840,7 @@ export default function App() {
         <div className="flex flex-wrap items-center gap-3 bg-slate-900/40 border border-slate-900 rounded-2xl px-4 py-2.5 backdrop-blur-sm justify-center md:justify-start">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Simulation Speed:</span>
           <div className="flex gap-1.5">
-            {[1, 1.5, 1.75, 2].map((speed) => (
+            {[1, 1.5, 1.65, 1.75, 2].map((speed) => (
               <button
                 key={speed}
                 onClick={() => { setSimulationSpeed(speed); gameRef.current.simulationSpeed = speed; }}
