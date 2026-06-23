@@ -166,23 +166,23 @@ const BALL_TYPES = {
   },
   bomber: {
     id: "bomber",
-    name: "Bomber Ball",
-    shortName: "MINE",
-    color: "#facc15",
-    stroke: "#78350f",
+    name: "Goblin Bomber",
+    shortName: "GBLN",
+    color: "#16a34a",
+    stroke: "#581c87",
     radius: 29,
-    description: "Lays up to 3 proximity landmines. Secondary: Homing Mine.",
-    emoji: "💣",
-    visualTheme: "Demolitions Expert / Mad Mechanic",
-    colorPalette: "Honey Yellow, Deep Bronze, Ember Red",
-    facialAge: "Late 40s (Sooty skin, crazed smile, welding goggles)",
-    personality: "Chaotic, laugh-happy, eccentric",
-    primaryWeapon: "Proximity Landmines",
-    signatureAbility: "Homing Mine (seeking target missile)",
+    description: "Flies on a glider dropping pumpkin bombs. Secondary: Glider Skill.",
+    emoji: "🎃",
+    visualTheme: "Green Goblin / Goblin Glider",
+    colorPalette: "Emerald Green, Deep Purple, Pumpkin Orange",
+    facialAge: "Ageless (Green mask, malicious grin, yellow slit eyes)",
+    personality: "Manic, wicked, glider-riding trickster",
+    primaryWeapon: "Pumpkin Jack-o'-Lantern Bombs",
+    signatureAbility: "Goblin Glider (high speed flight dropping bombs)",
     companion: "None",
-    specialVisualEffects: "Flame explosions, black smoke clouds, yellow hazard warning zones",
-    animeStyle: "Retro dieselpunk scrap mechanic anime character",
-    gameStyle: "Zone denial specialist with heavy delay-action explosives",
+    specialVisualEffects: "Bright orange pumpkin explosions, purple exhaust flames, green trail",
+    animeStyle: "Devilish goblin trickster anime with bright green/purple glow",
+    gameStyle: "High mobility flying bomber that saturates the arena with pumpkin bombs",
   },
   spore: {
     id: "spore",
@@ -664,6 +664,26 @@ const BALL_TYPES = {
     animeStyle: "Elegant magical trickster / anti-hero anime character",
     gameStyle: "Evasive spellcaster utilizing decoy illusions and fire projectiles to zone and outmaneuver targets",
   },
+  sorcerer: {
+    id: "sorcerer",
+    name: "Sorcerer Ball",
+    shortName: "SORC",
+    color: "#e2e2ec",
+    stroke: "#5a5a75",
+    radius: 30,
+    description: "Satoru Gojo-inspired fighter with Infinity Defense. Sequentially casts Lapse Blue, Reversal Red, and Hollow Purple.",
+    emoji: "🔮",
+    visualTheme: "Jujutsu Sorcerer / Limitless Infinity",
+    colorPalette: "Lavender Gray, Dark Violet, Pure White, Crimson",
+    facialAge: "28 (Spiky white hair, wrapped black blindfold, smug smirk)",
+    personality: "Smug, playful, effortlessly powerful",
+    primaryWeapon: "Limitless Sorcery (Blue, Red, Purple)",
+    signatureAbility: "Infinity Defense (Deflects/erases bullets)",
+    companion: "None",
+    specialVisualEffects: "Spiky white hair, black blindfold, gravity suction swirls, glowing red blasts, massive purple erasure spheres",
+    animeStyle: "Stylish modern sorcery anime protagonist",
+    gameStyle: "Zone control specialist utilizing gravitational pulls, high-knockback repulsions, and projectile-erasing ultimate blasts."
+  },
 };
 
 const getHpBarColor = (type) => {
@@ -732,7 +752,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb", "vampire", "ninja", "loki"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "batter", "stringWeb", "vampire", "ninja", "loki", "sorcerer"];
 const MAX_FLOATING_TEXTS = 48;
 const MAX_TRAIL_POINTS = 13;
 const MAX_RECORDING_TRAIL_POINTS = 9;
@@ -781,6 +801,21 @@ const BALANCE = {
   yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
   slipper: { cooldown: 3300, windup: 260, throwSpeed: 840, returnSpeed: 980, duration: 2600, damage: 5, knockback: 560, hitCooldown: 360, projectileRadius: 22, maxBounces: 3 },
   loki: { cooldown: 3400, fireballCooldown: 1200, fireballSpeed: 950, fireballDamage: 6, illusionDuration: 6000, illusionFireballCooldown: 1400 },
+  sorcerer: {
+    cooldown: 3800,
+    blueDuration: 1500,
+    blueSuction: 320,
+    blueExplosionDamage: 8,
+    redSpeed: 820,
+    redExplosionDamage: 10,
+    redKnockback: 1100,
+    purpleSpeed: 340,
+    purpleRadius: 28,
+    purpleTickDamage: 12,
+    purpleExplosionDamage: 18,
+    infinityRadius: 110,
+    infinitySlowFactor: 0.15
+  },
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -823,6 +858,23 @@ const mergeBalanceSettings = (base, saved = {}) => {
         cactusDamage: 3, growthDuration: 650, speedBoost: 1.4,
         cactusLife: 7600, cooldown: 4700, burstCount: 4,
         maxHydras: 8, hydraCharges: 3, targetRadius: 25, enemyKnockback: 280
+      });
+    }
+    if (type === "sorcerer") {
+      Object.assign(merged[type], {
+        cooldown: 4000,
+        infinityRadius: 90,
+        infinitySlowFactor: 0.12,
+        blueSuction: 320,
+        blueExplosionDamage: 8,
+        blueDuration: 1500,
+        redSpeed: 450,
+        redExplosionDamage: 10,
+        redKnockback: 1100,
+        purpleSpeed: 240,
+        purpleRadius: 28,
+        purpleExplosionDamage: 18,
+        purpleTickDamage: 12
       });
     }
     if (type === "blackSpider") {
@@ -904,8 +956,7 @@ const EIGHT_BALL_SILHOUETTE_SVG = `
 const EIGHT_BALL_SILHOUETTE_URI = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(EIGHT_BALL_SILHOUETTE_SVG)}`;
 const isWreckerJumpInvulnerable = (ball) => (ball?.type === "wrecker" && ["charging", "swinging", "rage_charging", "rage_dashing", "rage_slamming"].includes(ball.wreckerState)) || (ball?.type === "dragon" && ball.dragonState === "dashing");
 const isEightBallBreakInvulnerable = (ball, currentTime) => false;
-const isBomberSelfDestructInvulnerable = (ball) => ball?.type === "bomber" &&
-  (ball.bomberSelfDestructAt || 0) > 0 && !ball.bomberSelfDestructSpent;
+const isBomberSelfDestructInvulnerable = (ball) => false;
 
 const interruptSkills = (ball) => {
   if (!ball) return;
@@ -1385,9 +1436,6 @@ export default function App() {
       ninjaFlashUntil: 0,
       trail: [],
       nextBombAt: 0,
-      bomberSelfDestructAt: 0,
-      bomberSelfDestructSpent: false,
-      bomberCountdownShown: 4,
       laserState: "idle",
       laserStateUntil: 0,
       laserTargetAngle: 0,
@@ -1518,6 +1566,11 @@ export default function App() {
       // Mirror Specific
       mirrorNextHitAt: 0, mirrorFlashUntil: 0, mirrorNextSwitchAt: type === "mirror" ? (balanceSettings.mirror?.switchCooldown ?? BALANCE.mirror.switchCooldown) : 0, mirrorSwitchFlashUntil: 0,
 
+      // Sorcerer Specific
+      sorcererSpellIndex: 0,
+      nextSorcererCastAt: 0,
+      sorcererBlueOrb: null,
+
       // Joker Specific
       jokerNextThreadAt: type === "joker" ? (balanceSettings.joker?.cooldown ?? BALANCE.joker.cooldown) : 0, jokerFlashUntil: 0,
       // Fisherman Specific
@@ -1599,6 +1652,11 @@ export default function App() {
 
   const getBallSkillStatus = (ball, currentTime = 0) => {
     if (!ball) return "SKILL READY";
+    if (ball.type === "sorcerer") {
+      const spellNames = ["LAPSE: BLUE", "REVERSAL: RED", "HOLLOW: PURPLE"];
+      const nextIdx = (ball.sorcererSpellIndex || 0) % 3;
+      return `${spellNames[nextIdx]} · INFINITY ON`;
+    }
     if (ball.type === "spider") {
       if (ball.webShieldActive) return "WEB ARMOR · SPEED UP";
       const labels = { throwing: "WEB THROW", pulling: "WEB PULL", spinning: "WEB SPIN" };
@@ -1690,6 +1748,12 @@ export default function App() {
       const build = Math.min(100, Math.round(((ball.hammerAngle || 0) / (10 * Math.PI)) * 100));
       lines.push(`HAMMER SPIN: ${ball.hammerState === "spinning" ? "ACTIVE" : "READY"}`);
       lines.push(`CHARGE HIT: ${ball.hammerState === "charging" ? "CHARGING" : ball.hammerState === "launching" ? "LAUNCHING" : `BUILD ${build}%`}`);
+    } else if (ball.type === "sorcerer") {
+      const spellIdx = ball.sorcererSpellIndex || 0;
+      const spellNames = ["LAPSE: BLUE", "REVERSAL: RED", "HOLLOW: PURPLE"];
+      lines.push(`SPELL CYCLE: ${spellNames[spellIdx]}`);
+      lines.push(`COOLDOWN: ${cooldown(ball.nextSorcererCastAt)}`);
+      lines.push(`INFINITY FIELD: ACTIVE`);
     } else if (ball.type === "shield") {
       const states = { held: "HELD", windup: "WINDUP", thrown: "THROWN", returning: "RETURNING", catch_spin: "CATCH SPIN - RETHROW" };
       lines.push(`SHIELD THROW: ${states[ball.shieldState] || String(ball.shieldState || "READY").toUpperCase()}`);
@@ -1737,13 +1801,10 @@ export default function App() {
       lines.push(`ARMOR GATHER: ${ball.collectedArmorCount || 0}/${armorRequired}`);
       lines.push(`BIG LASER: ${big}`);
     } else if (ball.type === "bomber") {
-      const mines = (game?.mines || []).filter((mine) => mine.ownerId === ball.id && !mine.isHoming).length;
-      const homing = (game?.mines || []).some((mine) => mine.ownerId === ball.id && mine.isHoming);
-      let lastStand = ball.bomberSelfDestructSpent ? "SPENT" : "READY AT 1 HP";
-      if ((ball.bomberSelfDestructAt || 0) > currentTime) lastStand = "IMMUNE - SELF-DESTRUCT ARMED";
-      lines.push(`STATIONARY MINES: ${mines}/${game?.balance?.bomber?.maxMines || BALANCE.bomber.maxMines}`);
-      lines.push(`HOMING MINE: ${homing ? "ACTIVE" : cooldown(ball.nextSecondaryAt)}`);
-      lines.push(`LAST STAND: ${lastStand}`);
+      const normalMines = (game?.mines || []).filter((mine) => mine.ownerId === ball.id && !mine.isSticky).length;
+      const stickyMines = (game?.mines || []).filter((mine) => mine.ownerId === ball.id && mine.isSticky).length;
+      lines.push(`NORMAL BOMBS: ${normalMines}/3`);
+      lines.push(`STICKY BOMB: ${stickyMines > 0 ? "ON GROUND" : "READY (BOMB 4)"}`);
     } else if (ball.type === "fisherman") {
       const line = (game?.fishingLines || []).find((entry) => entry.ownerId === ball.id);
       const maxBounces = game?.balance?.fisherman?.maxBounces || BALANCE.fisherman.maxBounces;
@@ -2601,6 +2662,7 @@ export default function App() {
             const isBlackSpiderDashing = false;
             const isBlackSpiderPullingSelf = false;
             const isBlackSpiderPulled = balls.some(b => (b.type === "blackSpider" || b.type === "spider") && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
+            const isGoblinGrabbed = balls.some(b => b.type === "bomber" && b.goblinState === "carrying" && b.goblinTargetId === ball.id);
             
             const isLatchedTarget = balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > simTime;
@@ -2634,7 +2696,7 @@ export default function App() {
               }
             }
 
-            if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled)) {
+            if (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isGoblinGrabbed)) {
               ball.x += ball.vx * dt * slowMult;
               ball.y += ball.vy * dt * slowMult;
               
@@ -2845,6 +2907,8 @@ export default function App() {
             if (isGrabbedByArm) return;
             const isBlackSpiderPulled = balls.some(b => (b.type === "blackSpider" || b.type === "spider") && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
             if (isBlackSpiderPulled) return;
+            const isGoblinGrabbed = balls.some(b => b.type === "bomber" && b.goblinState === "carrying" && b.goblinTargetId === ball.id);
+            if (isGoblinGrabbed) return;
             if (simTime >= OPENING_SKILL_DELAY) {
               if (ball.type === "knife") {
                 const bal = balance.knife;
@@ -3376,29 +3440,95 @@ export default function App() {
             }
             // Bomber Ball Physics in Tournament
             if (ball.type === "bomber") {
-              if (ball.nextShotAt <= simTime) {
-                const rx = clamp(ball.x + (Math.random() - 0.5) * 120, 50, ARENA_SIZE - 50);
-                const ry = clamp(ball.y + (Math.random() - 0.5) * 120, 50, ARENA_SIZE - 50);
-                const activeMines = localMines.filter(m => m.ownerId === ball.id);
-                if (activeMines.length >= balance.bomber.maxMines) {
-                  activeMines[0].triggerTime = simTime;
-                }
-                localMines.push({
-                  ownerId: ball.id, ownerSide: ball.side, x: rx, y: ry, r: 10, triggerRadius: 45, triggerTime: null, isHoming: false
-                });
-                ball.nextShotAt = simTime + balance.bomber.cooldown;
-              }
-              
-              const secCooldown = balance.bomber.secCooldown !== undefined ? balance.bomber.secCooldown : 7000;
-              if (simTime >= (ball.nextSecondaryAt || 0)) {
-                ball.nextSecondaryAt = simTime + secCooldown;
+              if (ball.goblinState === "swooping") {
                 const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                const rx = clamp(ball.x - Math.cos(angle) * (ball.r + 15), 50, ARENA_SIZE - 50);
-                const ry = clamp(ball.y - Math.sin(angle) * (ball.r + 15), 50, ARENA_SIZE - 50);
-                localMines.push({
-                  ownerId: ball.id, ownerSide: ball.side, x: rx, y: ry, r: 10, triggerRadius: 45, triggerTime: null,
-                  isHoming: true, vx: Math.cos(angle) * 30, vy: Math.sin(angle) * 30
-                });
+                const glideSpeed = 950;
+                ball.vx += (Math.cos(angle) * glideSpeed - ball.vx) * 0.12;
+                ball.vy += (Math.sin(angle) * glideSpeed - ball.vy) * 0.12;
+
+                const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                if (dist < ball.r + enemy.r + 15) {
+                  ball.goblinState = "carrying";
+                  ball.goblinCarryUntil = simTime + 800;
+                  ball.goblinTargetId = enemy.id;
+                }
+              } else if (ball.goblinState === "carrying") {
+                const pad = 18;
+                const walls = [
+                  { x: pad + enemy.r, y: ball.y },
+                  { x: ARENA_SIZE - pad - enemy.r, y: ball.y },
+                  { x: ball.x, y: pad + enemy.r },
+                  { x: ball.x, y: ARENA_SIZE - pad - enemy.r }
+                ];
+                const nearestWall = walls.reduce((best, w) =>
+                  Math.hypot(w.x - ball.x, w.y - ball.y) < Math.hypot(best.x - ball.x, best.y - ball.y) ? w : best
+                );
+                const angle = Math.atan2(nearestWall.y - ball.y, nearestWall.x - ball.x);
+                const carrySpeed = 1200;
+                ball.vx = Math.cos(angle) * carrySpeed;
+                ball.vy = Math.sin(angle) * carrySpeed;
+
+                enemy.x = ball.x + Math.cos(angle) * 35;
+                enemy.y = ball.y + Math.sin(angle) * 35;
+                enemy.vx = ball.vx;
+                enemy.vy = ball.vy;
+
+                const distToWall = Math.hypot(nearestWall.x - ball.x, nearestWall.y - ball.y);
+                if (distToWall < ball.r + enemy.r + 20 || simTime >= ball.goblinCarryUntil) {
+                  ball.goblinState = "idle";
+                  ball.goblinTargetId = null;
+                  
+                  localApplyDamage(enemy, 14, `${ball.id}-glider-slam`, 0);
+                  const launchSpeed = 1250;
+                  enemy.vx = Math.cos(angle) * launchSpeed;
+                  enemy.vy = Math.sin(angle) * launchSpeed;
+                  enemy.hammerBouncesLeft = 4;
+                  enemy.hammerHitType = "charge";
+                  ball.vx = -Math.cos(angle) * 350;
+                  ball.vy = -Math.sin(angle) * 350;
+                  ball.nextSecondaryAt = simTime + 8000;
+                }
+              } else {
+                if (ball.gliderUntil && simTime < ball.gliderUntil) {
+                  const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                  const glideSpeed = 720;
+                  ball.vx += (Math.cos(angle) * glideSpeed - ball.vx) * 0.12;
+                  ball.vy += (Math.sin(angle) * glideSpeed - ball.vy) * 0.12;
+
+                  if (simTime - (ball.lastGliderBombAt || 0) >= 280) {
+                    ball.lastGliderBombAt = simTime;
+                    localMines.push({
+                      ownerId: ball.id,
+                      ownerSide: ball.side,
+                      x: ball.x,
+                      y: ball.y,
+                      r: 10,
+                      triggerRadius: 45,
+                      triggerTime: simTime + 600,
+                      isHoming: false
+                    });
+                  }
+                } else {
+                  if (simTime >= ball.nextShotAt) {
+                    const rx = clamp(ball.x + (Math.random() - 0.5) * 120, 50, ARENA_SIZE - 50);
+                    const ry = clamp(ball.y + (Math.random() - 0.5) * 120, 50, ARENA_SIZE - 50);
+                    const activeMines = localMines.filter(m => m.ownerId === ball.id);
+                    if (activeMines.length >= balance.bomber.maxMines) {
+                      activeMines[0].triggerTime = simTime;
+                    }
+                    localMines.push({
+                      ownerId: ball.id, ownerSide: ball.side, x: rx, y: ry, r: 10, triggerRadius: 45, triggerTime: null, isHoming: false
+                    });
+                    ball.nextShotAt = simTime + balance.bomber.cooldown;
+                  }
+                }
+
+                const secCooldown = balance.bomber.secCooldown !== undefined ? balance.bomber.secCooldown : 7000;
+                if (simTime >= (ball.nextSecondaryAt || 0)) {
+                  ball.nextSecondaryAt = simTime + secCooldown;
+                  ball.gliderUntil = simTime + 3000;
+                  ball.lastGliderBombAt = 0;
+                }
               }
             }
 
@@ -4411,7 +4541,12 @@ export default function App() {
         flashColor = "#67e8f9"; // Mirror cyan
       } else if (keyLower.includes("feral") || keyLower.includes("claw") || keyLower.includes("pounce")) {
         flashColor = "#facc15";
-
+      } else if (keyLower.includes("blue")) {
+        flashColor = "#3b82f6";
+      } else if (keyLower.includes("red")) {
+        flashColor = "#ef4444";
+      } else if (keyLower.includes("purple")) {
+        flashColor = "#d946ef";
       }
       defender.webHitFlashColor = flashColor;
 
@@ -4735,9 +4870,17 @@ export default function App() {
         if (ball.wreckerSlammedByPunch) {
           ball.wreckerSlammedByPunch = false;
           game.craters = game.craters || [];
+          
+          let craterX = bx;
+          let craterY = by;
+          if (sideHit === "left") craterX = 0;
+          else if (sideHit === "right") craterX = game.width;
+          else if (sideHit === "top") craterY = 0;
+          else if (sideHit === "bottom") craterY = game.height;
+
           game.craters.push({
-            x: bx,
-            y: by,
+            x: craterX,
+            y: craterY,
             r: 38,
             side: sideHit,
             angle: sideHit === "left" ? 0 : sideHit === "right" ? Math.PI : sideHit === "top" ? Math.PI / 2 : -Math.PI / 2,
@@ -4745,18 +4888,20 @@ export default function App() {
             maxLife: 6.0
           });
           
-          // Spawn extra rock debris/particles at impact point!
-          for (let k = 0; k < 12; k++) {
-            const angle = (sideHit === "left" ? 0 : sideHit === "right" ? Math.PI : sideHit === "top" ? Math.PI / 2 : -Math.PI / 2) + (Math.random() - 0.5) * 1.5;
-            const speed = 120 + Math.random() * 280;
+          // Spawn extra glass shard particles at impact point!
+          for (let k = 0; k < 16; k++) {
+            const angle = (sideHit === "left" ? 0 : sideHit === "right" ? Math.PI : sideHit === "top" ? Math.PI / 2 : -Math.PI / 2) + (Math.random() - 0.5) * 1.6;
+            const speed = 150 + Math.random() * 320;
+            const colors = ["#ffffff", "#7dd3fc", "#38bdf8", "#e2e8f0"];
+            const color = colors[Math.floor(Math.random() * colors.length)];
             game.particles.push({
-              x: bx, y: by,
+              x: craterX, y: craterY,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
-              color: "#64748b",
-              radius: 2.5 + Math.random() * 4,
-              life: 0.8,
-              maxLife: 0.8
+              color: color,
+              radius: 1.5 + Math.random() * 2.5,
+              life: 0.6 + Math.random() * 0.4,
+              maxLife: 1.0
             });
           }
           playSound("explosion", 1.25, 110);
@@ -7749,129 +7894,256 @@ export default function App() {
     };
 
     const updateBomber = (bomberBall, target, currentTime) => {
-      // 1. Regular mine spawning logic
-      if (currentTime >= bomberBall.nextShotAt) {
-        const randomOffset = () => (Math.random() - 0.5) * 120;
-        const mX = clamp(bomberBall.x + randomOffset(), 50, game.width - 50);
-        const mY = clamp(bomberBall.y + randomOffset(), 50, game.height - 50);
-
-        const activeMines = game.mines.filter(m => m.ownerId === bomberBall.id);
-        if (activeMines.length >= game.balance.bomber.maxMines) {
-          activeMines[0].triggerTime = currentTime;
-        }
-
-        game.mines.push({
-          ownerId: bomberBall.id,
-          ownerSide: bomberBall.side,
-          x: mX,
-          y: mY,
-          r: 16,
-          triggerRadius: 60,
-          explosionRadius: game.balance.bomber.mineRadius + 25,
-          isAboutToDetonate: false,
-          triggerTime: null,
-          isHoming: false,
-        });
-
-        if (bomberBall.side === "left") game.stats.left.totalShots++;
-        else game.stats.right.totalShots++;
-
-        bomberBall.nextShotAt = currentTime + game.balance.bomber.cooldown;
-        playSound("spikePlant");
-      }
-
-      // 2. Secondary homing mine skill
       const bal = game.balance.bomber || BALANCE.bomber;
-      const secCooldown = bal.secCooldown !== undefined ? bal.secCooldown : 7000;
-      if (currentTime >= (bomberBall.nextSecondaryAt || 0)) {
-        bomberBall.nextSecondaryAt = currentTime + secCooldown;
+
+      // 1. Goblin Glider Swoop Slam Combo State Machine
+      if (bomberBall.goblinState === "swooping") {
         const angle = Math.atan2(target.y - bomberBall.y, target.x - bomberBall.x);
-        const mX = clamp(bomberBall.x - Math.cos(angle) * (bomberBall.r + 15), 50, game.width - 50);
-        const mY = clamp(bomberBall.y - Math.sin(angle) * (bomberBall.r + 15), 50, game.height - 50);
+        const glideSpeed = 950;
+        bomberBall.vx += (Math.cos(angle) * glideSpeed - bomberBall.vx) * 0.12;
+        bomberBall.vy += (Math.sin(angle) * glideSpeed - bomberBall.vy) * 0.12;
 
-        game.mines.push({
-          ownerId: bomberBall.id,
-          ownerSide: bomberBall.side,
-          x: mX,
-          y: mY,
-          r: 10,
-          triggerRadius: 45,
-          isAboutToDetonate: false,
-          triggerTime: null,
-          isHoming: true,
-          vx: Math.cos(angle) * 30,
-          vy: Math.sin(angle) * 30,
-        });
-
-        spawnSparks(mX, mY, "#ef4444", 18);
-        spawnImpactBurst(mX, mY, angle, ["#fee2e2", "#ef4444", "#991b1b"], 0.9);
-
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: bomberBall.x, y: bomberBall.y - bomberBall.r - 20, vy: -50,
-          text: "HOMING MINE", color: "#ef4444", life: 0.8, maxLife: 0.8
-        });
-        playSound("spikePlant");
-      }
-    };
-
-    const updateBomberLastStand = (bomberBall, currentTime) => {
-      if (bomberBall.type !== "bomber" || bomberBall.bomberSelfDestructSpent) return false;
-
-      if (!bomberBall.bomberSelfDestructAt && bomberBall.health <= 1) {
-        bomberBall.health = 1;
-        bomberBall.bomberSelfDestructAt = currentTime + 5000;
-        game.floatingTexts = game.floatingTexts || [];
-        game.floatingTexts.push({
-          x: bomberBall.x, y: bomberBall.y - bomberBall.r - 24, vy: -42,
-          text: "SELF-DESTRUCT ARMED", color: "#ef4444", life: 0.95, maxLife: 0.95
-        });
-        spawnImpactBurst(bomberBall.x, bomberBall.y, 0, ["#ffffff", "#ef4444", "#7f1d1d"], 1.15);
-        playSound("bombFuse", 1.15, 80);
-      }
-
-      if (!bomberBall.bomberSelfDestructAt) return false;
-      bomberBall.health = 1;
-
-      if (currentTime < bomberBall.bomberSelfDestructAt) return true;
-
-      const blastRadius = Math.hypot(game.width, game.height) + 80;
-      game.explosions.push({
-        ownerId: bomberBall.id, x: bomberBall.x, y: bomberBall.y, r: 0,
-        maxRadius: blastRadius, duration: 650, life: 650
-      });
-      game.balls.forEach((enemy) => {
-        if (enemy.id === bomberBall.id || enemy.side === bomberBall.side || enemy.health <= 0) return;
-        const dist = Math.hypot(enemy.x - bomberBall.x, enemy.y - bomberBall.y);
-        if (dist >= blastRadius + enemy.r) return;
-        const falloff = 1;
-        const damage = game.balance.bomber.selfDestructDamage || 40;
-        const healthBefore = enemy.health;
-        applyDamage(enemy, damage, `${bomberBall.id}-last-stand-${enemy.id}`, currentTime, 0);
-        const dealt = Math.max(0, healthBefore - enemy.health);
-        const angle = Math.atan2(enemy.y - bomberBall.y, enemy.x - bomberBall.x);
-        if (!hasStringBounceGuard(enemy)) {
-          enemy.vx += Math.cos(angle) * 1000 * falloff;
-          enemy.vy += Math.sin(angle) * 1000 * falloff;
+        const dist = Math.hypot(target.x - bomberBall.x, target.y - bomberBall.y);
+        
+        // Spawn exhaust particles (purple sparks)
+        if (canSpawnParticle() && Math.random() < 0.8) {
+          game.particles.push({
+            x: bomberBall.x - Math.cos(angle) * bomberBall.r,
+            y: bomberBall.y - Math.sin(angle) * bomberBall.r,
+            vx: -Math.cos(angle) * 150 + (Math.random() - 0.5) * 60,
+            vy: -Math.sin(angle) * 150 + (Math.random() - 0.5) * 60,
+            color: "#a855f7",
+            radius: 3 + Math.random() * 2,
+            life: 0.35, maxLife: 0.35
+          });
         }
-        const stats = bomberBall.side === "left" ? game.stats.left : game.stats.right;
-        if (stats && dealt > 0) { stats.damageDealt += dealt; stats.hitsLanded++; }
-      });
-      spawnExplosionParticles(bomberBall.x, bomberBall.y, 4.2);
-      spawnSparks(bomberBall.x, bomberBall.y, "#ef4444", 72);
-      spawnImpactBurst(bomberBall.x, bomberBall.y, 0, ["#ffffff", "#fca5a5", "#ef4444", "#7f1d1d"], 3.8);
-      game.screenShake = Math.max(game.screenShake, 30);
-      playAudioFile("/mine%20bomb.mp3", 1.18, 0, game.simulationSpeed || 1);
-      bomberBall.bomberSelfDestructAt = 0;
-      bomberBall.bomberSelfDestructSpent = true;
-      bomberBall.health = 1;
-      bomberBall.lastDamageTakenAt = currentTime;
-      game.floatingTexts.push({
-        x: bomberBall.x, y: bomberBall.y - bomberBall.r - 26, vy: -48,
-        text: "1 HP · VULNERABLE", color: "#fee2e2", life: 1.05, maxLife: 1.05
-      });
-      return false;
+
+        if (dist < bomberBall.r + target.r + 15) {
+          bomberBall.goblinState = "carrying";
+          bomberBall.goblinCarryUntil = currentTime + 800; // carry for 800ms
+          playSound("spikePlant", 1.15, 75);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: target.x, y: target.y - target.r - 20, vy: -45,
+            text: "GRABBED! 😈", color: "#a855f7", life: 0.75, maxLife: 0.75
+          });
+        }
+      } else if (bomberBall.goblinState === "carrying") {
+        // Carry the target to the nearest wall!
+        const pad = 18;
+        const walls = [
+          { x: pad + target.r, y: bomberBall.y },
+          { x: game.width - pad - target.r, y: bomberBall.y },
+          { x: bomberBall.x, y: pad + target.r },
+          { x: bomberBall.x, y: game.height - pad - target.r }
+        ];
+        const nearestWall = walls.reduce((best, w) =>
+          Math.hypot(w.x - bomberBall.x, w.y - bomberBall.y) < Math.hypot(best.x - bomberBall.x, best.y - bomberBall.y) ? w : best
+        );
+        const angle = Math.atan2(nearestWall.y - bomberBall.y, nearestWall.x - bomberBall.x);
+        const carrySpeed = 1200;
+        bomberBall.vx = Math.cos(angle) * carrySpeed;
+        bomberBall.vy = Math.sin(angle) * carrySpeed;
+
+        // Lock target position in front of glider
+        target.x = bomberBall.x + Math.cos(angle) * 35;
+        target.y = bomberBall.y + Math.sin(angle) * 35;
+        target.vx = bomberBall.vx;
+        target.vy = bomberBall.vy;
+        target.skillLockedUntil = Math.max(target.skillLockedUntil || 0, currentTime + 100);
+        target.spinLockedUntil = Math.max(target.spinLockedUntil || 0, currentTime + 100);
+
+        // Spawn dust and fire trail
+        if (canSpawnParticle() && Math.random() < 0.7) {
+          game.particles.push({
+            x: target.x, y: target.y,
+            vx: (Math.random() - 0.5) * 80, vy: (Math.random() - 0.5) * 80,
+            color: "#ea580c", radius: 2.5 + Math.random() * 2,
+            life: 0.28, maxLife: 0.28
+          });
+        }
+
+        const distToWall = Math.hypot(nearestWall.x - bomberBall.x, nearestWall.y - bomberBall.y);
+        if (distToWall < bomberBall.r + target.r + 20 || currentTime >= bomberBall.goblinCarryUntil) {
+          // Release and slam!
+          bomberBall.goblinState = "idle";
+          bomberBall.goblinTargetId = null;
+
+          // Find any stuck bomb on the target and detonate it immediately!
+          game.mines.forEach((mine) => {
+            if (mine.ownerId === bomberBall.id && mine.isStuck && mine.stuckTo === target.id) {
+              mine.triggerTime = currentTime;
+            }
+          });
+
+          applyDamage(target, 14, `${bomberBall.id}-glider-slam-${currentTime}`, currentTime, 0);
+          
+          // Bounce and damage other opponent balls in splash range!
+          game.balls.forEach((ball) => {
+            if (ball.side !== bomberBall.side && ball.id !== target.id && ball.health > 0) {
+              const distToSlam = Math.hypot(ball.x - target.x, ball.y - target.y);
+              const splashRadius = 150;
+              if (distToSlam < splashRadius + ball.r) {
+                applyDamage(ball, 10, `${bomberBall.id}-glider-slam-splash-${ball.id}-${currentTime}`, currentTime, 0);
+                const bounceAngle = Math.atan2(ball.y - target.y, ball.x - target.x);
+                const bounceSpeed = 1000 * (1 - distToSlam / (splashRadius + ball.r));
+                ball.vx += Math.cos(bounceAngle) * bounceSpeed;
+                ball.vy += Math.sin(bounceAngle) * bounceSpeed;
+                ball.hammerBouncesLeft = 3;
+                ball.hammerHitType = "charge";
+              }
+            }
+          });
+          
+          const launchSpeed = 1250;
+          const normalAngle = angle + Math.PI;
+          const targetAngle = normalAngle + Math.PI / 6;
+          const goblinAngle = normalAngle - Math.PI / 6;
+
+          target.vx = Math.cos(targetAngle) * launchSpeed;
+          target.vy = Math.sin(targetAngle) * launchSpeed;
+          target.hammerBouncesLeft = 2;
+          target.hammerHitType = "charge";
+          target.skillLockedUntil = Math.max(target.skillLockedUntil || 0, currentTime + 1600);
+
+          // Clamp and nudge target and bomber away from any walls they are close to (clears corner and wall stuck cases)
+          const wallNudge = 35;
+
+          // Target nudge/clamp
+          if (target.x - target.r < pad + 15) target.x = pad + target.r + wallNudge;
+          if (target.x + target.r > game.width - pad - 15) target.x = game.width - pad - target.r - wallNudge;
+          if (target.y - target.r < pad + 15) target.y = pad + target.r + wallNudge;
+          if (target.y + target.r > game.height - pad - 15) target.y = game.height - pad - target.r - wallNudge;
+
+          // Bomber nudge/clamp
+          if (bomberBall.x - bomberBall.r < pad + 15) bomberBall.x = pad + bomberBall.r + wallNudge;
+          if (bomberBall.x + bomberBall.r > game.width - pad - 15) bomberBall.x = game.width - pad - bomberBall.r - wallNudge;
+          if (bomberBall.y - bomberBall.r < pad + 15) bomberBall.y = pad + bomberBall.r + wallNudge;
+          if (bomberBall.y + bomberBall.r > game.height - pad - 15) bomberBall.y = game.height - pad - bomberBall.r - wallNudge;
+
+          // Final bounds check clamping to ensure they are inside arena bounds
+          const minTargetX = pad + target.r;
+          const maxTargetX = game.width - pad - target.r;
+          const minTargetY = pad + target.r;
+          const maxTargetY = game.height - pad - target.r;
+          target.x = clamp(target.x, minTargetX, maxTargetX);
+          target.y = clamp(target.y, minTargetY, maxTargetY);
+
+          const minBomberX = pad + bomberBall.r;
+          const maxBomberX = game.width - pad - bomberBall.r;
+          const minBomberY = pad + bomberBall.r;
+          const maxBomberY = game.height - pad - bomberBall.r;
+          bomberBall.x = clamp(bomberBall.x, minBomberX, maxBomberX);
+          bomberBall.y = clamp(bomberBall.y, minBomberY, maxBomberY);
+
+          bomberBall.vx = Math.cos(goblinAngle) * launchSpeed;
+          bomberBall.vy = Math.sin(goblinAngle) * launchSpeed;
+          bomberBall.hammerBouncesLeft = 2;
+          bomberBall.hammerHitType = "charge";
+          bomberBall.skillLockedUntil = Math.max(bomberBall.skillLockedUntil || 0, currentTime + 1600);
+
+          // Cooldown before they can start another glider/combo
+          bomberBall.nextSecondaryAt = currentTime + 8000;
+
+          // Explosion effects
+          game.explosions.push({
+            ownerId: bomberBall.id, x: target.x, y: target.y, r: 0,
+            maxRadius: 124, duration: 550, life: 550
+          });
+          spawnExplosionParticles(target.x, target.y, 3.4);
+          spawnSparks(target.x, target.y, "#f97316", 42);
+          spawnImpactBurst(target.x, target.y, angle, ["#ffffff", "#f97316", "#a855f7", "#581c87"], 2.2);
+          game.screenShake = Math.max(game.screenShake, 24);
+          playSound("explosion", 1.18, 120);
+
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: target.x, y: target.y - target.r - 24, vy: -55,
+            text: "GLIDER SLAM! 💥", color: "#f97316", life: 0.95, maxLife: 0.95
+          });
+        }
+      } else {
+        // 2. Normal Glider/Spawning state (only if not doing the swoop slam combo)
+        if (bomberBall.gliderUntil && currentTime < bomberBall.gliderUntil) {
+          const angle = Math.atan2(target.y - bomberBall.y, target.x - bomberBall.x);
+          const glideSpeed = 720;
+          bomberBall.vx += (Math.cos(angle) * glideSpeed - bomberBall.vx) * 0.12;
+          bomberBall.vy += (Math.sin(angle) * glideSpeed - bomberBall.vy) * 0.12;
+
+
+
+          if (canSpawnParticle() && Math.random() < 0.65) {
+            const oppositeAngle = angle + Math.PI + (Math.random() - 0.5) * 0.5;
+            const pSpeed = 120 + Math.random() * 180;
+            game.particles.push({
+              x: bomberBall.x - Math.cos(angle) * bomberBall.r,
+              y: bomberBall.y - Math.sin(angle) * bomberBall.r,
+              vx: Math.cos(oppositeAngle) * pSpeed,
+              vy: Math.sin(oppositeAngle) * pSpeed,
+              color: Math.random() < 0.5 ? "#22c55e" : "#a855f7",
+              radius: 2 + Math.random() * 3,
+              life: 0.35, maxLife: 0.35
+            });
+          }
+        } else {
+          // Regular pumpkin bomb spawning logic
+          if (currentTime >= bomberBall.nextShotAt) {
+            const mX = clamp(bomberBall.x, 50, game.width - 50);
+            const mY = clamp(bomberBall.y, 50, game.height - 50);
+
+            bomberBall.goblinDroppedCount = (bomberBall.goblinDroppedCount || 0) + 1;
+            const isSticky = bomberBall.goblinDroppedCount % 4 === 0;
+
+            if (!isSticky) {
+              const activeNormalMines = game.mines.filter(m => m.ownerId === bomberBall.id && !m.isSticky);
+              if (activeNormalMines.length >= 3) {
+                activeNormalMines[0].triggerTime = currentTime;
+              }
+            }
+
+            game.mines.push({
+              ownerId: bomberBall.id,
+              ownerSide: bomberBall.side,
+              x: mX,
+              y: mY,
+              r: 16,
+              triggerRadius: 60,
+              explosionRadius: bal.mineRadius + 25,
+              isAboutToDetonate: false,
+              triggerTime: null,
+              isHoming: false,
+              isSticky: isSticky,
+              isStuck: false,
+              stuckTo: null
+            });
+
+            game.floatingTexts = game.floatingTexts || [];
+            if (isSticky) {
+              game.floatingTexts.push({
+                x: bomberBall.x, y: bomberBall.y - bomberBall.r - 20, vy: -45,
+                text: "STICKY BOMB! 🎯", color: "#f43f5e", life: 0.9, maxLife: 0.9
+              });
+              playSound("lockOn", 1.25, 80);
+            } else {
+              game.floatingTexts.push({
+                x: bomberBall.x, y: bomberBall.y - bomberBall.r - 20, vy: -40,
+                text: `BOMB ${bomberBall.goblinDroppedCount % 4}/4`, color: "#22c55e", life: 0.7, maxLife: 0.7
+              });
+              playSound("spikePlant");
+            }
+
+            if (bomberBall.side === "left") game.stats.left.totalShots++;
+            else game.stats.right.totalShots++;
+
+            bomberBall.nextShotAt = currentTime + bal.cooldown;
+          }
+        }
+      }
+
+
     };
+
+
 
     const consumeSpiderWebShield = (spiderBall, x, y) => {
       if (!spiderBall.webShieldActive) return;
@@ -9558,6 +9830,7 @@ export default function App() {
       } else if (hammerBall.hammerState === "charging") {
         hammerBall.vx = 0;
         hammerBall.vy = 0;
+        
         const targetAngle = Math.atan2(target.y - hammerBall.y, target.x - hammerBall.x);
         
         // Smoothly rotate towards target instead of snapping
@@ -9596,6 +9869,7 @@ export default function App() {
           playSound("hammerLaunch", 1.18, 0, { pan: (hammerBall.x / game.width) * 2 - 1, depth: 0.08, room: 0.48 });
         }
       } else if (hammerBall.hammerState === "launching") {
+
         // Enforce constant high velocity in launch direction
         hammerBall.vx = Math.cos(hammerBall.hammerLaunchAngle) * bal.hammer.launchSpeed;
         hammerBall.vy = Math.sin(hammerBall.hammerLaunchAngle) * bal.hammer.launchSpeed;
@@ -11431,6 +11705,166 @@ export default function App() {
       }
     };
 
+    const updateSorcerer = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.sorcerer || BALANCE.sorcerer;
+
+      if (ball.sorcererBlueOrb) {
+        const orb = ball.sorcererBlueOrb;
+        game.balls.forEach((enemy) => {
+          if (enemy.shattered || enemy.health <= 0 || enemy.type === "cueBall") return;
+          if (enemy.id === ball.id) return;
+          
+          const dx = orb.x - enemy.x;
+          const dy = orb.y - enemy.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 185) {
+            const suctionForce = bal.blueSuction || 320;
+            const forcePct = (185 - dist) / 185;
+            const pull = suctionForce * forcePct * 2.8 * stepDt;
+            enemy.vx += (dx / dist) * pull;
+            enemy.vy += (dy / dist) * pull;
+            
+            if (dist < orb.radius + 30) {
+              if (currentTime >= (orb.nextTickDamageAt || 0)) {
+                applyDamage(enemy, 1, `${ball.id}-blue-tick-${currentTime}`, currentTime, 200);
+                orb.nextTickDamageAt = currentTime + 200;
+                spawnSparks(enemy.x, enemy.y, "#3b82f6", 4);
+              }
+            }
+          }
+        });
+
+        if (Math.random() < 0.45 && canSpawnParticle()) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = orb.radius + 15 + Math.random() * 45;
+          game.particles.push({
+            x: orb.x + Math.cos(angle) * dist,
+            y: orb.y + Math.sin(angle) * dist,
+            vx: -Math.cos(angle) * 90 - Math.sin(angle) * 40,
+            vy: -Math.sin(angle) * 90 + Math.cos(angle) * 40,
+            color: Math.random() < 0.5 ? "#60a5fa" : "#1d4ed8",
+            radius: 2.2,
+            life: 0.35, maxLife: 0.35
+          });
+        }
+
+        orb.life += stepDt * 1000;
+        if (orb.life >= orb.duration) {
+          playSound("explosion", 1.0, 100);
+          game.screenShake = Math.max(game.screenShake || 0, 8);
+          spawnImpactBurst(orb.x, orb.y, 0, ["#ffffff", "#93c5fd", "#3b82f6", "#1e3a8a"], 1.3);
+          spawnSparks(orb.x, orb.y, "#3b82f6", 18);
+          
+          game.balls.forEach((enemy) => {
+            if (enemy.shattered || enemy.health <= 0 || enemy.type === "cueBall") return;
+            if (enemy.id === ball.id) return;
+            
+            const dist = Math.hypot(enemy.x - orb.x, enemy.y - orb.y);
+            const radius = 130;
+            if (dist < radius) {
+              const forcePct = (radius - dist) / radius;
+              const damage = bal.blueExplosionDamage || 8;
+              applyDamage(enemy, damage, `${ball.id}-blue-implosion`, currentTime, 300);
+              
+              const angle = Math.atan2(orb.y - enemy.y, orb.x - enemy.x);
+              const pullForce = 520 * forcePct;
+              enemy.vx += Math.cos(angle) * pullForce;
+              enemy.vy += Math.sin(angle) * pullForce;
+              
+              game.floatingTexts.push({
+                x: enemy.x, y: enemy.y - enemy.r - 8, vy: -45,
+                text: `BLUE IMPLODE -${damage}`, color: "#3b82f6", life: 0.8, maxLife: 0.8
+              });
+            }
+          });
+          
+          ball.sorcererBlueOrb = null;
+        }
+      }
+
+      if (currentTime >= (ball.nextSorcererCastAt || 0)) {
+        const spellIdx = ball.sorcererSpellIndex || 0;
+        
+        if (spellIdx === 0) {
+          const lead = 0.3;
+          const targetX = clamp(target.x + target.vx * lead, 80, game.width - 80);
+          const targetY = clamp(target.y + target.vy * lead, 80, game.height - 80);
+          ball.sorcererBlueOrb = {
+            x: targetX,
+            y: targetY,
+            radius: 12,
+            targetRadius: 75,
+            life: 0,
+            duration: bal.blueDuration || 1500,
+            nextTickDamageAt: 0
+          };
+          
+          playSound("laserCharge", 0.85, 120);
+          spawnImpactBurst(targetX, targetY, 0, ["#ffffff", "#bfdbfe", "#3b82f6", "#1d4ed8"], 1.2);
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 22, vy: -48,
+            text: "LAPSE: BLUE!", color: "#3b82f6", life: 0.85, maxLife: 0.85
+          });
+          
+        } else if (spellIdx === 1) {
+          const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          game.bullets.push({
+            ownerId: ball.id,
+            targetSide: target.side,
+            kind: "sorcererRed",
+            x: ball.x + Math.cos(angle) * (ball.r + 12),
+            y: ball.y + Math.sin(angle) * (ball.r + 12),
+            vx: Math.cos(angle) * bal.redSpeed,
+            vy: Math.sin(angle) * bal.redSpeed,
+            r: 8,
+            damage: bal.redExplosionDamage || 10,
+            knockback: bal.redKnockback || 1100,
+            life: 3.0
+          });
+          
+          playSound("laserFire", 0.9, 100);
+          spawnSparks(ball.x, ball.y, "#ef4444", 15);
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 22, vy: -48,
+            text: "REVERSAL: RED!", color: "#ef4444", life: 0.85, maxLife: 0.85
+          });
+          
+        } else {
+          const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          game.bullets.push({
+            ownerId: ball.id,
+            targetSide: target.side,
+            kind: "sorcererPurple",
+            x: ball.x + Math.cos(angle) * (ball.r + 15),
+            y: ball.y + Math.sin(angle) * (ball.r + 15),
+            vx: Math.cos(angle) * bal.purpleSpeed,
+            vy: Math.sin(angle) * bal.purpleSpeed,
+            r: bal.purpleRadius || 28,
+            damage: bal.purpleExplosionDamage || 18,
+            life: 4.5,
+            tickDamage: bal.purpleTickDamage || 12,
+            nextTickDamageAt: 0
+          });
+          
+          playSound("warpSlam", 1.2, 100);
+          spawnSparks(ball.x, ball.y, "#d946ef", 25);
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 22, vy: -48,
+            text: "HOLLOW: PURPLE!", color: "#d946ef", life: 1.05, maxLife: 1.05
+          });
+        }
+        
+        ball.sorcererSpellIndex = (spellIdx + 1) % 3;
+        ball.nextSorcererCastAt = currentTime + bal.cooldown;
+      }
+    };
+
     const updateSpore = (sporeBall, target, currentTime) => {
       const bal = game.balance;
       const sporeBal = bal.spore || BALANCE.spore;
@@ -11705,7 +12139,16 @@ export default function App() {
         const enemy = balls.find(b => b.side !== mine.ownerSide);
         const explosionRadius = mine.explosionRadius || game.balance.bomber.mineRadius;
         
-        if (mine.isHoming && !mine.triggerTime) {
+        if (mine.isSticky && mine.isStuck) {
+          if (enemy) {
+            mine.x = enemy.x;
+            mine.y = enemy.y;
+            mine.vx = 0;
+            mine.vy = 0;
+          }
+        }
+
+        if (mine.isHoming && !mine.isSticky && !mine.triggerTime) {
           const targetDx = enemy.x - mine.x;
           const targetDy = enemy.y - mine.y;
           const targetDist = Math.hypot(targetDx, targetDy);
@@ -11717,6 +12160,7 @@ export default function App() {
           }
           mine.x += mine.vx * stepDt;
           mine.y += mine.vy * stepDt;
+
           if (canSpawnParticle() && Math.random() < 0.45) {
             game.particles.push({
               x: mine.x - (mine.vx || 0) * 0.035 + (Math.random() - 0.5) * 5,
@@ -11729,11 +12173,14 @@ export default function App() {
               maxLife: 0.22
             });
           }
+
           const pad = 18;
-          if (mine.x < pad) { mine.x = pad; mine.vx = Math.abs(mine.vx); }
-          if (mine.x > game.width - pad) { mine.x = game.width - pad; mine.vx = -Math.abs(mine.vx); }
-          if (mine.y < pad) { mine.y = pad; mine.vy = Math.abs(mine.vy); }
-          if (mine.y > game.height - pad) { mine.y = game.height - pad; mine.vy = -Math.abs(mine.vy); }
+          if (!mine.isStuck) {
+            if (mine.x < pad) { mine.x = pad; mine.vx = Math.abs(mine.vx); }
+            if (mine.x > game.width - pad) { mine.x = game.width - pad; mine.vx = -Math.abs(mine.vx); }
+            if (mine.y < pad) { mine.y = pad; mine.vy = Math.abs(mine.vy); }
+            if (mine.y > game.height - pad) { mine.y = game.height - pad; mine.vy = -Math.abs(mine.vy); }
+          }
         }
 
         const dist = Math.hypot(mine.x - enemy.x, mine.y - enemy.y);
@@ -11797,6 +12244,32 @@ export default function App() {
                   text: `-${dmg}`, color: floatColor, life: 0.8, maxLife: 0.8
                 });
 
+                // Goblin Bomber Combo stacking logic
+                const ownerBall = balls.find(b => b.id === mine.ownerId);
+                if (ownerBall && ownerBall.type === "bomber" && (!ownerBall.goblinState || ownerBall.goblinState === "idle")) {
+                  ball.goblinHitCount = (ball.goblinHitCount || 0) + 1;
+                  playSound("carRev", 1.35, 60);
+                  
+                  game.floatingTexts.push({
+                    x: ball.x, y: ball.y - ball.r - 28, vy: -45,
+                    text: ball.goblinHitCount >= 3 ? "COMBO READY! 🎃" : `PUMPKIN HITS ${ball.goblinHitCount}/3`,
+                    color: "#f97316", life: 0.85, maxLife: 0.85
+                  });
+                  
+                  if (ball.goblinHitCount >= 3) {
+                    ball.goblinHitCount = 0;
+                    ownerBall.goblinState = "swooping";
+                    ownerBall.goblinTargetId = ball.id;
+                    ownerBall.gliderUntil = 0; // stop manual glider
+                    playSound("hammerLaunch", 1.25, 90);
+                    
+                    game.floatingTexts.push({
+                      x: ownerBall.x, y: ownerBall.y - ownerBall.r - 20, vy: -50,
+                      text: "GLIDER SWOOP COMBO!", color: "#a855f7", life: 1.0, maxLife: 1.0
+                    });
+                  }
+                }
+
                 if (mine.ownerId.startsWith("left") && ball.side === "right") {
                   game.stats.left.damageDealt += dmg; game.stats.left.hitsLanded++;
                 } else if (mine.ownerId.startsWith("right") && ball.side === "left") {
@@ -11820,11 +12293,33 @@ export default function App() {
           return true;
         }
 
-        if (dist < enemy.r + game.balance.bomber.mineTriggerDist) {
+        if (!mine.isSticky && dist < enemy.r + game.balance.bomber.mineTriggerDist) {
           mine.triggerTime = game.simTime + 150;
           mine.isAboutToDetonate = true;
           spawnSparks(mine.x, mine.y, "#ef4444", mine.isHoming ? 12 : 4);
           playSound("bombFuse");
+        }
+
+        if (mine.isSticky && !mine.isStuck) {
+          if (dist < enemy.r + mine.r + 18) {
+            mine.isStuck = true;
+            mine.stuckTo = enemy.id;
+            playSound("lockOn", 1.35, 100);
+
+            const ownerBall = balls.find(b => b.id === mine.ownerId);
+            if (ownerBall && ownerBall.type === "bomber" && (!ownerBall.goblinState || ownerBall.goblinState === "idle")) {
+              ownerBall.goblinState = "swooping";
+              ownerBall.goblinTargetId = enemy.id;
+              ownerBall.gliderUntil = 0;
+
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: ownerBall.x, y: ownerBall.y - ownerBall.r - 20, vy: -50,
+                text: "GLIDER SWOOP COMBO!", color: "#ea580c", life: 1.0, maxLife: 1.0
+              });
+              playSound("hammerLaunch", 1.25, 90);
+            }
+          }
         }
         return true;
       });
@@ -12033,6 +12528,72 @@ export default function App() {
       });
     };
 
+    const triggerRedExplosion = (b, hitTarget = null) => {
+      playSound("explosion", 1.15, 120);
+      game.screenShake = Math.max(game.screenShake || 0, 12);
+      spawnImpactBurst(b.x, b.y, Math.atan2(b.vy, b.vx), ["#ffffff", "#fca5a5", "#ef4444", "#991b1b"], 1.6);
+      spawnSparks(b.x, b.y, "#ef4444", 25);
+      
+      const explosionRadius = 120;
+      game.balls.forEach((ball) => {
+        if (ball.shattered || ball.health <= 0 || ball.type === "cueBall") return;
+        if (ball.id === b.ownerId) return; // don't hit self
+        
+        const dist = Math.hypot(ball.x - b.x, ball.y - b.y);
+        if (dist < explosionRadius) {
+          const forcePct = (explosionRadius - dist) / explosionRadius;
+          const damage = Math.round(b.damage * forcePct);
+          if (damage > 0) {
+            applyDamage(ball, damage, `${b.ownerId}-red-explosion`, game.simTime, 300);
+            
+            // Apply high knockback
+            const angle = Math.atan2(ball.y - b.y, ball.x - b.x);
+            const kbForce = b.knockback * forcePct * 1.5;
+            ball.vx += Math.cos(angle) * kbForce;
+            ball.vy += Math.sin(angle) * kbForce;
+            
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 8, vy: -55,
+              text: `RED BLAST -${damage}`, color: "#ef4444", life: 0.85, maxLife: 0.85
+            });
+          }
+        }
+      });
+    };
+
+    const triggerPurpleExplosion = (b) => {
+      playSound("explosion", 1.45, 180);
+      game.screenShake = Math.max(game.screenShake || 0, 24);
+      spawnImpactBurst(b.x, b.y, 0, ["#ffffff", "#e9d5ff", "#d946ef", "#701a75"], 2.5);
+      spawnSparks(b.x, b.y, "#d946ef", 40);
+      
+      const explosionRadius = 180;
+      game.balls.forEach((ball) => {
+        if (ball.shattered || ball.health <= 0 || ball.type === "cueBall") return;
+        if (ball.id === b.ownerId) return;
+        
+        const dist = Math.hypot(ball.x - b.x, ball.y - b.y);
+        if (dist < explosionRadius) {
+          const forcePct = (explosionRadius - dist) / explosionRadius;
+          const damage = Math.round(b.damage * forcePct);
+          if (damage > 0) {
+            applyDamage(ball, damage, `${b.ownerId}-purple-explosion`, game.simTime, 300);
+            
+            // Apply massive knockback
+            const angle = Math.atan2(ball.y - b.y, ball.x - b.x);
+            const kbForce = 1200 * forcePct;
+            ball.vx += Math.cos(angle) * kbForce;
+            ball.vy += Math.sin(angle) * kbForce;
+            
+            game.floatingTexts.push({
+              x: ball.x, y: ball.y - ball.r - 8, vy: -55,
+              text: `PURPLE ERASE -${damage}`, color: "#d946ef", life: 1.1, maxLife: 1.1
+            });
+          }
+        }
+      });
+    };
+
     const updateBullets = (dt, balls) => {
       game.bullets = game.bullets.filter((bullet) => {
         if (bullet.isCosmetic || bullet.kind === "thrownGun") {
@@ -12070,6 +12631,54 @@ export default function App() {
             bullet.vy += 1400 * dt; // gravity
           }
           return true;
+        }
+
+        // Gojo Limitless & Hollow Purple Intercept
+        if (!bullet.isCosmetic) {
+          if (bullet.kind !== "sorcererPurple") {
+            const purpleOrb = game.bullets.find((b) => b.kind === "sorcererPurple" && b.ownerId !== bullet.ownerId);
+            if (purpleOrb) {
+              const dPurple = Math.hypot(bullet.x - purpleOrb.x, bullet.y - purpleOrb.y);
+              const purpleBal = game.balance.sorcerer || BALANCE.sorcerer;
+              if (dPurple < purpleBal.purpleRadius + 45) {
+                const angleToPurple = Math.atan2(purpleOrb.y - bullet.y, purpleOrb.x - bullet.x);
+                const pullForce = 350;
+                bullet.vx += Math.cos(angleToPurple) * pullForce * dt;
+                bullet.vy += Math.sin(angleToPurple) * pullForce * dt;
+                if (dPurple < purpleBal.purpleRadius + 5) {
+                  spawnSparks(bullet.x, bullet.y, "#d946ef", 6);
+                  return false;
+                }
+              }
+            }
+          }
+
+          const opposSorcerers = balls.filter((b) => b.type === "sorcerer" && b.health > 0 && b.id !== bullet.ownerId);
+          for (const gojo of opposSorcerers) {
+            const dx = bullet.x - gojo.x;
+            const dy = bullet.y - gojo.y;
+            const dist = Math.hypot(dx, dy);
+            const gojoBal = game.balance.sorcerer || BALANCE.sorcerer;
+            const infRad = gojoBal.infinityRadius || 110;
+            if (dist < infRad) {
+              if (!bullet.piercesDefense && !bullet.cannotReflect) {
+                const slowFactor = gojoBal.infinitySlowFactor || 0.15;
+                const factor = Math.max(slowFactor, (dist - gojo.r) / (infRad - gojo.r));
+                bullet.vx *= Math.pow(factor, dt * 60);
+                bullet.vy *= Math.pow(factor, dt * 60);
+                const pushForce = (infRad - dist) * 16;
+                bullet.vx += (dx / dist) * pushForce * dt;
+                bullet.vy += (dy / dist) * pushForce * dt;
+                if (Math.random() < 0.18) {
+                  spawnSparks(bullet.x, bullet.y, "#818cf8", 1);
+                }
+                if (dist < gojo.r + 12) {
+                  spawnSparks(bullet.x, bullet.y, "#818cf8", 8);
+                  return false;
+                }
+              }
+            }
+          }
         }
 
         if (bullet.kind === "ninjaShuriken") {
@@ -12116,6 +12725,10 @@ export default function App() {
           if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
             spawnSparks(bullet.x, bullet.y, bullet.kind === "lokiFireball" ? "#fbbf24" : "#94a3b8", 12);
             playSound("explosion", 0.55, 70);
+          } else if (bullet.kind === "sorcererRed") {
+            triggerRedExplosion(bullet);
+          } else if (bullet.kind === "sorcererPurple") {
+            triggerPurpleExplosion(bullet);
           }
           return false;
         }
@@ -12197,6 +12810,24 @@ export default function App() {
           if (isChessCrownActive(target)) return false;
           if (isBomberSelfDestructInvulnerable(target)) return false;
           if (isWreckerJumpInvulnerable(target)) return false;
+
+          // Sorcerer bullets hit
+          if (bullet.kind === "sorcererRed") {
+            triggerRedExplosion(bullet, target);
+            return false;
+          }
+          if (bullet.kind === "sorcererPurple") {
+            if (game.simTime >= (bullet.nextTickDamageAt || 0)) {
+              applyDamage(target, bullet.tickDamage || 12, `${bullet.ownerId}-purple-tick`, game.simTime, 200);
+              bullet.nextTickDamageAt = game.simTime + 200;
+              spawnSparks(target.x, target.y, "#d946ef", 12);
+              playSound("explosion", 0.62, 70);
+              const angle = Math.atan2(bullet.vy, bullet.vx);
+              target.vx += Math.cos(angle) * 140;
+              target.vy += Math.sin(angle) * 140;
+            }
+            return true;
+          }
 
           // Loki Illusion Fireball hit
           if (bullet.kind === "lokiIllusionFireball") {
@@ -12351,7 +12982,7 @@ export default function App() {
         ctx.fillStyle = "rgba(244, 63, 94, 0.07)"; ctx.fillRect(game.width / 2, 4, game.width / 2 - 4, game.height - 8);
       }
       
-      // Draw wall craters spawned by Wrecker's Max Rage punches
+      // Draw wall glass shatters spawned by Wrecker's Max Rage punches
       if (game.craters) {
         game.craters.forEach(c => {
           ctx.save();
@@ -12361,39 +12992,86 @@ export default function App() {
           // Fade out slightly towards the end
           ctx.globalAlpha = Math.min(1.0, c.life * 1.5);
           
-          // Draw cracked wall background (grey circle with cracks)
-          ctx.strokeStyle = "#475569";
-          ctx.lineWidth = 3.5;
-          ctx.fillStyle = "#1e293b";
+          // Set glow effect for shattered glass
+          ctx.shadowColor = "#38bdf8";
+          ctx.shadowBlur = 6;
+
+          // Draw radial cracks
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+          ctx.lineWidth = 1.6;
           
-          // Draw crater inner hollow
-          ctx.beginPath();
-          ctx.arc(0, 0, c.r * 0.7, -Math.PI/2, Math.PI/2);
-          ctx.fill();
-          ctx.stroke();
-          
-          // Draw outer shock rings
-          ctx.strokeStyle = "#334155";
-          ctx.lineWidth = 2.2;
-          ctx.beginPath();
-          ctx.arc(0, 0, c.r, -Math.PI/2, Math.PI/2);
-          ctx.stroke();
-          
-          // Draw jagged cracks radiating from the crater
-          ctx.strokeStyle = "#475569";
-          ctx.lineWidth = 1.8;
-          const crackAngles = [-0.6, -0.3, 0, 0.3, 0.6];
-          crackAngles.forEach(ca => {
-            ctx.save();
-            ctx.rotate(ca);
+          const crackAngles = [-1.4, -1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.4];
+          crackAngles.forEach((theta, idx) => {
+            // Seeded deterministic jitter so cracks remain stable
+            const sSeed = Math.sin(c.x * 2.7 + c.y * 8.3 + idx * 4.9);
+            const length = c.r * (1.1 + Math.abs(sSeed) * 0.75);
+            
             ctx.beginPath();
-            ctx.moveTo(c.r * 0.7, 0);
-            // Jagged path
-            ctx.lineTo(c.r * 1.1, -8);
-            ctx.lineTo(c.r * 1.45, 4);
-            ctx.lineTo(c.r * 1.75, -2);
+            ctx.moveTo(0, 0);
+            
+            // Jagged segment 1
+            const p1_dist = length * 0.35;
+            const p1_angle = theta + sSeed * 0.12;
+            ctx.lineTo(Math.cos(p1_angle) * p1_dist, Math.sin(p1_angle) * p1_dist);
+            
+            // Jagged segment 2
+            const p2_dist = length * 0.7;
+            const p2_angle = theta - sSeed * 0.08;
+            ctx.lineTo(Math.cos(p2_angle) * p2_dist, Math.sin(p2_angle) * p2_dist);
+            
+            // Endpoint
+            ctx.lineTo(Math.cos(theta) * length, Math.sin(theta) * length);
             ctx.stroke();
-            ctx.restore();
+          });
+
+          // Draw spiderweb-like concentric polygon rings
+          ctx.strokeStyle = "rgba(186, 230, 253, 0.45)"; // light sky blue
+          ctx.lineWidth = 1.2;
+          const ringRadii = [c.r * 0.35, c.r * 0.75, c.r * 1.15];
+          ringRadii.forEach(R => {
+            ctx.beginPath();
+            for (let i = 0; i <= 8; i++) {
+              // Steps from -Math.PI/2 to Math.PI/2
+              const theta = -Math.PI / 2 + (Math.PI * i / 8);
+              const rJitter = 1 + Math.sin(c.x * 4.3 + c.y * 1.9 + theta * 8.5) * 0.08;
+              const currR = R * rJitter;
+              const px = Math.cos(theta) * currR;
+              const py = Math.sin(theta) * currR;
+              if (i === 0) {
+                ctx.moveTo(px, py);
+              } else {
+                ctx.lineTo(px, py);
+              }
+            }
+            ctx.stroke();
+          });
+
+          // Draw reflective glass shards near the impact center
+          ctx.fillStyle = "rgba(56, 189, 248, 0.18)"; // cyan semi-transparent glass fill
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+          ctx.lineWidth = 1.0;
+          
+          const shardPositions = [
+            { rMin: 0.12, rMax: 0.40, angle: -0.9 },
+            { rMin: 0.15, rMax: 0.48, angle: -0.3 },
+            { rMin: 0.18, rMax: 0.52, angle: 0.3 },
+            { rMin: 0.10, rMax: 0.38, angle: 0.9 }
+          ];
+
+          shardPositions.forEach((pos, idx) => {
+            const sSeed = Math.sin(c.x * 3.1 + c.y * 7.4 + idx * 5.9);
+            const aCenter = pos.angle + sSeed * 0.15;
+            const r1 = pos.rMin * c.r;
+            const r2 = pos.rMax * c.r;
+            const widthAngle = 0.08 + Math.abs(sSeed) * 0.1;
+            
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(aCenter) * r1, Math.sin(aCenter) * r1);
+            ctx.lineTo(Math.cos(aCenter - widthAngle) * r2, Math.sin(aCenter - widthAngle) * r2);
+            ctx.lineTo(Math.cos(aCenter + widthAngle) * (r2 * 0.82), Math.sin(aCenter + widthAngle) * (r2 * 0.82));
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
           });
           
           ctx.restore();
@@ -14006,44 +14684,7 @@ export default function App() {
       ctx.lineWidth = 3.6; ctx.strokeStyle = `hsl(${h}, ${s}%, ${l - 25}%)`;
       ctx.stroke();
 
-      // Draw angry vein pop mark on the top right
-      ctx.save();
-      ctx.translate(drawR * 0.32, -drawR * 0.32);
-      
-      // Dark green/blackish outline color when calm, stays dark green/blackish as rage builds
-      const veinH = 84;
-      const veinL = Math.max(10, l - 22 - rRatio * 12);
-      ctx.strokeStyle = `hsl(${veinH}, ${s}%, ${veinL}%)`;
-      ctx.lineWidth = drawR * 0.12;
-      ctx.lineCap = "round";
-      
-      const vSize = drawR * 0.28;
-      
-      // Top-Right curve
-      ctx.beginPath();
-      ctx.moveTo(vSize * 0.15, -vSize * 0.9);
-      ctx.quadraticCurveTo(vSize * 0.7, -vSize * 0.7, vSize * 0.9, -vSize * 0.15);
-      ctx.stroke();
 
-      // Top-Left curve
-      ctx.beginPath();
-      ctx.moveTo(-vSize * 0.15, -vSize * 0.9);
-      ctx.quadraticCurveTo(-vSize * 0.7, -vSize * 0.7, -vSize * 0.9, -vSize * 0.15);
-      ctx.stroke();
-
-      // Bottom-Left curve
-      ctx.beginPath();
-      ctx.moveTo(-vSize * 0.9, vSize * 0.15);
-      ctx.quadraticCurveTo(-vSize * 0.7, vSize * 0.7, -vSize * 0.15, vSize * 0.9);
-      ctx.stroke();
-
-      // Bottom-Right curve
-      ctx.beginPath();
-      ctx.moveTo(vSize * 0.15, vSize * 0.9);
-      ctx.quadraticCurveTo(vSize * 0.7, vSize * 0.7, vSize * 0.9, vSize * 0.15);
-      ctx.stroke();
-      
-      ctx.restore();
 
 
 
@@ -14954,33 +15595,296 @@ export default function App() {
 
     const drawBomberBall = (ball) => {
       const config = BALL_TYPES.bomber;
-      const selfDestructActive = ball.bomberSelfDestructAt && game.simTime < ball.bomberSelfDestructAt;
-      if (selfDestructActive) {
-        const pulse = 0.5 + Math.sin(game.simTime * 0.035) * 0.5;
+
+      // Draw black bat-collar/cape behind the ball
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.fillStyle = "#0c0f16"; // very dark black/grey
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      // Left shoulder collar
+      ctx.moveTo(-ball.r - 2, ball.r * 0.1);
+      ctx.quadraticCurveTo(-ball.r - 12, ball.r * 0.7, -ball.r * 0.9, ball.r + 10);
+      ctx.lineTo(-ball.r * 0.4, ball.r + 3);
+      ctx.lineTo(0, ball.r + 12); // center point
+      ctx.lineTo(ball.r * 0.4, ball.r + 3);
+      ctx.lineTo(ball.r * 0.9, ball.r + 10);
+      ctx.quadraticCurveTo(ball.r + 12, ball.r * 0.7, ball.r + 2, ball.r * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw glider underneath ball if active
+      const gliderActive = ball.goblinState === "swooping" || ball.goblinState === "carrying";
+      if (gliderActive) {
         ctx.save();
-        const warningGlow = ctx.createRadialGradient(ball.x, ball.y, ball.r * 0.5, ball.x, ball.y, ball.r + 35 + pulse * 14);
-        warningGlow.addColorStop(0, `rgba(239,68,68,${0.28 + pulse * 0.22})`);
-        warningGlow.addColorStop(1, "rgba(127,29,29,0)");
-        ctx.fillStyle = warningGlow;
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r + 50, 0, Math.PI * 2); ctx.fill();
+        ctx.translate(ball.x, ball.y);
+        ctx.fillStyle = "#1e293b"; // dark steel grey
+        ctx.strokeStyle = "#a855f7"; // glowing purple accents
+        ctx.lineWidth = 4.5;
+        
+        // Draw bat-winged glider
+        ctx.beginPath();
+        ctx.moveTo(-45, 12);
+        ctx.quadraticCurveTo(-20, 24, 0, 10);
+        ctx.quadraticCurveTo(20, 24, 45, 12);
+        ctx.lineTo(32, 25);
+        ctx.lineTo(15, 29);
+        ctx.lineTo(0, 39); // rear point
+        ctx.lineTo(-15, 29);
+        ctx.lineTo(-32, 25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Exhaust jets
+        const pulse = 0.5 + Math.sin(game.simTime * 0.04) * 0.5;
+        ctx.fillStyle = `rgba(234, 88, 12, ${0.6 + pulse * 0.4})`; // orange thruster exhaust
+        ctx.beginPath();
+        ctx.arc(-22, 24, 6 + pulse * 3, 0, Math.PI * 2);
+        ctx.arc(22, 24, 6 + pulse * 3, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fillStyle = config.color; ctx.fill();
-      ctx.clip();
 
-      ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 8;
-      for (let xOffset = -ball.r * 2; xOffset < ball.r * 2; xOffset += 18) {
-        ctx.beginPath(); ctx.moveTo(xOffset, -ball.r - 2);
-        ctx.lineTo(xOffset + 24, ball.r + 2); ctx.stroke();
+      // Draw purple energy bonds if carrying a target
+      if (ball.goblinState === "carrying" && ball.goblinTargetId) {
+        const targetBall = game.balls.find(b => b.id === ball.goblinTargetId);
+        if (targetBall) {
+          ctx.save();
+          const rayCount = 3;
+          for (let i = 0; i < rayCount; i++) {
+            const offset = (Math.sin(game.simTime * 0.05 + i * 2) * 5);
+            ctx.strokeStyle = i === 1 ? "#d8b4fe" : "#a855f7";
+            ctx.lineWidth = i === 1 ? 2.5 : 4.5;
+            ctx.shadowColor = "#a855f7";
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(ball.x, ball.y);
+            const midX = (ball.x + targetBall.x) / 2 + (Math.random() - 0.5) * 8;
+            const midY = (ball.y + targetBall.y) / 2 + offset;
+            ctx.quadraticCurveTo(midX, midY, targetBall.x, targetBall.y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
       }
 
+      // Draw main Goblin Ball body
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      // Clip drawing inside the circle
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      
+      // Radial metallic green gradient
+      const faceGrad = ctx.createRadialGradient(-ball.r * 0.2, -ball.r * 0.3, ball.r * 0.1, 0, 0, ball.r);
+      faceGrad.addColorStop(0, "#22c55e"); // bright green metallic highlight
+      faceGrad.addColorStop(0.4, "#15803d"); // rich green
+      faceGrad.addColorStop(0.8, "#14532d"); // forest green
+      faceGrad.addColorStop(1, "#052e16"); // dark edge
+      ctx.fillStyle = faceGrad;
+      ctx.fill();
+      ctx.clip();
+
+      // Armor plating lines and shadows (the segmented paneling look)
+      ctx.strokeStyle = "rgba(2, 44, 34, 0.9)";
+      ctx.lineWidth = 2.5;
+
+      // Eyebrow plate creases
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.9, -ball.r * 0.5);
+      ctx.quadraticCurveTo(-ball.r * 0.4, -ball.r * 0.25, 0, -ball.r * 0.1);
+      ctx.quadraticCurveTo(ball.r * 0.4, -ball.r * 0.25, ball.r * 0.9, -ball.r * 0.5);
+      ctx.stroke();
+
+      // Horizontal mid-face division
+      ctx.beginPath();
+      ctx.moveTo(-ball.r, 0);
+      ctx.lineTo(-ball.r * 0.6, -ball.r * 0.1);
+      ctx.lineTo(-ball.r * 0.2, 0);
+      ctx.lineTo(ball.r * 0.2, 0);
+      ctx.lineTo(ball.r * 0.6, -ball.r * 0.1);
+      ctx.lineTo(ball.r, 0);
+      ctx.stroke();
+
+      // Vertical head lines
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r);
+      ctx.quadraticCurveTo(-8, -ball.r * 0.5, 0, -ball.r * 0.1);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.35, -ball.r);
+      ctx.quadraticCurveTo(-ball.r * 0.5, -ball.r * 0.4, -ball.r * 0.7, -ball.r * 0.1);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.35, -ball.r);
+      ctx.quadraticCurveTo(ball.r * 0.5, -ball.r * 0.4, ball.r * 0.7, -ball.r * 0.1);
+      ctx.stroke();
+
+      // Nose bridge plate (central piece)
+      ctx.fillStyle = "#166534";
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 0.1);
+      ctx.lineTo(-6, ball.r * 0.05);
+      ctx.lineTo(-3, ball.r * 0.15);
+      ctx.lineTo(0, ball.r * 0.25);
+      ctx.lineTo(3, ball.r * 0.15);
+      ctx.lineTo(6, ball.r * 0.05);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Pointy metallic ears stretching out (from inside clip and outside)
       ctx.restore(); ctx.save(); ctx.translate(ball.x, ball.y);
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-      ctx.fillStyle = "#1e293b"; ctx.beginPath(); ctx.arc(0, 2, 8, 0, Math.PI * 2); ctx.fill();
-      ctx.fillRect(-2, -8, 4, 6);
+      
+      // Left Ear
+      ctx.fillStyle = "#15803d";
+      ctx.strokeStyle = "#052e16";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r + 4, -6);
+      ctx.quadraticCurveTo(-ball.r - 20, -18, -ball.r - 28, -8);
+      ctx.quadraticCurveTo(-ball.r - 15, 6, -ball.r + 4, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Left Ear inner shadow
+      ctx.fillStyle = "#14532d";
+      ctx.beginPath();
+      ctx.moveTo(-ball.r + 3, -2);
+      ctx.quadraticCurveTo(-ball.r - 14, -10, -ball.r - 20, -5);
+      ctx.quadraticCurveTo(-ball.r - 10, 2, -ball.r + 3, 5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right Ear
+      ctx.fillStyle = "#15803d";
+      ctx.strokeStyle = "#052e16";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(ball.r - 4, -6);
+      ctx.quadraticCurveTo(ball.r + 20, -18, ball.r + 28, -8);
+      ctx.quadraticCurveTo(ball.r + 15, 6, ball.r - 4, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Right Ear inner shadow
+      ctx.fillStyle = "#14532d";
+      ctx.beginPath();
+      ctx.moveTo(ball.r - 3, -2);
+      ctx.quadraticCurveTo(ball.r + 14, -10, ball.r + 20, -5);
+      ctx.quadraticCurveTo(ball.r + 10, 2, ball.r - 3, 5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw green circle boundary stroke
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#052e16";
+      ctx.stroke();
+
+      // Glowing Slanted Yellow/Orange eyes (like the image)
+      const drawArmorEye = (isRight) => {
+        ctx.save();
+        if (isRight) ctx.scale(-1, 1);
+
+        // Eye socket black background
+        ctx.fillStyle = "#022c22";
+        ctx.beginPath();
+        ctx.moveTo(-22, -9);
+        ctx.quadraticCurveTo(-12, -18, -2, -10);
+        ctx.quadraticCurveTo(-12, -2, -22, -9);
+        ctx.fill();
+
+        // Eye glow gradient
+        const eyeGrad = ctx.createRadialGradient(-12, -10, 1, -12, -10, 10);
+        eyeGrad.addColorStop(0, "#ffffff"); // white hot center
+        eyeGrad.addColorStop(0.3, "#facc15"); // yellow
+        eyeGrad.addColorStop(0.7, "#ea580c"); // orange
+        eyeGrad.addColorStop(1, "#7c2d12"); // dark red/brown outline
+
+        ctx.fillStyle = eyeGrad;
+        ctx.beginPath();
+        ctx.moveTo(-20, -10);
+        ctx.quadraticCurveTo(-12, -16, -4, -11);
+        ctx.quadraticCurveTo(-12, -4, -20, -10);
+        ctx.fill();
+
+        // Dark slit pupil
+        ctx.fillStyle = "#000000";
+        ctx.beginPath();
+        ctx.ellipse(-11, -10, 1.8, 4.5, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      };
+
+      drawArmorEye(false); // Left eye
+      drawArmorEye(true);  // Right eye
+
+      // Menacing Open Mouth (black void)
+      ctx.fillStyle = "#090d16";
+      ctx.strokeStyle = "#052e16";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-20, 3);
+      ctx.quadraticCurveTo(0, -1, 20, 3);
+      ctx.quadraticCurveTo(16, 21, 0, 21);
+      ctx.quadraticCurveTo(-16, 21, -20, 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Mouth inner mesh grid texture
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let x = -18; x <= 18; x += 3.5) {
+        ctx.moveTo(x, 1);
+        ctx.lineTo(x, 21);
+      }
+      ctx.stroke();
+
+      // Sharp Silver Teeth
+      ctx.fillStyle = "#f1f5f9"; // silver white
+      ctx.strokeStyle = "#64748b"; // metallic border
+      ctx.lineWidth = 1;
+
+      // Top row fangs
+      const topTeeth = [-15, -11, -7, -3, 3, 7, 11, 15];
+      topTeeth.forEach(tx => {
+        ctx.beginPath();
+        ctx.moveTo(tx - 2, 3);
+        const toothLen = tx === -3 || tx === 3 ? 9 : 6;
+        ctx.lineTo(tx, 3 + toothLen);
+        ctx.lineTo(tx + 2, 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      // Bottom row fangs
+      const bottomTeeth = [-13, -9, -5, 0, 5, 9, 13];
+      bottomTeeth.forEach(tx => {
+        ctx.beginPath();
+        ctx.moveTo(tx - 1.8, 19);
+        const toothLen = tx === 0 ? 8 : 5.5;
+        ctx.lineTo(tx, 19 - toothLen);
+        ctx.lineTo(tx + 1.8, 19);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+
       ctx.restore();
       drawHealthInsideBall(ball);
     };
@@ -18173,6 +19077,7 @@ export default function App() {
       else if (ball.type === "spider") drawSpiderBall(ball);
       else if (ball.type === "bomber") drawBomberBall(ball);
       else if (ball.type === "spore") drawSporeBall(ball);
+      else if (ball.type === "sorcerer") drawSorcererBall(ball);
       else if (ball.type === "batter") drawBatterBall(ball);
       else if (ball.type === "hammer") drawHammerBall(ball);
       else if (ball.type === "stringWeb") drawStringWebBall(ball);
@@ -18600,6 +19505,96 @@ export default function App() {
           ctx.strokeStyle = isReal ? "#fde047" : "#cbd5e1"; 
           ctx.lineWidth = 2.5; 
           ctx.stroke();
+        } else if (bullet.kind === "sorcererRed") {
+          ctx.shadowColor = "#ef4444";
+          ctx.shadowBlur = 16;
+          const pulse = 0.8 + Math.sin(game.simTime * 0.02) * 0.2;
+          const speedAngle = Math.atan2(bullet.vy, bullet.vx);
+          const tailLength = 20 + pulse * 8;
+          const tailWidth = bullet.r * 1.3;
+          
+          const tailGrad = ctx.createLinearGradient(
+            bullet.x - Math.cos(speedAngle) * tailLength,
+            bullet.y - Math.sin(speedAngle) * tailLength,
+            bullet.x,
+            bullet.y
+          );
+          tailGrad.addColorStop(0, "rgba(239, 68, 68, 0)");
+          tailGrad.addColorStop(0.5, "rgba(220, 38, 38, 0.4)");
+          tailGrad.addColorStop(1, "rgba(254, 226, 226, 0.85)");
+          
+          ctx.fillStyle = tailGrad;
+          ctx.beginPath();
+          ctx.moveTo(bullet.x + Math.cos(speedAngle) * bullet.r, bullet.y + Math.sin(speedAngle) * bullet.r);
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength - Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength + Math.cos(speedAngle) * tailWidth
+          );
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength + Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength - Math.cos(speedAngle) * tailWidth
+          );
+          ctx.closePath();
+          ctx.fill();
+          
+          const coreGrad = ctx.createRadialGradient(
+            bullet.x - bullet.r * 0.3, bullet.y - bullet.r * 0.3, 1,
+            bullet.x, bullet.y, bullet.r
+          );
+          coreGrad.addColorStop(0, "#fee2e2");
+          coreGrad.addColorStop(0.4, "#ef4444");
+          coreGrad.addColorStop(1, "#7f1d1d");
+          
+          ctx.fillStyle = coreGrad;
+          ctx.beginPath();
+          ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#fecaca";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+        } else if (bullet.kind === "sorcererPurple") {
+          ctx.shadowColor = "#d946ef";
+          ctx.shadowBlur = 24;
+          const pulse = 0.8 + Math.sin(game.simTime * 0.02) * 0.2;
+          const r = bullet.r;
+          
+          ctx.fillStyle = "rgba(162, 28, 175, 0.15)";
+          ctx.beginPath();
+          ctx.arc(bullet.x, bullet.y, r * 1.35 + pulse * 4, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.save();
+          ctx.translate(bullet.x, bullet.y);
+          ctx.rotate(game.simTime * 0.01);
+          ctx.strokeStyle = "rgba(217, 70, 239, 0.6)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 1.15, 0, Math.PI * 0.7);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 1.15, Math.PI, Math.PI * 1.7);
+          ctx.stroke();
+          ctx.restore();
+          
+          const coreGrad = ctx.createRadialGradient(
+            bullet.x - r * 0.2, bullet.y - r * 0.2, 1,
+            bullet.x, bullet.y, r
+          );
+          coreGrad.addColorStop(0, "#ffffff");
+          coreGrad.addColorStop(0.3, "#f3e8ff");
+          coreGrad.addColorStop(0.65, "#d946ef");
+          coreGrad.addColorStop(1, "#701a75");
+          
+          ctx.fillStyle = coreGrad;
+          ctx.beginPath();
+          ctx.arc(bullet.x, bullet.y, r, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.strokeStyle = "#fdf4ff";
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
         } else if (bullet.kind === "thrownGun") {
           ctx.globalAlpha = Math.max(0, Math.min(1, bullet.life / bullet.maxLife));
           ctx.translate(bullet.x, bullet.y);
@@ -18726,39 +19721,109 @@ export default function App() {
     const drawMines = () => {
       game.mines.forEach((mine) => {
         ctx.save();
-        if (mine.isHoming) {
-          ctx.shadowColor = "#ef4444"; ctx.shadowBlur = 12;
-          ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 2.5; ctx.fillStyle = "#2b0b0b";
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-          ctx.fillStyle = "#ef4444";
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r - 2, 0, Math.PI / 2); ctx.lineTo(mine.x, mine.y); ctx.fill();
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r - 2, Math.PI, Math.PI * 1.5); ctx.lineTo(mine.x, mine.y); ctx.fill();
-
-          const rate = mine.isAboutToDetonate ? 0.05 : 0.015;
-          const pulse = Math.abs(Math.sin(game.simTime * rate));
-          ctx.fillStyle = `rgba(254, 226, 226, ${0.4 + 0.6 * pulse})`;
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, 4, 0, Math.PI * 2); ctx.fill();
-
-          ctx.strokeStyle = `rgba(239, 68, 68, 0.22)`; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.triggerRadius, 0, Math.PI * 2); ctx.stroke();
+        
+        // Purple glow for homing/glider bombs, orange for standard pumpkin bombs, pink/red for sticky/stuck
+        if (mine.isSticky) {
+          ctx.shadowColor = mine.isStuck ? "#ef4444" : "#ec4899";
+          ctx.shadowBlur = 15;
         } else {
-          ctx.shadowColor = "#f59e0b"; ctx.shadowBlur = 6;
-          ctx.strokeStyle = "#78350f"; ctx.lineWidth = 2.5; ctx.fillStyle = "#1e293b";
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-          ctx.fillStyle = "#facc15";
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r - 2, 0, Math.PI / 2); ctx.lineTo(mine.x, mine.y); ctx.fill();
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.r - 2, Math.PI, Math.PI * 1.5); ctx.lineTo(mine.x, mine.y); ctx.fill();
-
-          const rate = mine.isAboutToDetonate ? 0.05 : 0.015;
-          const pulse = Math.abs(Math.sin(game.simTime * rate));
-          ctx.fillStyle = `rgba(239, 68, 68, ${0.4 + 0.6 * pulse})`;
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, 4, 0, Math.PI * 2); ctx.fill();
-
-          ctx.strokeStyle = `rgba(245, 158, 11, 0.12)`; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.arc(mine.x, mine.y, mine.triggerRadius, 0, Math.PI * 2); ctx.stroke();
+          ctx.shadowColor = mine.isHoming ? "#a855f7" : "#ea580c";
+          ctx.shadowBlur = 10;
         }
+        
+        // Main pumpkin sphere (orange)
+        ctx.fillStyle = "#ea580c"; // Orange
+        ctx.strokeStyle = "#7c2d12"; // Dark brown/orange outline
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(mine.x, mine.y, mine.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Pumpkin vertical ridges
+        ctx.beginPath();
+        // Outer ridges
+        ctx.ellipse(mine.x, mine.y, mine.r * 0.6, mine.r, 0, 0, Math.PI * 2);
+        // Inner ridges
+        ctx.ellipse(mine.x, mine.y, mine.r * 0.25, mine.r, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Stem (green)
+        ctx.fillStyle = "#22c55e"; // Green stem
+        ctx.beginPath();
+        ctx.moveTo(mine.x - 3, mine.y - mine.r);
+        ctx.quadraticCurveTo(mine.x - 6, mine.y - mine.r - 8, mine.x - 1, mine.y - mine.r - 8);
+        ctx.quadraticCurveTo(mine.x + 3, mine.y - mine.r - 8, mine.x + 3, mine.y - mine.r);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Glowing Jack-O'-Lantern Face (yellow/orange)
+        const rate = mine.isAboutToDetonate ? 0.05 : 0.015;
+        const pulse = Math.abs(Math.sin(game.simTime * rate));
+        ctx.fillStyle = mine.isHoming 
+          ? `rgba(216, 180, 254, ${0.45 + 0.55 * pulse})` // purple glowing face
+          : `rgba(250, 204, 21, ${0.45 + 0.55 * pulse})`; // yellow glowing face
+        
+        // Triangular eyes
+        ctx.beginPath();
+        // Left eye triangle
+        ctx.moveTo(mine.x - 7, mine.y - 4);
+        ctx.lineTo(mine.x - 3, mine.y - 4);
+        ctx.lineTo(mine.x - 5, mine.y - 8);
+        ctx.closePath();
+        
+        // Right eye triangle
+        ctx.moveTo(mine.x + 3, mine.y - 4);
+        ctx.lineTo(mine.x + 7, mine.y - 4);
+        ctx.lineTo(mine.x + 5, mine.y - 8);
+        ctx.closePath();
+        
+        // Jagged mouth
+        ctx.moveTo(mine.x - 7, mine.y + 1);
+        ctx.lineTo(mine.x - 4, mine.y + 4);
+        ctx.lineTo(mine.x - 2, mine.y + 2);
+        ctx.lineTo(mine.x, mine.y + 5);
+        ctx.lineTo(mine.x + 2, mine.y + 2);
+        ctx.lineTo(mine.x + 4, mine.y + 4);
+        ctx.lineTo(mine.x + 7, mine.y + 1);
+        ctx.quadraticCurveTo(mine.x, mine.y + 9, mine.x - 7, mine.y + 1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Trigger radius ring
+        ctx.strokeStyle = mine.isHoming ? `rgba(168, 85, 247, 0.22)` : `rgba(234, 88, 12, 0.16)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(mine.x, mine.y, mine.triggerRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        if (mine.isSticky) {
+          ctx.strokeStyle = mine.isStuck ? "rgba(239, 68, 68, 0.7)" : "rgba(217, 70, 239, 0.65)";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(mine.x, mine.y, mine.r + 3.5, 0, Math.PI * 2);
+          ctx.stroke();
+
+          if (mine.isStuck) {
+            ctx.strokeStyle = "rgba(239, 68, 68, 0.4)";
+            ctx.lineWidth = 1.5;
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+              ctx.beginPath();
+              ctx.moveTo(mine.x + Math.cos(angle) * mine.r, mine.y + Math.sin(angle) * mine.r);
+              ctx.lineTo(mine.x + Math.cos(angle) * (mine.r + 9), mine.y + Math.sin(angle) * (mine.r + 9));
+              ctx.stroke();
+            }
+          }
+
+          const flash = Math.floor(game.simTime / 120) % 2 === 0;
+          if (flash) {
+            ctx.fillStyle = mine.isStuck ? "#ef4444" : "#ec4899";
+            ctx.beginPath();
+            ctx.arc(mine.x, mine.y - mine.r * 0.45, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        
         ctx.restore();
       });
     };
@@ -19373,6 +20438,171 @@ export default function App() {
 
         ctx.restore();
       });
+    };
+
+    const drawSorcererBlueOrbs = () => {
+      game.balls.forEach((ball) => {
+        if (ball.type === "sorcerer" && ball.sorcererBlueOrb) {
+          const orb = ball.sorcererBlueOrb;
+          ctx.save();
+          ctx.translate(orb.x, orb.y);
+          
+          const pulse = Math.sin(game.simTime * 0.015) * 4;
+          const outerR = orb.targetRadius + pulse;
+          
+          ctx.strokeStyle = "rgba(59, 130, 246, 0.25)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, outerR, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.rotate(game.simTime * 0.005);
+          ctx.strokeStyle = "rgba(29, 78, 216, 0.4)";
+          ctx.lineWidth = 3;
+          for (let i = 0; i < 4; i++) {
+            ctx.rotate(Math.PI / 2);
+            ctx.beginPath();
+            ctx.arc(0, 0, outerR * 0.7, 0, Math.PI * 0.6);
+            ctx.stroke();
+          }
+          
+          ctx.shadowColor = "#3b82f6";
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = "#1e3a8a";
+          ctx.beginPath();
+          ctx.arc(0, 0, orb.radius, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(0, 0, orb.radius * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.restore();
+        }
+      });
+    };
+
+    const drawSorcererBall = (ball) => {
+      const config = BALL_TYPES.sorcerer;
+
+      // Draw Infinity Defense Concentric Warp Rings
+      ctx.save();
+      const numRings = 3;
+      for (let i = 0; i < numRings; i++) {
+        const ringRadius = ball.r + 15 + ((game.simTime * 0.02 + i * 35) % 85);
+        const alpha = Math.max(0, 1 - (ringRadius - ball.r) / 85) * 0.16;
+        ctx.strokeStyle = `rgba(129, 140, 248, ${alpha})`;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      // 1. Spiked White Hair (drawn behind head)
+      ctx.beginPath();
+      ctx.moveTo(-ball.r - 2, 4);
+      ctx.lineTo(-ball.r - 12, -8);
+      ctx.lineTo(-ball.r - 4, -14);
+      
+      ctx.lineTo(-ball.r - 16, -26);
+      ctx.lineTo(-ball.r + 2, -24);
+      
+      ctx.lineTo(-ball.r - 8, -42);
+      ctx.lineTo(-ball.r + 12, -34);
+      
+      ctx.lineTo(0, -ball.r - 24); // Center top spike
+      
+      ctx.lineTo(ball.r - 12, -34);
+      ctx.lineTo(ball.r + 8, -42);
+      
+      ctx.lineTo(ball.r - 2, -24);
+      ctx.lineTo(ball.r + 16, -26);
+      
+      ctx.lineTo(ball.r + 4, -14);
+      ctx.lineTo(ball.r + 12, -8);
+      ctx.lineTo(ball.r + 2, 4);
+
+      // Close along top perimeter
+      ctx.arc(0, 0, ball.r, 0, Math.PI, true);
+      ctx.closePath();
+
+      const hairGrad = ctx.createLinearGradient(0, -ball.r - 24, 0, ball.r);
+      hairGrad.addColorStop(0, "#ffffff");
+      hairGrad.addColorStop(0.7, "#f3f4f6");
+      hairGrad.addColorStop(1, "#dbdbe8");
+      ctx.fillStyle = hairGrad;
+      ctx.fill();
+
+      ctx.strokeStyle = "#1e1e2d";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Hair strands inner lines
+      ctx.strokeStyle = "rgba(90, 90, 117, 0.4)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r + 6, -10);
+      ctx.quadraticCurveTo(-15, -24, 2, -18);
+      ctx.moveTo(-6, -18);
+      ctx.lineTo(-12, -32);
+      ctx.moveTo(6, -18);
+      ctx.lineTo(12, -32);
+      ctx.moveTo(ball.r - 6, -10);
+      ctx.quadraticCurveTo(15, -24, -2, -18);
+      ctx.stroke();
+
+      // 2. Base head circle
+      ctx.fillStyle = config.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = config.stroke;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // 3. Black blindfold wrap
+      ctx.fillStyle = "#111115";
+      ctx.strokeStyle = "#1e1e2d";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r - 1, -8);
+      ctx.quadraticCurveTo(0, -6, ball.r + 1, -8);
+      ctx.lineTo(ball.r + 1, 8);
+      ctx.quadraticCurveTo(0, 10, -ball.r - 1, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Blindfold fold creases
+      ctx.strokeStyle = "#2e2e38";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.7, -2);
+      ctx.quadraticCurveTo(0, 0, ball.r * 0.7, -2);
+      ctx.moveTo(-ball.r * 0.8, 3);
+      ctx.quadraticCurveTo(0, 5, ball.r * 0.8, 3);
+      ctx.stroke();
+
+      // 4. Smug mouth smirk
+      ctx.strokeStyle = "#1e1e2d";
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(4, 12, 6, 0.05, Math.PI * 0.82);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(9, 13);
+      ctx.lineTo(12, 10);
+      ctx.stroke();
+
+      ctx.restore();
     };
 
     const drawSporeBall = (ball) => {
@@ -20189,6 +21419,7 @@ export default function App() {
             const isBlackSpiderPulled = game.balls.some(b => (b.type === "blackSpider" || b.type === "spider") && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
             const isFishermanPulled = ball.fishermanPulledUntil && game.simTime < ball.fishermanPulledUntil;
             const isVampireMistAction = ball.type === "vampire" && ball.vampireMistState !== "idle";
+            const isGoblinGrabbed = game.balls.some(b => b.type === "bomber" && b.goblinState === "carrying" && b.goblinTargetId === ball.id);
             
             const isLatchedTarget = game.balls.some(b => b.type === "vampire" && b.latchedTo === ball.id && b.latchUntil > game.simTime);
             const isLatchedSelf = ball.type === "vampire" && ball.latchedTo && ball.latchUntil > game.simTime;
@@ -20247,7 +21478,7 @@ export default function App() {
               ball.ragdollSpinVelocity *= Math.pow(0.985, stepDt * 60);
             }
 
-            if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isFishermanPulled && !isVampireMistAction && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
+            if (!isTridentPinned && !isBlackSpiderDashing && !isBlackSpiderPullingSelf && !isBlackSpiderPulled && !isFishermanPulled && !isVampireMistAction && !isGoblinGrabbed && (isChessCrownActive(ball) || (!isPulling && !isLatchedSelf && !isChargingHammer && !isArmGrabbed))) {
               const previousX = ball.x;
               const previousY = ball.y;
               ball.x += ball.vx * stepDt * slowMult; ball.y += ball.vy * stepDt * slowMult;
@@ -20416,7 +21647,6 @@ export default function App() {
           game.balls = game.balls.filter((ball) => !ball.pendingRemoval);
 
           game.balls.forEach((ball) => {
-            if (ball.type === "bomber") updateBomberLastStand(ball, game.simTime);
             if (ball.health <= 0 && ball.type !== "cueBall" && !ball.shattered) {
               const team = game.balls.filter((b) => b.side === ball.side && b.type !== "cueBall");
               const teamAlive = team.some((b) => b.health > 0 && b.id !== ball.id);
@@ -20444,6 +21674,7 @@ export default function App() {
                 const isGumPulled = ball.jokerPulledUntil && game.simTime < ball.jokerPulledUntil;
                 const isBlackSpiderPulled = game.balls.some(b => (b.type === "blackSpider" || b.type === "spider") && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
                 const isFishermanPulled = ball.fishermanPulledUntil && game.simTime < ball.fishermanPulledUntil;
+                const isGoblinGrabbed = game.balls.some(b => b.type === "bomber" && b.goblinState === "carrying" && b.goblinTargetId === ball.id);
                 if (ball.type === "knife" && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled) {
                   const bal = game.balance.knife;
                   if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
@@ -20526,7 +21757,7 @@ export default function App() {
                   (ball.batterBouncesLeft || 0) > 0 ||
                   (ball.shieldBashBouncesLeft || 0) > 0 ||
                   (ball.wreckerComboBouncesLeft || 0) > 0;
-                if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !isFishermanPulled && !skillsLocked) {
+                if (!isParalyzed && !isGrabbedByArm && !isGumPulled && !isBlackSpiderPulled && !isFishermanPulled && !skillsLocked && !isGoblinGrabbed) {
                   if (ball.type === "gun") updateGun(ball, target, game.simTime, stepDt);
                   if (ball.type === "ninja") updateNinja(ball, target, game.simTime, stepDt);
                   if (ball.type === "wrecker") updateWrecker(ball, target, game.simTime, stepDt);
@@ -20540,6 +21771,7 @@ export default function App() {
                   }
                   if (ball.type === "bomber") updateBomber(ball, target, game.simTime);
                   if (ball.type === "spore") updateSpore(ball, target, game.simTime);
+                  if (ball.type === "sorcerer") updateSorcerer(ball, target, game.simTime, stepDt);
                   if (ball.type === "batter") updateBatter(ball, target, game.simTime);
                   if (ball.type === "hammer") updateHammer(ball, target, game.simTime);
                   if (ball.type === "arm") updateArm(ball, target, game.simTime, stepDt);
@@ -20668,7 +21900,7 @@ export default function App() {
       game.balls.forEach(drawBallTrail);
       drawFireRoads();
       drawStrings(); drawJokerThreads(); drawFishingLines(); drawWebSplatters(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
-      drawArmorParts(); drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti();
+      drawArmorParts(); drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti(); drawSorcererBlueOrbs();
       drawFireCarEntities();
       drawVampireClones();
       game.balls.forEach((ball) => {
@@ -20772,6 +22004,22 @@ export default function App() {
               {renderSlider("Rotation Speed", "knife", "spinSpeed", 0.02, 0.3, 0.01)}
               {renderSlider("Sec: Throw Cooldown", "knife", "secCooldown", 1000, 8000, 100, "ms")}
               {renderSlider("Sec: Throw Damage", "knife", "secDamage", 1, 20)}
+            </>
+          )}
+          {type === "sorcerer" && (
+            <>
+              {renderSlider("Cooldown", "sorcerer", "cooldown", 1000, 10000, 100, "ms")}
+              {renderSlider("Infinity Radius", "sorcerer", "infinityRadius", 50, 200, 5, "px")}
+              {renderSlider("Infinity Slow Factor", "sorcerer", "infinitySlowFactor", 0.05, 0.5, 0.01)}
+              {renderSlider("Blue Suction", "sorcerer", "blueSuction", 100, 1000, 10, "px/s")}
+              {renderSlider("Blue Implode Damage", "sorcerer", "blueExplosionDamage", 2, 30)}
+              {renderSlider("Red Speed", "sorcerer", "redSpeed", 200, 1000, 50, "px/s")}
+              {renderSlider("Red Damage", "sorcerer", "redExplosionDamage", 2, 40)}
+              {renderSlider("Red Knockback", "sorcerer", "redKnockback", 300, 2000, 50)}
+              {renderSlider("Purple Speed", "sorcerer", "purpleSpeed", 100, 800, 25, "px/s")}
+              {renderSlider("Purple Radius", "sorcerer", "purpleRadius", 15, 60, 1, "px")}
+              {renderSlider("Purple Erase Damage", "sorcerer", "purpleExplosionDamage", 5, 50)}
+              {renderSlider("Purple Tick Damage", "sorcerer", "purpleTickDamage", 2, 30)}
             </>
           )}
           {type === "gun" && (
@@ -21621,8 +22869,8 @@ ${ball.description}`;
         (selectedArchetype === "Melee" && ["knife", "feralClaw", "arm", "wrecker", "mazeChomper", "ninja"].includes(ball.id)) ||
         (selectedArchetype === "Ranged" && ["gun", "laser", "gazerBall", "yoYo", "slipper"].includes(ball.id)) ||
         (selectedArchetype === "Summoner" && ["spore", "shadow"].includes(ball.id)) ||
-        (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull", "fisherman"].includes(ball.id)) ||
-        (selectedArchetype === "Utility/Defense" && ["vampire", "shield", "chess", "trident", "mirror", "joker", "eightBall"].includes(ball.id));
+        (selectedArchetype === "Zone Control" && ["spider", "blackSpider", "bomber", "stringWeb", "dragon", "psychicer", "chaos", "constellation", "fireSkull", "fisherman", "sorcerer"].includes(ball.id)) ||
+        (selectedArchetype === "Utility/Defense" && ["vampire", "shield", "chess", "trident", "mirror", "joker", "eightBall", "sorcerer"].includes(ball.id));
 
       return matchesSearch && matchesArchetype;
     });
@@ -21717,13 +22965,15 @@ ${ball.description}`;
                   {/* Card Header (Ball Visual & Basic info) */}
                   <div className="flex items-center gap-4">
                     {/* Visual representation of the ball */}
-                    <StaticBallCanvas 
-                      type={ball.id} 
-                      color={ball.color} 
-                      stroke={ball.stroke} 
-                      drawBallProxyRef={drawBallProxyRef} 
-                      proxyReady={proxyReady} 
-                    />
+                    {ball.id !== "wrecker" && (
+                      <StaticBallCanvas 
+                        type={ball.id} 
+                        color={ball.color} 
+                        stroke={ball.stroke} 
+                        drawBallProxyRef={drawBallProxyRef} 
+                        proxyReady={proxyReady} 
+                      />
+                    )}
 
                     <div className="min-w-0 flex-1 pr-16">
                       <div className="flex items-center gap-2">

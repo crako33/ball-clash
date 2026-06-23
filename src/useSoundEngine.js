@@ -382,8 +382,21 @@ export function useSoundEngine() {
       osc(ctx, dest, "sine", 120, 0.2, t, 0.1, 95);
     },
     hammerCharge: (ctx, dest, t) => {
-      osc(ctx, dest, "sawtooth", 160, 0.22, t, 0.35, 520);
-      osc(ctx, dest, "triangle", 95, 0.18, t, 0.35, 200);
+      // 1. Initial lightning crack (high-pass & band-pass noise + sawtooth bite)
+      noise(ctx, dest, 0.95, t, 0.18, 1400, 1.0, "bandpass");
+      noise(ctx, dest, 0.45, t + 0.05, 0.22, 3500, 0.8, "highpass");
+      osc(ctx, dest, "sawtooth", 220, 0.55, t, 0.28, 55);
+
+      // 2. Heavy bass rumble (sine & triangle pitch sweeps)
+      osc(ctx, dest, "sine", 75, 0.95, t, 1.3, 25);
+      osc(ctx, dest, "triangle", 45, 0.85, t, 1.5, 15);
+
+      // 3. Rolling thunder rumble layers (simulating acoustic echoes/tremolo)
+      noise(ctx, dest, 0.75, t, 1.5, 130, 3.0, "lowpass");
+      noise(ctx, dest, 0.6, t + 0.12, 1.2, 110, 2.5, "lowpass");
+      noise(ctx, dest, 0.55, t + 0.3, 1.0, 95, 2.5, "lowpass");
+      noise(ctx, dest, 0.5, t + 0.48, 0.8, 80, 2.5, "lowpass");
+      noise(ctx, dest, 0.4, t + 0.68, 0.6, 70, 2.0, "lowpass");
     },
     hammerLaunch: (ctx, dest, t) => {
       noise(ctx, dest, 0.75, t, 0.4, 700, 0.3, "bandpass");
@@ -508,13 +521,72 @@ export function useSoundEngine() {
       osc(ctx, dest, "sawtooth", 220, 0.12, t, 0.25, 50);
     },
     warpDrag: (ctx, dest, t) => {
-      // Exaggerated dimensional pull: a long sub drop, tearing midrange, and vacuum tail.
-      osc(ctx, dest, "sine", 72, 0.72, t, 0.62, 24);
-      osc(ctx, dest, "triangle", 165, 0.42, t, 0.5, 46);
-      osc(ctx, dest, "sawtooth", 310, 0.2, t, 0.42, 78);
-      noise(ctx, dest, 0.34, t, 0.46, 520, 0.72, "lowpass");
-      noise(ctx, dest, 0.16, t + 0.035, 0.34, 1450, 1.45, "bandpass");
-      osc(ctx, dest, "sine", 46, 0.5, t + 0.12, 0.58, 20);
+      // Exaggerated low magic wrrrrl sound
+      const duration = 0.8;
+      
+      // Carrier: a low sawtooth oscillator for warm bass growl
+      const carrier = ctx.createOscillator();
+      carrier.type = "sawtooth";
+      carrier.frequency.setValueAtTime(60, t);
+      carrier.frequency.exponentialRampToValueAtTime(32, t + duration); // sub sweep down
+      
+      // Modulator: creates the rotating "wrrrl" texture by modulating carrier frequency
+      const modulator = ctx.createOscillator();
+      modulator.type = "sine";
+      // Modulate at a low "wrrrrl" speed (14 Hz vibrating / rotating speed)
+      modulator.frequency.setValueAtTime(14, t); 
+      modulator.frequency.linearRampToValueAtTime(6, t + duration); // slow down rotation
+      
+      // Modulation depth (gain)
+      const modulationGain = ctx.createGain();
+      // Exaggerated modulation depth for heavy growling texture
+      modulationGain.gain.setValueAtTime(120, t);
+      modulationGain.gain.linearRampToValueAtTime(40, t + duration);
+      
+      // Main volume envelope
+      const amp = ctx.createGain();
+      amp.gain.setValueAtTime(0.55, t);
+      amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+      
+      // Lowpass filter to keep it low, bassy, and magical
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(180, t);
+      filter.frequency.exponentialRampToValueAtTime(90, t + duration);
+      
+      // Connect modulator -> modulationGain -> carrier.frequency
+      modulator.connect(modulationGain);
+      modulationGain.connect(carrier.frequency);
+      
+      // Connect carrier -> filter -> amp -> dest
+      carrier.connect(filter);
+      filter.connect(amp);
+      amp.connect(dest);
+      
+      // Start/Stop nodes
+      modulator.start(t);
+      modulator.stop(t + duration + 0.05);
+      carrier.start(t);
+      carrier.stop(t + duration + 0.05);
+      
+      // Also add a secondary deep sub swell voice
+      const sub = ctx.createOscillator();
+      sub.type = "sine";
+      sub.frequency.setValueAtTime(45, t);
+      sub.frequency.linearRampToValueAtTime(35, t + duration);
+      
+      const subAmp = ctx.createGain();
+      subAmp.gain.setValueAtTime(0.65, t);
+      subAmp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+      
+      sub.connect(subAmp);
+      subAmp.connect(dest);
+      
+      sub.start(t);
+      sub.stop(t + duration + 0.05);
+
+      // And a whooshing bandpassed noise vacuum tail
+      noise(ctx, dest, 0.22, t, duration, 350, 1.8, "bandpass");
     },
     warpSlam: (ctx, dest, t) => {
       osc(ctx, dest, "sine", 70, 0.85, t, 0.5, 20);
