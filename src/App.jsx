@@ -171,18 +171,38 @@ const BALL_TYPES = {
     color: "#020617",
     stroke: "#f1f5f9",
     radius: 30,
-    description: "Venom-style predator. Fires a slimy tendril, pulls itself in, opens a huge black jaw, then bites enemies into wall bounces.",
+    description: "Venom-style string fighter. Fires a slimy tendril, lunges in, slow-spins the target once, then slams them into walls twice before leaving black web.",
     emoji: "🕷️",
     visualTheme: "Symbiote Hunter / Corner Slammer",
     colorPalette: "Deep Onyx, Chalk White, Blood Red",
     facialAge: "Early 20s (Dark eye-paint, intense expressionless face)",
     personality: "Brooding, calculated, intense",
-    primaryWeapon: "Slimy Tendril Web and Oversized Venom Jaw",
-    signatureAbility: "Tendril pull-in into open-jaw bite that ricochets enemies twice",
+    primaryWeapon: "Slimy Tendril Web and Black Wall Web",
+    signatureAbility: "Tendril lunge into one slow spin and two attached wall slams",
     companion: "None",
-    specialVisualEffects: "Curving black tendril, slime droplets, huge opening jaw, black bite burst, wall-bounce impact trails",
+    specialVisualEffects: "Curving black tendril, slime droplets, slow spin circle, black string slam trails, black wall web",
     animeStyle: "Gritty dark cyberpunk anti-hero with high-contrast inks",
-    gameStyle: "Predatory burst grappler that pulls itself in and launches enemies with a Venom bite",
+    gameStyle: "Predatory string grappler that keeps the web attached through spin and double wall slam",
+  },
+  earthSpiker: {
+    id: "earthSpiker",
+    name: "Earth Spiker",
+    shortName: "ESPK",
+    color: "#2f4a34",
+    stroke: "#facc15",
+    radius: 31,
+    description: "Armored earth ball that plants rock spikes on wall bounces, harvests them into rock armor, then bashes opponents.",
+    emoji: "⛰️",
+    visualTheme: "Emerald Earth Knight / Rock Spike Commander",
+    colorPalette: "Deep Forest Green, Sandstone Gold, Dark Rock",
+    facialAge: "Ancient armored guardian",
+    personality: "Patient, grounded, punishing",
+    primaryWeapon: "Wall-grown rock spikes",
+    signatureAbility: "Wall spike planting, rock armor fusion, and armor bash",
+    companion: "None",
+    specialVisualEffects: "Rock shards, crumbling wall spikes, fused stone armor, gold armor glints",
+    animeStyle: "Fortress knight / earthbender boss",
+    gameStyle: "Arena-control tank that turns wall bounces into hazardous terrain",
   },
   bomber: {
     id: "bomber",
@@ -291,18 +311,18 @@ const BALL_TYPES = {
     color: "#020617",
     stroke: "#cbd5e1",
     radius: 31,
-    description: "Armored shield-star ball with a heavy robot arm and right-side pistol. Uses clean Gunner-style pistol shots and reload dash.",
+    description: "Armored shield-star ball with a huge jointed robot arm. Charges heavy punches and can spring off walls into a punch lunge.",
     emoji: "💪",
     visualTheme: "Armored Shield Gunner",
-    colorPalette: "Black Shield, Chrome Armor, Red Star, Silver Pistol",
+    colorPalette: "Black Shield, Chrome Armor, Red Star, Heavy Silver Arm",
     facialAge: "Military android core with glossy armor plating",
     personality: "Disciplined, steady, tactical",
-    primaryWeapon: "Right-side pistol with armored recoil frame",
-    signatureAbility: "Pistol shots and tactical reload dash",
+    primaryWeapon: "Oversized jointed robot arm",
+    signatureAbility: "Charge Punch / Wall Spring Punch",
     companion: "None",
-    specialVisualEffects: "Red muzzle flashes, shell casings, chrome shield glints",
-    animeStyle: "Tactical armored anime gunner",
-    gameStyle: "Clean ranged shooter using Gunner fundamentals without extra grappler skills",
+    specialVisualEffects: "Chrome arm springs, red charge flares, wall-push shock bursts",
+    animeStyle: "Tactical armored anime bruiser",
+    gameStyle: "Arm-first striker that charges punches and converts wall bounces into spring punches",
   },
   chess: {
     id: "chess",
@@ -772,7 +792,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "blackSpider", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "fireSword", "batter", "stringWeb", "arm", "vampire", "ninja", "loki", "sorcerer"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "blackSpider", "earthSpiker", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "fireSword", "fireSkull", "batter", "stringWeb", "arm", "vampire", "ninja", "loki", "sorcerer"];
 const MATCH_FORMATS = {
   "1v1": {
     label: "1v1",
@@ -843,7 +863,7 @@ const BALANCE = {
   hammer: { spinDamage: 4, launchDamage: 10, spinSpeed: 0.02, chargeDuration: 900, launchSpeed: 980, launchDuration: 580, cooldown: 1500 },
   batter: { damage: 7, cooldown: 6200, chargeDuration: 720, swingDuration: 260, range: 92, lungeSpeed: 520, launchSpeed: 1250, wallBounces: 10, skillLockDuration: 8000 },
   stringWeb: { stringDamage: 1, stringLifetime: 9000, maxStrings: 14, stringHitPadding: 10, trampolineCooldown: 1100, trampolineBoost: 1.8, trampolineMinSpeed: 480 },
-  arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 5600, punchDamage: 6, punchRange: 64, punchCooldown: 600, punchKnockback: 680, secCooldown: 7000, secSlamDamage: 6, chargePunchCooldown: 5600, chargePunchDuration: 520, chargePunchLungeDuration: 430, chargePunchLungeSpeed: 860, chargePunchRange: 72, chargePunchDamage: 6, chargePunchKnockback: 780 },
+  arm: { slamDamage: 1, grabRange: 40, grabDuration: 500, swingSpeed: 0.1, cooldown: 5600, punchDamage: 6, punchRange: 64, punchCooldown: 600, punchKnockback: 680, secCooldown: 7000, secSlamDamage: 6, chargePunchCooldown: 5600, chargePunchDuration: 520, chargePunchLungeDuration: 430, chargePunchLungeSpeed: 860, chargePunchRange: 72, chargePunchDamage: 6, chargePunchKnockback: 780, wallSpringCooldown: 3600, wallSpringChargeDuration: 260, wallSpringLungeSpeed: 1040, wallSpringDamage: 8, wallSpringKnockback: 920 },
   chess: { cooldown: 6000, centerSpeed: 230, crownDuration: 2500, damage: 7, tickCooldown: 400 },
   wrecker: { cooldown: 5200, chargeDuration: 1200, swingDuration: 320, damage: 6, range: 150, lungeSpeed: 760, launchSpeed: 760, wallBounces: 4, skillLockDuration: 1200, maxBounceSpeed: 350, hurlMinSpeed: 560, hurlMaxSpeed: 820, rageLaunchSpeed: 980, leapDamage: 12, megaLeapDamage: 18, shockwaveRadius: 78, megaShockwaveRadius: 124, knockbackForce: 420, rageRequired: 6, megaRageRequired: 10, pushCooldown: 4200, pushRange: 150, pushForce: 620, pushDamage: 4, leapCooldown: 9500, leapDuration: 680, leapLeadTime: 0.38, landingRecoil: 220, recoverySpeed: 230, bounceBoost: 1.08, sizePerRage: 0.015, maxRageSizeScale: 1.16, megaSizeScale: 1.3 },
   dragon: { flameDamage: 1, flameRange: 100, flameAngle: 0.55, tickCooldown: 460, breathDuration: 650, breathCooldown: 1800, heatPerWallBounce: 1, heatRequired: 5, fireballDamage: 5, fireballSpeed: 440, fireballBounces: 1, burnDuration: 900, cooldown: 2300, secCooldown: 5000, secDamage: 8, secDashForce: 650 },
@@ -860,12 +880,14 @@ const BALANCE = {
     slamCooldown: 7000, slamStringSpeed: 900, slamPullDuration: 600, slamSpinDuration: 700, slamSpinRadius: 75, slamLaunchSpeed: 1150, slamWallDamage: 5, slamHitDamage: 1,
     // Tendril Trap
     trapRadius: 32, trapDuration: 6000, trapStickDuration: 500, trapSpeedBoost: 280, maxTraps: 3,
-    blackWebCooldown: 3200, blackWebSpeed: 900, blackWebRange: 470, blackWebPullDuration: 680, blackWebPullSpeed: 860, blackWebLock: 700,
+    blackWebCooldown: 3200, blackWebSpeed: 900, blackWebRange: 470, blackWebPullDuration: 700, blackWebPullSpeed: 900, blackWebLock: 900,
+    wallWebDuration: 5000, wallWebRadius: 56, wallWebLock: 950, wallWebBuffDamage: 3,
     venomBiteCooldown: 3800, venomBiteCharge: 180, venomBiteDuration: 460, venomBiteSpeed: 1120, venomBiteRange: 310, venomBiteDamage: 6, venomBiteKnockback: 720, venomBiteLock: 850, venomBitePoisonDuration: 1200,
     tripleBiteDamage1: 2, tripleBiteDamage2: 2, tripleBiteDamage3: 5, tripleBiteDuration: 1020,
     tendrilSwingDuration: 860, tendrilSwingRadius: 78, swingSlamDamage: 5, swingSlamLock: 900,
     livingGooRadius: 58, livingGooDuration: 5200, gooLeapDamage: 5, gooBuffBonus: 4, gooBuffDuration: 5200,
   },
+  earthSpiker: { spikeDamage: 1, spikeLength: 40, spikeWidth: 22, maxSpikes: 12, pushCooldown: 2600, pushDamage: 6, pushGrowLength: 34, pushRange: 420, spikeHitCooldown: 520 },
   gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
   constellation: { cooldown: 4200, activePatternDuration: 4800, triangleDamage: 8, triangleKnockback: 420, squareEdgeDamage: 4, squareTickDamage: 2, squareKnockback: 340, pentagonEdgeDamage: 5, pentagonTickDamage: 3, pentagonPullStrength: 180, postFireSlowDuration: 300, ultDuration: 5600 },
   fireSkull: { cooldown: 8000, carDamage: 8, carKnockback: 1280, carSpeed: 950, carRadius: 40, carHitboxScale: 1.32, carHitboxWidthScale: 1.75, roadWidth: 28, minRoadLength: 520, carPasses: 5, maxRoadLife: 10000 },
@@ -966,9 +988,13 @@ const mergeBalanceSettings = (base, saved = {}) => {
         blackWebCooldown: 3200,
         blackWebSpeed: 900,
         blackWebRange: 470,
-        blackWebPullDuration: 680,
-        blackWebPullSpeed: 860,
-        blackWebLock: 700,
+        blackWebPullDuration: 700,
+        blackWebPullSpeed: 900,
+        blackWebLock: 900,
+        wallWebDuration: 5000,
+        wallWebRadius: 56,
+        wallWebLock: 950,
+        wallWebBuffDamage: 3,
         tripleBiteDamage1: 2,
         tripleBiteDamage2: 2,
         tripleBiteDamage3: 5,
@@ -1572,8 +1598,8 @@ export default function App() {
       isMegaLeap: false,
       angle: side === "left" ? 0 : Math.PI,
       spinAngle: 0,
-      ammo: (type === "gun" || type === "arm") ? 6 : null,
-      maxAmmo: (type === "gun" || type === "arm") ? 6 : null,
+      ammo: type === "gun" ? 6 : null,
+      maxAmmo: type === "gun" ? 6 : null,
       reloadUntil: 0,
       nextShotAt: 0,
       skillLockedUntil: 0,
@@ -1688,6 +1714,19 @@ export default function App() {
       blackVenomBiteAngle: side === "left" ? 0 : Math.PI,
       blackVenomBiteHit: false,
       blackVenomBiteNextAt: type === "blackSpider" ? 2200 : 0,
+      // Earth Spiker Specific
+      nextEarthSpikePushAt: type === "earthSpiker" ? 1200 : 0,
+      earthSpikePushUntil: 0,
+      earthSpikePushTargetId: null,
+      earthSpikeFlashUntil: 0,
+      earthArmorPieces: [],
+      earthArmorUntil: 0,
+      earthArmorBashUntil: 0,
+      earthArmorBashReadyAt: 0,
+      earthArmorBreakAt: 0,
+      earthArmorTargetId: null,
+      earthArmorAngle: side === "left" ? 0 : Math.PI,
+      earthArmorHitIds: {},
       attachmentResistanceUntil: 0,
       // Venom Abilities
       venomWallBounces: 0,
@@ -1800,6 +1839,10 @@ export default function App() {
       armPunchAngle: side === "left" ? 0 : Math.PI,
       armPunchHit: false,
       nextArmChargeAt: type === "arm" ? 2200 : 0,
+      nextArmSpringAt: type === "arm" ? 1200 : 0,
+      armSpringWall: null,
+      armSpringX: 0,
+      armSpringY: 0,
       // Chess Specific
       chessState: "idle",
       chessCrown: null,
@@ -1837,6 +1880,7 @@ export default function App() {
       shieldBashUntil: 0,
       shieldBashFlashUntil: 0,
       shieldBashBouncesLeft: 0,
+      shieldBashSpeedOverride: 0,
       homingMineBouncesLeft: 0,
       elbowDropUntil: 0,
       laserSweepState: "idle",
@@ -1912,15 +1956,17 @@ export default function App() {
       return trapReady ? "WEB TRAP ARMED" : `WEB BITES ${bitesLanded}/3`;
     }
     if (ball.type === "blackSpider") {
-      if (ball.blackWebState === "shooting") return "SYMBIOTE WEB";
-      if (ball.blackWebState === "pulling") return "TENDRIL PULL";
-      if (ball.blackVenomBiteState === "jaw_open") return "JAW OPEN";
-      if (ball.blackVenomBiteState === "triple_bite") return "VENOM BITE";
-      if (ball.blackVenomBiteState === "tendril_swing") return "TENDRIL SWING";
-      if (ball.blackVenomBiteState === "goo_leap") return "GOO LEAP BITE";
-      if (ball.blackVenomBiteState === "charging") return "BLACK VENOM CHARGE";
-      if (ball.blackVenomBiteState === "lunging") return "BLACK VENOM BITE";
-      if ((ball.blackGooBuffUntil || 0) > currentTime) return "GOO BUFF READY";
+      if (ball.blackWebState === "shooting") return "SLIMY TENDRIL";
+      if (ball.blackWebState === "pulling_self") return "STRING LUNGE";
+      if (ball.blackWebState === "string_spin") return "SLOW WEB SPIN";
+      if (ball.blackWebState === "string_slam") return "STRING WALL SLAM";
+      if (ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling") return "STRING PULL";
+      if (ball.blackVenomBiteState === "maw_open" || ball.blackVenomBiteState === "jaw_open") return "STRING LOCK";
+      if (ball.blackVenomBiteState === "maw_bite") return "STRING HIT";
+      if (ball.blackVenomBiteState === "recovery") return "RECOVERING";
+      if ((ball.blackGooBuffUntil || 0) > currentTime) return "WEB BUFF READY";
+      const wallWebReady = (gameRef.current?.venomPools || []).some((pool) => pool.ownerId === ball.id && pool.isBlackWallWeb && !pool.consumed);
+      if (wallWebReady) return "WALL WEB ARMED";
       return "SLIMY TENDRIL READY";
     }
     if (ball.type === "shield") {
@@ -1970,6 +2016,12 @@ export default function App() {
       if (ball.wreckerState === "swinging") return "CLOTHESLINE SWING";
       if (ball.wreckerState === "cooldown") return "RECOVERING";
       return "CLOTHESLINE READY";
+    }
+    if (ball.type === "earthSpiker") {
+      if ((ball.earthArmorBashUntil || 0) > currentTime) return "ROCK BASH";
+      if ((ball.earthArmorPieces?.length || 0) > 0) return `ROCK ARMOR ${Math.min(3, ball.earthArmorPieces.length)}/3`;
+      const count = (gameRef.current?.earthSpikes || []).filter((spike) => spike.ownerId === ball.id).length;
+      return count ? `SPIKES ${count}` : "WALL SPIKES READY";
     }
     if (ball.type === "chaos") return `TRAPS ${(gameRef.current?.chaosCircles || []).filter((trap) => trap.ownerId === ball.id).length}`;
     return "SKILL READY";
@@ -2043,11 +2095,10 @@ export default function App() {
       lines.push(`RAPID FIRE: ${ball.permanentRapidFire || (ball.rapidFireUntil || 0) > currentTime ? "ACTIVE" : "READY"}`);
       lines.push(`HEAVY RIFLE: ${ball.dogDied ? "UNLOCKED" : "LOCKED"}`);
     } else if (ball.type === "arm") {
-      const reloading = (ball.reloadUntil || 0) > currentTime;
-      const punchState = ball.armState === "charge_punch" ? "CHARGING" : ball.armState === "lunge_punch" ? "LUNGING" : ball.armState === "punch_recover" ? "RECOVER" : cooldown(ball.nextArmChargeAt);
+      const punchState = ball.armState === "wall_spring" ? "WALL SPRING" : ball.armState === "charge_punch" ? "CHARGING" : ball.armState === "lunge_punch" ? "LUNGING" : ball.armState === "punch_recover" ? "RECOVER" : cooldown(ball.nextArmChargeAt);
       lines.push(`CHARGE PUNCH: ${punchState}`);
-      lines.push(`RIGHT PISTOL: ${reloading ? "RELOADING" : `${ball.ammo ?? 0}/${ball.maxAmmo ?? 6} AMMO`}`);
-      lines.push(`RELOAD DASH: ${cooldown(ball.nextSecondaryAt)}`);
+      lines.push(`WALL SPRING: ${ball.armState === "wall_spring" ? "BRACING" : cooldown(ball.nextArmSpringAt)}`);
+      lines.push(`ARM MODE: MELEE ONLY`);
     } else if (ball.type === "vampire") {
       const biting = ball.latchedTo && ball.latchUntil > currentTime;
       lines.push(`LIFESTEAL BITE: ${biting ? "DRAINING" : cooldown(ball.nextLatchAt)}`);
@@ -2080,19 +2131,27 @@ export default function App() {
       lines.push(`WEB ARMOR: ${ball.webShieldActive ? "ACTIVE - SPEED UP" : "INACTIVE"}`);
     } else if (ball.type === "blackSpider") {
       const comboState = {
-        jaw_open: "JAW OPENING",
-        triple_bite: "VENOM BITE",
-        tendril_swing: "FULL CIRCLE SWING",
-        goo_leap: "AUTO LEAP BITE",
+        maw_open: "OPENING",
+        jaw_open: "OPENING",
+        maw_bite: "STRING HIT",
         recovery: "RECOVERING",
-        charging: "CHARGING",
-        lunging: "BITING"
       }[ball.blackVenomBiteState] || cooldown(ball.blackWebNextAt);
-      const webState = { shooting: "CURVING SHOT", pulling: "SELF PULL" }[ball.blackWebState] || cooldown(ball.blackWebNextAt);
+      const webState = { shooting: "CURVING SHOT", pulling_self: "STRING LUNGE", string_spin: "SLOW SPIN", string_slam: "WALL SLAM", pulling_target: "YANKING PREY", pulling: "YANKING PREY" }[ball.blackWebState] || cooldown(ball.blackWebNextAt);
+      const wallWebs = (game?.venomPools || []).filter((pool) => pool.ownerId === ball.id && pool.isBlackWallWeb && !pool.consumed).length;
       lines.push(`SLIMY TENDRIL: ${webState}`);
-      lines.push(`OPEN JAW BITE: ${comboState}`);
-      lines.push(`BITE BOUNCE: 2 WALL HITS`);
+      lines.push(`STRING SLAM: ${comboState}`);
+      lines.push(`WALL WEB: ${wallWebs ? `${wallWebs} ARMED` : "ON MISS"}`);
+      lines.push(`SLAM COUNT: 2 WALL HITS`);
       lines.push(`VENOM LOCK: ${game?.balance?.blackSpider?.venomBiteLock || BALANCE.blackSpider.venomBiteLock}MS + POISON`);
+    } else if (ball.type === "earthSpiker") {
+      const earthBal = game?.balance?.earthSpiker || BALANCE.earthSpiker;
+      const spikes = (game?.earthSpikes || []).filter((spike) => spike.ownerId === ball.id);
+      const armorStacks = Math.min(3, ball.earthArmorPieces?.length || 0);
+      const armorState = (ball.earthArmorBashUntil || 0) > currentTime ? "FULL PLATE BASH" : armorStacks >= 3 ? "FULL PLATED" : armorStacks > 0 ? `${armorStacks}/3 STACKED` : cooldown(ball.nextEarthSpikePushAt);
+      lines.push(`WALL SPIKES: ${spikes.length}/${earthBal.maxSpikes || 10}`);
+      lines.push(`ROCK ARMOR: ${armorState}`);
+      lines.push(`SPIKE DAMAGE: ${earthBal.spikeDamage ?? 1}`);
+      lines.push(`ARMOR BASH: SHIELD-BOUNCE STUN`);
     } else if (ball.type === "laser") {
       const armorRequired = game?.balance?.laser?.armorRequired || BALANCE.laser.armorRequired;
       const normal = ball.laserState === "charging" ? "CHARGING" : ball.laserState === "firing" ? "FIRING" : "READY";
@@ -2134,6 +2193,7 @@ export default function App() {
     particles: [],
     floatingTexts: [],
     wallSpikes: [],
+    earthSpikes: [],
     strings: [],
     cacti: [],
     psychicCircles: [],
@@ -2178,6 +2238,7 @@ export default function App() {
     gameRef.current.particles = [];
     gameRef.current.floatingTexts = [];
     gameRef.current.wallSpikes = [];
+    gameRef.current.earthSpikes = [];
     gameRef.current.strings = [];
     gameRef.current.cacti = [];
     gameRef.current.psychicCircles = [];
@@ -2301,6 +2362,7 @@ export default function App() {
       particles: [],
       floatingTexts: [],
       wallSpikes: [],
+      earthSpikes: [],
       strings: [],
       cacti: [],
       psychicCircles: [],
@@ -2429,6 +2491,7 @@ export default function App() {
     gameRef.current.particles = [];
     gameRef.current.floatingTexts = [];
     gameRef.current.wallSpikes = [];
+    gameRef.current.earthSpikes = [];
     gameRef.current.strings = [];
     gameRef.current.cacti = [];
     gameRef.current.psychicCircles = [];
@@ -2518,6 +2581,7 @@ export default function App() {
   const drawRecordingHudCard = (ctx, ball, x, y, w, align = "left", nameFontSize = 42) => {
     const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
     const blackGlow = ball?.type === "eightBall";
+    const skillLines = getBallSkillList(ball, gameRef.current.simTime).split("\n");
     ctx.save();
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
@@ -2530,6 +2594,24 @@ export default function App() {
     ctx.strokeStyle = blackGlow ? "#000000" : "#020617";
     ctx.strokeText(getHudBallName(ball), nameX, y + 30);
     ctx.fillText(getHudBallName(ball), nameX, y + 30);
+
+    const maxTextWidth = Math.max(120, w - 44);
+    const statusFont = skillLines.length > 4 ? 15 : 16;
+    const statusLineHeight = statusFont + 4;
+    ctx.shadowColor = "#020617";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(2, 6, 23, 0.9)";
+    ctx.lineWidth = 4;
+    ctx.font = `900 ${statusFont}px Arial, sans-serif`;
+    skillLines.forEach((line, index) => {
+      let text = line;
+      while (text.length > 6 && ctx.measureText(text).width > maxTextWidth) text = text.slice(0, -2);
+      if (text !== line) text = `${text.slice(0, -1)}…`;
+      const lineY = y + 70 + index * statusLineHeight;
+      ctx.strokeText(text, nameX, lineY);
+      ctx.fillText(text, nameX, lineY);
+    });
     ctx.restore();
   };
 
@@ -2585,15 +2667,41 @@ export default function App() {
   const drawRecordingTeamSkillStatus = (ctx, team, x, y, align = "center") => {
     const aliveTeam = (team || []).filter((ball) => ball.health > 0);
     const displayTeam = aliveTeam.length ? aliveTeam : (team || []);
-    const lines = displayTeam.slice(0, 3).map((ball) => `${ball.shortName || BALL_TYPES[ball.type]?.shortName || "BALL"}: ${getBallSkillStatus(ball, gameRef.current.simTime)}`);
+    const fighterBlocks = displayTeam.map((ball) => ({
+      ball,
+      lines: [
+        `${ball.shortName || BALL_TYPES[ball.type]?.shortName || "BALL"} · ${getBallSkillStatus(ball, gameRef.current.simTime)}`,
+        ...getBallSkillList(ball, gameRef.current.simTime).split("\n")
+      ]
+    }));
+    const totalLines = fighterBlocks.reduce((sum, block) => sum + block.lines.length, 0);
+    const fontSize = totalLines > 13 ? 13 : totalLines > 9 ? 14 : 16;
+    const lineHeight = fontSize + 3;
+    const blockGap = 8;
+    const maxTextWidth = 440;
     ctx.save();
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(2, 6, 23, 0.92)";
+    ctx.lineWidth = 4;
     ctx.shadowColor = "#020617";
     ctx.shadowBlur = 12;
-    ctx.font = "900 22px Arial, sans-serif";
-    lines.forEach((line, index) => ctx.fillText(line, x, y + index * 30));
+    let cursorY = y;
+    fighterBlocks.forEach((block) => {
+      const config = BALL_TYPES[block.ball?.type] || BALL_TYPES.knife;
+      block.lines.forEach((line, index) => {
+        let text = line;
+        ctx.font = `900 ${index === 0 ? fontSize + 1 : fontSize}px Arial, sans-serif`;
+        while (text.length > 6 && ctx.measureText(text).width > maxTextWidth) text = text.slice(0, -2);
+        if (text !== line) text = `${text.slice(0, -1)}…`;
+        ctx.fillStyle = index === 0 && block.ball?.type !== "eightBall" ? config.color : "#ffffff";
+        ctx.strokeText(text, x, cursorY);
+        ctx.fillText(text, x, cursorY);
+        cursorY += lineHeight;
+      });
+      cursorY += blockGap;
+    });
     ctx.restore();
   };
 
@@ -4854,6 +4962,27 @@ export default function App() {
       playAudioFile(clip, volume, 0, game.simulationSpeed || 1);
     };
 
+    const playEarthSpikeHitSound = (volume = 0.9) => {
+      if ((game.nextEarthSpikeHitSoundAt || 0) > game.simTime) return;
+      game.nextEarthSpikeHitSoundAt = game.simTime + 70;
+      const clip = Math.random() < 0.55 ? "/Spike%20hit%201.mp3" : "/spike%20hit2.mp3";
+      playAudioFile(clip, volume, -30, game.simulationSpeed || 1);
+    };
+
+    const playEarthSpikePlantSound = (volume = 0.75) => {
+      if ((game.nextEarthSpikePlantSoundAt || 0) > game.simTime) return;
+      game.nextEarthSpikePlantSoundAt = game.simTime + 90;
+      playAudioFile("/Spike%20hit%201.mp3", volume, -80, (game.simulationSpeed || 1) * 0.92);
+    };
+
+    const playEarthArmorDockSound = (volume = 0.82) => {
+      playAudioFile("/spike%20hit2.mp3", volume, -70, (game.simulationSpeed || 1) * 1.02);
+    };
+
+    const playEarthArmorBashSound = (volume = 1.05) => {
+      playAudioFile("/Spike%20Bash%20Sound.mp3", volume, 0, (game.simulationSpeed || 1) * 0.95);
+    };
+
     const triggerNinjaSubstitution = (defender, amount, cooldownKey, currentTime) => {
       if (defender?.type !== "ninja" || defender.ninjaRushState !== "idle") return false;
       const bal = game.balance.ninja || BALANCE.ninja;
@@ -5272,7 +5401,8 @@ export default function App() {
     };
 
     const leaveSpiderWebSplatter = (owner, x, y, wall, impactAngle = 0, activationDelay = 0) => {
-      if (!owner || owner.type !== "spider") return;
+      if (!owner || (owner.type !== "spider" && owner.type !== "blackSpider")) return;
+      const isBlackSpider = owner.type === "blackSpider";
       const splatX = wall === "left" ? 0 : wall === "right" ? game.width : clamp(x, 0, game.width);
       const splatY = wall === "top" ? 0 : wall === "bottom" ? game.height : clamp(y, 0, game.height);
       game.webSplatters = game.webSplatters || [];
@@ -5284,12 +5414,67 @@ export default function App() {
         y: splatY,
         wall,
         r: 42,
+        isBlackSpider,
         createdAt: game.simTime,
         activeAt: game.simTime + activationDelay,
       });
-      spawnSparks(splatX, splatY, "#ffffff", 18);
-      spawnImpactBurst(splatX, splatY, impactAngle, ["#ffffff", "#dbeafe", "#60a5fa"], 1.05);
+      spawnSparks(splatX, splatY, isBlackSpider ? "#020617" : "#ffffff", 18);
+      spawnImpactBurst(splatX, splatY, impactAngle, isBlackSpider ? ["#020617", "#f8fafc", "#111827"] : ["#ffffff", "#dbeafe", "#60a5fa"], 1.05);
       playSound("webHit", 1.08, 80);
+    };
+
+    const earthSpikeNormalAngle = (wall) => (
+      wall === "left" ? 0 :
+      wall === "right" ? Math.PI :
+      wall === "top" ? Math.PI / 2 :
+      wall === "bottom" ? -Math.PI / 2 : 0
+    );
+
+    const plantEarthSpike = (owner, x, y, wall, impactAngle = 0) => {
+      if (!owner || owner.type !== "earthSpiker") return null;
+      const bal = game.balance.earthSpiker || BALANCE.earthSpiker;
+      const angle = earthSpikeNormalAngle(wall);
+      const basePad = 18;
+      const spike = {
+        id: `${owner.id}-earth-spike-${game.simTime}-${Math.random().toString(16).slice(2)}`,
+        ownerId: owner.id,
+        ownerSide: owner.side,
+        x: wall === "left" ? 0 : wall === "right" ? game.width : clamp(x, basePad, game.width - basePad),
+        y: wall === "top" ? 0 : wall === "bottom" ? game.height : clamp(y, basePad, game.height - basePad),
+        wall,
+        angle,
+        length: bal.spikeLength || 44,
+        width: bal.spikeWidth || 22,
+        maxLength: (bal.spikeLength || 44) + (bal.pushGrowLength || 34) * 4,
+        seed: Math.random() * 1000,
+        createdAt: game.simTime,
+        growUntil: game.simTime + 260,
+        lastHit: {}
+      };
+      game.earthSpikes = game.earthSpikes || [];
+      game.earthSpikes.push(spike);
+      const maxSpikes = bal.maxSpikes || 10;
+      const owned = game.earthSpikes.filter((s) => s.ownerId === owner.id);
+      if (owned.length > maxSpikes) {
+        const removeId = owned.sort((a, b) => a.createdAt - b.createdAt)[0]?.id;
+        game.earthSpikes = game.earthSpikes.filter((s) => s.id !== removeId);
+      }
+      spawnDust(spike.x, spike.y, 4);
+      spawnSparks(spike.x, spike.y, "#a16207", 6);
+      playEarthSpikePlantSound(0.72);
+      return spike;
+    };
+
+    const distanceToSpikeSegment = (ball, spike) => {
+      const tipX = spike.x + Math.cos(spike.angle) * spike.length;
+      const tipY = spike.y + Math.sin(spike.angle) * spike.length;
+      const vx = tipX - spike.x;
+      const vy = tipY - spike.y;
+      const lenSq = Math.max(1, vx * vx + vy * vy);
+      const t = clamp(((ball.x - spike.x) * vx + (ball.y - spike.y) * vy) / lenSq, 0, 1);
+      const px = spike.x + vx * t;
+      const py = spike.y + vy * t;
+      return { d: Math.hypot(ball.x - px, ball.y - py), px, py, t };
     };
 
 
@@ -5303,6 +5488,9 @@ export default function App() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        if (ball.type === "earthSpiker" && sideHit) {
+          plantEarthSpike(ball, bx, by, sideHit, Math.atan2(ball.vy, ball.vx));
+        }
         if (ball.wreckerSlammedByPunch) {
           ball.wreckerSlammedByPunch = false;
           game.craters = game.craters || [];
@@ -5344,6 +5532,35 @@ export default function App() {
         }
         if (ball.ragdollUntil && game.simTime < ball.ragdollUntil) {
           ball.ragdollSpinVelocity = -(ball.ragdollSpinVelocity || 24) * 0.9;
+        }
+        if (ball.blackSpiderWebSplattersLeft > 0 && ball.blackSpiderSplatterOwnerId && sideHit) {
+          const blackOwner = game.balls.find((candidate) => candidate.id === ball.blackSpiderSplatterOwnerId && candidate.type === "blackSpider");
+          if (blackOwner) {
+            leaveSpiderWebSplatter(blackOwner, bx, by, sideHit, Math.atan2(ball.vy, ball.vx), 120);
+            ball.blackSpiderWebSplattersLeft -= 1;
+          }
+        }
+        if (ball.type === "arm" && sideHit && game.simTime >= (ball.nextArmSpringAt || 0) &&
+            !["charge_punch", "lunge_punch", "wall_spring"].includes(ball.armState)) {
+          const armBal = game.balance.arm || BALANCE.arm;
+          ball.armState = "wall_spring";
+          ball.armChargeStartAt = game.simTime;
+          ball.armStateUntil = game.simTime + (armBal.wallSpringChargeDuration || 260);
+          ball.armSpringWall = sideHit;
+          ball.armSpringX = bx;
+          ball.armSpringY = by;
+          ball.armPunchHit = false;
+          ball.nextArmSpringAt = game.simTime + (armBal.wallSpringCooldown || 3600);
+          ball.vx *= 0.28;
+          ball.vy *= 0.28;
+          spawnSparks(bx, by, "#e5e7eb", 18);
+          spawnImpactBurst(bx, by, Math.atan2(ball.y - by, ball.x - bx), ["#ffffff", "#cbd5e1", "#ef4444"], 1.05);
+          game.screenShake = Math.max(game.screenShake || 0, 8);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 20, vy: -48,
+            text: "WALL SPRING", color: "#f8fafc", life: 0.65, maxLife: 0.65
+          });
         }
         if ((ball.hammerBouncesLeft || 0) > 0) {
           ball.hammerBouncesLeft -= 1;
@@ -5411,11 +5628,12 @@ export default function App() {
         if ((ball.shieldBashBouncesLeft || 0) > 0) {
           ball.shieldBashBouncesLeft -= 1;
           const speed = Math.hypot(ball.vx, ball.vy);
-          const bashSpeed = 980;
+          const bashSpeed = ball.shieldBashSpeedOverride || 980;
           if (ball.shieldBashBouncesLeft > 0 && speed > 0 && speed < bashSpeed) {
             ball.vx = (ball.vx / speed) * bashSpeed;
             ball.vy = (ball.vy / speed) * bashSpeed;
           }
+          if (ball.shieldBashBouncesLeft <= 0) ball.shieldBashSpeedOverride = 0;
           spawnSparks(ball.x, ball.y, "#60a5fa", 24);
           spawnImpactBurst(ball.x, ball.y, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#93c5fd", "#3b82f6"], 1.25);
           game.screenShake = Math.max(game.screenShake, 13);
@@ -7658,6 +7876,33 @@ export default function App() {
       const bal = game.balance.arm || BALANCE.arm;
       const targetAngle = Math.atan2(target.y - armBall.y, target.x - armBall.x);
       armBall.angle = targetAngle;
+      const desiredStretch =
+        armBall.armState === "lunge_punch" ? 1 :
+        armBall.armState === "wall_spring" ? 0.82 :
+        armBall.armState === "charge_punch" ? 0.18 :
+        armBall.armState === "punch_recover" ? 0.34 : 0;
+      armBall.armStretch = (armBall.armStretch || 0) + (desiredStretch - (armBall.armStretch || 0)) * Math.min(1, stepDt * 9);
+
+      if (armBall.armState === "wall_spring") {
+        armBall.vx *= Math.pow(0.66, stepDt * 60);
+        armBall.vy *= Math.pow(0.66, stepDt * 60);
+        armBall.armPunchAngle = targetAngle;
+        if (currentTime >= (armBall.armStateUntil || 0)) {
+          armBall.armState = "lunge_punch";
+          armBall.armPunchSource = "wall_spring";
+          armBall.armChargeStartAt = currentTime;
+          armBall.armStateUntil = currentTime + Math.max(320, (bal.chargePunchLungeDuration || 430) * 0.9);
+          armBall.armPunchAngle = targetAngle;
+          armBall.armPunchHit = false;
+          const lungeSpeed = bal.wallSpringLungeSpeed || 1040;
+          armBall.vx = Math.cos(targetAngle) * lungeSpeed;
+          armBall.vy = Math.sin(targetAngle) * lungeSpeed;
+          spawnImpactBurst(armBall.x, armBall.y, targetAngle, ["#ffffff", "#f8fafc", "#ef4444"], 1.35);
+          spawnSparks(armBall.x + Math.cos(targetAngle) * armBall.r, armBall.y + Math.sin(targetAngle) * armBall.r, "#f8fafc", 26);
+          playSound("hammerHit", 0.92, 90);
+        }
+        return;
+      }
 
       if (armBall.armState === "charge_punch") {
         armBall.vx *= Math.pow(0.78, stepDt * 60);
@@ -7665,6 +7910,7 @@ export default function App() {
         armBall.armPunchAngle = targetAngle;
         if (currentTime >= (armBall.armStateUntil || 0)) {
           armBall.armState = "lunge_punch";
+          armBall.armPunchSource = "charge";
           armBall.armChargeStartAt = currentTime;
           armBall.armStateUntil = currentTime + (bal.chargePunchLungeDuration || 430);
           armBall.armPunchAngle = targetAngle;
@@ -7685,13 +7931,15 @@ export default function App() {
         if (!armBall.armPunchHit && dist <= hitRange) {
           armBall.armPunchHit = true;
           const hitAngle = Math.atan2(target.y - armBall.y, target.x - armBall.x);
-          applyDamage(target, bal.chargePunchDamage || bal.punchDamage || 6, `${armBall.id}-charge-punch`, currentTime, 500);
+          const isSpringPunch = armBall.armPunchSource === "wall_spring";
+          const punchDamage = isSpringPunch ? (bal.wallSpringDamage || 8) : (bal.chargePunchDamage || bal.punchDamage || 6);
+          applyDamage(target, punchDamage, `${armBall.id}-${isSpringPunch ? "wall-spring-punch" : "charge-punch"}`, currentTime, 500);
           if (!hasStringBounceGuard(target)) {
-            const knock = bal.chargePunchKnockback || bal.punchKnockback || 760;
+            const knock = isSpringPunch ? (bal.wallSpringKnockback || 920) : (bal.chargePunchKnockback || bal.punchKnockback || 760);
             target.vx = Math.cos(hitAngle) * knock;
             target.vy = Math.sin(hitAngle) * knock;
-            target.skillLockedUntil = Math.max(target.skillLockedUntil || 0, currentTime + 650);
-            target.ragdollUntil = Math.max(target.ragdollUntil || 0, currentTime + 650);
+            target.skillLockedUntil = Math.max(target.skillLockedUntil || 0, currentTime + (isSpringPunch ? 850 : 650));
+            target.ragdollUntil = Math.max(target.ragdollUntil || 0, currentTime + (isSpringPunch ? 850 : 650));
             target.ragdollSpinVelocity = 18 + Math.random() * 10;
           }
           armBall.vx = -Math.cos(hitAngle) * 240;
@@ -7705,7 +7953,7 @@ export default function App() {
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: target.x, y: target.y - target.r - 22, vy: -52,
-            text: "CHARGE PUNCH", color: "#f8fafc", life: 0.78, maxLife: 0.78
+            text: isSpringPunch ? "SPRING PUNCH" : "CHARGE PUNCH", color: "#f8fafc", life: 0.78, maxLife: 0.78
           });
           return;
         }
@@ -7724,6 +7972,7 @@ export default function App() {
         if (currentTime >= (armBall.armStateUntil || 0)) {
           armBall.armState = "idle";
           armBall.armPunchHit = false;
+          armBall.armPunchSource = null;
         }
         return;
       }
@@ -7733,6 +7982,7 @@ export default function App() {
       const shouldChargePunch = punchReady && dist < 300 && canStartSkillConnection(armBall, target, game.balls, currentTime);
       if (shouldChargePunch) {
         armBall.armState = "charge_punch";
+        armBall.armPunchSource = "charge";
         armBall.armChargeStartAt = currentTime;
         armBall.armStateUntil = currentTime + (bal.chargePunchDuration || 520);
         armBall.armPunchAngle = targetAngle;
@@ -7749,7 +7999,7 @@ export default function App() {
         return;
       }
 
-      updateGun(armBall, target, currentTime, stepDt);
+      armBall.armAngle = targetAngle;
     };
 
     const scatterArmorParts = (laserBall, targetArray) => {
@@ -9399,6 +9649,172 @@ export default function App() {
       }
     };
 
+    const updateEarthSpiker = (ball, target, currentTime) => {
+      if (ball.type !== "earthSpiker") return;
+      const bal = game.balance.earthSpiker || BALANCE.earthSpiker;
+      const resetEarthArmorCycle = (burstX = ball.x, burstY = ball.y, burstScale = 1.25) => {
+        spawnImpactBurst(burstX, burstY, ball.earthArmorAngle || 0, ["#ffffff", "#d6b77a", "#8a6a3f", "#3f2a16"], burstScale);
+        spawnSparks(burstX, burstY, "#a16207", 18);
+        spawnDust(burstX, burstY, 16);
+        playEarthArmorBashSound(0.72);
+        ball.earthArmorPieces = [];
+        ball.earthArmorUntil = 0;
+        ball.earthArmorBashUntil = 0;
+        ball.earthArmorBashReadyAt = 0;
+        ball.earthArmorBreakAt = 0;
+        ball.earthArmorTargetId = null;
+        ball.earthArmorHitIds = {};
+        ball.earthSpikePushUntil = 0;
+        ball.nextEarthSpikePushAt = currentTime;
+      };
+      if (!target || target.health <= 0) {
+        if ((ball.earthArmorPieces?.length || 0) > 0) resetEarthArmorCycle(ball.x, ball.y, 0.9);
+        return;
+      }
+      const maxArmorStacks = 3;
+      ball.earthArmorPieces = ball.earthArmorPieces || [];
+      const armorStacks = ball.earthArmorPieces.length;
+      const armorActive = armorStacks > 0;
+      if (armorActive && !(ball.earthArmorBashUntil > currentTime)) {
+        ball.earthArmorAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        ball.earthArmorTargetId = target.id;
+      }
+
+      if (armorActive && armorStacks >= maxArmorStacks && !(ball.earthArmorBashUntil > currentTime) && currentTime >= (ball.earthArmorBashReadyAt || 0)) {
+        const bashAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        ball.earthArmorAngle = bashAngle;
+        ball.earthArmorTargetId = target.id;
+        ball.earthArmorBashUntil = currentTime + 980;
+        ball.earthArmorBreakAt = 0;
+        ball.earthArmorHitIds = {};
+        ball.vx = Math.cos(bashAngle) * 1120;
+        ball.vy = Math.sin(bashAngle) * 1120;
+        ball.earthSpikeFlashUntil = currentTime + 520;
+        game.screenShake = Math.max(game.screenShake || 0, 16);
+        spawnSparks(ball.x, ball.y, "#facc15", 28);
+        spawnDust(ball.x, ball.y, 16);
+        playEarthArmorBashSound(0.94);
+        game.floatingTexts = game.floatingTexts || [];
+        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 24, vy: -54, text: "ARMOR BASH", color: "#facc15", life: 0.72, maxLife: 0.72 });
+      }
+
+      if (armorActive && currentTime < (ball.earthArmorBashUntil || 0)) {
+        const bashTarget = game.balls.find((candidate) => candidate.id === ball.earthArmorTargetId && candidate.health > 0) || target;
+        const dist = Math.hypot(ball.x - bashTarget.x, ball.y - bashTarget.y);
+        if (dist < ball.r + bashTarget.r + 16 && !(ball.earthArmorHitIds || {})[bashTarget.id]) {
+          ball.earthArmorHitIds = ball.earthArmorHitIds || {};
+          ball.earthArmorHitIds[bashTarget.id] = true;
+          const hitAngle = Math.atan2(bashTarget.y - ball.y, bashTarget.x - ball.x);
+          const before = bashTarget.health;
+          applyDamage(bashTarget, bal.pushDamage ?? 6, `${ball.id}-earth-armor-bash-${bashTarget.id}`, currentTime, 280);
+          const dealt = Math.max(0, before - bashTarget.health);
+          const stats = ball.side === "left" ? game.stats.left : ball.side === "right" ? game.stats.right : null;
+          if (stats && dealt > 0) { stats.damageDealt += dealt; stats.hitsLanded++; }
+          if (!hasStringBounceGuard(bashTarget)) {
+            cancelActiveMovementStates(bashTarget);
+            const bashRecoil = 1320;
+            bashTarget.vx = Math.cos(hitAngle) * bashRecoil;
+            bashTarget.vy = Math.sin(hitAngle) * bashRecoil;
+            bashTarget.shieldBashBouncesLeft = 5;
+            bashTarget.shieldBashSpeedOverride = 1280;
+          }
+          bashTarget.skillLockedUntil = Math.max(bashTarget.skillLockedUntil || 0, currentTime + 1900);
+          bashTarget.paralyzedUntil = Math.max(bashTarget.paralyzedUntil || 0, currentTime + 520);
+          bashTarget.webHitFlashUntil = currentTime + 220;
+          bashTarget.webHitFlashColor = "#a16207";
+          spawnImpactBurst(bashTarget.x, bashTarget.y, hitAngle, ["#ffffff", "#fde68a", "#a16207", "#44403c"], 2.0);
+          spawnSparks(bashTarget.x, bashTarget.y, "#facc15", 34);
+          spawnDust(bashTarget.x, bashTarget.y, 18);
+          playEarthArmorBashSound(1.08);
+          game.screenShake = Math.max(game.screenShake || 0, 18);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({ x: bashTarget.x, y: bashTarget.y - 30, vy: -56, text: "ROCK BASH", color: "#facc15", life: 0.78, maxLife: 0.78 });
+          resetEarthArmorCycle(ball.x, ball.y, 1.35);
+          return;
+        }
+        return;
+      }
+
+      if (armorActive && ((ball.earthArmorBreakAt || 0) > 0 && currentTime >= ball.earthArmorBreakAt || (ball.earthArmorBashUntil || 0) > 0 && currentTime >= ball.earthArmorBashUntil)) {
+        resetEarthArmorCycle(ball.x, ball.y, 1.25);
+        return;
+      }
+
+      if (armorStacks >= maxArmorStacks || currentTime < (ball.nextEarthSpikePushAt || 0)) return;
+      const ownedSpikes = (game.earthSpikes || []).filter((spike) => spike.ownerId === ball.id);
+      const touched = ownedSpikes
+        .map((spike) => ({ spike, hit: distanceToSpikeSegment(ball, spike) }))
+        .filter(({ hit }) => hit.d <= ball.r + 12)
+        .sort((a, b) => a.hit.d - b.hit.d)[0];
+      if (!touched) return;
+      const consumed = touched.spike;
+      game.earthSpikes = (game.earthSpikes || []).filter((spike) => spike.id !== consumed.id);
+      const slotOffsets = [0, (Math.PI * 2) / 3, -(Math.PI * 2) / 3];
+      const nextStack = Math.min(maxArmorStacks, ball.earthArmorPieces.length + 1);
+      const facing = Math.atan2(target.y - ball.y, target.x - ball.x);
+      ball.earthArmorAngle = facing;
+      ball.earthArmorPieces.push({
+        angle: facing + slotOffsets[nextStack - 1],
+        slotOffset: slotOffsets[nextStack - 1],
+        size: 1.28 + nextStack * 0.08 + Math.random() * 0.14,
+        seed: Math.random() * 1000,
+        fromX: consumed.x + Math.cos(consumed.angle) * (consumed.length || bal.spikeLength || 44) * 0.72,
+        fromY: consumed.y + Math.sin(consumed.angle) * (consumed.length || bal.spikeLength || 44) * 0.72,
+        collectedAt: currentTime,
+        attachedAt: currentTime + 360,
+      });
+      ball.earthArmorUntil = currentTime + 5000;
+      if (ball.earthArmorPieces.length >= maxArmorStacks) {
+        ball.earthArmorBashReadyAt = currentTime + 420;
+        ball.earthArmorTargetId = target.id;
+        ball.earthArmorHitIds = {};
+      }
+      ball.nextEarthSpikePushAt = currentTime + (bal.pushCooldown || 2600);
+      ball.earthSpikePushUntil = currentTime + (ball.earthArmorPieces.length >= maxArmorStacks ? 1180 : 520);
+      ball.earthSpikeFlashUntil = currentTime + 640;
+      spawnImpactBurst(consumed.x, consumed.y, consumed.angle, ["#ffffff", "#fde68a", "#a16207", "#3f6212"], 1.8);
+      spawnSparks(consumed.x, consumed.y, "#facc15", 34);
+      spawnDust(consumed.x, consumed.y, 22);
+      playEarthArmorDockSound(0.92);
+      game.screenShake = Math.max(game.screenShake || 0, 14);
+      game.floatingTexts = game.floatingTexts || [];
+      game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -48, text: `ROCK ARMOR ${ball.earthArmorPieces.length}/3`, color: "#facc15", life: 0.72, maxLife: 0.72 });
+    };
+
+    const updateEarthSpikes = () => {
+      const spikes = game.earthSpikes || [];
+      if (!spikes.length) return;
+      const bal = game.balance.earthSpiker || BALANCE.earthSpiker;
+      spikes.forEach((spike) => {
+        spike.lastHit = spike.lastHit || {};
+        game.balls.forEach((ball) => {
+          if (ball.health <= 0 || ball.type === "cueBall" || ball.side === spike.ownerSide) return;
+          const hit = distanceToSpikeSegment(ball, spike);
+          const hitRadius = ball.r + Math.max(8, (spike.width || 22) * (1 - hit.t) * 0.35);
+          if (hit.d > hitRadius) return;
+          if (game.simTime < (spike.lastHit[ball.id] || 0)) return;
+          spike.lastHit[ball.id] = game.simTime + (bal.spikeHitCooldown || 520);
+          const damage = bal.spikeDamage ?? 1;
+          const before = ball.health;
+          applyDamage(ball, damage, `${spike.id}-earth-spike-${ball.id}`, game.simTime, 180);
+          const dealt = Math.max(0, before - ball.health);
+          if (dealt > 0) {
+            const owner = game.balls.find((candidate) => candidate.id === spike.ownerId);
+            const stats = owner?.side === "left" ? game.stats.left : owner?.side === "right" ? game.stats.right : null;
+            if (stats) { stats.damageDealt += dealt; stats.hitsLanded++; }
+          }
+          ball.vx += Math.cos(spike.angle) * 260;
+          ball.vy += Math.sin(spike.angle) * 260;
+          ball.webHitFlashUntil = game.simTime + 170;
+          ball.webHitFlashColor = "#a16207";
+          game.screenShake = Math.max(game.screenShake || 0, 7);
+          spawnImpactBurst(hit.px, hit.py, spike.angle, ["#ffffff", "#facc15", "#a16207", "#44403c"], 1.05);
+          spawnSparks(hit.px, hit.py, "#a16207", 12);
+          playEarthSpikeHitSound(0.82);
+        });
+      });
+    };
+
     const updateEightBall = (ball, target, currentTime) => {
       const bal = game.balance.eightBall || BALANCE.eightBall;
 
@@ -9607,13 +10023,89 @@ export default function App() {
           spawnSparks(x, y, "#020617", 34);
         };
 
-        const startTripleBite = (victim, label = "TRIPLE BITE") => {
+        const createBlackWallWeb = (x, y) => {
+          const radius = bsBal.wallWebRadius || 56;
+          const distances = [
+            { wall: "left", d: Math.abs(x), x: 0, y: clamp(y, radius + 8, game.height - radius - 8) },
+            { wall: "right", d: Math.abs(game.width - x), x: game.width, y: clamp(y, radius + 8, game.height - radius - 8) },
+            { wall: "top", d: Math.abs(y), x: clamp(x, radius + 8, game.width - radius - 8), y: 0 },
+            { wall: "bottom", d: Math.abs(game.height - y), x: clamp(x, radius + 8, game.width - radius - 8), y: game.height },
+          ].sort((a, b) => a.d - b.d);
+          const snap = distances[0];
+          leaveSpiderWebSplatter(ball, snap.x, snap.y, snap.wall, Math.atan2(game.height / 2 - snap.y, game.width / 2 - snap.x), 120);
+          return;
+          game.venomPools = game.venomPools || [];
+          game.venomPools.push({
+            ownerId: ball.id,
+            ownerSide: ball.side,
+            x: snap.x,
+            y: snap.y,
+            r: radius,
+            wall: snap.wall,
+            createdTime: currentTime,
+            duration: bsBal.wallWebDuration || 5000,
+            isBlackWallWeb: true,
+            consumed: false,
+            damageDealtMap: {}
+          });
+          spawnImpactBurst(snap.x, snap.y, Math.atan2(game.height / 2 - snap.y, game.width / 2 - snap.x), ["#020617", "#f8fafc", "#475569"], 1.35);
+          spawnSparks(snap.x, snap.y, "#020617", 24);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({ x: snap.x, y: snap.y - 16, vy: -42, text: "WALL WEB", color: "#f8fafc", life: 0.75, maxLife: 0.75 });
+          playSound("webHit", 0.72, 100, { pan: (snap.x / game.width) * 2 - 1, depth: 0.1, room: 0.42 });
+        };
+
+        const absorbBlackWallWeb = (pool) => {
+          if (!pool || pool.consumed) return;
+          pool.consumed = true;
+          ball.blackGooBuffUntil = currentTime + (bsBal.gooBuffDuration || 5200);
+          ball.blackGooBuffBonus = bsBal.wallWebBuffDamage || bsBal.gooBuffBonus || 3;
+          ball.blackGooFlashUntil = currentTime + 520;
+          spawnImpactBurst(ball.x, ball.y, ball.blackVenomBiteAngle || 0, ["#f8fafc", "#020617", "#94a3b8"], 1.2);
+          playSound("webHit", 0.78, 75, { pan: (ball.x / game.width) * 2 - 1, depth: 0.08, room: 0.4 });
+        };
+
+        const getBlackSpiderWallPoint = (angle, victim) => {
+          const pad = Math.max(22, (victim?.r || 28) + 10);
+          const dx = Math.cos(angle);
+          const dy = Math.sin(angle);
+          const candidates = [];
+          if (Math.abs(dx) > 0.001) {
+            const tx = dx > 0 ? (game.width - pad - ball.x) / dx : (pad - ball.x) / dx;
+            if (tx > 0) candidates.push({ t: tx, wall: dx > 0 ? "right" : "left", x: ball.x + dx * tx, y: ball.y + dy * tx });
+          }
+          if (Math.abs(dy) > 0.001) {
+            const ty = dy > 0 ? (game.height - pad - ball.y) / dy : (pad - ball.y) / dy;
+            if (ty > 0) candidates.push({ t: ty, wall: dy > 0 ? "bottom" : "top", x: ball.x + dx * ty, y: ball.y + dy * ty });
+          }
+          const hit = candidates.sort((a, b) => a.t - b.t)[0] || { wall: "right", x: game.width - pad, y: ball.y };
+          return { ...hit, x: clamp(hit.x, pad, game.width - pad), y: clamp(hit.y, pad, game.height - pad) };
+        };
+
+        const startBlackStringSlam = (victim, slamIndex, angle) => {
+          const slamPoint = getBlackSpiderWallPoint(angle, victim);
+          ball.blackWebState = "string_slam";
+          ball.blackStringSlamIndex = slamIndex;
+          ball.blackStringSlamStartedAt = currentTime;
+          ball.blackStringSlamUntil = currentTime + 480;
+          ball.blackStringSlamStartX = victim.x;
+          ball.blackStringSlamStartY = victim.y;
+          ball.blackStringSlamX = slamPoint.x;
+          ball.blackStringSlamY = slamPoint.y;
+          ball.blackStringSlamWall = slamPoint.wall;
+          ball.blackVenomBiteAngle = angle;
+          victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + 800);
+          victim.spinLockedUntil = Math.max(victim.spinLockedUntil || 0, currentTime + 800);
+          playSound("webShoot", 0.9, 65, { pan: (ball.x / game.width) * 2 - 1, depth: 0.08, room: 0.45 });
+        };
+
+        const startTripleBite = (victim, label = "BIG MAW BITE") => {
           if (!victim) return;
           ball.blackWebState = "idle";
-          ball.blackVenomBiteState = "jaw_open";
+          ball.blackVenomBiteState = "maw_open";
           ball.blackComboTargetId = victim.id;
           ball.blackComboStartedAt = currentTime;
-          ball.blackComboUntil = currentTime + 380;
+          ball.blackComboUntil = currentTime + (bsBal.venomBiteCharge || 380);
           ball.blackComboBiteHits = {};
           ball.blackVenomBiteStartedAt = currentTime;
           ball.blackVenomBiteUntil = ball.blackComboUntil;
@@ -9622,7 +10114,7 @@ export default function App() {
           victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, ball.blackComboUntil + 1250);
           victim.spinLockedUntil = Math.max(victim.spinLockedUntil || 0, ball.blackComboUntil);
           game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -52, text: "JAW OPEN", color: "#f8fafc", life: 0.8, maxLife: 0.8 });
+          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -52, text: label, color: "#f8fafc", life: 0.8, maxLife: 0.8 });
           playSound("hammerCharge", 0.72, 70, { pan: (ball.x / game.width) * 2 - 1, depth: 0.06, room: 0.46 });
         };
 
@@ -9658,6 +10150,32 @@ export default function App() {
         setBlackSpiderSize();
 
         const comboTarget = getComboTarget();
+        if (ball.blackWebState === "idle" && ball.blackVenomBiteState === "idle") {
+          const activeWallWebs = (game.venomPools || []).filter((pool) => pool.ownerId === ball.id && pool.isBlackWallWeb && !pool.consumed);
+          activeWallWebs.forEach((pool) => {
+            const ownerDist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
+            if (ownerDist < ball.r + (pool.r || 56) * 0.72) {
+              absorbBlackWallWeb(pool);
+              return;
+            }
+            const victim = game.balls.find((candidate) => candidate.side !== ball.side && candidate.health > 0 && Math.hypot(candidate.x - pool.x, candidate.y - pool.y) < candidate.r + (pool.r || 56) * 0.78);
+            if (victim && canStartSkillConnection(ball, victim, game.balls, currentTime)) {
+              pool.consumed = true;
+              ball.blackWebState = "pulling_target";
+              ball.blackWebTargetId = victim.id;
+              ball.blackComboTargetId = victim.id;
+              ball.blackWebAttachedUntil = currentTime + (bsBal.blackWebPullDuration || 700) + 220;
+              ball.blackWebX = pool.x;
+              ball.blackWebY = pool.y;
+              victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + (bsBal.wallWebLock || 950));
+              victim.spinLockedUntil = Math.max(victim.spinLockedUntil || 0, currentTime + (bsBal.wallWebLock || 950));
+              victim.webHitFlashUntil = currentTime + 320;
+              victim.webHitFlashColor = "#020617";
+              spawnImpactBurst(victim.x, victim.y, Math.atan2(ball.y - victim.y, ball.x - victim.x), ["#020617", "#f8fafc", "#475569"], 1.25);
+              playSound("webHit", 0.9, 70, { pan: (victim.x / game.width) * 2 - 1, depth: 0.1, room: 0.42 });
+            }
+          });
+        }
 
         if (ball.blackVenomBiteState === "goo_leap") {
           const victim = comboTarget;
@@ -9701,17 +10219,19 @@ export default function App() {
           return;
         }
 
-        if (ball.blackVenomBiteState === "jaw_open") {
+        if (ball.blackVenomBiteState === "maw_open" || ball.blackVenomBiteState === "jaw_open") {
           const victim = comboTarget;
           const biteAngle = Math.atan2(victim.y - ball.y, victim.x - ball.x);
           const openP = clamp((currentTime - (ball.blackComboStartedAt || currentTime)) / Math.max(1, (ball.blackComboUntil || currentTime) - (ball.blackComboStartedAt || currentTime)), 0, 1);
+          const mouthX = ball.x + Math.cos(biteAngle) * (ball.r + victim.r * 0.55 + 12);
+          const mouthY = ball.y + Math.sin(biteAngle) * (ball.r + victim.r * 0.55 + 12);
+          const toMouth = Math.atan2(mouthY - victim.y, mouthX - victim.x);
+          const mawPullSpeed = (bsBal.blackWebPullSpeed || 900) * (0.55 + openP * 0.35);
           ball.blackVenomBiteAngle = biteAngle;
-          ball.x = victim.x - Math.cos(biteAngle) * (ball.r + victim.r + 16);
-          ball.y = victim.y - Math.sin(biteAngle) * (ball.r + victim.r + 16);
-          ball.vx *= 0.25;
-          ball.vy *= 0.25;
-          victim.vx *= 0.18;
-          victim.vy *= 0.18;
+          ball.vx *= 0.12;
+          ball.vy *= 0.12;
+          victim.vx = victim.vx * 0.22 + Math.cos(toMouth) * mawPullSpeed * 0.78;
+          victim.vy = victim.vy * 0.22 + Math.sin(toMouth) * mawPullSpeed * 0.78;
           victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + 260);
           victim.spinLockedUntil = Math.max(victim.spinLockedUntil || 0, currentTime + 260);
           if (canSpawnParticle() && Math.random() < 0.72) {
@@ -9729,7 +10249,7 @@ export default function App() {
           }
           if (currentTime >= (ball.blackComboUntil || 0)) {
             const damage = (bsBal.venomBiteDamage || 6) + (((ball.blackGooBuffUntil || 0) > currentTime) ? (ball.blackGooBuffBonus || bsBal.gooBuffBonus || 4) : 0);
-            const dealt = applyBlackSpiderDamage(victim, damage, "VENOM BITE", `open-jaw-bite-${currentTime}`, biteAngle, 1450, true);
+            const dealt = applyBlackSpiderDamage(victim, damage, "BIG MAW BITE", `maw-bite-${currentTime}`, biteAngle, 1450, true);
             if (dealt > 0 && !hasStringBounceGuard(victim)) {
               const launchSpeed = 980;
               victim.vx = Math.cos(biteAngle) * launchSpeed;
@@ -9742,14 +10262,24 @@ export default function App() {
             }
             ball.blackGooBuffUntil = 0;
             ball.blackGooBuffBonus = 0;
-            ball.blackVenomBiteState = "recovery";
-            ball.blackComboUntil = currentTime + 300;
+            ball.blackVenomBiteState = "maw_bite";
+            ball.blackComboUntil = currentTime + 150;
             ball.blackWebNextAt = currentTime + (bsBal.blackWebCooldown || 3200);
             ball.vx = -Math.cos(biteAngle) * 280;
             ball.vy = -Math.sin(biteAngle) * 280;
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({ x: victim.x, y: victim.y - victim.r - 36, vy: -62, text: "2X WALL BOUNCE", color: "#f8fafc", life: 0.82, maxLife: 0.82 });
             playSound("hammerHit", 1.05, 60, { pan: (victim.x / game.width) * 2 - 1, depth: 0.05, room: 0.56 });
+          }
+          return;
+        }
+
+        if (ball.blackVenomBiteState === "maw_bite") {
+          ball.vx *= Math.pow(0.9, stepDt * 60);
+          ball.vy *= Math.pow(0.9, stepDt * 60);
+          if (currentTime >= (ball.blackComboUntil || 0)) {
+            ball.blackVenomBiteState = "recovery";
+            ball.blackComboUntil = currentTime + 260;
           }
           return;
         }
@@ -9897,7 +10427,7 @@ export default function App() {
             || ball.blackWebX < -24 || ball.blackWebX > game.width + 24
             || ball.blackWebY < -24 || ball.blackWebY > game.height + 24;
           if (webHitDist < target.r + 15) {
-            ball.blackWebState = "pulling";
+            ball.blackWebState = "pulling_self";
             ball.blackWebTargetId = target.id;
             ball.blackComboTargetId = target.id;
             ball.blackWebAttachedUntil = currentTime + (bsBal.blackWebPullDuration || 680);
@@ -9909,22 +10439,155 @@ export default function App() {
             spawnImpactBurst(target.x, target.y, Math.atan2(ball.y - target.y, ball.x - target.x), ["#ffffff", "#020617", "#475569"], 1.05);
             playSound("webHit", 0.9, 80, { pan: (target.x / game.width) * 2 - 1, depth: 0.1, room: 0.42 });
           } else if (webExpired) {
+            createBlackWallWeb(ball.blackWebX, ball.blackWebY);
             ball.blackWebState = "idle";
             ball.blackWebTargetId = null;
           }
           return;
         }
 
-        if (ball.blackWebState === "pulling") {
+        if (ball.blackWebState === "string_spin") {
+          const hooked = game.balls.find((candidate) => candidate.id === ball.blackWebTargetId && candidate.health > 0) || comboTarget;
+          const duration = Math.max(560, (ball.blackComboUntil || currentTime) - (ball.blackComboStartedAt || currentTime));
+          const p = clamp((currentTime - (ball.blackComboStartedAt || currentTime)) / duration, 0, 1);
+          const spinAngle = (ball.blackStringSpinStartAngle || 0) + p * Math.PI * 2;
+          const radius = ball.blackStringSpinRadius || 82;
+          ball.blackVenomBiteAngle = spinAngle;
+          ball.vx *= Math.pow(0.74, stepDt * 60);
+          ball.vy *= Math.pow(0.74, stepDt * 60);
+          hooked.x = clamp(ball.x + Math.cos(spinAngle) * radius, hooked.r + 20, game.width - hooked.r - 20);
+          hooked.y = clamp(ball.y + Math.sin(spinAngle) * radius, hooked.r + 20, game.height - hooked.r - 20);
+          hooked.vx = 0;
+          hooked.vy = 0;
+          hooked.skillLockedUntil = Math.max(hooked.skillLockedUntil || 0, currentTime + 260);
+          hooked.spinLockedUntil = Math.max(hooked.spinLockedUntil || 0, currentTime + 260);
+          if (canSpawnParticle() && Math.random() < 0.58) {
+            game.particles.push({
+              x: ball.x + Math.cos(spinAngle) * radius * (0.4 + Math.random() * 0.55),
+              y: ball.y + Math.sin(spinAngle) * radius * (0.4 + Math.random() * 0.55),
+              vx: (Math.random() - 0.5) * 46,
+              vy: (Math.random() - 0.5) * 46,
+              color: Math.random() < 0.76 ? "#020617" : "#f8fafc",
+              radius: 2.7,
+              life: 0.24,
+              maxLife: 0.24
+            });
+          }
+          if (currentTime >= (ball.blackComboUntil || 0)) {
+            startBlackStringSlam(hooked, 1, spinAngle);
+          }
+          return;
+        }
+
+        if (ball.blackWebState === "string_slam") {
+          const hooked = game.balls.find((candidate) => candidate.id === ball.blackWebTargetId && candidate.health > 0) || comboTarget;
+          const duration = Math.max(1, (ball.blackStringSlamUntil || currentTime) - (ball.blackStringSlamStartedAt || currentTime));
+          const p = clamp((currentTime - (ball.blackStringSlamStartedAt || currentTime)) / duration, 0, 1);
+          const ease = 1 - Math.pow(1 - p, 3);
+          hooked.x = clamp((ball.blackStringSlamStartX || hooked.x) * (1 - ease) + (ball.blackStringSlamX || hooked.x) * ease, hooked.r + 18, game.width - hooked.r - 18);
+          hooked.y = clamp((ball.blackStringSlamStartY || hooked.y) * (1 - ease) + (ball.blackStringSlamY || hooked.y) * ease, hooked.r + 18, game.height - hooked.r - 18);
+          hooked.vx = 0;
+          hooked.vy = 0;
+          hooked.skillLockedUntil = Math.max(hooked.skillLockedUntil || 0, currentTime + 280);
+          hooked.spinLockedUntil = Math.max(hooked.spinLockedUntil || 0, currentTime + 280);
+          ball.vx *= Math.pow(0.82, stepDt * 60);
+          ball.vy *= Math.pow(0.82, stepDt * 60);
+          ball.blackVenomBiteAngle = Math.atan2(hooked.y - ball.y, hooked.x - ball.x);
+          if (currentTime >= (ball.blackStringSlamUntil || 0)) {
+            const impactAngle = Math.atan2(hooked.y - ball.y, hooked.x - ball.x);
+            const slamDamage = Math.max(1, bsBal.swingSlamDamage || bsBal.slamWallDamage || 5);
+            applyBlackSpiderDamage(hooked, slamDamage, `STRING SLAM ${ball.blackStringSlamIndex || 1}`, `string-slam-${ball.blackStringSlamIndex || 1}-${ball.blackStringSlamStartedAt}`, impactAngle, 850, false);
+            spawnImpactBurst(hooked.x, hooked.y, impactAngle, ["#020617", "#f8fafc", "#475569"], 1.55);
+            spawnSparks(hooked.x, hooked.y, "#020617", 30);
+            game.screenShake = Math.max(game.screenShake || 0, 16);
+            playSound("explosion", 0.62, 95, { pan: (hooked.x / game.width) * 2 - 1, depth: 0.08, room: 0.52 });
+            if ((ball.blackStringSlamIndex || 1) < 2) {
+              const nextAngle = impactAngle + Math.PI + 0.42;
+              startBlackStringSlam(hooked, 2, nextAngle);
+            } else {
+              leaveSpiderWebSplatter(ball, hooked.x, hooked.y, ball.blackStringSlamWall || "right", impactAngle, 80);
+              hooked.vx = -Math.cos(impactAngle) * 360;
+              hooked.vy = -Math.sin(impactAngle) * 360;
+              hooked.skillLockedUntil = Math.max(hooked.skillLockedUntil || 0, currentTime + 650);
+              ball.blackWebState = "idle";
+              ball.blackWebTargetId = null;
+              ball.blackComboTargetId = null;
+              ball.blackVenomBiteState = "recovery";
+              ball.blackComboUntil = currentTime + 220;
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({ x: hooked.x, y: hooked.y - hooked.r - 28, vy: -50, text: "BLACK WEB LEFT", color: "#f8fafc", life: 0.78, maxLife: 0.78 });
+            }
+          }
+          return;
+        }
+
+        if (ball.blackWebState === "pulling_self") {
           const hooked = game.balls.find((candidate) => candidate.id === ball.blackWebTargetId && candidate.health > 0) || target;
-          const pullAngle = Math.atan2(hooked.y - ball.y, hooked.x - ball.x);
-          const pullDist = Math.max(1, Math.hypot(hooked.x - ball.x, hooked.y - ball.y));
-          const pullSpeed = bsBal.blackWebPullSpeed || 860;
-          ball.blackVenomBiteAngle = pullAngle;
-          ball.vx = ball.vx * 0.55 + Math.cos(pullAngle) * pullSpeed * 0.45;
-          ball.vy = ball.vy * 0.55 + Math.sin(pullAngle) * pullSpeed * 0.45;
+          const lungeAngle = Math.atan2(hooked.y - ball.y, hooked.x - ball.x);
+          const lungeDist = Math.max(1, Math.hypot(hooked.x - ball.x, hooked.y - ball.y));
+          const lungeSpeed = Math.max(980, (bsBal.blackWebPullSpeed || 900) * 1.18);
+          ball.blackVenomBiteAngle = lungeAngle;
+          ball.vx = ball.vx * 0.18 + Math.cos(lungeAngle) * lungeSpeed * 0.82;
+          ball.vy = ball.vy * 0.18 + Math.sin(lungeAngle) * lungeSpeed * 0.82;
           hooked.vx *= 0.35;
           hooked.vy *= 0.35;
+          hooked.skillLockedUntil = Math.max(hooked.skillLockedUntil || 0, currentTime + 220);
+          hooked.spinLockedUntil = Math.max(hooked.spinLockedUntil || 0, currentTime + 220);
+          if (canSpawnParticle() && Math.random() < 0.7) {
+            const t = Math.random();
+            game.particles.push({
+              x: ball.x + (hooked.x - ball.x) * t + (Math.random() - 0.5) * 13,
+              y: ball.y + (hooked.y - ball.y) * t + (Math.random() - 0.5) * 13,
+              vx: (Math.random() - 0.5) * 70,
+              vy: (Math.random() - 0.5) * 70,
+              color: Math.random() < 0.82 ? "#020617" : "#f8fafc",
+              radius: 3.4,
+              life: 0.24,
+              maxLife: 0.24
+            });
+          }
+          if (lungeDist < ball.r + hooked.r + 26 && canStartSkillConnection(ball, hooked, game.balls, currentTime)) {
+            ball.blackWebState = "string_spin";
+            ball.blackComboTargetId = hooked.id;
+            ball.blackComboStartedAt = currentTime;
+            ball.blackComboUntil = currentTime + 760;
+            ball.blackStringSpinStartAngle = Math.atan2(hooked.y - ball.y, hooked.x - ball.x);
+            ball.blackStringSpinRadius = Math.max(ball.r + hooked.r + 28, Math.min(92, lungeDist));
+            ball.blackStringSlamIndex = 0;
+            ball.blackWebNextAt = currentTime + (bsBal.blackWebCooldown || 3200);
+            ball.vx *= 0.18;
+            ball.vy *= 0.18;
+            hooked.vx = 0;
+            hooked.vy = 0;
+            hooked.skillLockedUntil = Math.max(hooked.skillLockedUntil || 0, currentTime + 2200);
+            hooked.spinLockedUntil = Math.max(hooked.spinLockedUntil || 0, currentTime + 2200);
+            hooked.webHitFlashUntil = currentTime + 260;
+            hooked.webHitFlashColor = "#020617";
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({ x: hooked.x, y: hooked.y - hooked.r - 34, vy: -58, text: "WEB SPIN LOCK", color: "#f8fafc", life: 0.82, maxLife: 0.82 });
+            playSound("webHit", 1.0, 70, { pan: (hooked.x / game.width) * 2 - 1, depth: 0.08, room: 0.48 });
+            return;
+          }
+          if (currentTime >= (ball.blackWebAttachedUntil || 0)) {
+            ball.blackWebState = "idle";
+            ball.blackWebTargetId = null;
+            ball.blackVenomBiteState = "recovery";
+            ball.blackComboUntil = currentTime + 220;
+          }
+          return;
+        }
+
+        if (ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling") {
+          const hooked = game.balls.find((candidate) => candidate.id === ball.blackWebTargetId && candidate.health > 0) || target;
+          const mouthAngle = Math.atan2(hooked.y - ball.y, hooked.x - ball.x);
+          const pullAngle = Math.atan2(ball.y - hooked.y, ball.x - hooked.x);
+          const pullDist = Math.max(1, Math.hypot(hooked.x - ball.x, hooked.y - ball.y));
+          const pullSpeed = bsBal.blackWebPullSpeed || 860;
+          ball.blackVenomBiteAngle = mouthAngle;
+          ball.vx *= Math.pow(0.82, stepDt * 60);
+          ball.vy *= Math.pow(0.82, stepDt * 60);
+          hooked.vx = hooked.vx * 0.24 + Math.cos(pullAngle) * pullSpeed * 0.76;
+          hooked.vy = hooked.vy * 0.24 + Math.sin(pullAngle) * pullSpeed * 0.76;
           hooked.skillLockedUntil = Math.max(hooked.skillLockedUntil || 0, currentTime + 180);
           hooked.spinLockedUntil = Math.max(hooked.spinLockedUntil || 0, currentTime + 180);
           if (canSpawnParticle() && Math.random() < 0.55) {
@@ -9941,7 +10604,7 @@ export default function App() {
             });
           }
           if (pullDist < ball.r + hooked.r + 28 && canStartSkillConnection(ball, hooked, game.balls, currentTime)) {
-            startTripleBite(hooked, "TENDRIL HIT!");
+            startTripleBite(hooked, "BIG MAW BITE");
             return;
           }
           if (currentTime >= (ball.blackWebAttachedUntil || 0)) {
@@ -9985,7 +10648,7 @@ export default function App() {
         }
         return;
 
-        const startBlackVenomBite = (label = "BLACK VENOM BITE") => {
+        const startBlackVenomBite = (label = "BIG MAW BITE") => {
           ball.blackVenomBiteState = "charging";
           ball.blackVenomBiteStartedAt = currentTime;
           ball.blackVenomBiteUntil = currentTime + (bsBal.venomBiteCharge || 260);
@@ -10149,7 +10812,7 @@ export default function App() {
               game.floatingTexts = game.floatingTexts || [];
               game.floatingTexts.push({
                 x: target.x, y: target.y - target.r - 20, vy: -58,
-                text: `BLACK VENOM -${dealt}`, color: "#f8fafc", life: 0.9, maxLife: 0.9
+                text: `BIG MAW -${dealt}`, color: "#f8fafc", life: 0.9, maxLife: 0.9
               });
               playSound("hammerHit", 0.95, 90, { pan: (target.x / game.width) * 2 - 1, depth: 0.06, room: 0.5 });
             }
@@ -10198,7 +10861,7 @@ export default function App() {
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
             x: ball.x, y: ball.y - ball.r - 22, vy: -52,
-            text: "SYMBIOTE WEB", color: "#f8fafc", life: 0.7, maxLife: 0.7
+            text: "SLIMY TENDRIL", color: "#f8fafc", life: 0.7, maxLife: 0.7
           });
           spawnImpactBurst(ball.x, ball.y, angle, ["#f8fafc", "#020617", "#475569"], 0.85);
           playSound("webShoot", 0.84, 72, { pan: (ball.x / game.width) * 2 - 1, depth: 0.08, room: 0.32 });
@@ -13542,7 +14205,8 @@ export default function App() {
               game.simulationSpeed || 1
             );
           } else if (ball.side !== splat.ownerSide) {
-            ball.webSplatterStuckUntil = Math.max(ball.webSplatterStuckUntil || 0, game.simTime + 1600);
+            const isBlackSplat = !!splat.isBlackSpider;
+            ball.webSplatterStuckUntil = Math.max(ball.webSplatterStuckUntil || 0, game.simTime + (isBlackSplat ? 950 : 1600));
             ball.vx = 0;
             ball.vy = 0;
             const spiderOwner = game.balls.find((candidate) => candidate.id === splat.ownerId && candidate.type === "spider");
@@ -13554,13 +14218,33 @@ export default function App() {
                 text: "WEB READY", color: "#bfdbfe", life: 0.75, maxLife: 0.75
               });
             }
+            const blackSpiderOwner = game.balls.find((candidate) => candidate.id === splat.ownerId && candidate.type === "blackSpider");
+            if (blackSpiderOwner && canStartSkillConnection(blackSpiderOwner, ball, game.balls, game.simTime)) {
+              const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
+              const angle = Math.atan2(ball.y - blackSpiderOwner.y, ball.x - blackSpiderOwner.x);
+              blackSpiderOwner.blackWebState = "pulling_self";
+              blackSpiderOwner.blackWebTargetId = ball.id;
+              blackSpiderOwner.blackComboTargetId = ball.id;
+              blackSpiderOwner.blackWebAttachedUntil = game.simTime + (bsBal.blackWebPullDuration || 700);
+              blackSpiderOwner.blackWebX = splat.x;
+              blackSpiderOwner.blackWebY = splat.y;
+              blackSpiderOwner.blackVenomBiteAngle = angle;
+              blackSpiderOwner.blackWebNextAt = game.simTime + (bsBal.blackWebCooldown || 3200);
+              ball.skillLockedUntil = Math.max(ball.skillLockedUntil || 0, game.simTime + (bsBal.blackWebLock || 900));
+              ball.spinLockedUntil = Math.max(ball.spinLockedUntil || 0, game.simTime + (bsBal.blackWebLock || 900));
+              game.floatingTexts = game.floatingTexts || [];
+              game.floatingTexts.push({
+                x: blackSpiderOwner.x, y: blackSpiderOwner.y - blackSpiderOwner.r - 22, vy: -42,
+                text: "BLACK WEB STRING", color: "#f8fafc", life: 0.75, maxLife: 0.75
+              });
+            }
             consumed = true;
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({
               x: ball.x, y: ball.y - ball.r - 22, vy: -45,
-              text: "WEB STUCK", color: "#ffffff", life: 0.85, maxLife: 0.85
+              text: isBlackSplat ? "BLACK WEB STUCK" : "WEB STUCK", color: isBlackSplat ? "#f8fafc" : "#ffffff", life: 0.85, maxLife: 0.85
             });
-            spawnSparks(ball.x, ball.y, "#ffffff", 18);
+            spawnSparks(ball.x, ball.y, isBlackSplat ? "#020617" : "#ffffff", 18);
             playAudioFile(
               "/spider%20splatter%20opponent%20step.mp3",
               0.92,
@@ -13882,6 +14566,23 @@ export default function App() {
       const bal = game.balance;
       game.venomPools = game.venomPools.filter((pool) => {
         if (game.simTime >= pool.createdTime + pool.duration) return false;
+        if (pool.isBlackWallWeb) {
+          if (pool.consumed) return false;
+          if (canSpawnParticle() && Math.random() < 0.08) {
+            const horizontal = pool.wall === "top" || pool.wall === "bottom";
+            game.particles.push({
+              x: pool.x + (horizontal ? (Math.random() - 0.5) * pool.r * 1.2 : (pool.wall === "left" ? 4 : -4)),
+              y: pool.y + (horizontal ? (pool.wall === "top" ? 4 : -4) : (Math.random() - 0.5) * pool.r * 1.2),
+              vx: (Math.random() - 0.5) * 28,
+              vy: (Math.random() - 0.5) * 28,
+              color: Math.random() < 0.75 ? "#020617" : "#f8fafc",
+              radius: 2.2,
+              life: 0.3,
+              maxLife: 0.3
+            });
+          }
+          return true;
+        }
 
         game.balls.forEach((ball) => {
           if (pool.consumed) return;
@@ -17262,8 +17963,8 @@ export default function App() {
     const drawBlackSpiderBall = (ball) => {
       const config = BALL_TYPES.blackSpider || { color: "#020617", stroke: "#f1f5f9" };
       ctx.save();
-      if (ball.blackWebState === "shooting" || ball.blackWebState === "pulling") {
-        const webTarget = ball.blackWebState === "pulling"
+      if (ball.blackWebState === "shooting" || ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam") {
+        const webTarget = ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam"
           ? game.balls.find((candidate) => candidate.id === ball.blackWebTargetId)
           : null;
         const endX = webTarget ? webTarget.x : ball.blackWebX;
@@ -17277,7 +17978,7 @@ export default function App() {
         ctx.shadowColor = "#020617";
         ctx.shadowBlur = 15;
         ctx.strokeStyle = "rgba(2, 6, 23, 0.88)";
-        ctx.lineWidth = ball.blackWebState === "pulling" ? 8 : 6;
+        ctx.lineWidth = ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam" ? 9 : 6;
         ctx.beginPath();
         ctx.moveTo(ball.x, ball.y);
         ctx.quadraticCurveTo(midX, midY, endX, endY);
@@ -17285,7 +17986,7 @@ export default function App() {
 
         ctx.shadowBlur = 5;
         ctx.strokeStyle = "rgba(248, 250, 252, 0.9)";
-        ctx.lineWidth = ball.blackWebState === "pulling" ? 2.6 : 2;
+        ctx.lineWidth = ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam" ? 2.9 : 2;
         ctx.beginPath();
         ctx.moveTo(ball.x, ball.y);
         ctx.quadraticCurveTo(midX, midY, endX, endY);
@@ -17295,9 +17996,46 @@ export default function App() {
         ctx.strokeStyle = "#f8fafc";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(endX, endY, ball.blackWebState === "pulling" ? 8 : 6, 0, Math.PI * 2);
+        ctx.arc(endX, endY, ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam" ? 8 : 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        if (ball.blackWebState === "string_spin") {
+          ctx.globalAlpha = 0.58;
+          ctx.strokeStyle = "rgba(248,250,252,0.72)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.blackStringSpinRadius || 82, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      if (ball.blackWebState === "pulling_target" || ball.blackVenomBiteState === "maw_open") {
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.shadowColor = "#020617";
+        ctx.shadowBlur = 16;
+        for (let i = 0; i < 6; i++) {
+          const side = i < 3 ? -1 : 1;
+          const spread = (i % 3 - 1) * 0.42;
+          const anchorAngle = (ball.blackVenomBiteAngle || 0) + Math.PI + side * (0.75 + Math.abs(spread));
+          const rootX = ball.x + Math.cos(anchorAngle) * ball.r * 0.55;
+          const rootY = ball.y + Math.sin(anchorAngle) * ball.r * 0.55;
+          const tipX = clamp(ball.x + Math.cos(anchorAngle + spread) * (ball.r + 34 + i * 3), 0, game.width);
+          const tipY = clamp(ball.y + Math.sin(anchorAngle + spread) * (ball.r + 34 + i * 3), 0, game.height);
+          ctx.strokeStyle = "rgba(2, 6, 23, 0.9)";
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.moveTo(rootX, rootY);
+          ctx.quadraticCurveTo((rootX + tipX) / 2, (rootY + tipY) / 2 + Math.sin(game.simTime * 0.03 + i) * 6, tipX, tipY);
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(248, 250, 252, 0.72)";
+          ctx.lineWidth = 1.7;
+          ctx.beginPath();
+          ctx.moveTo(rootX, rootY);
+          ctx.quadraticCurveTo((rootX + tipX) / 2, (rootY + tipY) / 2 + Math.sin(game.simTime * 0.03 + i) * 6, tipX, tipY);
+          ctx.stroke();
+        }
         ctx.restore();
       }
 
@@ -17339,11 +18077,131 @@ export default function App() {
         ctx.restore();
       }
 
-      if (["charging", "lunging", "jaw_open", "triple_bite", "goo_leap"].includes(ball.blackVenomBiteState)) {
+      if (false && ball.blackWebState === "pulling_self") {
+        const biteAngle = ball.blackVenomBiteAngle || 0;
+        const lockPulse = 0.5 + Math.sin(game.simTime * 0.035) * 0.5;
+        ctx.save();
+        ctx.rotate(biteAngle);
+        ctx.shadowColor = "#020617";
+        ctx.shadowBlur = 22;
+        ctx.fillStyle = "#040609";
+        ctx.strokeStyle = "rgba(248,250,252,0.35)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 3.3, ball.r * 0.48);
+        ctx.bezierCurveTo(-ball.r * 2.72, -ball.r * 0.55, -ball.r * 1.45, -ball.r * 0.76, -ball.r * 0.2, -ball.r * 0.46);
+        ctx.bezierCurveTo(ball.r * 0.42, -ball.r * 0.78, ball.r * 1.2, -ball.r * 0.88, ball.r * 1.88, -ball.r * 0.58);
+        ctx.bezierCurveTo(ball.r * 2.28, -ball.r * 0.38, ball.r * 2.42, -ball.r * 0.06, ball.r * 2.0, ball.r * 0.1);
+        ctx.bezierCurveTo(ball.r * 1.24, ball.r * 0.38, ball.r * 0.62, ball.r * 0.62, -ball.r * 0.08, ball.r * 0.54);
+        ctx.bezierCurveTo(-ball.r * 1.16, ball.r * 0.9, -ball.r * 2.55, ball.r * 0.82, -ball.r * 3.3, ball.r * 0.48);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Large white Venom head patch from the reference.
+        ctx.fillStyle = "rgba(248,250,252,0.96)";
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.15, -ball.r * 0.52);
+        ctx.bezierCurveTo(ball.r * 0.72, -ball.r * 0.82, ball.r * 1.45, -ball.r * 0.78, ball.r * 2.05, -ball.r * 0.42);
+        ctx.bezierCurveTo(ball.r * 1.54, -ball.r * 0.35, ball.r * 0.84, -ball.r * 0.36, ball.r * 0.2, -ball.r * 0.28);
+        ctx.bezierCurveTo(-ball.r * 0.02, -ball.r * 0.34, -ball.r * 0.02, -ball.r * 0.46, ball.r * 0.15, -ball.r * 0.52);
+        ctx.closePath();
+        ctx.fill();
+
+        // Open red mouth cavity, locked toward the target.
+        const mouthOpen = 1 + lockPulse * 0.1;
+        ctx.fillStyle = "#b91c1c";
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.82, -ball.r * 0.22 * mouthOpen);
+        ctx.bezierCurveTo(ball.r * 1.26, -ball.r * 0.4 * mouthOpen, ball.r * 2.38, -ball.r * 0.33, ball.r * 2.66, -ball.r * 0.08);
+        ctx.bezierCurveTo(ball.r * 2.18, ball.r * 0.16, ball.r * 1.18, ball.r * 0.42 * mouthOpen, ball.r * 0.78, ball.r * 0.22 * mouthOpen);
+        ctx.bezierCurveTo(ball.r * 0.62, ball.r * 0.08, ball.r * 0.62, -ball.r * 0.08, ball.r * 0.82, -ball.r * 0.22 * mouthOpen);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Black upper/lower jaw lips.
+        ctx.fillStyle = "#050505";
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.54, -ball.r * 0.3);
+        ctx.bezierCurveTo(ball.r * 1.16, -ball.r * 0.76, ball.r * 2.25, -ball.r * 0.62, ball.r * 2.76, -ball.r * 0.2);
+        ctx.bezierCurveTo(ball.r * 2.12, -ball.r * 0.18, ball.r * 1.28, -ball.r * 0.2, ball.r * 0.72, -ball.r * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.62, ball.r * 0.32);
+        ctx.bezierCurveTo(ball.r * 1.18, ball.r * 0.64, ball.r * 2.2, ball.r * 0.56, ball.r * 2.76, ball.r * 0.18);
+        ctx.bezierCurveTo(ball.r * 2.08, ball.r * 0.18, ball.r * 1.14, ball.r * 0.22, ball.r * 0.72, ball.r * 0.05);
+        ctx.closePath();
+        ctx.fill();
+
+        // Long sharp teeth.
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 0.9;
+        for (let i = 0; i < 9; i++) {
+          const x = ball.r * (1.0 + i * 0.19);
+          const topLen = ball.r * (0.22 + (i % 3) * 0.05);
+          ctx.beginPath();
+          ctx.moveTo(x, -ball.r * 0.18);
+          ctx.lineTo(x + ball.r * 0.07, -ball.r * 0.18 - topLen);
+          ctx.lineTo(x + ball.r * 0.15, -ball.r * 0.14);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          const botLen = ball.r * (0.2 + ((i + 1) % 3) * 0.05);
+          ctx.beginPath();
+          ctx.moveTo(x + ball.r * 0.04, ball.r * 0.17);
+          ctx.lineTo(x + ball.r * 0.1, ball.r * 0.17 + botLen);
+          ctx.lineTo(x + ball.r * 0.18, ball.r * 0.13);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Green venom splashes near the bite, from the reference accents.
+        ctx.strokeStyle = "#39ff14";
+        ctx.shadowColor = "#39ff14";
+        ctx.shadowBlur = 8;
+        ctx.lineWidth = 3.2;
+        for (let i = 0; i < 3; i++) {
+          const baseX = ball.r * (1.05 + i * 0.38);
+          const baseY = ball.r * (0.22 + (i % 2) * 0.08);
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY);
+          ctx.lineTo(baseX + ball.r * 0.16, baseY - ball.r * 0.22);
+          ctx.lineTo(baseX + ball.r * 0.28, baseY + ball.r * 0.08);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "rgba(15,23,42,0.9)";
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.ellipse(-ball.r * (2.2 - i * 0.35), Math.sin(game.simTime * 0.018 + i) * ball.r * 0.18, ball.r * 0.26, ball.r * 0.1, -0.25, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = "rgba(71,85,105,0.58)";
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-ball.r * (2.55 - i * 0.45), ball.r * (0.22 - i * 0.08));
+          ctx.quadraticCurveTo(-ball.r * (2.1 - i * 0.4), -ball.r * 0.22, -ball.r * (1.4 - i * 0.28), -ball.r * 0.18);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      if (ball.blackWebState !== "pulling_self" && ["charging", "lunging", "jaw_open", "maw_open", "maw_bite", "triple_bite", "goo_leap"].includes(ball.blackVenomBiteState)) {
         const biteAngle = ball.blackVenomBiteAngle || 0;
         const biteElapsed = game.simTime - (ball.blackComboStartedAt || ball.blackVenomBiteStartedAt || game.simTime);
-        const triplePhase = ball.blackVenomBiteState === "jaw_open"
+        const triplePhase = ball.blackWebState === "pulling_self"
+          ? 1.62
+          : ball.blackVenomBiteState === "jaw_open" || ball.blackVenomBiteState === "maw_open"
           ? 1 + clamp(biteElapsed / 380, 0, 1) * 0.48
+          : ball.blackVenomBiteState === "maw_bite" ? 1.55
           : ball.blackVenomBiteState === "triple_bite"
           ? biteElapsed > 700 ? 1.35 : biteElapsed > 330 ? 1.12 : 0.9
           : ball.blackVenomBiteState === "goo_leap" ? 1.28 : 1;
@@ -18216,29 +19074,41 @@ export default function App() {
       ctx.restore();
 
       // Big chrome robot arm on the back-left side of the shield.
-      const punching = ["charge_punch", "lunge_punch", "punch_recover"].includes(ball.armState);
-      const punchAngle = punching ? (ball.armPunchAngle || aimAngle) : aimAngle;
+      const springing = ball.armState === "wall_spring";
+      const springAngle = springing && Number.isFinite(ball.armSpringX) && Number.isFinite(ball.armSpringY)
+        ? Math.atan2((ball.armSpringY || ball.y) - ball.y, (ball.armSpringX || ball.x) - ball.x)
+        : aimAngle + Math.PI;
+      const punching = ["charge_punch", "lunge_punch", "punch_recover", "wall_spring"].includes(ball.armState);
+      const punchAngle = springing ? springAngle : punching ? (ball.armPunchAngle || aimAngle) : aimAngle;
       const chargeDuration = (game.balance.arm || BALANCE.arm).chargePunchDuration || 520;
       const lungeDuration = (game.balance.arm || BALANCE.arm).chargePunchLungeDuration || 430;
       const chargeProgress = ball.armState === "charge_punch"
         ? clamp((game.simTime - (ball.armChargeStartAt || game.simTime)) / chargeDuration, 0, 1)
-        : 0;
+        : springing ? clamp((game.simTime - (ball.armChargeStartAt || game.simTime)) / ((game.balance.arm || BALANCE.arm).wallSpringChargeDuration || 260), 0, 1) : 0;
       const lungeProgress = ball.armState === "lunge_punch"
         ? clamp((game.simTime - (ball.armChargeStartAt || game.simTime)) / lungeDuration, 0, 1)
         : ball.armState === "punch_recover" ? 0.55 : 0;
-      const punchExtend = ball.armState === "charge_punch"
-        ? -R * (0.42 + chargeProgress * 0.35)
+      const stretchProgress = ball.armState === "lunge_punch"
+        ? Math.sin(lungeProgress * Math.PI)
+        : ball.armState === "charge_punch"
+          ? -chargeProgress
+          : springing ? chargeProgress * 0.6 : 0;
+      const smoothStretch = clamp(ball.armStretch || Math.max(0, stretchProgress), 0, 1);
+      const punchExtend = springing
+        ? R * (0.55 + chargeProgress * 0.55)
+        : ball.armState === "charge_punch"
+        ? -R * (0.38 + chargeProgress * 0.32)
         : ball.armState === "lunge_punch"
-          ? R * (1.0 + Math.sin(lungeProgress * Math.PI) * 0.55)
+          ? R * (1.15 + Math.max(stretchProgress, smoothStretch * 0.7) * 0.95)
           : ball.armState === "punch_recover" ? R * 0.25 : 0;
       const backAngle = punching ? punchAngle + Math.PI * 0.92 : aimAngle + Math.PI;
       const shoulderX = ball.x + Math.cos(backAngle) * (R * 0.82);
       const shoulderY = ball.y + Math.sin(backAngle) * (R * 0.82);
       const handTargetX = punching
-        ? ball.x + Math.cos(punchAngle) * (R * 1.35 + punchExtend)
+        ? springing ? (ball.armSpringX || (ball.x + Math.cos(punchAngle) * R * 1.4)) : ball.x + Math.cos(punchAngle) * (R * 1.35 + punchExtend)
         : shoulderX + Math.cos(backAngle + 1.27) * (R * 1.85);
       const handTargetY = punching
-        ? ball.y + Math.sin(punchAngle) * (R * 1.35 + punchExtend)
+        ? springing ? (ball.armSpringY || (ball.y + Math.sin(punchAngle) * R * 1.4)) : ball.y + Math.sin(punchAngle) * (R * 1.35 + punchExtend)
         : shoulderY + Math.sin(backAngle + 1.27) * (R * 1.85);
       const midX = (shoulderX + handTargetX) / 2;
       const midY = (shoulderY + handTargetY) / 2;
@@ -18247,39 +19117,104 @@ export default function App() {
       const elbowX = midX + Math.cos(bendAngle) * bendAmount;
       const elbowY = midY + Math.sin(bendAngle) * bendAmount;
       const handAngle = punching ? punchAngle : Math.atan2(handTargetY - elbowY, handTargetX - elbowX);
+      const upperArmAngle = Math.atan2(elbowY - shoulderY, elbowX - shoulderX);
       const handX = handTargetX;
       const handY = handTargetY;
 
-      ctx.save();
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "#111827";
-      ctx.lineWidth = punching ? 28 : 24;
-      ctx.beginPath();
-      ctx.moveTo(shoulderX, shoulderY);
-      ctx.lineTo(elbowX, elbowY);
-      ctx.lineTo(handX, handY);
-      ctx.stroke();
-      ctx.strokeStyle = ball.armState === "charge_punch" ? "#f8fafc" : "#cbd5e1";
-      ctx.lineWidth = punching ? 19 : 16;
-      ctx.beginPath();
-      ctx.moveTo(shoulderX, shoulderY);
-      ctx.lineTo(elbowX, elbowY);
-      ctx.lineTo(handX, handY);
-      ctx.stroke();
-      ctx.strokeStyle = ball.armState === "charge_punch" ? "rgba(248,113,113,0.95)" : "rgba(248,250,252,0.8)";
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(shoulderX - Math.cos(backAngle + Math.PI / 2) * 4, shoulderY - Math.sin(backAngle + Math.PI / 2) * 4);
-      ctx.lineTo(elbowX - Math.cos(elbowAngle + Math.PI / 2) * 4, elbowY - Math.sin(elbowAngle + Math.PI / 2) * 4);
-      ctx.lineTo(handX - Math.cos(handAngle + Math.PI / 2) * 4, handY - Math.sin(handAngle + Math.PI / 2) * 4);
-      ctx.stroke();
-      [["#1f2937", shoulderX, shoulderY, R * 0.34], ["#64748b", elbowX, elbowY, punching ? R * 0.32 : R * 0.26], ["#cbd5e1", handX, handY, punching ? R * 0.42 : R * 0.3]].forEach(([color, x, y, r]) => {
-        ctx.fillStyle = color;
+      const drawLeverBar = (x1, y1, x2, y2, width, extended = false) => {
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const length = Math.max(1, Math.hypot(x2 - x1, y2 - y1));
+        ctx.save();
+        ctx.translate(x1, y1);
+        ctx.rotate(angle);
+        ctx.lineJoin = "round";
+        ctx.fillStyle = "#111827";
         ctx.strokeStyle = "#020617";
         ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      });
+        ctx.beginPath();
+        ctx.roundRect(0, -width * 0.5, length, width, width * 0.22);
+        ctx.fill();
+        ctx.stroke();
+        const railGrad = ctx.createLinearGradient(0, 0, length, 0);
+        railGrad.addColorStop(0, "#94a3b8");
+        railGrad.addColorStop(0.5, extended ? "#f8fafc" : "#cbd5e1");
+        railGrad.addColorStop(1, "#475569");
+        ctx.fillStyle = railGrad;
+        ctx.beginPath();
+        ctx.roundRect(4, -width * 0.32, Math.max(4, length - 8), width * 0.64, width * 0.16);
+        ctx.fill();
+        ctx.strokeStyle = extended ? "rgba(248,113,113,0.9)" : "rgba(248,250,252,0.75)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(width * 0.35, -width * 0.16);
+        ctx.lineTo(length - width * 0.35, -width * 0.16);
+        ctx.moveTo(width * 0.35, width * 0.16);
+        ctx.lineTo(length - width * 0.35, width * 0.16);
+        ctx.stroke();
+        const notchCount = Math.max(2, Math.floor(length / 22));
+        ctx.strokeStyle = "rgba(15,23,42,0.6)";
+        ctx.lineWidth = 1.5;
+        for (let i = 1; i < notchCount; i++) {
+          const nx = (length * i) / notchCount;
+          ctx.beginPath();
+          ctx.moveTo(nx, -width * 0.26);
+          ctx.lineTo(nx - width * 0.22, width * 0.26);
+          ctx.stroke();
+        }
+        ctx.restore();
+      };
+
+      const drawLeverJoint = (x, y, radius, color = "#64748b", hot = false) => {
+        ctx.save();
+        ctx.fillStyle = "#020617";
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
+        ctx.fill();
+        const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.35, 2, x, y, radius);
+        grad.addColorStop(0, "#f8fafc");
+        grad.addColorStop(0.46, color);
+        grad.addColorStop(1, "#1f2937");
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = hot ? "#fca5a5" : "#cbd5e1";
+        ctx.lineWidth = hot ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = hot ? "#ef4444" : "#e5e7eb";
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(3, radius * 0.28), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      ctx.save();
+      const hotArm = ball.armState === "charge_punch" || springing || ball.armPunchSource === "wall_spring";
+      const upperWidth = punching ? R * 0.48 : R * 0.42;
+      const lowerWidth = punching ? R * 0.42 : R * 0.34;
+      drawLeverBar(shoulderX, shoulderY, elbowX, elbowY, upperWidth, hotArm);
+      drawLeverBar(elbowX, elbowY, handX, handY, lowerWidth, hotArm || stretchProgress > 0.2);
+      if (punching && (stretchProgress > 0.1 || smoothStretch > 0.1)) {
+        const railAngle = Math.atan2(handY - elbowY, handX - elbowX);
+        const railLength = Math.hypot(handY - elbowY, handX - elbowX);
+        ctx.save();
+        ctx.translate(elbowX, elbowY);
+        ctx.rotate(railAngle);
+        ctx.strokeStyle = `rgba(248,113,113,${0.35 + smoothStretch * 0.35})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(Math.min(R * 0.55, railLength * 0.25), -lowerWidth * 0.6);
+        ctx.lineTo(Math.max(R * 0.8, railLength - R * 0.4), -lowerWidth * 0.6);
+        ctx.moveTo(Math.min(R * 0.55, railLength * 0.25), lowerWidth * 0.6);
+        ctx.lineTo(Math.max(R * 0.8, railLength - R * 0.4), lowerWidth * 0.6);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+      drawLeverJoint(shoulderX, shoulderY, R * 0.32, "#475569", hotArm);
+      drawLeverJoint(elbowX, elbowY, punching ? R * 0.32 : R * 0.26, "#64748b", hotArm);
+      drawLeverJoint(handX, handY, punching ? R * 0.4 : R * 0.3, "#cbd5e1", hotArm);
       ctx.save();
       ctx.translate(handX, handY);
       ctx.rotate(handAngle);
@@ -18296,12 +19231,12 @@ export default function App() {
 
       if (punching) {
         ctx.save();
-        ctx.strokeStyle = ball.armState === "charge_punch" ? "rgba(248,113,113,0.78)" : "rgba(248,250,252,0.62)";
+        ctx.strokeStyle = (ball.armState === "charge_punch" || springing) ? "rgba(248,113,113,0.78)" : "rgba(248,250,252,0.62)";
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(handX, handY, R * (0.62 + pulse * 0.2), -0.9, 0.9);
         ctx.stroke();
-        ctx.fillStyle = ball.armState === "charge_punch" ? "rgba(239,68,68,0.22)" : "rgba(248,250,252,0.18)";
+        ctx.fillStyle = (ball.armState === "charge_punch" || springing) ? "rgba(239,68,68,0.22)" : "rgba(248,250,252,0.18)";
         ctx.beginPath();
         ctx.arc(handX, handY, R * (0.36 + lungeProgress * 0.2), 0, Math.PI * 2);
         ctx.fill();
@@ -18341,234 +19276,9 @@ export default function App() {
       ctx.beginPath(); ctx.arc(-R * 0.32, -R * 0.34, R * 0.16, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
 
-      // Right-side pistol using the Gunner silhouette language.
-      ctx.save();
-      ctx.translate(ball.x, ball.y);
-      ctx.rotate(aimAngle);
-      ctx.fillStyle = "#1e293b";
-      ctx.strokeStyle = "#cbd5e1";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(R - 7, -8, 13, 16, 4); ctx.fill(); ctx.stroke();
-      ctx.translate(R + 7, 0);
-      if (ball.reloadUntil > game.simTime) {
-        const reloadDuration = game.balance.gun.reloadTime || BALANCE.gun.reloadTime;
-        const progress = clamp((reloadDuration - ((ball.reloadUntil || 0) - game.simTime)) / 360, 0, 1);
-        ctx.rotate(progress * Math.PI * 2);
-      }
-      ctx.fillStyle = "#111827";
-      ctx.strokeStyle = "#020617";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.roundRect(0, -10, 46, 18, 3); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#cbd5e1";
-      ctx.beginPath(); ctx.roundRect(5, -7, 30, 7, 2); ctx.fill();
-      ctx.fillStyle = "#ef4444";
-      ctx.fillRect(27, -1, 16, 5);
-      ctx.fillStyle = "#0f172a";
-      ctx.beginPath(); ctx.roundRect(9, 7, 14, 25, 4); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = "#94a3b8";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(28, 11, 7, Math.PI * 0.2, Math.PI * 1.25); ctx.stroke();
-      ctx.fillStyle = "#020617";
-      ctx.beginPath(); ctx.roundRect(44, -8, 8, 15, 3); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = "rgba(203,213,225,0.28)";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 6]);
-      ctx.beginPath(); ctx.moveTo(54, 0); ctx.lineTo(160, 0); ctx.stroke();
-      ctx.setLineDash([]);
-      if (ball.flashUntil > game.simTime) {
-        const flashGrad = ctx.createRadialGradient(55, 0, 2, 68, 0, 18);
-        flashGrad.addColorStop(0, "#ffffff");
-        flashGrad.addColorStop(0.3, "#facc15");
-        flashGrad.addColorStop(1, "rgba(239,68,68,0)");
-        ctx.fillStyle = flashGrad;
-        ctx.beginPath(); ctx.arc(62, 0, 17, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.restore();
-
       drawHealthInsideBall(ball);
       return;
       }
-
-      const bal = game.balance;
-      const L = bal.arm.grabRange;
-      
-      let yOffset = 0;
-      if (ball.armState === "elbow_dropping") {
-        const duration = Math.max(1, ball.armStateUntil - (ball.armDropStartAt || game.simTime));
-        const elapsed = game.simTime - (ball.armDropStartAt || game.simTime);
-        const progress = clamp(elapsed / duration, 0, 1);
-        yOffset = -18 * Math.sin(progress * Math.PI);
-      }
-      
-      const armAngle = ball.armAngle || 0;
-      const enemy = game.balls.find(b => b.id !== ball.id);
-      const punching = ball.armPunchUntil && game.simTime < ball.armPunchUntil;
-      const punchDuration = Math.max(1, (ball.armPunchUntil || 0) - (ball.armPunchStartAt || 0));
-      const punchProgress = punching ? clamp((game.simTime - (ball.armPunchStartAt || game.simTime)) / punchDuration, 0, 1) : 0;
-      const punchExtend = punching
-        ? Math.sin(Math.min(1, punchProgress * 1.35) * Math.PI) * 42 - Math.sin(punchProgress * Math.PI) * 9
-        : 0;
-      const dropAngle = ball.armState === "elbow_dropping"
-        ? Math.atan2((ball.armDropTargetY || ball.y) - ball.y, (ball.armDropTargetX || ball.x) - ball.x)
-        : armAngle;
-      const drawArmAngle = punching ? (ball.armPunchAngle ?? armAngle) : dropAngle;
-      const reach = L + punchExtend;
-      const handX = ball.armState === "elbow_dropping"
-        ? (ball.armDropTargetX || (enemy ? enemy.x : ball.x))
-        : ball.x + Math.cos(drawArmAngle) * reach;
-      const handY = ball.armState === "elbow_dropping"
-        ? (ball.armDropTargetY || (enemy ? enemy.y : ball.y))
-        : ball.y + Math.sin(drawArmAngle) * reach;
-
-      // Draw the arm line / segments
-      ctx.save();
-      
-      const bendAmp = ball.armState === "elbow_dropping" ? 14 : 6;
-      const bendFreq = ball.armState === "elbow_dropping" ? 0.03 : 0.01;
-      const bendOffset = Math.sin(game.simTime * bendFreq) * bendAmp;
-      
-      const midX = (ball.x + handX) / 2;
-      const midY = (ball.y + yOffset + handY) / 2;
-      const perpAngle = drawArmAngle + Math.PI / 2;
-      const punchSnap = punching ? Math.sin(punchProgress * Math.PI) : 0;
-      const jointX = midX + Math.cos(perpAngle) * bendOffset - Math.cos(drawArmAngle) * punchSnap * 12;
-      const jointY = midY + Math.sin(perpAngle) * bendOffset - Math.sin(drawArmAngle) * punchSnap * 12;
-
-      ctx.strokeStyle = "#64748b";
-      ctx.lineWidth = 10;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y + yOffset);
-      ctx.lineTo(jointX, jointY);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#e2e8f0";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y + yOffset);
-      ctx.lineTo(jointX, jointY);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#64748b";
-      ctx.lineWidth = 7;
-      ctx.beginPath();
-      ctx.moveTo(jointX, jointY);
-      ctx.lineTo(handX, handY);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#e2e8f0";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(jointX, jointY);
-      ctx.lineTo(handX, handY);
-      ctx.stroke();
-
-      ctx.fillStyle = "#cbd5e1";
-      ctx.strokeStyle = "#f8fafc";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(jointX, jointY, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      
-      ctx.fillStyle = "#ef4444";
-      ctx.beginPath();
-      ctx.arc(jointX, jointY, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.save();
-      ctx.translate(handX, handY);
-      ctx.rotate(drawArmAngle);
-      
-      let fingerAngle = 0.5;
-      if (punching) {
-        fingerAngle = 0.02;
-      } else if (ball.armState === "elbow_dropping") {
-        fingerAngle = 0.12 + Math.sin(game.simTime * 0.05) * 0.05;
-      } else {
-        fingerAngle = 0.4 + Math.sin(game.simTime * 0.015) * 0.15;
-      }
-
-      ctx.strokeStyle = "#475569";
-      ctx.lineWidth = 4;
-      ctx.lineCap = "round";
-      ctx.fillStyle = "#e5e7eb";
-
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(Math.cos(fingerAngle) * 15, Math.sin(fingerAngle) * 15, Math.cos(fingerAngle) * 20 - Math.sin(fingerAngle) * 5, Math.sin(fingerAngle) * 20 + Math.cos(fingerAngle) * 5);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(Math.cos(-fingerAngle) * 15, Math.sin(-fingerAngle) * 15, Math.cos(-fingerAngle) * 20 - Math.sin(-fingerAngle) * -5, Math.sin(-fingerAngle) * 20 + Math.cos(-fingerAngle) * -5);
-      ctx.stroke();
-
-      ctx.fillStyle = punching ? "#f8fafc" : "#cbd5e1";
-      ctx.beginPath();
-      ctx.arc(0, 0, punching ? 10 + punchSnap * 3 : 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      if (punching) {
-        ctx.strokeStyle = "rgba(248, 250, 252, 0.7)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, 16 + punchSnap * 10, -0.8, 0.8);
-        ctx.stroke();
-        ctx.fillStyle = "#ef4444";
-        ctx.beginPath();
-        ctx.arc(5, 0, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-      ctx.restore();
-
-      ctx.save();
-      ctx.translate(ball.x, ball.y + yOffset);
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      const grad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.3, 3, 0, 0, ball.r);
-      grad.addColorStop(0, "#f8fafc");
-      grad.addColorStop(0.4, config.color);
-      grad.addColorStop(1, "#020617");
-      ctx.fillStyle = grad;
-      ctx.fill();
-      
-      ctx.strokeStyle = config.stroke;
-      ctx.lineWidth = 4;
-      ctx.stroke();
-
-      ctx.strokeStyle = "rgba(226, 232, 240, 0.9)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r * 0.65, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.fillStyle = "#ef4444";
-      ctx.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const radius = i % 2 === 0 ? ball.r * 0.34 : ball.r * 0.14;
-        const a = -Math.PI / 2 + (i * Math.PI) / 5;
-        const x = Math.cos(a) * radius;
-        const y = Math.sin(a) * radius;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = "rgba(226, 232, 240, 0.85)";
-      for (let i = 0; i < 6; i++) {
-        const a = (i * Math.PI) / 3;
-        ctx.beginPath();
-        ctx.arc(Math.cos(a) * ball.r * 0.65, Math.sin(a) * ball.r * 0.65, 1.8, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-      drawHealthInsideBall(ball);
     };
 
     const drawLightning = (x1, y1, x2, y2, color, thickness) => {
@@ -20363,76 +21073,163 @@ export default function App() {
       ctx.save();
       ctx.translate(ball.x, ball.y);
 
-      const badgeGrad = ctx.createLinearGradient(-ball.r, -ball.r, ball.r, ball.r);
-      badgeGrad.addColorStop(0, "#ef4444");
-      badgeGrad.addColorStop(0.55, "#f97316");
-      badgeGrad.addColorStop(1, "#facc15");
-      ctx.fillStyle = badgeGrad;
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      ctx.fill();
+      const s = ball.r / 31;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.018 + ball.x * 0.01) * 0.5;
 
-      const redGlow = ctx.createRadialGradient(0, 0, ball.r * 0.1, 0, 0, ball.r * 0.9);
-      redGlow.addColorStop(0, "#111111");
-      redGlow.addColorStop(0.72, "#050505");
-      redGlow.addColorStop(1, "#000000");
-      ctx.fillStyle = redGlow;
-      ctx.beginPath();
-      ctx.arc(0, 0, ball.r * 0.9, 0, Math.PI * 2);
-      ctx.fill();
-
-      const skullScale = ball.r / 30;
       ctx.save();
-
-      const skullGrad = ctx.createRadialGradient(-ball.r * 0.18, -ball.r * 0.18, 1, 0, 0, ball.r * 0.95);
-      skullGrad.addColorStop(0, "#ffffff");
-      skullGrad.addColorStop(1, "#f3f4f6");
-      ctx.fillStyle = skullGrad;
-      ctx.beginPath();
-      ctx.moveTo(0, -18 * skullScale);
-      ctx.quadraticCurveTo(-16 * skullScale, -18 * skullScale, -24 * skullScale, -4 * skullScale);
-      ctx.quadraticCurveTo(-28 * skullScale, 7 * skullScale, -24 * skullScale, 16 * skullScale);
-      ctx.quadraticCurveTo(-27 * skullScale, 19 * skullScale, -23 * skullScale, 24 * skullScale);
-      ctx.quadraticCurveTo(-18 * skullScale, 27 * skullScale, -14 * skullScale, 23 * skullScale);
-      ctx.lineTo(-17 * skullScale, 40 * skullScale);
-      ctx.quadraticCurveTo(-18 * skullScale, 43 * skullScale, -14 * skullScale, 44 * skullScale);
-      ctx.lineTo(-8 * skullScale, 45 * skullScale);
-      ctx.quadraticCurveTo(-4 * skullScale, 45 * skullScale, -4 * skullScale, 41 * skullScale);
-      ctx.lineTo(-2 * skullScale, 30 * skullScale);
-      ctx.quadraticCurveTo(0, 29 * skullScale, 2 * skullScale, 30 * skullScale);
-      ctx.lineTo(4 * skullScale, 41 * skullScale);
-      ctx.quadraticCurveTo(4 * skullScale, 45 * skullScale, 8 * skullScale, 45 * skullScale);
-      ctx.lineTo(14 * skullScale, 44 * skullScale);
-      ctx.quadraticCurveTo(18 * skullScale, 43 * skullScale, 17 * skullScale, 40 * skullScale);
-      ctx.lineTo(14 * skullScale, 23 * skullScale);
-      ctx.quadraticCurveTo(18 * skullScale, 27 * skullScale, 23 * skullScale, 24 * skullScale);
-      ctx.quadraticCurveTo(27 * skullScale, 19 * skullScale, 24 * skullScale, 16 * skullScale);
-      ctx.quadraticCurveTo(28 * skullScale, 7 * skullScale, 24 * skullScale, -4 * skullScale);
-      ctx.quadraticCurveTo(16 * skullScale, -18 * skullScale, 0, -18 * skullScale);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = "#7f0000";
-      ctx.beginPath();
-      ctx.ellipse(-10.5 * skullScale, 10.5 * skullScale, 8.4 * skullScale, 9.9 * skullScale, -0.49, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(10.5 * skullScale, 10.5 * skullScale, 9.9 * skullScale, 8.4 * skullScale, -0.49, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(0, 15 * skullScale);
-      ctx.quadraticCurveTo(1 * skullScale, 15 * skullScale, 2 * skullScale, 17 * skullScale);
-      ctx.lineTo(5 * skullScale, 24 * skullScale);
-      ctx.quadraticCurveTo(6 * skullScale, 27 * skullScale, 3.5 * skullScale, 26 * skullScale);
-      ctx.lineTo(0, 24 * skullScale);
-      ctx.lineTo(-3.5 * skullScale, 26 * skullScale);
-      ctx.quadraticCurveTo(-6 * skullScale, 27 * skullScale, -5 * skullScale, 24 * skullScale);
-      ctx.lineTo(-2 * skullScale, 17 * skullScale);
-      ctx.quadraticCurveTo(-1 * skullScale, 15 * skullScale, 0, 15 * skullScale);
-      ctx.closePath();
-      ctx.fill();
+      ctx.shadowColor = "#f97316";
+      ctx.shadowBlur = 24 + pulse * 10;
+      for (let layer = 0; layer < 3; layer++) {
+        const outer = layer === 0;
+        ctx.fillStyle = outer ? "rgba(249, 115, 22, 0.88)" : layer === 1 ? "rgba(250, 204, 21, 0.78)" : "rgba(255, 247, 173, 0.72)";
+        ctx.beginPath();
+        for (let i = 0; i <= 18; i++) {
+          const a = -Math.PI * 0.98 + (i / 18) * Math.PI * 1.96;
+          const lick = Math.sin(i * 1.7 + game.simTime * 0.02 + layer) * 5 * s;
+          const peakBoost = Math.max(0, -Math.sin(a)) * (outer ? 18 : layer === 1 ? 11 : 6) * s;
+          const radius = ball.r * (outer ? 1.36 : layer === 1 ? 1.16 : 0.98) + peakBoost + lick;
+          const x = Math.cos(a) * radius;
+          const y = Math.sin(a) * radius - ball.r * (outer ? 0.12 : layer === 1 ? 0.06 : 0);
+          if (i === 0) ctx.moveTo(x, y);
+          else {
+            const prevA = -Math.PI * 0.98 + ((i - 0.5) / 18) * Math.PI * 1.96;
+            const midR = radius + (i % 2 === 0 ? 10 : -7) * s;
+            ctx.quadraticCurveTo(Math.cos(prevA) * midR, Math.sin(prevA) * midR - ball.r * 0.12, x, y);
+          }
+        }
+        ctx.quadraticCurveTo(ball.r * 0.72, ball.r * 1.05, 0, ball.r * 1.05);
+        ctx.quadraticCurveTo(-ball.r * 0.72, ball.r * 1.05, -ball.r * 1.2, -ball.r * 0.2);
+        ctx.closePath();
+        ctx.fill();
+      }
       ctx.restore();
+
+      const emberGrad = ctx.createRadialGradient(-ball.r * 0.18, -ball.r * 0.22, 1, 0, 0, ball.r * 1.02);
+      emberGrad.addColorStop(0, "#fff7ad");
+      emberGrad.addColorStop(0.38, "#facc15");
+      emberGrad.addColorStop(0.72, "#f97316");
+      emberGrad.addColorStop(1, "#7c2d12");
+      ctx.fillStyle = emberGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 1.02, 0, Math.PI * 2);
+      ctx.fill();
+
+      const skullGrad = ctx.createRadialGradient(-ball.r * 0.25, -ball.r * 0.25, 1, 0, 0, ball.r * 1.05);
+      skullGrad.addColorStop(0, "#fff7d6");
+      skullGrad.addColorStop(0.42, "#fde68a");
+      skullGrad.addColorStop(0.78, "#d6a45a");
+      skullGrad.addColorStop(1, "#7c4a1f");
+      ctx.fillStyle = skullGrad;
+      ctx.strokeStyle = "#3b1d0b";
+      ctx.lineWidth = 2.4 * s;
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 0.84);
+      ctx.bezierCurveTo(-ball.r * 0.78, -ball.r * 0.82, -ball.r * 0.98, -ball.r * 0.12, -ball.r * 0.82, ball.r * 0.35);
+      ctx.bezierCurveTo(-ball.r * 0.72, ball.r * 0.72, -ball.r * 0.48, ball.r * 0.96, 0, ball.r * 0.94);
+      ctx.bezierCurveTo(ball.r * 0.48, ball.r * 0.96, ball.r * 0.72, ball.r * 0.72, ball.r * 0.82, ball.r * 0.35);
+      ctx.bezierCurveTo(ball.r * 0.98, -ball.r * 0.12, ball.r * 0.78, -ball.r * 0.82, 0, -ball.r * 0.84);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#f7cf79";
+      ctx.strokeStyle = "rgba(59, 29, 11, 0.82)";
+      ctx.lineWidth = 1.6 * s;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.7, -ball.r * 0.1);
+      ctx.quadraticCurveTo(-ball.r * 0.35, -ball.r * 0.37, -ball.r * 0.06, -ball.r * 0.18);
+      ctx.quadraticCurveTo(-ball.r * 0.38, ball.r * 0.02, -ball.r * 0.74, ball.r * 0.03);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ball.r * 0.7, -ball.r * 0.1);
+      ctx.quadraticCurveTo(ball.r * 0.35, -ball.r * 0.37, ball.r * 0.06, -ball.r * 0.18);
+      ctx.quadraticCurveTo(ball.r * 0.38, ball.r * 0.02, ball.r * 0.74, ball.r * 0.03);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      const drawEye = (side) => {
+        ctx.save();
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 13 + pulse * 5;
+        const eyeGrad = ctx.createRadialGradient(side * ball.r * 0.43, ball.r * 0.1, 1, side * ball.r * 0.43, ball.r * 0.1, ball.r * 0.28);
+        eyeGrad.addColorStop(0, "#facc15");
+        eyeGrad.addColorStop(0.35, "#f97316");
+        eyeGrad.addColorStop(1, "#450a0a");
+        ctx.fillStyle = eyeGrad;
+        ctx.beginPath();
+        ctx.ellipse(side * ball.r * 0.42, ball.r * 0.08, ball.r * 0.26, ball.r * 0.16, side * -0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+      drawEye(-1);
+      drawEye(1);
+
+      ctx.fillStyle = "#1c0b05";
+      ctx.beginPath();
+      ctx.moveTo(0, ball.r * 0.18);
+      ctx.lineTo(-ball.r * 0.12, ball.r * 0.46);
+      ctx.quadraticCurveTo(0, ball.r * 0.53, ball.r * 0.12, ball.r * 0.46);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#1c0b05";
+      ctx.beginPath();
+      ctx.ellipse(0, ball.r * 0.64, ball.r * 0.55, ball.r * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffe7a3";
+      ctx.strokeStyle = "#5b2c0b";
+      ctx.lineWidth = 0.8 * s;
+      for (let i = -4; i <= 4; i++) {
+        const x = i * ball.r * 0.105;
+        const h = ball.r * (0.18 - Math.abs(i) * 0.014);
+        ctx.beginPath();
+        ctx.moveTo(x - ball.r * 0.045, ball.r * 0.48);
+        ctx.lineTo(x, ball.r * 0.48 + h);
+        ctx.lineTo(x + ball.r * 0.045, ball.r * 0.48);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - ball.r * 0.04, ball.r * 0.81);
+        ctx.lineTo(x, ball.r * 0.81 - h * 0.82);
+        ctx.lineTo(x + ball.r * 0.04, ball.r * 0.81);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(58, 24, 7, 0.82)";
+      ctx.lineWidth = 1.25 * s;
+      [[0.28, -0.58, 0.42, -0.34], [0.4, -0.34, 0.34, -0.18], [-0.3, -0.34, -0.12, -0.12], [0.58, 0.18, 0.68, 0.38]].forEach(([x1, y1, x2, y2], idx) => {
+        ctx.beginPath();
+        ctx.moveTo(ball.r * x1, ball.r * y1);
+        ctx.lineTo(ball.r * ((x1 + x2) / 2 + (idx % 2 ? 0.04 : -0.04)), ball.r * ((y1 + y2) / 2));
+        ctx.lineTo(ball.r * x2, ball.r * y2);
+        ctx.stroke();
+      });
+
+      ["#fb923c", "#f97316", "#facc15", "#fff7ad"].forEach((color, i) => {
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = i < 2 ? 0.58 : 0.36;
+        ctx.lineWidth = (2.2 - i * 0.35) * s;
+        ctx.beginPath();
+        const x = (-0.42 + i * 0.28) * ball.r;
+        ctx.moveTo(x, -ball.r * 0.12);
+        ctx.bezierCurveTo(x - ball.r * 0.1, -ball.r * 0.35, x + ball.r * 0.22, -ball.r * 0.48, x + ball.r * 0.06, -ball.r * 0.72);
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = "#ea580c";
+      ctx.shadowColor = "#f97316";
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 2.6 * s;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r * 1.02, 0, Math.PI * 2);
+      ctx.stroke();
 
       ctx.restore();
       drawHealthInsideBall(ball);
@@ -21084,6 +21881,435 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
+    const drawEarthSpikes = () => {
+      (game.earthSpikes || []).forEach((spike) => {
+        const pushed = false;
+        const pressActive = false;
+        const growActive = false;
+        const indicator = false;
+        const pushStart = Number.isFinite(spike.pushStartLength) ? spike.pushStartLength : spike.length;
+        const pushEnd = Number.isFinite(spike.pushEndLength) ? spike.pushEndLength : spike.length;
+        let displayLength = spike.length;
+        if (game.simTime < (spike.growUntil || 0) && (spike.lastPushedAt || 0) > 0) {
+          const totalGrowTime = Math.max(1, (spike.growUntil || game.simTime) - (spike.lastPushedAt || game.simTime));
+          const raw = Math.max(0, Math.min(1, (game.simTime - (spike.lastPushedAt || game.simTime)) / totalGrowTime));
+          const pressDrop = raw < 0.25 ? Math.sin((raw / 0.25) * Math.PI) * 11 : 0;
+          const growRaw = Math.max(0, Math.min(1, (raw - 0.16) / 0.84));
+          const growEase = 1 - Math.pow(1 - growRaw, 3);
+          const overshoot = raw > 0.72 ? Math.sin(((raw - 0.72) / 0.28) * Math.PI) * 14 : 0;
+          displayLength = pushStart + (pushEnd - pushStart) * growEase - pressDrop + overshoot;
+        }
+        const pulse = pushed ? 1 + Math.sin(game.simTime * 0.1) * 0.1 : 1;
+        const len = Math.max(12, displayLength * pulse);
+        const baseHalf = (spike.width || 22) * (pushed ? 0.68 : 0.82);
+        const seed = spike.seed || 1;
+        ctx.save();
+        ctx.translate(spike.x, spike.y);
+        ctx.rotate(spike.angle);
+        ctx.shadowColor = pushed ? "#facc15" : "#44403c";
+        ctx.shadowBlur = pushed ? 16 : 5;
+
+        // Dirt/stone base pressed into the wall so the spike never appears to float.
+        ctx.fillStyle = "rgba(87, 65, 37, 0.72)";
+        ctx.beginPath();
+        ctx.moveTo(-3, -baseHalf * 1.28);
+        ctx.lineTo(10, -baseHalf * 1.05);
+        ctx.lineTo(13, baseHalf * 1.05);
+        ctx.lineTo(-3, baseHalf * 1.28);
+        ctx.closePath();
+        ctx.fill();
+
+        if (indicator) {
+          const indicatorEnd = Math.max(spike.pressUntil || 0, spike.growUntil || 0);
+          const indicatorStart = spike.lastPushedAt || game.simTime;
+          const indicatorLife = Math.max(0, Math.min(1, (indicatorEnd - game.simTime) / Math.max(1, indicatorEnd - indicatorStart)));
+          const beat = 0.5 + Math.sin(game.simTime * 0.045) * 0.5;
+          ctx.save();
+          ctx.globalAlpha = 0.32 + indicatorLife * 0.58;
+          ctx.strokeStyle = `rgba(250, 204, 21, ${0.55 + beat * 0.28})`;
+          ctx.lineWidth = 4.4;
+          ctx.setLineDash([10, 7]);
+          ctx.beginPath();
+          ctx.moveTo(Math.max(10, pushStart - 4), -baseHalf - 13);
+          ctx.lineTo(pushEnd + 23 + beat * 9, -baseHalf - 13);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = `rgba(250, 204, 21, ${0.55 + beat * 0.35})`;
+          ctx.beginPath();
+          ctx.moveTo(pushEnd + 33 + beat * 9, -baseHalf - 13);
+          ctx.lineTo(pushEnd + 15 + beat * 7, -baseHalf - 25);
+          ctx.lineTo(pushEnd + 15 + beat * 7, -baseHalf - 1);
+          ctx.closePath();
+          ctx.fill();
+          ctx.font = "900 13px Impact, Arial Black, sans-serif";
+          ctx.textAlign = "center";
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "rgba(20, 12, 4, 0.82)";
+          ctx.fillStyle = "#fff7ed";
+          ctx.strokeText("PRESS", Math.max(38, pushEnd * 0.5), -baseHalf - 24);
+          ctx.fillText("PRESS", Math.max(38, pushEnd * 0.5), -baseHalf - 24);
+          ctx.restore();
+        }
+
+        if (pressActive) {
+          const pressLife = Math.max(0, Math.min(1, ((spike.pressUntil || game.simTime) - game.simTime) / 260));
+          ctx.save();
+          ctx.globalAlpha = 0.25 + pressLife * 0.5;
+          ctx.strokeStyle = "#facc15";
+          ctx.shadowColor = "#facc15";
+          ctx.shadowBlur = 18;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(-1, -baseHalf * 1.55);
+          ctx.quadraticCurveTo(-18 - pressLife * 13, 0, -1, baseHalf * 1.55);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(5, -baseHalf * 1.4);
+          ctx.quadraticCurveTo(-9 - pressLife * 8, 0, 5, baseHalf * 1.4);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        const leftEdge = [];
+        const rightEdge = [];
+        const segments = 6;
+        for (let i = 0; i <= segments; i++) {
+          const t = i / segments;
+          const taper = Math.pow(1 - t, 0.68);
+          const roughL = Math.sin(seed + i * 1.91) * 4 + Math.sin(seed * 0.37 + i * 3.4) * 2.5;
+          const roughR = Math.cos(seed + i * 2.13) * 4 + Math.sin(seed * 0.51 + i * 2.7) * 2.5;
+          const x = len * t + Math.sin(seed + i) * 2.2;
+          const half = Math.max(2.2, baseHalf * taper);
+          leftEdge.push({ x, y: -half + roughL * taper });
+          rightEdge.push({ x, y: half + roughR * taper });
+        }
+        leftEdge[segments] = { x: len, y: -2.4 };
+        rightEdge[segments] = { x: len, y: 2.4 };
+
+        const grad = ctx.createLinearGradient(0, 0, len, 0);
+        grad.addColorStop(0, "#5b3a1d");
+        grad.addColorStop(0.28, "#8a6a3f");
+        grad.addColorStop(0.62, "#b99b67");
+        grad.addColorStop(1, pushed ? "#f7d88c" : "#d8c19a");
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = "#1c1917";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(leftEdge[0].x, leftEdge[0].y);
+        leftEdge.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+        rightEdge.slice().reverse().forEach((point) => ctx.lineTo(point.x, point.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Faceted rock planes, cracks, and strata like a natural earth shard.
+        const facetColors = ["rgba(245, 222, 179, 0.34)", "rgba(68, 50, 30, 0.32)", "rgba(161, 98, 7, 0.22)"];
+        for (let i = 0; i < segments - 1; i++) {
+          const t0 = i / segments;
+          const t1 = (i + 1.15) / segments;
+          const x0 = len * t0;
+          const x1 = len * Math.min(0.96, t1);
+          const midY = Math.sin(seed + i * 2.2) * baseHalf * 0.28 * (1 - t0);
+          ctx.fillStyle = facetColors[i % facetColors.length];
+          ctx.beginPath();
+          ctx.moveTo(x0 + 3, midY);
+          ctx.lineTo(x1, -baseHalf * 0.52 * (1 - t1));
+          ctx.lineTo(x1 - 4, baseHalf * 0.48 * (1 - t1));
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.strokeStyle = "rgba(41, 27, 14, 0.72)";
+        ctx.lineWidth = 1.1;
+        for (let i = 1; i < segments; i++) {
+          const x = len * (i / segments);
+          const y = Math.sin(seed + i * 1.6) * baseHalf * 0.3 * (1 - i / segments);
+          ctx.beginPath();
+          ctx.moveTo(x - 7, y - baseHalf * 0.22);
+          ctx.lineTo(x + 3, y);
+          ctx.lineTo(x - 2, y + baseHalf * 0.24);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "rgba(255, 247, 237, 0.38)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(len * 0.16, -baseHalf * 0.42);
+        ctx.lineTo(len * 0.72, -baseHalf * 0.16);
+        ctx.lineTo(len * 0.94, -1.8);
+        ctx.stroke();
+
+        // Small rubble chunks at the base, also flush with the wall.
+        ctx.fillStyle = "#6b4f2a";
+        for (let i = 0; i < 4; i++) {
+          const rubbleY = (-0.65 + i * 0.42) * baseHalf;
+          const rubbleX = 4 + Math.sin(seed + i) * 3;
+          ctx.beginPath();
+          ctx.moveTo(rubbleX, rubbleY - 3);
+          ctx.lineTo(rubbleX + 8, rubbleY);
+          ctx.lineTo(rubbleX + 2, rubbleY + 5);
+          ctx.lineTo(rubbleX - 4, rubbleY + 1);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+
+        if (indicator && Number.isFinite(spike.pushTargetX) && Number.isFinite(spike.pushTargetY)) {
+          const indicatorEnd = Math.max(spike.pressUntil || 0, spike.growUntil || 0);
+          const indicatorStart = spike.lastPushedAt || game.simTime;
+          const indicatorLife = Math.max(0, Math.min(1, (indicatorEnd - game.simTime) / Math.max(1, indicatorEnd - indicatorStart)));
+          const tipX = spike.x + Math.cos(spike.angle) * len;
+          const tipY = spike.y + Math.sin(spike.angle) * len;
+          ctx.save();
+          ctx.globalAlpha = 0.16 + indicatorLife * 0.34;
+          ctx.strokeStyle = "#fde68a";
+          ctx.lineWidth = 2.2;
+          ctx.setLineDash([12, 9]);
+          ctx.beginPath();
+          ctx.moveTo(tipX, tipY);
+          ctx.lineTo(spike.pushTargetX, spike.pushTargetY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        }
+      });
+    };
+
+    const drawEarthSpikerBall = (ball) => {
+      const config = BALL_TYPES.earthSpiker;
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      if ((ball.earthSpikeFlashUntil || 0) > game.simTime) {
+        ctx.save();
+        ctx.globalAlpha = 0.35 + Math.sin(game.simTime * 0.06) * 0.12;
+        ctx.strokeStyle = "#facc15";
+        ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 18;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r + 9, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.28, -ball.r * 0.34, 2, 0, 0, ball.r);
+      bodyGrad.addColorStop(0, "#8fa889");
+      bodyGrad.addColorStop(0.34, "#2f4a34");
+      bodyGrad.addColorStop(0.76, "#183022");
+      bodyGrad.addColorStop(1, "#0b1510");
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      if ((ball.earthArmorPieces?.length || 0) > 0 && (ball.earthArmorUntil || 0) > game.simTime) {
+        const bashGlow = (ball.earthArmorBashUntil || 0) > game.simTime;
+        const fullArmor = (ball.earthArmorPieces?.length || 0) >= 3;
+        ctx.save();
+        ctx.shadowColor = bashGlow ? "#facc15" : "#a16207";
+        ctx.shadowBlur = bashGlow ? 18 : 8;
+        ball.earthArmorPieces.forEach((piece, i) => {
+          const attachProgress = Math.max(0, Math.min(1, (game.simTime - (piece.collectedAt || game.simTime - 360)) / Math.max(1, (piece.attachedAt || game.simTime) - (piece.collectedAt || game.simTime - 360))));
+          const snap = 1 - Math.pow(1 - attachProgress, 3);
+          const wobble = Math.sin(game.simTime * 0.035 + piece.seed) * 0.035;
+          const angle = (ball.earthArmorAngle || 0) + (piece.slotOffset ?? piece.angle ?? 0) + wobble;
+          const finalX = Math.cos(angle) * (ball.r + (fullArmor ? 14 : 12));
+          const finalY = Math.sin(angle) * (ball.r + (fullArmor ? 14 : 12));
+          const startX = Number.isFinite(piece.fromX) ? piece.fromX - ball.x : finalX;
+          const startY = Number.isFinite(piece.fromY) ? piece.fromY - ball.y : finalY;
+          const flyX = startX + (finalX - startX) * snap;
+          const flyY = startY + (finalY - startY) * snap;
+          const plateLength = ball.r * ((fullArmor ? 0.82 : 0.62) + piece.size * 0.2);
+          const plateHalf = ball.r * ((fullArmor ? 0.3 : 0.22) + piece.size * 0.05);
+          if (attachProgress < 1) {
+            ctx.save();
+            ctx.globalAlpha = 0.22 + attachProgress * 0.22;
+            ctx.strokeStyle = "#fde68a";
+            ctx.lineWidth = 2.6;
+            ctx.setLineDash([8, 7]);
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(flyX, flyY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+          }
+          if (attachProgress < 1) {
+            ctx.save();
+            ctx.translate(flyX, flyY);
+            ctx.rotate(angle);
+            ctx.globalAlpha = 0.6 + snap * 0.4;
+            const rockGrad = ctx.createLinearGradient(-plateLength * 0.4, -plateHalf, plateLength * 0.55, plateHalf);
+            rockGrad.addColorStop(0, "#3f2a16");
+            rockGrad.addColorStop(0.36, "#8a6a3f");
+            rockGrad.addColorStop(0.72, "#d6b77a");
+            rockGrad.addColorStop(1, bashGlow ? "#fde68a" : "#a16207");
+            ctx.fillStyle = rockGrad;
+            ctx.strokeStyle = "#1c1917";
+            ctx.lineWidth = 2.1;
+            ctx.beginPath();
+            ctx.moveTo(-plateLength * 0.42, -plateHalf * 0.68);
+            ctx.lineTo(plateLength * 0.12, -plateHalf * 1.12);
+            ctx.lineTo(plateLength * 0.62, -plateHalf * 0.2);
+            ctx.lineTo(plateLength * 0.48, plateHalf * 0.78);
+            ctx.lineTo(-plateLength * 0.18, plateHalf * 1.05);
+            ctx.lineTo(-plateLength * 0.58, plateHalf * 0.18);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(255, 247, 237, 0.38)";
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(-plateLength * 0.22, -plateHalf * 0.28);
+            ctx.lineTo(plateLength * 0.34, -plateHalf * 0.08);
+            ctx.stroke();
+            ctx.restore();
+          } else {
+            ctx.save();
+            ctx.rotate(angle);
+            const plateSpan = fullArmor ? 1.82 : 1.48;
+            const outer = ball.r + (fullArmor ? 15 : 12);
+            const inner = ball.r + 1.5;
+            const shellGrad = ctx.createRadialGradient(-ball.r * 0.26, -ball.r * 0.28, ball.r * 0.16, 0, 0, outer + 8);
+            shellGrad.addColorStop(0, "#f7d88c");
+            shellGrad.addColorStop(0.3, "#d8c19a");
+            shellGrad.addColorStop(0.58, "#b99b67");
+            shellGrad.addColorStop(0.82, "#8a6a3f");
+            shellGrad.addColorStop(1, bashGlow ? "#fde68a" : "#5b3a1d");
+            ctx.globalAlpha = 0.92;
+            ctx.fillStyle = shellGrad;
+            ctx.strokeStyle = "#1c1917";
+            ctx.lineWidth = 2.3;
+            const outerPoints = [];
+            const innerPoints = [];
+            const segments = 7;
+            for (let j = 0; j <= segments; j++) {
+              const t = j / segments;
+              const a = -plateSpan / 2 + plateSpan * t;
+              const rough = Math.sin(piece.seed + j * 1.9) * 3.2 + Math.cos(piece.seed * 0.5 + j * 2.7) * 1.9;
+              outerPoints.push({ a, r: outer + rough });
+              innerPoints.push({ a, r: inner + Math.sin(piece.seed + j * 2.4) * 1.2 });
+            }
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(outerPoints[0].a) * outerPoints[0].r, Math.sin(outerPoints[0].a) * outerPoints[0].r);
+            outerPoints.slice(1).forEach((point) => ctx.lineTo(Math.cos(point.a) * point.r, Math.sin(point.a) * point.r));
+            innerPoints.slice().reverse().forEach((point) => ctx.lineTo(Math.cos(point.a) * point.r, Math.sin(point.a) * point.r));
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            const facetColors = ["rgba(245, 222, 179, 0.34)", "rgba(68, 50, 30, 0.22)", "rgba(161, 98, 7, 0.2)"];
+            for (let f = 0; f < 4; f++) {
+              const a0 = -plateSpan * 0.42 + f * plateSpan * 0.22;
+              const a1 = a0 + plateSpan * 0.18;
+              ctx.fillStyle = facetColors[f % facetColors.length];
+              ctx.beginPath();
+              ctx.moveTo(Math.cos(a0) * (inner + 4), Math.sin(a0) * (inner + 4));
+              ctx.lineTo(Math.cos(a1) * (outer - 3), Math.sin(a1) * (outer - 3));
+              ctx.lineTo(Math.cos(a1 + 0.08) * (inner + 10), Math.sin(a1 + 0.08) * (inner + 10));
+              ctx.closePath();
+              ctx.fill();
+            }
+
+            ctx.strokeStyle = "rgba(255, 247, 237, 0.42)";
+            ctx.lineWidth = 1.35;
+            for (let crack = -1; crack <= 1; crack++) {
+              const crackAngle = crack * plateSpan * 0.22 + Math.sin(piece.seed + crack) * 0.08;
+              ctx.beginPath();
+              ctx.moveTo(Math.cos(crackAngle) * (inner + 3), Math.sin(crackAngle) * (inner + 3));
+              ctx.lineTo(Math.cos(crackAngle + 0.08) * (outer - 5), Math.sin(crackAngle + 0.08) * (outer - 5));
+              ctx.stroke();
+            }
+
+            ctx.fillStyle = "rgba(91, 58, 29, 0.24)";
+            ctx.beginPath();
+            ctx.arc(0, 0, outer - 5, -plateSpan * 0.44, -plateSpan * 0.08);
+            ctx.lineTo(Math.cos(-plateSpan * 0.08) * (inner + 4), Math.sin(-plateSpan * 0.08) * (inner + 4));
+            ctx.arc(0, 0, inner + 4, -plateSpan * 0.08, -plateSpan * 0.44, true);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+        });
+        ctx.restore();
+      }
+
+      const gold = ctx.createLinearGradient(0, -ball.r, 0, ball.r);
+      gold.addColorStop(0, "#fde68a");
+      gold.addColorStop(0.55, "#bfa449");
+      gold.addColorStop(1, "#5f501a");
+      ctx.fillStyle = gold;
+      ctx.strokeStyle = "#2f2508";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.58, -ball.r * 0.02);
+      ctx.quadraticCurveTo(0, ball.r * 0.22, ball.r * 0.58, -ball.r * 0.02);
+      ctx.lineTo(ball.r * 0.36, ball.r * 0.84);
+      ctx.quadraticCurveTo(0, ball.r * 1.02, -ball.r * 0.36, ball.r * 0.84);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      [-1, 1].forEach((side) => {
+        ctx.fillStyle = "#102a1d";
+        ctx.strokeStyle = "#020617";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(side * ball.r * 0.34, ball.r * 0.18);
+        ctx.lineTo(side * ball.r * 0.75, ball.r * 0.36);
+        ctx.lineTo(side * ball.r * 0.62, ball.r * 0.82);
+        ctx.lineTo(side * ball.r * 0.25, ball.r * 0.68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#d1d5db";
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.arc(side * ball.r * (0.43 + i * 0.05), ball.r * (0.38 + i * 0.16), 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      ctx.fillStyle = "#0f2a1c";
+      ctx.strokeStyle = "#020617";
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.ellipse(0, -ball.r * 0.38, ball.r * 1.06, ball.r * 0.28, 0, Math.PI, 0);
+      ctx.lineTo(ball.r * 0.86, -ball.r * 0.1);
+      ctx.quadraticCurveTo(0, ball.r * 0.02, -ball.r * 0.86, -ball.r * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#facc15";
+      ctx.strokeStyle = "#1c1917";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -ball.r * 1.23);
+      ctx.lineTo(ball.r * 0.16, -ball.r * 0.82);
+      ctx.lineTo(-ball.r * 0.16, -ball.r * 0.82);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.save();
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = "#fde68a";
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 2;
+      ctx.fillRect(-ball.r * 0.13, -ball.r * 0.49, ball.r * 0.26, ball.r * 0.26);
+      ctx.strokeRect(-ball.r * 0.13, -ball.r * 0.49, ball.r * 0.26, ball.r * 0.26);
+      ctx.restore();
+
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = config.stroke;
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawFishingLines = () => {
       if (!game.fishingLines?.length) return;
       game.fishingLines.forEach((line) => {
@@ -21287,6 +22513,7 @@ export default function App() {
       else if (ball.type === "joker") drawJokerBall(ball);
       else if (ball.type === "fisherman") drawFishermanBall(ball);
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
+      else if (ball.type === "earthSpiker") drawEarthSpikerBall(ball);
       else if (ball.type === "gazerBall") drawGazerBall(ball);
       else if (ball.type === "constellation") drawConstellationBall(ball);
       else if (ball.type === "fireSkull") drawFireSkullBall(ball);
@@ -22953,13 +24180,14 @@ export default function App() {
         };
         const [startAngle, endAngle] = arcByWall[splat.wall] || [0, Math.PI];
         const arming = game.simTime < (splat.activeAt || 0);
+        const isBlackSplat = !!splat.isBlackSpider;
         ctx.save();
         ctx.translate(splat.x, splat.y);
         ctx.globalAlpha = arming ? 0.48 : 0.92;
-        ctx.shadowColor = "#60a5fa";
-        ctx.shadowBlur = 12;
-        ctx.fillStyle = "rgba(219,234,254,0.28)";
-        ctx.strokeStyle = "#ffffff";
+        ctx.shadowColor = isBlackSplat ? "#020617" : "#60a5fa";
+        ctx.shadowBlur = isBlackSplat ? 18 : 12;
+        ctx.fillStyle = isBlackSplat ? "rgba(2,6,23,0.58)" : "rgba(219,234,254,0.28)";
+        ctx.strokeStyle = isBlackSplat ? "#e5e7eb" : "#ffffff";
         ctx.lineWidth = 2.2;
         ctx.beginPath();
         ctx.moveTo(0, 0);
@@ -22982,7 +24210,45 @@ export default function App() {
     const drawVenomPools = () => {
       if (!game.venomPools) return;
       game.venomPools.forEach((pool) => {
-        if (pool.isSymbiote) {
+        if (pool.isBlackWallWeb) {
+          if (pool.consumed) return;
+          ctx.save();
+          const age = game.simTime - pool.createdTime;
+          const lifeRatio = 1 - age / pool.duration;
+          const alpha = Math.max(0, Math.min(0.9, lifeRatio * 1.35));
+          const pulse = 0.88 + Math.sin(game.simTime * 0.012 + pool.createdTime * 0.01) * 0.08;
+          const wall = pool.wall || "left";
+          const rotate = wall === "right" ? Math.PI : wall === "top" ? Math.PI / 2 : wall === "bottom" ? -Math.PI / 2 : 0;
+          ctx.translate(pool.x, pool.y);
+          ctx.rotate(rotate);
+          ctx.shadowColor = "#020617";
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = `rgba(2, 6, 23, ${alpha * 0.88})`;
+          ctx.strokeStyle = `rgba(248, 250, 252, ${alpha})`;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(0, -pool.r * pulse);
+          ctx.quadraticCurveTo(pool.r * 0.95 * pulse, -pool.r * 0.95 * pulse, pool.r * pulse, 0);
+          ctx.quadraticCurveTo(pool.r * 0.95 * pulse, pool.r * 0.95 * pulse, 0, pool.r * pulse);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.lineWidth = 1.35;
+          ctx.strokeStyle = `rgba(226, 232, 240, ${alpha * 0.72})`;
+          for (let i = -3; i <= 3; i++) {
+            const y = (i / 3) * pool.r * 0.74;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.quadraticCurveTo(pool.r * 0.42, y * 0.72 + Math.sin(game.simTime * 0.018 + i) * 2, pool.r * 0.86, y * 0.25);
+            ctx.stroke();
+          }
+          [0.35, 0.62, 0.84].forEach((scale) => {
+            ctx.beginPath();
+            ctx.arc(0, 0, pool.r * scale * pulse, -Math.PI / 2, Math.PI / 2);
+            ctx.stroke();
+          });
+          ctx.restore();
+        } else if (pool.isSymbiote) {
           ctx.save();
           // Draw dark pulsing slime pool
           const pulse = 0.9 + Math.sin(game.simTime * 0.008 + pool.createdTime * 0.01) * 0.1;
@@ -23661,7 +24927,7 @@ export default function App() {
             }
             if ((ball.shieldBashBouncesLeft || 0) > 0) {
               const speed = Math.hypot(ball.vx, ball.vy);
-              const bashSpeed = 980;
+              const bashSpeed = ball.shieldBashSpeedOverride || 980;
               if (speed > 0) {
                 ball.vx = (ball.vx / speed) * bashSpeed;
                 ball.vy = (ball.vy / speed) * bashSpeed;
@@ -24079,6 +25345,7 @@ export default function App() {
                   if (ball.type === "joker") updateJoker(ball, target, game.simTime);
                   if (ball.type === "fisherman") updateFisherman(ball, target, game.simTime, stepDt);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
+                  if (ball.type === "earthSpiker") updateEarthSpiker(ball, target, game.simTime);
                   if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
                   if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
                   if (ball.type === "eightBall") updateEightBall(ball, target, game.simTime);
@@ -24102,6 +25369,7 @@ export default function App() {
           updateBullets(stepDt, game.balls);
           updateSpiderWebProjectile(stepDt, game.balls);
           updateWebSplatters();
+          updateEarthSpikes();
           updateMines(stepDt, game.balls);
           updateFireCars(stepDt, game.balls);
           pruneShadowMinions();
@@ -24198,7 +25466,7 @@ export default function App() {
 
       game.balls.forEach(drawBallTrail);
       drawFireRoads();
-      drawStrings(); drawJokerThreads(); drawFishingLines(); drawWebSplatters(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
+      drawStrings(); drawJokerThreads(); drawFishingLines(); drawEarthSpikes(); drawWebSplatters(); drawVenomPools(); drawVenomTraps(); drawWebStrands(); drawPsychicCircles(); drawChaosCircles(); drawConstellationStars(); drawActiveConstellations();
       drawArmorParts(); drawMines(); drawBullets(); drawExplosions(); drawParticles(); drawFloatingTexts(); drawCacti(); drawSorcererBlueOrbs();
       drawFireCarEntities();
       drawVampireClones();
@@ -24447,14 +25715,26 @@ export default function App() {
               {renderSlider("Slimy Tendril Cooldown", "blackSpider", "blackWebCooldown", 1000, 10000, 100, "ms")}
               {renderSlider("Tendril Speed", "blackSpider", "blackWebSpeed", 300, 1400, 20, "px/s")}
               {renderSlider("Tendril Range", "blackSpider", "blackWebRange", 120, 800, 10, "px")}
-              {renderSlider("Pull-In Duration", "blackSpider", "blackWebPullDuration", 200, 1600, 50, "ms")}
-              {renderSlider("Pull-In Speed", "blackSpider", "blackWebPullSpeed", 300, 1400, 20, "px/s")}
-              {renderSlider("Open Jaw Charge", "blackSpider", "venomBiteCharge", 80, 1000, 20, "ms")}
-              {renderSlider("Venom Bite Damage", "blackSpider", "venomBiteDamage", 1, 25)}
-              {renderSlider("Venom Bite Knockback", "blackSpider", "venomBiteKnockback", 100, 1600, 20)}
-              {renderSlider("Venom Bite Lock", "blackSpider", "venomBiteLock", 200, 2500, 50, "ms")}
-              {renderSlider("Goo Puddle Radius", "blackSpider", "livingGooRadius", 20, 120, 2, "px")}
-              {renderSlider("Goo Puddle Duration", "blackSpider", "livingGooDuration", 1000, 10000, 250, "ms")}
+              {renderSlider("Yank Duration", "blackSpider", "blackWebPullDuration", 200, 1600, 50, "ms")}
+              {renderSlider("Yank Speed", "blackSpider", "blackWebPullSpeed", 300, 1400, 20, "px/s")}
+              {renderSlider("String Spin Time", "blackSpider", "venomBiteCharge", 80, 1000, 20, "ms")}
+              {renderSlider("String Slam Damage", "blackSpider", "venomBiteDamage", 1, 25)}
+              {renderSlider("String Slam Knockback", "blackSpider", "venomBiteKnockback", 100, 1600, 20)}
+              {renderSlider("String Lock", "blackSpider", "venomBiteLock", 200, 2500, 50, "ms")}
+              {renderSlider("Wall Web Radius", "blackSpider", "wallWebRadius", 20, 120, 2, "px")}
+              {renderSlider("Wall Web Duration", "blackSpider", "wallWebDuration", 1000, 10000, 250, "ms")}
+              {renderSlider("Wall Web Lock", "blackSpider", "wallWebLock", 200, 2500, 50, "ms")}
+              {renderSlider("Wall Web String Buff", "blackSpider", "wallWebBuffDamage", 0, 10)}
+            </>
+          )}
+          {type === "earthSpiker" && (
+            <>
+              {renderSlider("Spike Damage", "earthSpiker", "spikeDamage", 1, 20)}
+              {renderSlider("Armor Bash Damage", "earthSpiker", "pushDamage", 1, 30)}
+              {renderSlider("Base Spike Length", "earthSpiker", "spikeLength", 20, 100, 2, "px")}
+              {renderSlider("Spike Width", "earthSpiker", "spikeWidth", 10, 50, 2, "px")}
+              {renderSlider("Max Spikes", "earthSpiker", "maxSpikes", 2, 20, 1)}
+              {renderSlider("Armor Harvest Cooldown", "earthSpiker", "pushCooldown", 800, 8000, 100, "ms")}
             </>
           )}
           {type === "bomber" && (
@@ -24514,13 +25794,11 @@ export default function App() {
               {renderSlider("Lunge Speed", "arm", "chargePunchLungeSpeed", 300, 1500, 20, "px/s")}
               {renderSlider("Lunge Duration", "arm", "chargePunchLungeDuration", 180, 1000, 20, "ms")}
               {renderSlider("Punch Knockback", "arm", "chargePunchKnockback", 100, 1500, 20)}
-              {renderSlider("Pistol Damage", "gun", "bulletDamage", 1, 30)}
-              {renderSlider("Pistol Cooldown", "gun", "shotCooldown", 100, 1500, 10, "ms")}
-              {renderSlider("Reload Time", "gun", "reloadTime", 500, 4000, 50, "ms")}
-              {renderSlider("Bullet Speed", "gun", "bulletSpeed", 100, 800, 10, "px/s")}
-              {renderSlider("Bullet Life", "gun", "bulletLife", 0.4, 4, 0.05, "s")}
-              {renderSlider("Reload Dash Cooldown", "gun", "secCooldown", 1000, 8000, 100, "ms")}
-              {renderSlider("Reload Dash Force", "gun", "secDashForce", 100, 800, 20, "px/s")}
+              {renderSlider("Wall Spring Cooldown", "arm", "wallSpringCooldown", 1000, 9000, 100, "ms")}
+              {renderSlider("Wall Brace Time", "arm", "wallSpringChargeDuration", 80, 900, 20, "ms")}
+              {renderSlider("Wall Spring Lunge Speed", "arm", "wallSpringLungeSpeed", 400, 1800, 20, "px/s")}
+              {renderSlider("Wall Spring Damage", "arm", "wallSpringDamage", 1, 30)}
+              {renderSlider("Wall Spring Knockback", "arm", "wallSpringKnockback", 100, 1800, 20)}
             </>
           )}
           {type === "batter" && (

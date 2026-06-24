@@ -38,6 +38,10 @@ const ALLOWED_AUDIO_FILES = new Set([
   "/fisher%20reeling.mp3",
   "/big%20laser%20charge%20sound.mp3",
   "/laser%20sound%20charge.mp3",
+  "/Spike%20Bash%20Sound.mp3",
+  "/Spike%20hit%201.mp3",
+  "/spike%20hit2.mp3",
+  "/warp%20drag.mp3",
 ]);
 
 const AUDIO_FILE_COOLDOWNS = Object.freeze({
@@ -57,6 +61,23 @@ const AUDIO_FILE_COOLDOWNS = Object.freeze({
   "/fisher%20reeling.mp3": 0.9,
   "/big%20laser%20charge%20sound.mp3": 0.5,
   "/laser%20sound%20charge.mp3": 0.35,
+  "/Spike%20Bash%20Sound.mp3": 0.22,
+  "/Spike%20hit%201.mp3": 0.08,
+  "/spike%20hit2.mp3": 0.08,
+  "/warp%20drag.mp3": 0.18,
+});
+
+const AUDIO_FILE_MAX_INSTANCES = Object.freeze({
+  "/Gun%20Shot.mp3": 3,
+  "/hammer%20hit%20new.mp3": 2,
+  "/mine%20bomb.mp3": 2,
+  "/Spike%20Bash%20Sound.mp3": 2,
+  "/Spike%20hit%201.mp3": 3,
+  "/spike%20hit2.mp3": 3,
+  "/shield%20hit%201.mp3": 2,
+  "/shield%20hit%202.mp3": 2,
+  "/laser%20fire.mp3": 2,
+  "/big%20laser.mp3": 1,
 });
 
 const DEFAULT_SOUND_COOLDOWNS = Object.freeze({
@@ -72,7 +93,20 @@ const DEFAULT_SOUND_COOLDOWNS = Object.freeze({
   explosion: 180,
   gunShot: 90,
   laserFire: 140,
+  hammerHit: 130,
+  hammerCharge: 220,
+  shieldBlock: 120,
+  shieldThrow: 100,
+  shieldCatch: 110,
+  spikeHit: 90,
+  spikePlant: 100,
+  stringTwang: 130,
+  warpSlam: 180,
+  cueImpact: 80,
 });
+
+const MAX_PROCEDURAL_VOICES = 34;
+const MAX_FILE_VOICES = 12;
 
 export function useSoundEngine() {
   const ctxRef = useRef(null);
@@ -87,6 +121,8 @@ export function useSoundEngine() {
   const audioBufferPromiseCacheRef = useRef({});
   const audioFileCooldownsRef = useRef({});
   const activeAudioSourcesRef = useRef({});
+  const activeProceduralVoicesRef = useRef(0);
+  const activeFileVoicesRef = useRef(0);
   // cooldown map: soundKey -> earliest next play time (AudioContext time)
   const cooldowns = useRef({});
 
@@ -646,6 +682,9 @@ export function useSoundEngine() {
     const ctx = getCtx();
     if (!ctx) return;
 
+    const isHeavy = HEAVY_HITS.has(name) || (volume >= 1.2 && (name.includes("Hit") || name.includes("Slam") || name.includes("Bounce")));
+    if (!isHeavy && activeProceduralVoicesRef.current >= MAX_PROCEDURAL_VOICES) return;
+
     // Enforce a small per-cue floor even when a caller omits a cooldown.
     const effectiveCooldownMs = Math.max(cooldownMs, DEFAULT_SOUND_COOLDOWNS[name] || 0);
     if (effectiveCooldownMs > 0) {
@@ -657,10 +696,16 @@ export function useSoundEngine() {
 
     const dest = masterGainRef.current;
     const t = ctx.currentTime;
+    activeProceduralVoicesRef.current += 1;
+    const releaseVoice = () => {
+      activeProceduralVoicesRef.current = Math.max(0, activeProceduralVoicesRef.current - 1);
+    };
 
     // Setup local volume gain node
     const volGainNode = ctx.createGain();
-    volGainNode.gain.setValueAtTime(Math.max(0, Math.min(2.5, volume)), t);
+    const safeVolume = Math.max(0, Math.min(isHeavy ? 1.55 : 1.15, volume));
+    volGainNode.gain.setValueAtTime(0.0001, t);
+    volGainNode.gain.linearRampToValueAtTime(safeVolume, t + 0.006);
     volGainNode.connect(dest);
 
     let nodeDest = volGainNode;
@@ -717,7 +762,6 @@ export function useSoundEngine() {
     }
 
     // Apply Waveshaper Saturation and Music Ducking for heavy hit impacts
-    const isHeavy = HEAVY_HITS.has(name) || (volume >= 1.2 && (name.includes("Hit") || name.includes("Slam") || name.includes("Bounce")));
     if (isHeavy) {
       const saturator = ctx.createWaveShaper();
       saturator.curve = getDistortionCurve();
@@ -730,7 +774,10 @@ export function useSoundEngine() {
 
     // Trigger procedural sound synthesis
     fn(ctx, nodeDest, t, spatialOpts?.playbackRate || 1);
-    window.setTimeout(() => volGainNode.disconnect(), 3000);
+    window.setTimeout(() => {
+      try { volGainNode.disconnect(); } catch {}
+      releaseVoice();
+    }, isHeavy ? 2400 : 1300);
   }, [getCtx, getReverbBuffer, getDistortionCurve, duckMusic]);
 
   const toggleMute = useCallback(() => {
@@ -779,23 +826,44 @@ export function useSoundEngine() {
         await audioBufferPromiseCacheRef.current[url];
       }
       if (mutedRef.current) return;
+      const activeForKey = activeAudioSourcesRef.current[instanceKey];
+      const activeForUrl = activeAudioSourcesRef.current[url];
+      const maxForUrl = AUDIO_FILE_MAX_INSTANCES[url] || 2;
+      if ((activeForKey?.size || 0) >= maxForUrl || (activeForUrl?.size || 0) >= maxForUrl) return;
+      if (activeFileVoicesRef.current >= MAX_FILE_VOICES && !url.includes("Bash") && !url.includes("bomb") && !url.includes("laser")) return;
       const source = ctx.createBufferSource();
       const gain = ctx.createGain();
       source.buffer = audioBufferCacheRef.current[url];
       source.playbackRate.value = Math.max(0.5, Math.min(2.5, playbackRate));
-      gain.gain.value = Math.max(0, Math.min(2, volume));
+      const safeVolume = Math.max(0, Math.min(1.25, volume));
+      const startAt = ctx.currentTime + Math.max(0, delay);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.linearRampToValueAtTime(safeVolume, startAt + 0.012);
+      const duration = source.buffer?.duration ? source.buffer.duration / source.playbackRate.value : 1;
+      const fadeStart = startAt + Math.max(0.04, duration - 0.045);
+      gain.gain.setTargetAtTime(0.0001, fadeStart, 0.018);
       source.connect(gain);
       gain.connect(masterGainRef.current);
       if (!activeAudioSourcesRef.current[instanceKey]) activeAudioSourcesRef.current[instanceKey] = new Set();
       const activeEntry = { source, gain };
       activeAudioSourcesRef.current[instanceKey].add(activeEntry);
+      if (instanceKey !== url) {
+        if (!activeAudioSourcesRef.current[url]) activeAudioSourcesRef.current[url] = new Set();
+        activeAudioSourcesRef.current[url].add(activeEntry);
+      }
+      activeFileVoicesRef.current += 1;
       source.onended = () => {
         activeAudioSourcesRef.current[instanceKey]?.delete(activeEntry);
         if (activeAudioSourcesRef.current[instanceKey]?.size === 0) delete activeAudioSourcesRef.current[instanceKey];
-        source.disconnect();
-        gain.disconnect();
+        if (instanceKey !== url) {
+          activeAudioSourcesRef.current[url]?.delete(activeEntry);
+          if (activeAudioSourcesRef.current[url]?.size === 0) delete activeAudioSourcesRef.current[url];
+        }
+        activeFileVoicesRef.current = Math.max(0, activeFileVoicesRef.current - 1);
+        try { source.disconnect(); } catch {}
+        try { gain.disconnect(); } catch {}
       };
-      source.start(ctx.currentTime + Math.max(0, delay));
+      source.start(startAt);
     } catch {
       // Keep procedural SFX running if an optional recorded clip fails.
     }
@@ -816,6 +884,7 @@ export function useSoundEngine() {
         // Source may already have ended.
       }
     });
+    activeFileVoicesRef.current = Math.max(0, activeFileVoicesRef.current - active.size);
     delete activeAudioSourcesRef.current[url];
   }, []);
 
