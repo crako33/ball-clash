@@ -22114,14 +22114,14 @@ export default function App() {
           const snap = 1 - Math.pow(1 - attachProgress, 3);
           const wobble = Math.sin(game.simTime * 0.035 + piece.seed) * 0.035;
           const angle = (ball.earthArmorAngle || 0) + (piece.slotOffset ?? piece.angle ?? 0) + wobble;
-          const finalX = Math.cos(angle) * (ball.r + (fullArmor ? 14 : 12));
-          const finalY = Math.sin(angle) * (ball.r + (fullArmor ? 14 : 12));
+          const finalX = Math.cos(angle) * (ball.r + (fullArmor ? 18 : 15));
+          const finalY = Math.sin(angle) * (ball.r + (fullArmor ? 18 : 15));
           const startX = Number.isFinite(piece.fromX) ? piece.fromX - ball.x : finalX;
           const startY = Number.isFinite(piece.fromY) ? piece.fromY - ball.y : finalY;
           const flyX = startX + (finalX - startX) * snap;
           const flyY = startY + (finalY - startY) * snap;
-          const plateLength = ball.r * ((fullArmor ? 0.82 : 0.62) + piece.size * 0.2);
-          const plateHalf = ball.r * ((fullArmor ? 0.3 : 0.22) + piece.size * 0.05);
+          const plateLength = ball.r * ((fullArmor ? 0.94 : 0.72) + piece.size * 0.22);
+          const plateHalf = ball.r * ((fullArmor ? 0.38 : 0.28) + piece.size * 0.06);
           if (attachProgress < 1) {
             ctx.save();
             ctx.globalAlpha = 0.22 + attachProgress * 0.22;
@@ -22168,9 +22168,9 @@ export default function App() {
           } else {
             ctx.save();
             ctx.rotate(angle);
-            const plateSpan = fullArmor ? 1.82 : 1.48;
-            const outer = ball.r + (fullArmor ? 15 : 12);
-            const inner = ball.r + 1.5;
+            const plateSpan = fullArmor ? 1.96 : 1.62;
+            const outer = ball.r + (fullArmor ? 22 : 17);
+            const inner = ball.r - (fullArmor ? 3 : 1);
             const shellGrad = ctx.createRadialGradient(-ball.r * 0.26, -ball.r * 0.28, ball.r * 0.16, 0, 0, outer + 8);
             shellGrad.addColorStop(0, "#f7d88c");
             shellGrad.addColorStop(0.3, "#d8c19a");
@@ -22180,14 +22180,14 @@ export default function App() {
             ctx.globalAlpha = 0.92;
             ctx.fillStyle = shellGrad;
             ctx.strokeStyle = "#1c1917";
-            ctx.lineWidth = 2.3;
+            ctx.lineWidth = 2.9;
             const outerPoints = [];
             const innerPoints = [];
             const segments = 7;
             for (let j = 0; j <= segments; j++) {
               const t = j / segments;
               const a = -plateSpan / 2 + plateSpan * t;
-              const rough = Math.sin(piece.seed + j * 1.9) * 3.2 + Math.cos(piece.seed * 0.5 + j * 2.7) * 1.9;
+              const rough = Math.sin(piece.seed + j * 1.9) * 4.2 + Math.cos(piece.seed * 0.5 + j * 2.7) * 2.4;
               outerPoints.push({ a, r: outer + rough });
               innerPoints.push({ a, r: inner + Math.sin(piece.seed + j * 2.4) * 1.2 });
             }
