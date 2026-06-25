@@ -746,23 +746,23 @@ const BALL_TYPES = {
   },
   serpent: {
     id: "serpent",
-    name: "Serpent",
+    name: "Dragon Serpent",
     shortName: "SERP",
-    color: "#dc2626",
-    stroke: "#991b1b",
-    radius: 30,
-    description: "Serpent-dragon that grows a slithering tail on wall bounces. Deals contact damage with segments; detaches tail end to execute bouncing swipes.",
+    color: "#22c55e",
+    stroke: "#14532d",
+    radius: 31,
+    description: "Green snake-dragon head with trailing body sections. Starts with 3 sections, grows after every 2 wall bounces, and body sections damage opponents.",
     emoji: "🐉",
-    visualTheme: "Red Dragon / Serpent God",
-    colorPalette: "Deep Crimson Red, Obsidian Scales, Gold Horns, Fiery Amber Eyes",
-    facialAge: "Ancient (Wyrm Head with golden horns and dark scales)",
-    personality: "Ruthless, ancient, territorial",
-    primaryWeapon: "Obsidian Tail Segments",
-    signatureAbility: "Bouncing Tail Swipe",
+    visualTheme: "Green Eastern Dragon / Snake Wyrm",
+    colorPalette: "Emerald Green, Lime Scales, Gold Horns, Red Eyes",
+    facialAge: "Ancient (dragon head with antler horns, whiskers, and sharp red eyes)",
+    personality: "Patient, territorial, coils around the fight",
+    primaryWeapon: "Growing Dragon Body Sections",
+    signatureAbility: "Wall-Bounce Body Growth",
     companion: "None",
-    specialVisualEffects: "Slithering segmented tail, golden horns, fire trail sparks, bouncing tail blades",
-    animeStyle: "Classic mythological red dragon/serpent boss",
-    gameStyle: "Trailing defensive body blocker and bouncing projectile launcher"
+    specialVisualEffects: "Slithering emerald body, gold antler horns, red predator eyes, scale sparks on wall bounces",
+    animeStyle: "Classic mythological green dragon-serpent boss",
+    gameStyle: "Momentum body-control fighter that becomes more dangerous as it bounces"
   }
 };
 
@@ -936,7 +936,7 @@ const BALANCE = {
   yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
   slipper: { cooldown: 3300, windup: 260, throwSpeed: 840, returnSpeed: 980, duration: 2600, damage: 5, knockback: 560, hitCooldown: 360, projectileRadius: 22, maxBounces: 3 },
   fireBender: { fireballDamage: 5, fireballCooldown: 1400, whipDamage: 8, whipCooldown: 3500, wheelDamage: 12, wheelCooldown: 7500, wheelDuration: 800, burnDuration: 1800 },
-  serpent: { segmentDamage: 3, segmentHitCooldown: 400, maxSegments: 10, swipeDamage: 8, swipeCooldown: 6000, swipeSpeed: 1000 },
+  serpent: { startSegments: 3, segmentDamage: 3, segmentHitCooldown: 420, maxSegments: 14, bouncesPerSegment: 2, segmentSpacing: 34, segmentRadius: 18, segmentBounceSpeed: 720 },
   loki: { cooldown: 3000, fireballCooldown: 1050, fireballSpeed: 980, fireballDamage: 6, illusionDuration: 7000, illusionFireballCooldown: 1550, illusionCount: 3, illusionDamage: 1, illusionKnockback: 180, swapStrikeDamage: 4, swapStrikeKnockback: 620, dodgeCooldown: 2100, fireballBounces: 1, fireballHomingTurn: 2.2 },
   sorcerer: {
     cooldown: 3800,
@@ -1950,7 +1950,8 @@ export default function App() {
       fireBenderWhipSwingAngle: 0,
       fireBenderWhipHitDone: false,
       // Serpent Specific
-      serpentSegments: 0,
+      serpentSegments: type === "serpent" ? (BALANCE.serpent.startSegments || 3) : 0,
+      serpentWallBounceCount: 0,
       serpentHistory: [],
       nextSerpentSwipeAt: type === "serpent" ? 1800 : 0,
       serpentSwipeState: "idle",
@@ -2138,8 +2139,8 @@ export default function App() {
       return "FIRE BENDER READY";
     }
     if (ball.type === "serpent") {
-      if (ball.serpentSwipeState === "swiping") return "TAIL SWIPE";
-      return `TAIL SECTIONS: ${ball.serpentSegments || 0}`;
+      const bal = gameRef.current?.balance?.serpent || BALANCE.serpent;
+      return `SECTIONS ${ball.serpentSegments || 0}/${bal.maxSegments || 14} · BOUNCES ${(ball.serpentWallBounceCount || 0)}/${bal.bouncesPerSegment || 2}`;
     }
     if (ball.type === "gun") return ball.gunReloading ? "RELOADING" : "GUN READY";
     if (ball.type === "ninja") {
@@ -2231,8 +2232,10 @@ export default function App() {
       lines.push(`FIRE WHIP: ${ball.fireBenderState === "whip" ? "WHIPPING" : cooldown(ball.nextFireWhipAt)}`);
       lines.push(`FLAME WHEEL: ${ball.fireBenderState === "wheel" ? "DASHING" : cooldown(ball.nextFlameWheelAt)}`);
     } else if (ball.type === "serpent") {
-      lines.push(`TAIL LENGTH: ${ball.serpentSegments || 0} SECTIONS`);
-      lines.push(`TAIL SWIPE: ${ball.serpentSwipeState === "swiping" ? "SWIPING" : cooldown(ball.nextSerpentSwipeAt)}`);
+      const serpentBal = game?.balance?.serpent || BALANCE.serpent;
+      lines.push(`BODY SECTIONS: ${ball.serpentSegments || 0}/${serpentBal.maxSegments || 14}`);
+      lines.push(`GROWTH: ${(ball.serpentWallBounceCount || 0)}/${serpentBal.bouncesPerSegment || 2} WALL BOUNCES`);
+      lines.push(`SECTION DAMAGE: ${serpentBal.segmentDamage || 3}`);
     } else if (ball.type === "sorcerer") {
       const spellIdx = ball.sorcererSpellIndex || 0;
       const spellNames = ["LAPSE: BLUE", "REVERSAL: RED", "HOLLOW: PURPLE"];
@@ -5285,6 +5288,8 @@ export default function App() {
         flashColor = "#d946ef"; // Spider/Web/Joker pink/magenta
       } else if (keyLower.includes("dragon") || keyLower.includes("ember") || keyLower.includes("fireball")) {
         flashColor = "#ff781f"; // Dragon orange
+      } else if (keyLower.includes("serpent")) {
+        flashColor = "#22c55e"; // Dragon Serpent green
       } else if (keyLower.includes("shadow") || keyLower.includes("minion") || keyLower.includes("burst")) {
         flashColor = "#8b5cf6"; // Shadow purple
       } else if (keyLower.includes("trident") || keyLower.includes("dive")) {
@@ -5363,6 +5368,8 @@ export default function App() {
         playAudioFile("/spider%20bite.mp3", 0.92, 0, game.simulationSpeed || 1);
       } else if (keyLower.includes("spider")) {
         playSound("webHit", 0.9, 80);
+      } else if (keyLower.includes("serpent")) {
+        playSound("spikeHit", 0.8, 95);
       } else if (keyLower.includes("cactus")) {
         playSound("cactusHit", 1, 100);
       } else if (keyLower.includes("hammer")) {
@@ -5690,10 +5697,18 @@ export default function App() {
         if (ball.type === "serpent") {
           const serpentBal = game.balance.serpent || BALANCE.serpent;
           const maxSegs = serpentBal.maxSegments || 10;
-          if ((ball.serpentSegments || 0) < maxSegs) {
+          const bouncesPerSegment = Math.max(1, serpentBal.bouncesPerSegment || 2);
+          ball.serpentWallBounceCount = (ball.serpentWallBounceCount || 0) + 1;
+          if (ball.serpentWallBounceCount >= bouncesPerSegment && (ball.serpentSegments || 0) < maxSegs) {
+            ball.serpentWallBounceCount = 0;
             ball.serpentSegments = (ball.serpentSegments || 0) + 1;
-            spawnSparks(bx, by, "#f59e0b", 8);
-            playSound("wallBounce", 0.72, 140);
+            ball.serpentGrowFlashUntil = game.simTime + 420;
+            spawnSparks(bx, by, "#86efac", 18);
+            spawnImpactBurst(bx, by, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#bbf7d0", "#22c55e", "#facc15"], 1.05);
+            playSound("spikePlant", 0.72, 140);
+          } else {
+            spawnSparks(bx, by, "#4ade80", 7);
+            playSound("wallBounce", 0.58, 140);
           }
         }
         if (ball.type === "earthSpiker" && sideHit) {
@@ -12217,6 +12232,126 @@ export default function App() {
       }
     };
 
+    const getSerpentBodyPoints = (ball) => {
+      const bal = game.balance.serpent || BALANCE.serpent;
+      const count = Math.max(0, Math.min(ball.serpentSegments || 0, bal.maxSegments || 14));
+      const spacing = bal.segmentSpacing || 34;
+      const history = ball.serpentHistory || [];
+      const fallbackAngle = Math.atan2(ball.vy || 0, ball.vx || 0) || ball.angle || (ball.side === "left" ? 0 : Math.PI);
+      const points = [];
+      for (let i = 1; i <= count; i++) {
+        const desired = i * spacing;
+        let travelled = 0;
+        let point = null;
+        for (let h = 1; h < history.length; h++) {
+          const prev = history[h - 1];
+          const curr = history[h];
+          const d = Math.hypot(prev.x - curr.x, prev.y - curr.y);
+          if (travelled + d >= desired) {
+            const t = d > 0 ? (desired - travelled) / d : 0;
+            point = {
+              x: prev.x + (curr.x - prev.x) * t,
+              y: prev.y + (curr.y - prev.y) * t,
+              angle: Math.atan2(prev.y - curr.y, prev.x - curr.x),
+              index: i - 1,
+            };
+            break;
+          }
+          travelled += d;
+        }
+        if (!point) {
+          point = {
+            x: ball.x - Math.cos(fallbackAngle) * desired,
+            y: ball.y - Math.sin(fallbackAngle) * desired,
+            angle: fallbackAngle,
+            index: i - 1,
+          };
+        }
+        points.push(point);
+      }
+      return points;
+    };
+
+    const updateSerpent = (ball, target, currentTime, stepDt) => {
+      const bal = game.balance.serpent || BALANCE.serpent;
+      if ((ball.serpentSegments || 0) <= 0) ball.serpentSegments = bal.startSegments || 3;
+      ball.serpentHistory = ball.serpentHistory || [];
+      const spacing = bal.segmentSpacing || 34;
+      const seedSerpentHistory = () => {
+        const angle = Math.atan2(ball.vy || 0, ball.vx || 0) || ball.angle || (ball.side === "left" ? 0 : Math.PI);
+        const seedCount = Math.max(18, (bal.maxSegments || 14) * 3);
+        ball.serpentHistory = Array.from({ length: seedCount }, (_, i) => ({
+          x: ball.x - Math.cos(angle) * i * spacing * 0.45,
+          y: ball.y - Math.sin(angle) * i * spacing * 0.45,
+          angle,
+          t: currentTime,
+        }));
+      };
+      const last = ball.serpentHistory[0];
+      const headJumped = last && Math.hypot(last.x - ball.x, last.y - ball.y) > Math.max(90, spacing * 3.2);
+      if (!last || headJumped) {
+        seedSerpentHistory();
+      } else if (Math.hypot(last.x - ball.x, last.y - ball.y) >= 4) {
+        ball.serpentHistory.unshift({
+          x: ball.x,
+          y: ball.y,
+          angle: Math.atan2(ball.vy || 0, ball.vx || 0) || ball.angle || 0,
+          t: currentTime,
+        });
+      }
+      const maxHistory = Math.max(80, (bal.maxSegments || 14) * 8);
+      if (ball.serpentHistory.length > maxHistory) ball.serpentHistory.length = maxHistory;
+      const maxTrailAge = Math.max(1300, ((bal.maxSegments || 14) * (bal.segmentSpacing || 34) / 170) * 1000);
+      ball.serpentHistory = ball.serpentHistory.filter((point, idx) => idx === 0 || currentTime - (point.t || currentTime) <= maxTrailAge);
+      if (ball.serpentHistory.length < 4) seedSerpentHistory();
+
+      const bodyPoints = getSerpentBodyPoints(ball);
+      const segmentRadius = bal.segmentRadius || 18;
+      const damage = bal.segmentDamage || 3;
+      const hitCooldown = bal.segmentHitCooldown || 420;
+      bodyPoints.forEach((segment, index) => {
+        game.balls.forEach((enemy) => {
+          if (!enemy || enemy.id === ball.id || enemy.side === ball.side || enemy.type === "cueBall" || enemy.health <= 0) return;
+          const dx = enemy.x - segment.x;
+          const dy = enemy.y - segment.y;
+          const d = Math.hypot(dx, dy);
+          const contactDist = enemy.r + segmentRadius;
+          if (d > contactDist) return;
+          const key = `${ball.id}-serpent-section-${index}-${enemy.id}`;
+          const before = enemy.health;
+          applyDamage(enemy, damage, key, currentTime, hitCooldown);
+          const dealt = Math.max(0, before - enemy.health);
+          if (dealt <= 0) return;
+          const angle = d > 0.001 ? Math.atan2(dy, dx) : (segment.angle || Math.atan2(enemy.y - ball.y, enemy.x - ball.x) || 0);
+          if (!hasStringBounceGuard(enemy)) {
+            const nx = Math.cos(angle);
+            const ny = Math.sin(angle);
+            const overlap = Math.max(0, contactDist - d);
+            enemy.x += nx * (overlap + 4);
+            enemy.y += ny * (overlap + 4);
+            const speed = Math.hypot(enemy.vx, enemy.vy);
+            const dot = enemy.vx * nx + enemy.vy * ny;
+            let outVx = enemy.vx;
+            let outVy = enemy.vy;
+            if (dot < 0) {
+              outVx = enemy.vx - 2 * dot * nx;
+              outVy = enemy.vy - 2 * dot * ny;
+            }
+            const bounceSpeed = Math.max(bal.segmentBounceSpeed || 720, speed * 1.08, 620);
+            const outSpeed = Math.max(1, Math.hypot(outVx, outVy));
+            enemy.vx = (outVx / outSpeed) * bounceSpeed + nx * 120;
+            enemy.vy = (outVy / outSpeed) * bounceSpeed + ny * 120;
+            enemy.skillLockedUntil = Math.max(enemy.skillLockedUntil || 0, currentTime + 520);
+            enemy.serpentSegmentBounceUntil = currentTime + 520;
+          }
+          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+          if (stats) { stats.damageDealt += dealt; stats.hitsLanded++; }
+          spawnSparks(segment.x, segment.y, "#86efac", 14);
+          spawnImpactBurst(enemy.x, enemy.y, angle, ["#ffffff", "#bbf7d0", "#22c55e", "#facc15"], 0.8);
+        });
+      });
+    };
+
     const updateDragon = (ball, target, currentTime) => {
       // Disabled skills
     };
@@ -12483,7 +12618,7 @@ export default function App() {
       const pad = 18;
       game.fishingLines = game.fishingLines.filter((line) => {
         const owner = game.balls.find((ball) => ball.id === line.ownerId);
-        if (!owner) {
+        if (!owner || owner.health <= 0 || owner.shattered) {
           stopAudioFile(`fisher-reel-${line.ownerId}`);
           return false;
         }
@@ -12495,6 +12630,8 @@ export default function App() {
             target.fishermanPullOwnerId = null;
           }
           owner.fishermanNextCastAt = game.simTime + bal.cooldown;
+          owner.fishermanSpinUntil = 0;
+          owner.fishermanIdleRope = null;
           stopAudioFile(`fisher-reel-${owner.id}`);
           return false;
         };
@@ -12512,6 +12649,14 @@ export default function App() {
           actor.y += (dy / dist) * travel;
           return dist - travel;
         };
+
+        line.maxLife = line.maxLife || Math.max(bal.castLife || 4200, 1800) + 5200;
+        line.totalAge = (line.totalAge || 0) + dt * 1000;
+        if (line.totalAge > line.maxLife) return finishLine();
+        if (
+          line.x < -80 || line.x > game.width + 80 ||
+          line.y < -80 || line.y > game.height + 80
+        ) return finishLine();
 
         if (line.state === "flying") {
           line.life -= dt * 1000;
@@ -12554,6 +12699,9 @@ export default function App() {
         }
 
         if (line.state === "returning") {
+          if (line.points?.length) {
+            line.points = line.points.slice(0, Math.max(1, Math.min(line.points.length, (line.returnIndex || 0) + 2)));
+          }
           const rodAngle = owner.fishermanRodAngle || 0;
           const rodTip = {
             x: owner.x + Math.cos(rodAngle) * (owner.r + 34) + Math.sin(rodAngle) * 10,
@@ -12595,7 +12743,10 @@ export default function App() {
 
         if (line.state === "pulling") {
           const target = game.balls.find((ball) => ball.id === line.targetId);
-          if (!target || target.health <= 0) return finishLine();
+          if (!target || target.health <= 0 || target.shattered || target.side === owner.side) return finishLine();
+          if (line.points?.length) {
+            line.points = line.points.slice(0, Math.max(1, Math.min(line.points.length, (line.returnIndex || 0) + 2)));
+          }
           const waypointIndex = line.returnIndex;
           let finalPullAngle = line.finalPullAngle;
           if (line.returnIndex <= 0 && finalPullAngle === undefined) {
@@ -21973,6 +22124,202 @@ export default function App() {
     };
 
     // ─── Fire Skull Ball ──────────────────────────────────────────────────────
+    const drawSerpentBall = (ball) => {
+      const config = BALL_TYPES.serpent;
+      const bal = game.balance.serpent || BALANCE.serpent;
+      const s = ball.r / 31;
+      const pulse = 0.5 + Math.sin(game.simTime * 0.018 + ball.id.length) * 0.5;
+      const bodyPoints = getSerpentBodyPoints(ball);
+      const growPulse = ball.serpentGrowFlashUntil && game.simTime < ball.serpentGrowFlashUntil
+        ? clamp((ball.serpentGrowFlashUntil - game.simTime) / 420, 0, 1)
+        : 0;
+
+      bodyPoints.slice().reverse().forEach((segment, revIdx) => {
+        const idx = bodyPoints.length - 1 - revIdx;
+        const radius = (bal.segmentRadius || 18) * (1 - idx * 0.018);
+        ctx.save();
+        ctx.translate(segment.x, segment.y);
+        ctx.rotate(segment.angle || 0);
+        const segGrad = ctx.createRadialGradient(-radius * 0.25, -radius * 0.35, 2, 0, 0, radius * 1.15);
+        segGrad.addColorStop(0, "#bbf7d0");
+        segGrad.addColorStop(0.35, "#22c55e");
+        segGrad.addColorStop(0.82, "#15803d");
+        segGrad.addColorStop(1, "#052e16");
+        ctx.shadowColor = growPulse ? "#bbf7d0" : "#22c55e";
+        ctx.shadowBlur = growPulse ? 18 : 7;
+        ctx.fillStyle = segGrad;
+        ctx.strokeStyle = "#052e16";
+        ctx.lineWidth = 2.3;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, radius * 1.18, radius * 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(187, 247, 208, 0.55)";
+        ctx.lineWidth = 1.1;
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.arc(i * radius * 0.35, -radius * 0.05, radius * 0.34, Math.PI * 1.05, Math.PI * 1.9);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+
+      const faceAngle = Math.atan2(ball.vy || 0, ball.vx || 0) || ball.angle || (ball.side === "left" ? 0 : Math.PI);
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(faceAngle);
+
+      [-1, 1].forEach((side) => {
+        ctx.save();
+        ctx.strokeStyle = "#65a30d";
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 7;
+        ctx.lineWidth = 3 * s;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.2, side * ball.r * 0.38);
+        ctx.bezierCurveTo(ball.r * 0.85, side * ball.r * 0.58, ball.r * 1.35, side * ball.r * 1.08, ball.r * 1.75, side * ball.r * 0.78);
+        ctx.stroke();
+        ctx.strokeStyle = "#bbf7d0";
+        ctx.lineWidth = 1.1 * s;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      [-1, 1].forEach((side) => {
+        ctx.save();
+        ctx.fillStyle = "#166534";
+        ctx.strokeStyle = "#052e16";
+        ctx.lineWidth = 2 * s;
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.35, side * ball.r * 0.66);
+        ctx.lineTo(-ball.r * 0.92, side * ball.r * 1.08);
+        ctx.lineTo(-ball.r * 0.68, side * ball.r * 0.42);
+        ctx.lineTo(-ball.r * 1.18, side * ball.r * 0.72);
+        ctx.lineTo(-ball.r * 0.82, side * ball.r * 0.18);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      [-1, 1].forEach((side) => {
+        ctx.save();
+        ctx.translate(-ball.r * 0.34, side * ball.r * 0.54);
+        ctx.rotate(side * 0.56);
+        ctx.strokeStyle = "#1f1300";
+        ctx.lineWidth = 10 * s;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-ball.r * 0.18, side * ball.r * 1.14);
+        ctx.stroke();
+        ctx.strokeStyle = "#d97706";
+        ctx.lineWidth = 7 * s;
+        ctx.stroke();
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 3 * s;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.08, side * ball.r * 0.46);
+        ctx.lineTo(ball.r * 0.34, side * ball.r * 0.78);
+        ctx.strokeStyle = "#1f1300";
+        ctx.lineWidth = 8 * s;
+        ctx.stroke();
+        ctx.strokeStyle = "#d97706";
+        ctx.lineWidth = 5 * s;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      const headGrad = ctx.createRadialGradient(-ball.r * 0.28, -ball.r * 0.28, 1, 0, 0, ball.r * 1.08);
+      headGrad.addColorStop(0, "#bbf7d0");
+      headGrad.addColorStop(0.26, "#4ade80");
+      headGrad.addColorStop(0.68, "#16a34a");
+      headGrad.addColorStop(1, "#064e3b");
+      ctx.shadowColor = growPulse ? "#bbf7d0" : "#22c55e";
+      ctx.shadowBlur = 10 + growPulse * 18;
+      ctx.fillStyle = headGrad;
+      ctx.strokeStyle = "#052e16";
+      ctx.lineWidth = 4 * s;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ball.r * 1.06, ball.r * 0.96, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "#15803d";
+      ctx.strokeStyle = "rgba(5, 46, 22, 0.9)";
+      ctx.lineWidth = 1.6 * s;
+      [-1, 1].forEach((side) => {
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.18, side * ball.r * 0.08);
+        ctx.quadraticCurveTo(ball.r * 0.48, side * ball.r * 0.24, ball.r * 0.72, side * ball.r * 0.12);
+        ctx.quadraticCurveTo(ball.r * 0.48, side * ball.r * 0.44, ball.r * 0.08, side * ball.r * 0.32);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      [-1, 1].forEach((side) => {
+        ctx.save();
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 10 + pulse * 5;
+        ctx.fillStyle = "#ef4444";
+        ctx.strokeStyle = "#450a0a";
+        ctx.lineWidth = 2 * s;
+        ctx.beginPath();
+        ctx.ellipse(ball.r * 0.26, side * ball.r * 0.34, ball.r * 0.23, ball.r * 0.12, side * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#7f1d1d";
+        ctx.beginPath();
+        ctx.ellipse(ball.r * 0.32, side * ball.r * 0.34, ball.r * 0.09, ball.r * 0.11, side * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      ctx.strokeStyle = "rgba(5, 46, 22, 0.65)";
+      ctx.lineWidth = 1.2 * s;
+      for (let row = -2; row <= 2; row++) {
+        for (let col = -2; col <= 2; col++) {
+          const x = -ball.r * 0.5 + col * ball.r * 0.18;
+          const y = row * ball.r * 0.18;
+          if (Math.hypot(x, y) > ball.r * 0.82) continue;
+          ctx.beginPath();
+          ctx.arc(x, y, ball.r * 0.09, Math.PI * 1.08, Math.PI * 1.92);
+          ctx.stroke();
+        }
+      }
+      ctx.fillStyle = "#14532d";
+      ctx.strokeStyle = "#052e16";
+      ctx.lineWidth = 1.5 * s;
+      ctx.beginPath();
+      ctx.moveTo(-ball.r * 0.52, 0);
+      ctx.lineTo(-ball.r * 0.86, -ball.r * 0.16);
+      ctx.lineTo(-ball.r * 0.76, 0);
+      ctx.lineTo(-ball.r * 0.86, ball.r * 0.16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#facc15";
+      [-1, 1].forEach((side) => {
+        ctx.beginPath();
+        ctx.ellipse(ball.r * 0.72, side * ball.r * 0.38, ball.r * 0.18, ball.r * 0.1, side * -0.25, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = "#022c22";
+      [-1, 1].forEach((side) => {
+        ctx.beginPath();
+        ctx.ellipse(ball.r * 0.84, side * ball.r * 0.13, ball.r * 0.07, ball.r * 0.035, side * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.restore();
+      drawHealthInsideBall(ball);
+    };
+
     const drawFireSkullBall = (ball) => {
       ctx.save();
       ctx.translate(ball.x, ball.y);
@@ -23361,7 +23708,11 @@ export default function App() {
       if (!game.fishingLines?.length) return;
       game.fishingLines.forEach((line) => {
         const owner = game.balls.find((ball) => ball.id === line.ownerId);
-        if (!owner) return;
+        if (!owner || owner.health <= 0 || owner.shattered) return;
+        if (line.state === "pulling") {
+          const target = game.balls.find((ball) => ball.id === line.targetId);
+          if (!target || target.health <= 0 || target.shattered) return;
+        }
         const rodAngle = owner.fishermanRodAngle || 0;
         const points = [{
           x: owner.x + Math.cos(rodAngle) * (owner.r + 34) + Math.sin(rodAngle) * 10,
@@ -23562,6 +23913,7 @@ export default function App() {
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
       else if (ball.type === "earthSpiker") drawEarthSpikerBall(ball);
       else if (ball.type === "fireBender") drawFireBenderBall(ball);
+      else if (ball.type === "serpent") drawSerpentBall(ball);
       else if (ball.type === "gazerBall") drawGazerBall(ball);
       else if (ball.type === "constellation") drawConstellationBall(ball);
       else if (ball.type === "fireSkull") drawFireSkullBall(ball);
@@ -26693,6 +27045,8 @@ export default function App() {
       }
       if (winner && !game.roundOverSoundPlayed) {
         game.roundOverSoundPlayed = true;
+        game.fishingLines = [];
+        stopFisherReels();
         stopMatchMusic();
         playSound("roundWin");
       }
@@ -26865,6 +27219,18 @@ export default function App() {
               {renderSlider("Dodge Swap Cooldown", "loki", "dodgeCooldown", 500, 7000, 100, "ms")}
               {renderSlider("Swap Strike Damage", "loki", "swapStrikeDamage", 1, 15, 1)}
               {renderSlider("Swap Strike Knockback", "loki", "swapStrikeKnockback", 100, 1200, 20)}
+            </>
+          )}
+          {type === "serpent" && (
+            <>
+              {renderSlider("Start Sections", "serpent", "startSegments", 1, 8, 1)}
+              {renderSlider("Max Sections", "serpent", "maxSegments", 3, 24, 1)}
+              {renderSlider("Bounces Per Section", "serpent", "bouncesPerSegment", 1, 5, 1)}
+              {renderSlider("Section Damage", "serpent", "segmentDamage", 1, 15, 1)}
+              {renderSlider("Section Bounce Speed", "serpent", "segmentBounceSpeed", 300, 1400, 20, "px/s")}
+              {renderSlider("Hit Cooldown", "serpent", "segmentHitCooldown", 100, 1200, 20, "ms")}
+              {renderSlider("Section Spacing", "serpent", "segmentSpacing", 20, 70, 1, "px")}
+              {renderSlider("Section Radius", "serpent", "segmentRadius", 10, 32, 1, "px")}
             </>
           )}
           {type === "vampire" && (
