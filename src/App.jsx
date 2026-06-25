@@ -1962,6 +1962,31 @@ export default function App() {
     };
   };
 
+  const setBallStartFacing = (ball) => {
+    if (!ball) return ball;
+    const inwardAngle = ball.side === "left" ? 0 : Math.PI;
+    ball.angle = inwardAngle;
+    ball.shieldAngle = inwardAngle;
+    ball.shieldThrowAngle = inwardAngle;
+    ball.blackVenomBiteAngle = inwardAngle;
+    ball.vampireMistAngle = inwardAngle;
+    ball.fireSwordSwingAngle = inwardAngle;
+    ball.fireBenderWhipAngle = inwardAngle;
+    ball.eightCueAngle = inwardAngle;
+    ball.chomperBiteAngle = inwardAngle;
+    ball.slipperThrowAngle = inwardAngle;
+    ball.tridentAngle = inwardAngle;
+    ball.tridentDiveAngle = inwardAngle;
+    ball.shadowSlashAngle = inwardAngle;
+    ball.feralSlashAngle = inwardAngle;
+    ball.feralPounceAngle = inwardAngle;
+    ball.batterBatAngle = inwardAngle;
+    ball.armPunchAngle = inwardAngle;
+    ball.earthArmorAngle = inwardAngle;
+    ball.fishermanRodAngle = ball.side === "left" ? Math.PI : 0;
+    return ball;
+  };
+
   const createFightBalls = (selection = selectedBalls, mode = battleMode, hpValues = slotHealths, arenaFormat = recordingFormat) => {
     const slots = MATCH_FORMATS[mode]?.slots || MATCH_FORMATS["1v1"].slots;
     const slotHp = hpValues || [];
@@ -1983,7 +2008,7 @@ export default function App() {
         ball.x = ball.side === "left" ? 72 : arenaWidth - 72;
         ball.y = ARENA_SIZE * ((sideIndex + 1) / (count + 1));
       }
-      return ball;
+      return setBallStartFacing(ball);
     });
     if (hasTeamLayout) {
       balls.forEach((ball) => {
@@ -2294,6 +2319,7 @@ export default function App() {
     screenShake: 0,
     combatFlash: null,
     nextShieldHitSoundAt: 0,
+    earthSpikeSoundCooldowns: {},
     deathEffectStarted: false,
     deathSlowMoUntil: 0,
     combatStarted: false,
@@ -2339,6 +2365,7 @@ export default function App() {
     gameRef.current.combatStarted = false;
     gameRef.current.combatFlash = null;
     gameRef.current.nextShieldHitSoundAt = 0;
+    gameRef.current.earthSpikeSoundCooldowns = {};
     gameRef.current.portals = [];
     gameRef.current.portalProjectiles = [];
     return balls;
@@ -2464,6 +2491,7 @@ export default function App() {
       screenShake: 0,
       combatFlash: null,
       nextShieldHitSoundAt: 0,
+      earthSpikeSoundCooldowns: {},
       deathEffectStarted: false,
       deathSlowMoUntil: 0,
       combatStarted: false,
@@ -2487,30 +2515,33 @@ export default function App() {
     if (!fightIntroRef.current.active) return;
     const left = gameRef.current.balls[0];
     const right = gameRef.current.balls[1];
+    gameRef.current.balls.forEach(setBallStartFacing);
     if (isWideBattleMode(battleMode)) {
       const centerX = gameRef.current.width / 2;
       const centerY = gameRef.current.height / 2;
-      const speed = 560;
-      gameRef.current.balls.forEach((ball) => {
+      const intro = fightIntroRef.current;
+      gameRef.current.balls.forEach((ball, index) => {
         const dx = ball.x - centerX;
         const dy = ball.y - centerY;
-        const length = Math.max(1, Math.hypot(dx, dy));
-        ball.vx = (dx / length) * speed;
-        ball.vy = (dy / length) * speed;
+        const start = intro.teamStarts?.[index] || {};
+        const baseAngle = Math.atan2(dy, dx) + (start.recoilAngleJitter || (Math.random() - 0.5) * 0.7);
+        const speed = 500 + Math.random() * 170;
+        ball.vx = Math.cos(baseAngle) * speed;
+        ball.vy = Math.sin(baseAngle) * speed + (Math.random() - 0.5) * 130;
       });
     } else if (left && right) {
       const centerY = gameRef.current.height / 2;
       const intro = fightIntroRef.current;
-      const seed = (left.type.length * 17 + right.type.length * 31) % 100;
-      const leftVertical = intro.leftRecoilY || (seed % 2 === 0 ? -1 : 1);
+      const leftVertical = intro.leftRecoilY || (Math.random() < 0.5 ? -1 : 1);
       const rightVertical = intro.rightRecoilY || -leftVertical;
-      const leftAngle = Math.PI + leftVertical * (0.42 + (seed % 7) * 0.018);
-      const rightAngle = rightVertical * (0.38 + (seed % 5) * 0.022);
-      const speed = 520;
-      left.vx = Math.cos(leftAngle) * speed;
-      left.vy = Math.sin(leftAngle) * speed;
-      right.vx = Math.cos(rightAngle) * speed;
-      right.vy = Math.sin(rightAngle) * speed;
+      const leftAngle = Math.PI + leftVertical * (0.32 + Math.random() * 0.34) + (intro.leftRecoilAngleJitter || 0);
+      const rightAngle = rightVertical * (0.3 + Math.random() * 0.34) + (intro.rightRecoilAngleJitter || 0);
+      const leftSpeed = 500 + Math.random() * 120;
+      const rightSpeed = 500 + Math.random() * 120;
+      left.vx = Math.cos(leftAngle) * leftSpeed;
+      left.vy = Math.sin(leftAngle) * leftSpeed;
+      right.vx = Math.cos(rightAngle) * rightSpeed;
+      right.vy = Math.sin(rightAngle) * rightSpeed;
       left.y = clamp(left.y || centerY, left.r + 18, gameRef.current.height - left.r - 18);
       right.y = clamp(right.y || centerY, right.r + 18, gameRef.current.height - right.r - 18);
     }
@@ -2590,6 +2621,7 @@ export default function App() {
     gameRef.current.combatStarted = false;
     gameRef.current.combatFlash = null;
     gameRef.current.nextShieldHitSoundAt = 0;
+    gameRef.current.earthSpikeSoundCooldowns = {};
   };
 
   const resetFight = () => {
@@ -5055,11 +5087,13 @@ export default function App() {
       playAudioFile(clip, volume, 0, game.simulationSpeed || 1);
     };
 
-    const playEarthSpikeHitSound = (volume = 0.9) => {
-      if ((game.nextEarthSpikeHitSoundAt || 0) > game.simTime) return;
-      game.nextEarthSpikeHitSoundAt = game.simTime + 70;
+    const playEarthSpikeHitSound = (volume = 0.9, instanceKey = "earth-spike-hit") => {
+      game.earthSpikeSoundCooldowns = game.earthSpikeSoundCooldowns || {};
+      const nextForContact = game.earthSpikeSoundCooldowns[instanceKey] || 0;
+      if (game.simTime < nextForContact) return;
+      game.earthSpikeSoundCooldowns[instanceKey] = game.simTime + 120;
       const clip = Math.random() < 0.55 ? "/Spike%20hit%201.mp3" : "/spike%20hit2.mp3";
-      playAudioFile(clip, volume, -30, game.simulationSpeed || 1);
+      playAudioFile(clip, volume, -30, game.simulationSpeed || 1, instanceKey);
     };
 
     const playEarthSpikePlantSound = (volume = 0.75) => {
@@ -5743,7 +5777,7 @@ export default function App() {
           spawnImpactBurst(ball.x, ball.y, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#93c5fd", "#3b82f6"], 1.25);
           game.screenShake = Math.max(game.screenShake, 13);
           if (ball.shieldBashIsSpikerRecoil) {
-            playEarthSpikeHitSound(1.02);
+            playEarthSpikeHitSound(1.02, `earth-spiker-bounce-${ball.id}`);
           } else {
             playShieldHitSound(0.98);
           }
@@ -10107,7 +10141,7 @@ export default function App() {
           game.screenShake = Math.max(game.screenShake || 0, 7);
           spawnImpactBurst(hit.px, hit.py, spike.angle, ["#ffffff", "#facc15", "#a16207", "#44403c"], 1.05);
           spawnSparks(hit.px, hit.py, "#a16207", 12);
-          playEarthSpikeHitSound(0.82);
+          playEarthSpikeHitSound(0.82, `earth-spike-hit-${spike.id}-${ball.id}`);
         });
       });
     };
@@ -22952,159 +22986,210 @@ export default function App() {
 
       const r = ball.r;
 
-      // Soft face plate in the middle, framed by green/cream earth gear.
-      const faceGrad = ctx.createRadialGradient(-r * 0.24, -r * 0.2, r * 0.08, 0, r * 0.08, r * 0.9);
-      faceGrad.addColorStop(0, "#fff7d6");
-      faceGrad.addColorStop(0.58, "#f0d9a3");
-      faceGrad.addColorStop(1, "#c4ad6d");
+      // 1. Skin/Face Base
+      const faceGrad = ctx.createRadialGradient(-r * 0.15, -r * 0.15, 0, 0, 0, r);
+      faceGrad.addColorStop(0, "#fffbe9");
+      faceGrad.addColorStop(0.5, "#faecc8");
+      faceGrad.addColorStop(1, "#eadbb4");
       ctx.fillStyle = faceGrad;
-      ctx.strokeStyle = "#21351d";
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Black Hair Cap
+      ctx.fillStyle = "#1e1f22";
+      ctx.strokeStyle = "#050607";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.96, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.quadraticCurveTo(0, -r * 0.78, -r * 0.93, -r * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 3. Green Headband with Gold Trim
+      // Green headband arch
+      ctx.fillStyle = "#2a703b";
+      ctx.strokeStyle = "#081c0e";
       ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.78, -r * 0.04);
-      ctx.quadraticCurveTo(-r * 0.42, -r * 0.52, 0, -r * 0.48);
-      ctx.quadraticCurveTo(r * 0.42, -r * 0.52, r * 0.78, -r * 0.04);
-      ctx.quadraticCurveTo(r * 0.62, r * 0.72, 0, r * 0.84);
-      ctx.quadraticCurveTo(-r * 0.62, r * 0.72, -r * 0.78, -r * 0.04);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Rounded side cream knots.
-      [-1, 1].forEach((side) => {
-        const knotGrad = ctx.createRadialGradient(side * r * 0.76, -r * 0.18, r * 0.05, side * r * 0.86, -r * 0.12, r * 0.28);
-        knotGrad.addColorStop(0, "#fffaf0");
-        knotGrad.addColorStop(0.62, "#e9ddb8");
-        knotGrad.addColorStop(1, "#b9a76d");
-        ctx.fillStyle = knotGrad;
-        ctx.strokeStyle = "#111827";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(side * r * 0.9, -r * 0.17, r * 0.21, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      });
-
-      // Green headband with gold band under the dark hair cap.
-      ctx.fillStyle = "#1f7a35";
-      ctx.strokeStyle = "#0d2817";
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 0.92, Math.PI * 1.08, Math.PI * 1.92);
-      ctx.lineTo(r * 0.78, -r * 0.38);
-      ctx.quadraticCurveTo(0, -r * 0.72, -r * 0.78, -r * 0.38);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      const headBandGold = ctx.createLinearGradient(0, -r * 0.76, 0, -r * 0.34);
-      headBandGold.addColorStop(0, "#fff2a8");
-      headBandGold.addColorStop(0.58, "#ecd36d");
-      headBandGold.addColorStop(1, "#8d7829");
-      ctx.fillStyle = headBandGold;
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 0.76, Math.PI * 1.11, Math.PI * 1.89);
-      ctx.lineTo(r * 0.62, -r * 0.42);
-      ctx.quadraticCurveTo(0, -r * 0.57, -r * 0.62, -r * 0.42);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = "#f8df83";
-      ctx.strokeStyle = "#2f2508";
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.2, -r * 0.76, r * 0.4, r * 0.18, r * 0.07);
-      ctx.fill();
-      ctx.stroke();
-
-      // Heavy black hair cap and separated bangs.
-      const hairGrad = ctx.createLinearGradient(0, -r * 1.02, 0, r * 0.34);
-      hairGrad.addColorStop(0, "#34383b");
-      hairGrad.addColorStop(0.46, "#111518");
-      hairGrad.addColorStop(1, "#050708");
-      ctx.fillStyle = hairGrad;
-      ctx.strokeStyle = "#030712";
-      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(0, 0, r * 0.94, Math.PI * 1.05, Math.PI * 1.95);
-      ctx.quadraticCurveTo(r * 0.74, -r * 0.12, r * 0.5, r * 0.36);
-      ctx.quadraticCurveTo(r * 0.24, r * 0.04, 0, r * 0.14);
-      ctx.quadraticCurveTo(-r * 0.24, r * 0.04, -r * 0.5, r * 0.36);
-      ctx.quadraticCurveTo(-r * 0.74, -r * 0.12, -r * 0.94, 0);
+      ctx.quadraticCurveTo(0, -r * 0.48, -r * 0.91, -r * 0.29);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      const bangs = [
-        [-0.58, -0.43, -0.36, 0.22, -0.22, -0.22],
-        [-0.24, -0.52, -0.04, 0.42, 0.12, -0.28],
-        [0.13, -0.5, 0.33, 0.34, 0.47, -0.22],
-        [0.48, -0.42, 0.62, 0.18, 0.76, -0.18],
-      ];
-      bangs.forEach((p, index) => {
-        ctx.fillStyle = index % 2 === 0 ? "#171b1f" : "#0c0f12";
-        ctx.strokeStyle = "#020617";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(p[0] * r, p[1] * r);
-        ctx.quadraticCurveTo(p[2] * r, p[3] * r, p[4] * r, p[5] * r);
-        ctx.lineTo((p[0] + 0.13) * r, (p[1] + 0.02) * r);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      });
-
-      // Cream armor collar and green wrap at the bottom.
-      const collarGrad = ctx.createLinearGradient(0, r * 0.22, 0, r * 1.02);
-      collarGrad.addColorStop(0, "#fff4be");
-      collarGrad.addColorStop(0.54, "#d4c071");
-      collarGrad.addColorStop(1, "#756c2b");
-      ctx.fillStyle = collarGrad;
-      ctx.strokeStyle = "#273612";
-      ctx.lineWidth = 2.6;
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.82, r * 0.42);
-      ctx.quadraticCurveTo(-r * 0.35, r * 0.82, 0, r * 0.88);
-      ctx.quadraticCurveTo(r * 0.35, r * 0.82, r * 0.82, r * 0.42);
-      ctx.lineTo(r * 0.58, r * 0.72);
-      ctx.quadraticCurveTo(0, r * 1.02, -r * 0.58, r * 0.72);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = "#0f5b27";
-      ctx.strokeStyle = "#0b2f17";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.34, r * 0.56);
-      ctx.lineTo(r * 0.34, r * 0.56);
-      ctx.lineTo(r * 0.2, r * 0.8);
-      ctx.lineTo(-r * 0.2, r * 0.8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "rgba(38, 132, 55, 0.75)";
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.44, r * 0.7);
-      ctx.lineTo(r * 0.2, r * 0.52);
-      ctx.lineTo(r * 0.42, r * 0.62);
-      ctx.lineTo(-r * 0.15, r * 0.86);
-      ctx.closePath();
-      ctx.fill();
-
-      // Small earth-pin detail on the lower left collar.
-      ctx.strokeStyle = "#5f501a";
+      // Gold band inside green headband
+      ctx.fillStyle = "#edd25d";
+      ctx.strokeStyle = "#382f05";
       ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.moveTo(-r * 0.68, r * 0.64);
-      ctx.lineTo(-r * 0.78, r * 0.88);
+      ctx.arc(0, 0, r * 0.88, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.quadraticCurveTo(0, -r * 0.54, -r * 0.84, -r * 0.35);
+      ctx.closePath();
+      ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#d5b747";
-      ctx.strokeStyle = "#4a3f15";
-      ctx.lineWidth = 1.4;
+
+      // Raised center gold tab/crown
+      ctx.save();
+      ctx.translate(0, -r * 0.76);
+      ctx.fillStyle = "#edd25d";
+      ctx.strokeStyle = "#382f05";
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.roundRect(-r * 0.77, r * 0.57, r * 0.18, r * 0.07, r * 0.035);
+      ctx.roundRect(-r * 0.16, -r * 0.1, r * 0.32, r * 0.14, r * 0.03);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // 4. Cream side knots / ear covers
+      [-1, 1].forEach((side) => {
+        ctx.save();
+        ctx.translate(side * r * 0.92, -r * 0.15);
+        const bunGrad = ctx.createRadialGradient(-side * r * 0.05, -r * 0.05, 0, 0, 0, r * 0.21);
+        bunGrad.addColorStop(0, "#fffdf5");
+        bunGrad.addColorStop(0.6, "#f5ebd1");
+        bunGrad.addColorStop(1, "#d5caa7");
+        ctx.fillStyle = bunGrad;
+        ctx.strokeStyle = "#121315";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.21, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // 5. Base green robes layer
+      ctx.fillStyle = "#164420";
+      ctx.strokeStyle = "#081a0b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.lineTo(0, r * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 6. Crossed robe flaps inside V collar
+      // Under flap
+      ctx.fillStyle = "#1e5c2d";
+      ctx.strokeStyle = "#081a0b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.4, r * 0.4);
+      ctx.lineTo(-r * 0.4, r * 0.9);
+      ctx.lineTo(-r * 0.1, r * 1.0);
+      ctx.lineTo(r * 0.6, r * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Top flap
+      ctx.fillStyle = "#2c7a42";
+      ctx.strokeStyle = "#081a0b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.4, r * 0.4);
+      ctx.lineTo(r * 0.4, r * 0.9);
+      ctx.lineTo(r * 0.1, r * 1.0);
+      ctx.lineTo(-r * 0.6, r * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 7. Cream collar cowl wrapping shoulders/neck
+      ctx.fillStyle = "#faecc8";
+      ctx.strokeStyle = "#151618";
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      // Start left cheek
+      ctx.moveTo(-r * 0.84, r * 0.36);
+      // Curve down left
+      ctx.quadraticCurveTo(-r * 0.88, r * 0.78, -r * 0.45, r * 0.94);
+      // Bottom crossover
+      ctx.quadraticCurveTo(0, r * 1.0, r * 0.45, r * 0.94);
+      // Curve up right
+      ctx.quadraticCurveTo(r * 0.88, r * 0.78, r * 0.84, r * 0.36);
+      // Inner right curve
+      ctx.quadraticCurveTo(r * 0.58, r * 0.68, r * 0.4, r * 0.7);
+      // Center V dip
+      ctx.lineTo(0, r * 0.86);
+      ctx.lineTo(-r * 0.4, r * 0.7);
+      // Inner left curve
+      ctx.quadraticCurveTo(-r * 0.58, r * 0.68, -r * 0.84, r * 0.36);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 8. Gold toggle pin on the left collar
+      ctx.strokeStyle = "#423512";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.65, r * 0.62);
+      ctx.lineTo(-r * 0.52, r * 0.75);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(-r * 0.58, r * 0.68);
+      ctx.rotate(-Math.PI / 6);
+      ctx.fillStyle = "#eab32a";
+      ctx.strokeStyle = "#2c2205";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.12, -r * 0.04, r * 0.24, r * 0.08, r * 0.04);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // 9. Hair side bangs framing face
+      ctx.fillStyle = "#181a1d";
+      ctx.strokeStyle = "#050607";
+      ctx.lineWidth = 2.2;
+
+      // Left side bang
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.8, -r * 0.15);
+      ctx.quadraticCurveTo(-r * 0.85, r * 0.2, -r * 0.6, r * 0.42);
+      ctx.quadraticCurveTo(-r * 0.76, r * 0.15, -r * 0.72, -r * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Right side bang
+      ctx.beginPath();
+      ctx.moveTo(r * 0.8, -r * 0.15);
+      ctx.quadraticCurveTo(r * 0.85, r * 0.2, r * 0.6, r * 0.42);
+      ctx.quadraticCurveTo(r * 0.76, r * 0.15, r * 0.72, -r * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Three main forehead bangs pointing down
+      // Left forehead bang
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.42, -r * 0.48);
+      ctx.quadraticCurveTo(-r * 0.38, r * 0.05, -r * 0.24, r * 0.24);
+      ctx.quadraticCurveTo(-r * 0.2, r * 0.0, -r * 0.14, -r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Middle forehead bang (longest and offset left)
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.22, -r * 0.48);
+      ctx.quadraticCurveTo(-r * 0.18, r * 0.1, -r * 0.03, r * 0.38);
+      ctx.quadraticCurveTo(r * 0.02, r * 0.1, r * 0.12, -r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Right forehead bang
+      ctx.beginPath();
+      ctx.moveTo(r * 0.05, -r * 0.48);
+      ctx.quadraticCurveTo(r * 0.1, r * 0.0, r * 0.18, r * 0.24);
+      ctx.quadraticCurveTo(r * 0.24, r * 0.05, r * 0.36, -r * 0.48);
+      ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
@@ -25519,23 +25604,40 @@ export default function App() {
             right: game.balls.filter((ball) => ball.side === "right").length,
           };
           const sideSeen = { left: 0, right: 0 };
-          intro.teamStarts = game.balls.map((ball) => ({
-            x: ball.side === "left" ? ball.r + 54 : game.width - ball.r - 54,
-            y: game.height * (((sideSeen[ball.side]++) + 1) / ((sideCounts[ball.side] || 1) + 1)),
-          }));
+          intro.teamStarts = game.balls.map((ball) => {
+            const sideIndex = sideSeen[ball.side]++;
+            const baseY = game.height * ((sideIndex + 1) / ((sideCounts[ball.side] || 1) + 1));
+            return {
+              x: ball.side === "left" ? ball.r + 54 : game.width - ball.r - 54,
+              y: clamp(baseY + (Math.random() - 0.5) * 34, ball.r + 36, game.height - ball.r - 36),
+              impactYJitter: (Math.random() - 0.5) * 44,
+              recoilAngleJitter: (Math.random() - 0.5) * 0.72,
+              recoilDistance: 122 + Math.random() * 76,
+              recoilVerticalBoost: 84 + Math.random() * 58,
+            };
+          });
           game.balls.forEach((ball, index) => {
             ball.x = intro.teamStarts[index].x;
             ball.y = intro.teamStarts[index].y;
             ball.vx = 0;
             ball.vy = 0;
             ball.trail = [];
+            setBallStartFacing(ball);
           });
         } else {
         intro.leftStartX = left.r + 42;
         intro.rightStartX = game.width - right.r - 42;
         intro.centerY = centerY;
-        intro.leftRecoilY = ((left.type.length * 17 + right.type.length * 31) % 2 === 0) ? -1 : 1;
-        intro.rightRecoilY = -intro.leftRecoilY;
+        intro.leftRecoilY = Math.random() < 0.5 ? -1 : 1;
+        intro.rightRecoilY = Math.random() < 0.72 ? -intro.leftRecoilY : intro.leftRecoilY;
+        intro.leftRecoilDistance = 118 + Math.random() * 72;
+        intro.rightRecoilDistance = 118 + Math.random() * 72;
+        intro.leftRecoilHeight = 70 + Math.random() * 58;
+        intro.rightRecoilHeight = 70 + Math.random() * 58;
+        intro.leftRecoilArc = 16 + Math.random() * 34;
+        intro.rightRecoilArc = 16 + Math.random() * 34;
+        intro.leftRecoilAngleJitter = (Math.random() - 0.5) * 0.2;
+        intro.rightRecoilAngleJitter = (Math.random() - 0.5) * 0.2;
         left.x = intro.leftStartX;
         right.x = intro.rightStartX;
         left.y = centerY;
@@ -25546,12 +25648,15 @@ export default function App() {
         right.vy = 0;
         left.trail = [];
         right.trail = [];
+        setBallStartFacing(left);
+        setBallStartFacing(right);
         game.balls.slice(2).forEach((ball) => {
           ball.x = ball.side === "left" ? ball.r + 62 : game.width - ball.r - 62;
           ball.y = game.height * 0.7;
           ball.vx = 0;
           ball.vy = 0;
           ball.trail = [];
+          setBallStartFacing(ball);
         });
         }
       }
@@ -25575,7 +25680,7 @@ export default function App() {
           const horizontalSign = ball.side === "left" ? -1 : 1;
           const verticalSign = start.y < centerY - 20 ? -1 : start.y > centerY + 20 ? 1 : 0;
           const impactX = centerX + horizontalSign * ball.r * 0.58;
-          const impactY = centerY + verticalSign * ball.r * 0.58;
+          const impactY = centerY + verticalSign * ball.r * 0.58 + (start.impactYJitter || 0) * chargeProgress;
           if (elapsed < chargeStart) {
             ball.x = start.x;
             ball.y = start.y;
@@ -25585,10 +25690,13 @@ export default function App() {
           } else {
             const dx = start.x - impactX;
             const dy = start.y - impactY;
-            const length = Math.max(1, Math.hypot(dx, dy));
-            ball.x = impactX + (dx / length) * recoilProgress * 142;
-            ball.y = impactY + (dy / length) * recoilProgress * 108;
+            const baseAngle = Math.atan2(dy, dx) + (start.recoilAngleJitter || 0);
+            const distance = start.recoilDistance || 142;
+            const lift = Math.sin(recoilProgress * Math.PI) * (start.recoilVerticalBoost || 96) * (verticalSign || (ball.side === "left" ? -1 : 1));
+            ball.x = impactX + Math.cos(baseAngle) * recoilProgress * distance;
+            ball.y = impactY + Math.sin(baseAngle) * recoilProgress * distance + lift;
           }
+          ball.angle = ball.side === "left" ? 0 : Math.PI;
           ball.trail = [...(ball.trail || []), { x: ball.x, y: ball.y }].slice(-MAX_TRAIL_POINTS);
         });
 
@@ -25650,21 +25758,24 @@ export default function App() {
         }
       } else if (elapsed >= impactAt) {
         const recoil = easeOut(clamp((elapsed - impactAt) / 420, 0, 1));
-        const arc = Math.sin(recoil * Math.PI) * 28;
-        leftX = centerX - left.r - 4 - recoil * 138;
-        rightX = centerX + right.r + 4 + recoil * 138;
-        leftY = centerY + (intro.leftRecoilY || -1) * (recoil * 92 + arc);
-        rightY = centerY + (intro.rightRecoilY || 1) * (recoil * 92 + arc * 0.8);
-        left.vx = -520;
-        left.vy = (intro.leftRecoilY || -1) * 300;
-        right.vx = 520;
-        right.vy = (intro.rightRecoilY || 1) * 300;
+        const leftArc = Math.sin(recoil * Math.PI) * (intro.leftRecoilArc || 28);
+        const rightArc = Math.sin(recoil * Math.PI) * (intro.rightRecoilArc || 28);
+        leftX = centerX - left.r - 4 - recoil * (intro.leftRecoilDistance || 138);
+        rightX = centerX + right.r + 4 + recoil * (intro.rightRecoilDistance || 138);
+        leftY = centerY + (intro.leftRecoilY || -1) * (recoil * (intro.leftRecoilHeight || 92) + leftArc);
+        rightY = centerY + (intro.rightRecoilY || 1) * (recoil * (intro.rightRecoilHeight || 92) + rightArc);
+        left.vx = -520 - ((intro.leftRecoilDistance || 138) - 138) * 2.2;
+        left.vy = (intro.leftRecoilY || -1) * (260 + (intro.leftRecoilHeight || 92) * 0.58);
+        right.vx = 520 + ((intro.rightRecoilDistance || 138) - 138) * 2.2;
+        right.vy = (intro.rightRecoilY || 1) * (260 + (intro.rightRecoilHeight || 92) * 0.58);
       }
 
       left.x = leftX;
       left.y = leftY;
       right.x = rightX;
       right.y = rightY;
+      left.angle = 0;
+      right.angle = Math.PI;
       left.trail = [...(left.trail || []), { x: left.x, y: left.y }].slice(-MAX_TRAIL_POINTS);
       right.trail = [...(right.trail || []), { x: right.x, y: right.y }].slice(-MAX_TRAIL_POINTS);
 

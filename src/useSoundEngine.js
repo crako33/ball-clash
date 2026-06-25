@@ -818,9 +818,10 @@ export function useSoundEngine() {
     if (!ALLOWED_AUDIO_FILES.has(url)) return;
     const ctx = getCtx();
     if (!ctx || !masterGainRef.current) return;
-    const nextAllowedAt = audioFileCooldownsRef.current[url] || 0;
+    const cooldownKey = instanceKey === url ? url : `${url}::${instanceKey}`;
+    const nextAllowedAt = audioFileCooldownsRef.current[cooldownKey] || 0;
     if (ctx.currentTime < nextAllowedAt) return;
-    audioFileCooldownsRef.current[url] = ctx.currentTime + (AUDIO_FILE_COOLDOWNS[url] || 0.06);
+    audioFileCooldownsRef.current[cooldownKey] = ctx.currentTime + (AUDIO_FILE_COOLDOWNS[url] || 0.06);
     try {
       if (!audioBufferCacheRef.current[url]) {
         if (!audioBufferPromiseCacheRef.current[url]) {
@@ -852,8 +853,17 @@ export function useSoundEngine() {
       const gain = ctx.createGain();
       source.buffer = audioBufferCacheRef.current[url];
       source.playbackRate.value = Math.max(0.5, Math.min(2.5, playbackRate));
+      let detuneValue = 0;
+      let actualDelay = delay;
+      if (delay < 0) {
+        detuneValue = delay;
+        actualDelay = 0;
+      }
+      if (source.detune && detuneValue !== 0) {
+        source.detune.setValueAtTime(detuneValue, ctx.currentTime);
+      }
       const safeVolume = Math.max(0, Math.min(1.25, volume));
-      const startAt = ctx.currentTime + Math.max(0, delay);
+      const startAt = ctx.currentTime + actualDelay;
       gain.gain.setValueAtTime(0.0001, startAt);
       gain.gain.linearRampToValueAtTime(safeVolume, startAt + 0.012);
       const duration = source.buffer?.duration ? source.buffer.duration / source.playbackRate.value : 1;
