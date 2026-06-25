@@ -18,7 +18,7 @@ const BALL_TYPES = {
     facialAge: "75 (Wise Master, kind wrinkles, glowing visor-shade eyes)",
     personality: "Serene, disciplined, mentor-like",
     primaryWeapon: "Green Energy Lightsaber",
-    signatureAbility: "Saber Throw (returning spin projectile)",
+    signatureAbility: "Saber Throw (returning saber projectile)",
     companion: "None (prefers solitude)",
     specialVisualEffects: "Shimmering green hum ripples, trails of light slash arcs",
     animeStyle: "Classic wandering ronin meets futuristic mech master",
@@ -1920,6 +1920,7 @@ export default function App() {
       knifeBladeThrownAt: 0,
       knifeBladeReturnAt: 0,
       knifeBladeSpin: 0,
+      knifeBladeWindupSide: side === "left" ? -1 : 1,
       saberSpinDirection: 1,
       saberSlashFlashUntil: 0,
       saberLastClashAt: 0,
@@ -2197,7 +2198,7 @@ export default function App() {
     if (ball.type === "knife") {
       const bladeState = String(ball.knifeBladeState || "rotating").toUpperCase();
       lines.push(`SABER SLASH: ${ball.saberSlashActive ? "SLASHING" : cooldown(ball.nextSlashAt)}`);
-      const throwState = bladeState === "ROTATING" ? cooldown(ball.nextSecondaryAt) : bladeState === "CHARGING" ? "CHARGE THROW" : bladeState === "THROWN" ? "SPINNING OUT" : "RETURNING";
+      const throwState = bladeState === "ROTATING" ? cooldown(ball.nextSecondaryAt) : bladeState === "CHARGING" ? "CHARGE THROW" : bladeState === "THROWN" ? "SABER OUT" : "RETURNING";
       lines.push(`SABER THROW: ${throwState}`);
     } else if (ball.type === "spore") {
       const hydras = (game?.cacti || []).filter((cactus) => cactus.ownerId === ball.id);
@@ -3638,7 +3639,6 @@ export default function App() {
                     ball.saberSlashDir = Math.random() < 0.5 ? 1 : -1;
                     ball.saberSlashBase = targetAngle;
                     ball.nextSlashAt = simTime + (bal.cooldown || 390);
-                    playSound("laserFire", 0.48, 195);
                   }
 
                   if (ball.saberSlashActive) {
@@ -3663,37 +3663,45 @@ export default function App() {
 
                   if (dist >= 120 && dist <= 270 && simTime >= (ball.nextSecondaryAt || 0) && !ball.saberSlashActive) {
                     const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                    const windupSide = Math.random() < 0.5 ? -1 : 1;
+                    const windupAngle = angle - windupSide * 1.85;
                     ball.knifeBladeState = "charging";
                     ball.knifeBladeChargeUntil = simTime + 430;
-                    ball.knifeBladeX = ball.x + Math.cos(angle) * (ball.r + 34);
-                    ball.knifeBladeY = ball.y + Math.sin(angle) * (ball.r + 34);
+                    ball.knifeBladeWindupSide = windupSide;
+                    ball.knifeBladeX = ball.x + Math.cos(windupAngle) * (ball.r + 34);
+                    ball.knifeBladeY = ball.y + Math.sin(windupAngle) * (ball.r + 34);
                     ball.knifeBladeTargetX = enemy.x;
                     ball.knifeBladeTargetY = enemy.y;
                     ball.knifeBladeVx = 0;
                     ball.knifeBladeVy = 0;
-                    ball.knifeBladeAngle = angle;
-                    ball.knifeBladeSpin = angle;
-                    ball.spinAngle = angle;
-                    ball.nextSecondaryAt = simTime + bal.secCooldown;
+                    ball.knifeBladeAngle = windupAngle + windupSide * Math.PI / 2;
+                    ball.spinAngle = windupAngle;
                     playSound("webShoot", 0.7, 140);
                   }
                 } else {
                   if (ball.knifeBladeState === "charging") {
                     const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                    ball.spinAngle = angle;
-                    ball.knifeBladeAngle = angle;
-                    ball.knifeBladeSpin = (ball.knifeBladeSpin || angle) + 0.5;
-                    ball.knifeBladeX = ball.x + Math.cos(angle) * (ball.r + 34);
-                    ball.knifeBladeY = ball.y + Math.sin(angle) * (ball.r + 34);
+                    const chargeProgress = clamp(1 - ((ball.knifeBladeChargeUntil || simTime) - simTime) / 430, 0, 1);
+                    const windupSide = ball.knifeBladeWindupSide || 1;
+                    const windupEase = 1 - Math.pow(1 - chargeProgress, 3);
+                    const arcAngle = angle - windupSide * (1.85 * (1 - windupEase));
+                    const tangentAngle = arcAngle + windupSide * (Math.PI / 2) * (1 - windupEase) + windupSide * Math.sin(chargeProgress * Math.PI) * 0.35;
+                    const holdDistance = ball.r + 32 + Math.sin(chargeProgress * Math.PI) * 16;
+                    ball.spinAngle = arcAngle;
+                    ball.knifeBladeAngle = tangentAngle;
+                    ball.knifeBladeX = ball.x + Math.cos(arcAngle) * holdDistance;
+                    ball.knifeBladeY = ball.y + Math.sin(arcAngle) * holdDistance;
                     if (simTime >= (ball.knifeBladeChargeUntil || 0)) {
                       ball.knifeBladeState = "thrown";
                       ball.knifeBladeThrownAt = simTime;
                       ball.knifeBladeReturnAt = simTime + 720;
                       ball.knifeBladeVx = Math.cos(angle) * 660;
                       ball.knifeBladeVy = Math.sin(angle) * 660;
+                      ball.knifeBladeAngle = angle;
+                      ball.nextSecondaryAt = simTime + bal.secCooldown;
                     }
                   } else if (ball.knifeBladeState === "thrown") {
-                    ball.knifeBladeSpin = (ball.knifeBladeSpin || ball.knifeBladeAngle || 0) + 0.58;
+                    ball.knifeBladeAngle = Math.atan2(ball.knifeBladeVy, ball.knifeBladeVx);
                     ball.knifeBladeX += ball.knifeBladeVx * dt;
                     ball.knifeBladeY += ball.knifeBladeVy * dt;
                     const farFromOwner = Math.hypot(ball.knifeBladeX - ball.x, ball.knifeBladeY - ball.y) > 360;
@@ -3705,7 +3713,6 @@ export default function App() {
                     ball.knifeBladeVx = Math.cos(returnAngle) * 760;
                     ball.knifeBladeVy = Math.sin(returnAngle) * 760;
                     ball.knifeBladeAngle = returnAngle;
-                    ball.knifeBladeSpin = (ball.knifeBladeSpin || returnAngle) + 0.68;
                     ball.knifeBladeX += ball.knifeBladeVx * dt;
                     ball.knifeBladeY += ball.knifeBladeVy * dt;
                     if (Math.hypot(ball.x - ball.knifeBladeX, ball.y - ball.knifeBladeY) < ball.r + 10) {
@@ -5329,7 +5336,9 @@ export default function App() {
       });
 
       // Play damage sound effects based on the source
-      if (keyLower.includes("knife")) {
+      if (keyLower.includes("saber") || keyLower.includes("-knife-hit") || keyLower.includes("-knife-sec")) {
+        playAudioFile("/Saber%20hit.mp3", 0.95, 0, game.simulationSpeed || 1, `${cooldownKey}-saber-hit`);
+      } else if (keyLower.includes("knife")) {
         playSound("knifeHit", 1, 80);
       } else if (keyLower.includes("wallspike")) {
         playSound("wallSpikeHit", 1, 100);
@@ -15883,6 +15892,28 @@ export default function App() {
     const drawKnifeBall = (ball) => {
       const config = BALL_TYPES.knife;
       ctx.save(); ctx.translate(ball.x, ball.y);
+      [-1, 1].forEach((side) => {
+        const earGrad = ctx.createLinearGradient(side * ball.r * 0.65, -ball.r * 0.22, side * (ball.r + 34), -ball.r * 0.28);
+        earGrad.addColorStop(0, "#bbf7d0");
+        earGrad.addColorStop(0.58, "#22c55e");
+        earGrad.addColorStop(1, "#15803d");
+        ctx.fillStyle = earGrad;
+        ctx.strokeStyle = "#14532d";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(side * ball.r * 0.68, -ball.r * 0.25);
+        ctx.quadraticCurveTo(side * (ball.r + 16), -ball.r * 0.55, side * (ball.r + 35), -ball.r * 0.24);
+        ctx.quadraticCurveTo(side * (ball.r + 12), -ball.r * 0.05, side * ball.r * 0.7, ball.r * 0.06);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(236, 253, 245, 0.78)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(side * ball.r * 0.9, -ball.r * 0.18);
+        ctx.quadraticCurveTo(side * (ball.r + 16), -ball.r * 0.3, side * (ball.r + 27), -ball.r * 0.21);
+        ctx.stroke();
+      });
       ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       ctx.fillStyle = config.color; ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
@@ -15956,59 +15987,77 @@ export default function App() {
         const pulse = 0.65 + Math.sin(game.simTime * 0.08) * 0.25 + chargeProgress * 0.55;
         ctx.save();
         ctx.translate(ball.x, ball.y);
-        ctx.rotate(ball.knifeBladeAngle || ball.spinAngle || 0);
         ctx.globalAlpha = 0.45 + chargeProgress * 0.35;
         ctx.strokeStyle = "#bbf7d0";
         ctx.shadowColor = "#22c55e";
         ctx.shadowBlur = 18 + chargeProgress * 18;
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(0, 0, ball.r + 10 + pulse * 8, -0.55, 0.55);
+        const side = ball.knifeBladeWindupSide || 1;
+        const holdAngle = Math.atan2((ball.knifeBladeY || ball.y) - ball.y, (ball.knifeBladeX || ball.x) - ball.x);
+        ctx.arc(0, 0, ball.r + 28 + pulse * 8, holdAngle - side * 0.9, holdAngle + side * 0.35, side < 0);
         ctx.stroke();
+        ctx.strokeStyle = "rgba(236, 253, 245, 0.72)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(holdAngle) * (ball.r + 8), Math.sin(holdAngle) * (ball.r + 8));
+        ctx.lineTo(Math.cos(holdAngle) * (ball.r + 32), Math.sin(holdAngle) * (ball.r + 32));
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(ball.knifeBladeX || ball.x, ball.knifeBladeY || ball.y);
+        ctx.rotate(ball.knifeBladeAngle || ball.spinAngle || 0);
         ctx.globalAlpha = 1;
-        const holdStart = ball.r + 3;
-        const holdEnd = ball.r + game.balance.knife.bladeLength * (0.72 + chargeProgress * 0.18);
+        const chargeBladeLength = Math.max(34, game.balance.knife.bladeLength * (0.74 + chargeProgress * 0.08));
+        const chargeGrad = ctx.createLinearGradient(0, 0, chargeBladeLength, 0);
+        chargeGrad.addColorStop(0, "#bbf7d0");
+        chargeGrad.addColorStop(0.58, "#22c55e");
+        chargeGrad.addColorStop(1, "#ecfdf5");
         ctx.strokeStyle = "#22c55e";
+        ctx.strokeStyle = chargeGrad;
         ctx.lineWidth = 9;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(holdStart, 0);
-        ctx.lineTo(holdEnd, 0);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(chargeBladeLength, 0);
         ctx.stroke();
         ctx.strokeStyle = "#f0fdf4";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(holdStart + 5, 0);
-        ctx.lineTo(holdEnd - 5, 0);
+        ctx.moveTo(4, 0);
+        ctx.lineTo(chargeBladeLength - 5, 0);
         ctx.stroke();
         ctx.fillStyle = "#374151";
-        ctx.fillRect(ball.r - 9, -5, 18, 10);
+        ctx.fillRect(-16, -5.5, 18, 11);
         ctx.fillStyle = "#d1d5db";
-        ctx.fillRect(ball.r - 5, -3, 5, 6);
+        ctx.fillRect(-13, -8, 6, 16);
         ctx.restore();
       } else {
         ctx.save(); ctx.translate(ball.knifeBladeX, ball.knifeBladeY);
-        ctx.rotate(ball.knifeBladeSpin || ball.knifeBladeAngle || 0);
-        const bladeHalf = Math.max(30, game.balance.knife.bladeLength * 0.58);
+        ctx.rotate(ball.knifeBladeAngle || 0);
+        const tipX = Math.max(32, game.balance.knife.bladeLength - 8);
         ctx.shadowColor = "#22c55e";
-        ctx.shadowBlur = 18;
-        ctx.strokeStyle = "#22c55e";
+        ctx.shadowBlur = 14;
+        const thrownGrad = ctx.createLinearGradient(0, 0, tipX, 0);
+        thrownGrad.addColorStop(0, "#bbf7d0");
+        thrownGrad.addColorStop(0.6, "#22c55e");
+        thrownGrad.addColorStop(1, "#ecfdf5");
+        ctx.strokeStyle = thrownGrad;
         ctx.lineWidth = 8;
         ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(-bladeHalf, 0); ctx.lineTo(-10, 0); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(bladeHalf, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(tipX, 0); ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.strokeStyle = "#f0fdf4";
         ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-bladeHalf + 5, 0); ctx.lineTo(-14, 0); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(bladeHalf - 5, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(tipX - 4, 0); ctx.stroke();
         ctx.fillStyle = "#1f2937";
-        ctx.fillRect(-12, -5.5, 24, 11);
+        ctx.fillRect(-16, -5.5, 18, 11);
         ctx.fillStyle = "#9ca3af";
-        ctx.fillRect(-3, -8, 6, 16);
+        ctx.fillRect(-13, -8, 6, 16);
         ctx.fillStyle = "#ecfdf5";
         ctx.beginPath();
-        ctx.arc(0, 0, 3, 0, Math.PI * 2);
+        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -26308,14 +26357,22 @@ export default function App() {
                             y2: target.y + Math.sin(angle) * (target.r + (tBal.bladeLength || 60))
                           };
                         }
-                        if (["charging", "thrown", "returning"].includes(target.knifeBladeState)) {
+                        if (target.knifeBladeState === "charging") {
                           const angle = target.knifeBladeAngle || 0;
-                          const length = (tBal.bladeLength || 60) * 0.82;
                           return {
-                            x1: target.knifeBladeX - Math.cos(angle) * length,
-                            y1: target.knifeBladeY - Math.sin(angle) * length,
-                            x2: target.knifeBladeX + Math.cos(angle) * length,
-                            y2: target.knifeBladeY + Math.sin(angle) * length
+                            x1: target.knifeBladeX - Math.cos(angle) * 14,
+                            y1: target.knifeBladeY - Math.sin(angle) * 14,
+                            x2: target.knifeBladeX + Math.cos(angle) * ((tBal.bladeLength || 60) - 8),
+                            y2: target.knifeBladeY + Math.sin(angle) * ((tBal.bladeLength || 60) - 8)
+                          };
+                        }
+                        if (["thrown", "returning"].includes(target.knifeBladeState)) {
+                          const angle = target.knifeBladeAngle || 0;
+                          return {
+                            x1: target.knifeBladeX - Math.cos(angle) * 14,
+                            y1: target.knifeBladeY - Math.sin(angle) * 14,
+                            x2: target.knifeBladeX + Math.cos(angle) * ((tBal.bladeLength || 60) - 8),
+                            y2: target.knifeBladeY + Math.sin(angle) * ((tBal.bladeLength || 60) - 8)
                           };
                         }
                       }
@@ -26347,7 +26404,7 @@ export default function App() {
                       spawnSparks(clashX, clashY, "#bbf7d0", 34);
                       spawnImpactBurst(clashX, clashY, ball.spinAngle, ["#ffffff", "#dcfce7", "#4ade80", "#facc15"], 1.45);
                       game.screenShake = Math.max(game.screenShake || 0, 9);
-                      playSound("shieldBlock", 0.78, 160);
+                      playAudioFile("/Saber%20hit.mp3", 0.9, 0, game.simulationSpeed || 1, `${ball.id}-saber-clash-${target.id}`);
                     } else if (linePointDist(target.x, target.y, bladeStart.x, bladeStart.y, tip.x, tip.y) < target.r + 10) {
                       const hitKey = `${ball.id}-knife-hit`;
                       const freshHit = !(game.damageCooldowns[hitKey] > game.simTime);
@@ -26370,21 +26427,22 @@ export default function App() {
                     
                     if (dist >= 120 && dist <= 270 && game.simTime >= (ball.nextSecondaryAt || 0) && !ball.saberSlashActive) {
                       const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+                      const windupSide = Math.random() < 0.5 ? -1 : 1;
+                      const windupAngle = angle - windupSide * 1.85;
                       ball.knifeBladeState = "charging";
                       ball.knifeBladeChargeUntil = game.simTime + 430;
                       ball.knifeBladeThrownAt = 0;
                       ball.knifeBladeReturnAt = 0;
-                      ball.knifeBladeX = ball.x + Math.cos(angle) * (ball.r + 34);
-                      ball.knifeBladeY = ball.y + Math.sin(angle) * (ball.r + 34);
+                      ball.knifeBladeWindupSide = windupSide;
+                      ball.knifeBladeX = ball.x + Math.cos(windupAngle) * (ball.r + 34);
+                      ball.knifeBladeY = ball.y + Math.sin(windupAngle) * (ball.r + 34);
                       ball.knifeBladeTargetX = target.x;
                       ball.knifeBladeTargetY = target.y;
                       ball.knifeBladeVx = 0;
                       ball.knifeBladeVy = 0;
-                      ball.knifeBladeAngle = angle;
-                      ball.knifeBladeSpin = angle;
-                      ball.spinAngle = angle;
+                      ball.knifeBladeAngle = windupAngle + windupSide * Math.PI / 2;
+                      ball.spinAngle = windupAngle;
                       ball.saberSlashActive = false;
-                      ball.nextSecondaryAt = game.simTime + bal.secCooldown;
                       ball.saberSlashFlashUntil = game.simTime + 430;
                       spawnSparks(ball.knifeBladeX, ball.knifeBladeY, "#bbf7d0", 18);
                       playSound("shieldCatch", 0.68, 120);
@@ -26393,11 +26451,15 @@ export default function App() {
                     if (ball.knifeBladeState === "charging") {
                       const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
                       const chargeProgress = clamp(1 - ((ball.knifeBladeChargeUntil || game.simTime) - game.simTime) / 430, 0, 1);
-                      ball.spinAngle = angle;
-                      ball.knifeBladeAngle = angle;
-                      ball.knifeBladeSpin = angle + chargeProgress * Math.PI * 4;
-                      ball.knifeBladeX = ball.x + Math.cos(angle) * (ball.r + 34 + Math.sin(chargeProgress * Math.PI) * 10);
-                      ball.knifeBladeY = ball.y + Math.sin(angle) * (ball.r + 34 + Math.sin(chargeProgress * Math.PI) * 10);
+                      const windupSide = ball.knifeBladeWindupSide || 1;
+                      const windupEase = 1 - Math.pow(1 - chargeProgress, 3);
+                      const arcAngle = angle - windupSide * (1.85 * (1 - windupEase));
+                      const tangentAngle = arcAngle + windupSide * (Math.PI / 2) * (1 - windupEase) + windupSide * Math.sin(chargeProgress * Math.PI) * 0.35;
+                      const holdDistance = ball.r + 32 + Math.sin(chargeProgress * Math.PI) * 16;
+                      ball.spinAngle = arcAngle;
+                      ball.knifeBladeAngle = tangentAngle;
+                      ball.knifeBladeX = ball.x + Math.cos(arcAngle) * holdDistance;
+                      ball.knifeBladeY = ball.y + Math.sin(arcAngle) * holdDistance;
                       ball.vx *= 0.965;
                       ball.vy *= 0.965;
                       if (game.simTime >= (ball.knifeBladeChargeUntil || 0)) {
@@ -26408,12 +26470,12 @@ export default function App() {
                         ball.knifeBladeVx = Math.cos(angle) * throwSpeed;
                         ball.knifeBladeVy = Math.sin(angle) * throwSpeed;
                         ball.knifeBladeAngle = angle;
-                        ball.knifeBladeSpin = angle;
+                        ball.nextSecondaryAt = game.simTime + bal.secCooldown;
                         spawnImpactBurst(ball.knifeBladeX, ball.knifeBladeY, angle, ["#ffffff", "#bbf7d0", "#22c55e"], 0.9);
-                        playSound("shieldThrow", 0.9, 120);
+                        playSound("shieldThrow", 0.72, 120);
                       }
                     } else if (ball.knifeBladeState === "thrown") {
-                      ball.knifeBladeSpin = (ball.knifeBladeSpin || ball.knifeBladeAngle || 0) + 0.58;
+                      ball.knifeBladeAngle = Math.atan2(ball.knifeBladeVy, ball.knifeBladeVx);
                       ball.knifeBladeX += ball.knifeBladeVx * stepDt;
                       ball.knifeBladeY += ball.knifeBladeVy * stepDt;
                       const farFromOwner = Math.hypot(ball.knifeBladeX - ball.x, ball.knifeBladeY - ball.y) > 360;
@@ -26426,7 +26488,6 @@ export default function App() {
                       ball.knifeBladeVx = Math.cos(angle) * 760;
                       ball.knifeBladeVy = Math.sin(angle) * 760;
                       ball.knifeBladeAngle = angle;
-                      ball.knifeBladeSpin = (ball.knifeBladeSpin || angle) + 0.68;
                       ball.knifeBladeX += ball.knifeBladeVx * stepDt;
                       ball.knifeBladeY += ball.knifeBladeVy * stepDt;
                       if (Math.hypot(ball.x - ball.knifeBladeX, ball.y - ball.knifeBladeY) < ball.r + 10) {

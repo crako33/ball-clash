@@ -41,6 +41,7 @@ const ALLOWED_AUDIO_FILES = new Set([
   "/Spike%20Bash%20Sound.mp3",
   "/Spike%20hit%201.mp3",
   "/spike%20hit2.mp3",
+  "/Saber%20hit.mp3",
   "/warp%20drag.mp3",
 ]);
 
@@ -64,6 +65,7 @@ const AUDIO_FILE_COOLDOWNS = Object.freeze({
   "/Spike%20Bash%20Sound.mp3": 0.22,
   "/Spike%20hit%201.mp3": 0.08,
   "/spike%20hit2.mp3": 0.08,
+  "/Saber%20hit.mp3": 0.08,
   "/warp%20drag.mp3": 0.18,
 });
 
@@ -76,6 +78,7 @@ const AUDIO_FILE_MAX_INSTANCES = Object.freeze({
   "/spike%20hit2.mp3": 3,
   "/shield%20hit%201.mp3": 2,
   "/shield%20hit%202.mp3": 2,
+  "/Saber%20hit.mp3": 3,
   "/laser%20fire.mp3": 2,
   "/big%20laser.mp3": 1,
 });
