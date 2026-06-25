@@ -724,6 +724,46 @@ const BALL_TYPES = {
     animeStyle: "Stylish modern sorcery anime protagonist",
     gameStyle: "Zone control specialist utilizing gravitational pulls, high-knockback repulsions, and projectile-erasing ultimate blasts."
   },
+  fireBender: {
+    id: "fireBender",
+    name: "Fire Bender",
+    shortName: "BEND",
+    color: "#f87171",
+    stroke: "#7f1d1d",
+    radius: 30,
+    description: "Zuko-inspired flame manipulator. Auto fireballs explode and burn; skill is Fire Whip, secondary is high-speed Flame Wheel.",
+    emoji: "🔥",
+    visualTheme: "Fire Nation Prince / Pyrokinetic Bending",
+    colorPalette: "Crimson Red, Gold, Black Hair, Amber Orange",
+    facialAge: "16 (Prince Zuko, burn scar over left eye, golden top-knot crown)",
+    personality: "Determined, hot-headed, honor-driven",
+    primaryWeapon: "Firebending fists and whips",
+    signatureAbility: "Flame Wheel dash and Fire Whip",
+    companion: "None",
+    specialVisualEffects: "Flowing flame particle trails, exploding fireballs, ground fire pools",
+    animeStyle: "Royal Fire Nation bending master",
+    gameStyle: "High-mobility aggressive zoning and damage-over-time character"
+  },
+  serpent: {
+    id: "serpent",
+    name: "Serpent",
+    shortName: "SERP",
+    color: "#dc2626",
+    stroke: "#991b1b",
+    radius: 30,
+    description: "Serpent-dragon that grows a slithering tail on wall bounces. Deals contact damage with segments; detaches tail end to execute bouncing swipes.",
+    emoji: "🐉",
+    visualTheme: "Red Dragon / Serpent God",
+    colorPalette: "Deep Crimson Red, Obsidian Scales, Gold Horns, Fiery Amber Eyes",
+    facialAge: "Ancient (Wyrm Head with golden horns and dark scales)",
+    personality: "Ruthless, ancient, territorial",
+    primaryWeapon: "Obsidian Tail Segments",
+    signatureAbility: "Bouncing Tail Swipe",
+    companion: "None",
+    specialVisualEffects: "Slithering segmented tail, golden horns, fire trail sparks, bouncing tail blades",
+    animeStyle: "Classic mythological red dragon/serpent boss",
+    gameStyle: "Trailing defensive body blocker and bouncing projectile launcher"
+  }
 };
 
 const getHpBarColor = (type) => {
@@ -792,7 +832,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "blackSpider", "earthSpiker", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "fireSword", "fireSkull", "batter", "stringWeb", "arm", "vampire", "ninja", "loki", "sorcerer"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "blackSpider", "earthSpiker", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "fireSword", "fireSkull", "batter", "stringWeb", "arm", "vampire", "ninja", "loki", "sorcerer", "fireBender", "serpent"];
 const MATCH_FORMATS = {
   "1v1": {
     label: "1v1",
@@ -895,6 +935,8 @@ const BALANCE = {
   mazeChomper: { biteDamage: 4, biteCooldown: 1050, biteRange: 150, lungeSpeed: 700, lungeDuration: 360, biteKnockback: 360, powerCooldown: 7200, powerDuration: 3200, powerSpeed: 520, powerDamage: 7, powerKnockback: 620 },
   yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
   slipper: { cooldown: 3300, windup: 260, throwSpeed: 840, returnSpeed: 980, duration: 2600, damage: 5, knockback: 560, hitCooldown: 360, projectileRadius: 22, maxBounces: 3 },
+  fireBender: { fireballDamage: 5, fireballCooldown: 1400, whipDamage: 8, whipCooldown: 3500, wheelDamage: 12, wheelCooldown: 7500, wheelDuration: 800, burnDuration: 1800 },
+  serpent: { segmentDamage: 3, segmentHitCooldown: 400, maxSegments: 10, swipeDamage: 8, swipeCooldown: 6000, swipeSpeed: 1000 },
   loki: { cooldown: 3000, fireballCooldown: 1050, fireballSpeed: 980, fireballDamage: 6, illusionDuration: 7000, illusionFireballCooldown: 1550, illusionCount: 3, illusionDamage: 1, illusionKnockback: 180, swapStrikeDamage: 4, swapStrikeKnockback: 620, dodgeCooldown: 2100, fireballBounces: 1, fireballHomingTurn: 2.2 },
   sorcerer: {
     cooldown: 3800,
@@ -911,6 +953,17 @@ const BALANCE = {
     infinityRadius: 110,
     infinitySlowFactor: 0.15
   },
+  fireBender: {
+    fireballDamage: 5,
+    fireballCooldown: 1400,
+    whipDamage: 8,
+    whipCooldown: 3500,
+    whipLength: 160,
+    wheelDamage: 12,
+    wheelCooldown: 7500,
+    wheelDuration: 800,
+    burnDuration: 1800
+  }
 };
 
 const BALANCE_STORAGE_KEY = "ball-fighters-balance-v1";
@@ -1881,6 +1934,23 @@ export default function App() {
       shieldBashFlashUntil: 0,
       shieldBashBouncesLeft: 0,
       shieldBashSpeedOverride: 0,
+      shieldBashIsSpikerRecoil: false,
+      // Fire Bender Specific
+      fireBenderState: "idle",
+      fireBenderStateUntil: 0,
+      nextFireballAt: type === "fireBender" ? 1200 : 0,
+      nextFireWhipAt: type === "fireBender" ? 1500 : 0,
+      nextFlameWheelAt: type === "fireBender" ? 4200 : 0,
+      fireBenderWhipAngle: side === "left" ? 0 : Math.PI,
+      fireBenderWhipSwingAngle: 0,
+      fireBenderWhipHitDone: false,
+      // Serpent Specific
+      serpentSegments: 0,
+      serpentHistory: [],
+      nextSerpentSwipeAt: type === "serpent" ? 1800 : 0,
+      serpentSwipeState: "idle",
+      serpentSwipeUntil: 0,
+      serpentTailHitTimes: {},
       homingMineBouncesLeft: 0,
       elbowDropUntil: 0,
       laserSweepState: "idle",
@@ -1989,6 +2059,15 @@ export default function App() {
       if (ball.fireSwordState === "swinging") return "WATER SLASH";
       return "FIRE SWORD READY";
     }
+    if (ball.type === "fireBender") {
+      if (ball.fireBenderState === "wheel") return "FLAME WHEEL";
+      if (ball.fireBenderState === "whip") return "FIRE WHIP";
+      return "FIRE BENDER READY";
+    }
+    if (ball.type === "serpent") {
+      if (ball.serpentSwipeState === "swiping") return "TAIL SWIPE";
+      return `TAIL SECTIONS: ${ball.serpentSegments || 0}`;
+    }
     if (ball.type === "gun") return ball.gunReloading ? "RELOADING" : "GUN READY";
     if (ball.type === "ninja") {
       if (ball.ninjaRushState !== "idle") return "CLONE RUSH";
@@ -2073,6 +2152,13 @@ export default function App() {
       lines.push(`WATER SWORD: ${ball.fireSwordState === "swinging" ? "SLASHING" : cooldown(ball.fireSwordNextSwingAt)}`);
       lines.push(`HINOKAMI KAGURA: ${ball.fireSwordState === "kagura_charging" ? "CHARGING" : ball.fireSwordState === "kagura" ? "FIRE CIRCLE" : cooldown(ball.fireSwordNextKaguraAt)}`);
       lines.push(`BURN: ${ball.fireSwordState === "kagura" ? "IGNITED" : ball.fireSwordState === "kagura_charging" ? "BUILDING" : "READY"}`);
+    } else if (ball.type === "fireBender") {
+      lines.push(`FIREBALL: ${cooldown(ball.nextFireballAt)}`);
+      lines.push(`FIRE WHIP: ${ball.fireBenderState === "whip" ? "WHIPPING" : cooldown(ball.nextFireWhipAt)}`);
+      lines.push(`FLAME WHEEL: ${ball.fireBenderState === "wheel" ? "DASHING" : cooldown(ball.nextFlameWheelAt)}`);
+    } else if (ball.type === "serpent") {
+      lines.push(`TAIL LENGTH: ${ball.serpentSegments || 0} SECTIONS`);
+      lines.push(`TAIL SWIPE: ${ball.serpentSwipeState === "swiping" ? "SWIPING" : cooldown(ball.nextSerpentSwipeAt)}`);
     } else if (ball.type === "sorcerer") {
       const spellIdx = ball.sorcererSpellIndex || 0;
       const spellNames = ["LAPSE: BLUE", "REVERSAL: RED", "HOLLOW: PURPLE"];
@@ -4621,6 +4707,9 @@ export default function App() {
               if (bullet.y < pad) { bullet.y = pad; bullet.vy = Math.abs(bullet.vy); }
               if (bullet.y > ARENA_SIZE - pad) { bullet.y = ARENA_SIZE - pad; bullet.vy = -Math.abs(bullet.vy); }
             } else if (bullet.x < 18 || bullet.x > ARENA_SIZE - 18 || bullet.y < 18 || bullet.y > ARENA_SIZE - 18) {
+              if (bullet.kind === "fireBenderFireball") {
+                triggerFireballExplosion(bullet);
+              }
               return false;
             }
             
@@ -4662,6 +4751,10 @@ export default function App() {
             if (bullet.targetSide && Math.hypot(bullet.x - target.x, bullet.y - target.y) < target.r + bullet.r) {
               if (isChessCrownActive(target)) return false;
               if (isWreckerJumpInvulnerable(target)) return false;
+              if (bullet.kind === "fireBenderFireball") {
+                triggerFireballExplosion(bullet);
+                return false;
+              }
               target.health = Math.max(0, target.health - bullet.damage);
               if (bullet.burnDuration) {
                 target.burnUntil = Math.max(target.burnUntil || 0, simTime + bullet.burnDuration);
@@ -5488,6 +5581,15 @@ export default function App() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        if (ball.type === "serpent") {
+          const serpentBal = game.balance.serpent || BALANCE.serpent;
+          const maxSegs = serpentBal.maxSegments || 10;
+          if ((ball.serpentSegments || 0) < maxSegs) {
+            ball.serpentSegments = (ball.serpentSegments || 0) + 1;
+            spawnSparks(bx, by, "#f59e0b", 8);
+            playSound("wallBounce", 0.72, 140);
+          }
+        }
         if (ball.type === "earthSpiker" && sideHit) {
           plantEarthSpike(ball, bx, by, sideHit, Math.atan2(ball.vy, ball.vx));
         }
@@ -5633,11 +5735,18 @@ export default function App() {
             ball.vx = (ball.vx / speed) * bashSpeed;
             ball.vy = (ball.vy / speed) * bashSpeed;
           }
-          if (ball.shieldBashBouncesLeft <= 0) ball.shieldBashSpeedOverride = 0;
+          if (ball.shieldBashBouncesLeft <= 0) {
+            ball.shieldBashSpeedOverride = 0;
+            ball.shieldBashIsSpikerRecoil = false;
+          }
           spawnSparks(ball.x, ball.y, "#60a5fa", 24);
           spawnImpactBurst(ball.x, ball.y, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#93c5fd", "#3b82f6"], 1.25);
           game.screenShake = Math.max(game.screenShake, 13);
-          playShieldHitSound(0.98);
+          if (ball.shieldBashIsSpikerRecoil) {
+            playEarthSpikeHitSound(1.02);
+          } else {
+            playShieldHitSound(0.98);
+          }
           playSound("explosion", 1.0, 90);
           game.floatingTexts = game.floatingTexts || [];
           game.floatingTexts.push({
@@ -9649,6 +9758,193 @@ export default function App() {
       }
     };
 
+    const updateFireBender = (ball, target, currentTime, dt) => {
+      if (ball.type !== "fireBender") return;
+      const fbBal = game.balance.fireBender || BALANCE.fireBender;
+
+      // Initialize state variables if not set
+      if (!ball.fireBenderState) ball.fireBenderState = "idle";
+      if (ball.nextFireballAt === undefined) ball.nextFireballAt = currentTime + 800; // brief starting delay
+      if (ball.nextFireWhipAt === undefined) ball.nextFireWhipAt = currentTime + 1000;
+      if (ball.nextFlameWheelAt === undefined) ball.nextFlameWheelAt = currentTime + 1200;
+
+      // Reset state if duration is exceeded
+      if (ball.fireBenderState !== "idle" && currentTime >= ball.fireBenderStateUntil) {
+        ball.fireBenderState = "idle";
+      }
+
+      const distToTarget = Math.hypot(target.x - ball.x, target.y - ball.y);
+
+      // State Action Updates
+      if (ball.fireBenderState === "wheel") {
+        // Dash directly towards target at high speed
+        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        ball.vx = Math.cos(angle) * 1150;
+        ball.vy = Math.sin(angle) * 1150;
+
+        // Leave ground Fire Pools behind every 100ms
+        if (currentTime >= (ball.nextFlameWheelPoolAt || 0)) {
+          game.venomPools = game.venomPools || [];
+          game.venomPools.push({
+            ownerId: ball.id,
+            ownerSide: ball.side,
+            x: clamp(ball.x, 35, game.width - 35),
+            y: clamp(ball.y, 35, game.height - 35),
+            r: 40,
+            createdTime: currentTime,
+            duration: 3800,
+            isFirePool: true,
+            consumed: false,
+            damageDealtMap: {}
+          });
+          ball.nextFlameWheelPoolAt = currentTime + 100;
+        }
+
+        // Crash collision check with opponent
+        if (distToTarget < ball.r + target.r + 6) {
+          applyDamage(target, fbBal.wheelDamage, `${ball.id}-wheel-crash-${currentTime}`, currentTime, 250);
+          target.burnUntil = Math.max(target.burnUntil || 0, currentTime + fbBal.burnDuration);
+          target.nextBurnTickAt = Math.min(target.nextBurnTickAt || Infinity, currentTime + 150);
+
+          const knockBackAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          target.vx += Math.cos(knockBackAngle) * 1200;
+          target.vy += Math.sin(knockBackAngle) * 1200;
+
+          game.screenShake = Math.max(game.screenShake || 0, 16);
+          spawnSparks(target.x, target.y, "#f97316", 26);
+          spawnImpactBurst(target.x, target.y, knockBackAngle, ["#ffffff", "#facc15", "#f97316", "#ef4444"], 1.8);
+          playSound("explosion", 1.0, 90);
+
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: target.x, y: target.y - target.r - 20, vy: -55,
+            text: "FLAME IMPACT!", color: "#f97316", life: 0.9, maxLife: 0.9
+          });
+
+          ball.fireBenderState = "idle";
+          ball.fireBenderStateUntil = 0;
+        }
+
+        // Fire dash trail particles
+        if (canSpawnParticle() && Math.random() < 0.45) {
+          game.particles.push({
+            x: ball.x + (Math.random() - 0.5) * ball.r,
+            y: ball.y + (Math.random() - 0.5) * ball.r,
+            vx: -ball.vx * 0.15 + (Math.random() - 0.5) * 40,
+            vy: -ball.vy * 0.15 + (Math.random() - 0.5) * 40,
+            color: Math.random() < 0.65 ? "#f97316" : "#ef4444",
+            radius: 3 + Math.random() * 4,
+            life: 0.35, maxLife: 0.35
+          });
+        }
+        return;
+      }
+
+      if (ball.fireBenderState === "whip") {
+        // Track target with whip angle
+        ball.fireBenderWhipAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+
+        // Check whip collision at mid-swing (150ms after starting)
+        const whipStart = ball.fireBenderStateUntil - 320;
+        if (currentTime >= whipStart + 150 && !ball.fireBenderWhipHitDone) {
+          game.balls.forEach((victim) => {
+            if (victim.health <= 0 || victim.type === "cueBall" || victim.side === ball.side) return;
+            const distToVictim = Math.hypot(victim.x - ball.x, victim.y - ball.y);
+            if (distToVictim <= 160 + victim.r) {
+              const angleToVictim = Math.atan2(victim.y - ball.y, victim.x - ball.x);
+              let diff = Math.abs(angleToVictim - ball.fireBenderWhipAngle);
+              while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+
+              if (diff < Math.PI / 3) {
+                applyDamage(victim, fbBal.whipDamage, `${ball.id}-whip-hit-${currentTime}`, currentTime, 250);
+                victim.burnUntil = Math.max(victim.burnUntil || 0, currentTime + fbBal.burnDuration);
+                victim.nextBurnTickAt = Math.min(victim.nextBurnTickAt || Infinity, currentTime + 150);
+                victim.vx += Math.cos(ball.fireBenderWhipAngle) * 650;
+                victim.vy += Math.sin(ball.fireBenderWhipAngle) * 650;
+                victim.ragdollUntil = Math.max(victim.ragdollUntil || 0, currentTime + 450);
+
+                spawnSparks(victim.x, victim.y, "#fde047", 16);
+                spawnImpactBurst(victim.x, victim.y, ball.fireBenderWhipAngle, ["#ffffff", "#f97316", "#ef4444"], 1.4);
+                playSound("hit", 1.1, 95);
+
+                game.floatingTexts = game.floatingTexts || [];
+                game.floatingTexts.push({
+                  x: victim.x, y: victim.y - victim.r - 18, vy: -50,
+                  text: "WHIP CRACK!", color: "#fde047", life: 0.8, maxLife: 0.8
+                });
+              }
+            }
+          });
+          ball.fireBenderWhipHitDone = true;
+        }
+
+        // Fire whip particles
+        if (canSpawnParticle() && Math.random() < 0.35) {
+          const whipProgress = clamp((currentTime - whipStart) / 320, 0, 1);
+          const currentLen = 160 * Math.sin(whipProgress * Math.PI);
+          const randLen = Math.random() * currentLen;
+          const px = ball.x + Math.cos(ball.fireBenderWhipAngle) * randLen;
+          const py = ball.y + Math.sin(ball.fireBenderWhipAngle) * randLen;
+          game.particles.push({
+            x: px, y: py,
+            vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 20,
+            color: Math.random() < 0.5 ? "#f97316" : "#fde047",
+            radius: 2 + Math.random() * 2,
+            life: 0.25, maxLife: 0.25
+          });
+        }
+        return;
+      }
+
+      // Idle State Actions & Triggers
+      // Priority 1: Flame Wheel if target is far away
+      if (currentTime >= ball.nextFlameWheelAt && distToTarget > 220) {
+        ball.fireBenderState = "wheel";
+        ball.fireBenderStateUntil = currentTime + fbBal.wheelDuration;
+        ball.nextFlameWheelAt = currentTime + fbBal.wheelCooldown;
+        ball.nextFlameWheelPoolAt = currentTime;
+        playSound("laserBeamCharge", 0.9, 100);
+        return;
+      }
+
+      // Priority 2: Fire Whip if target is close
+      if (currentTime >= ball.nextFireWhipAt && distToTarget <= 160) {
+        ball.fireBenderState = "whip";
+        ball.fireBenderStateUntil = currentTime + 320;
+        ball.fireBenderWhipAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        ball.fireBenderWhipHitDone = false;
+        ball.nextFireWhipAt = currentTime + fbBal.whipCooldown;
+        playSound("swipe", 1.25, 100);
+        return;
+      }
+
+      // Priority 3: Fireballs
+      if (currentTime >= ball.nextFireballAt) {
+        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        const speed = 950;
+        game.bullets = game.bullets || [];
+        game.bullets.push({
+          ownerId: ball.id,
+          targetSide: target.side,
+          kind: "fireBenderFireball",
+          x: ball.x + Math.cos(angle) * (ball.r + 10),
+          y: ball.y + Math.sin(angle) * (ball.r + 10),
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          r: 7,
+          damage: fbBal.fireballDamage,
+          life: 2.2,
+          burnDuration: fbBal.burnDuration
+        });
+        ball.nextFireballAt = currentTime + fbBal.fireballCooldown;
+        playSound("shoot", 1.05, 100);
+
+        if (canSpawnParticle()) {
+          spawnSparks(ball.x + Math.cos(angle) * ball.r, ball.y + Math.sin(angle) * ball.r, "#f97316", 8);
+        }
+      }
+    };
+
     const updateEarthSpiker = (ball, target, currentTime) => {
       if (ball.type !== "earthSpiker") return;
       const bal = game.balance.earthSpiker || BALANCE.earthSpiker;
@@ -9717,6 +10013,7 @@ export default function App() {
             bashTarget.vy = Math.sin(hitAngle) * bashRecoil;
             bashTarget.shieldBashBouncesLeft = 5;
             bashTarget.shieldBashSpeedOverride = 1280;
+            bashTarget.shieldBashIsSpikerRecoil = true;
           }
           bashTarget.skillLockedUntil = Math.max(bashTarget.skillLockedUntil || 0, currentTime + 1900);
           bashTarget.paralyzedUntil = Math.max(bashTarget.paralyzedUntil || 0, currentTime + 520);
@@ -14629,7 +14926,19 @@ export default function App() {
           if (ball.side === pool.ownerSide) return;
           const dist = Math.hypot(ball.x - pool.x, ball.y - pool.y);
           if (dist < ball.r + pool.r) {
-            if (pool.isSpiderTrap) {
+            if (pool.isFirePool) {
+              applyDamage(ball, 1.5, `${ball.id}-firepool-tick-${pool.createdTime}`, game.simTime, 250);
+              ball.burnUntil = Math.max(ball.burnUntil || 0, game.simTime + 1800);
+              if (canSpawnParticle() && Math.random() < 0.25) {
+                game.particles.push({
+                  x: ball.x + (Math.random() - 0.5) * ball.r,
+                  y: ball.y + (Math.random() - 0.5) * ball.r,
+                  vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 30,
+                  color: Math.random() < 0.6 ? "#f97316" : "#ef4444",
+                  radius: 2 + Math.random() * 2, life: 0.4, maxLife: 0.4
+                });
+              }
+            } else if (pool.isSpiderTrap) {
               const owner = game.balls.find((candidate) => candidate.id === pool.ownerId);
               if (owner?.bsSkillState === "idle") {
                 const lockUntil = game.simTime + (bal.spider.trapLockDuration || 2400);
@@ -14857,6 +15166,40 @@ export default function App() {
       });
     };
 
+    const triggerFireballExplosion = (bullet) => {
+      playSound("explosion", 0.95, 110);
+      game.screenShake = Math.max(game.screenShake || 0, 8);
+      spawnImpactBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx) || 0, ["#ffffff", "#fde047", "#f97316", "#dc2626"], 1.35);
+      spawnSparks(bullet.x, bullet.y, "#f97316", 18);
+      
+      const explosionRadius = 75;
+      const damage = bullet.damage || 5;
+      game.balls.forEach((ball) => {
+        if (ball.shattered || ball.health <= 0 || ball.type === "cueBall") return;
+        if (ball.side !== bullet.targetSide) return;
+        
+        const dist = Math.hypot(ball.x - bullet.x, ball.y - bullet.y);
+        if (dist < explosionRadius + ball.r) {
+          const forcePct = (explosionRadius + ball.r - dist) / (explosionRadius + ball.r);
+          const finalDamage = Math.max(1, Math.round(damage * forcePct));
+          applyDamage(ball, finalDamage, `${bullet.ownerId}-fireball-explode-${game.simTime}`, game.simTime, 120);
+          ball.burnUntil = Math.max(ball.burnUntil || 0, game.simTime + 1800);
+          ball.nextBurnTickAt = Math.min(ball.nextBurnTickAt || Infinity, game.simTime + 150);
+          
+          const angle = Math.atan2(ball.y - bullet.y, ball.x - bullet.x);
+          const kbForce = 180 * forcePct;
+          ball.vx += Math.cos(angle) * kbForce;
+          ball.vy += Math.sin(angle) * kbForce;
+          
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({
+            x: ball.x, y: ball.y - ball.r - 8, vy: -50,
+            text: `FIREBLAST -${finalDamage}`, color: "#f97316", life: 0.72, maxLife: 0.72
+          });
+        }
+      });
+    };
+
     const triggerPurpleExplosion = (b) => {
       playSound("explosion", 1.45, 180);
       game.screenShake = Math.max(game.screenShake || 0, 24);
@@ -15017,7 +15360,7 @@ export default function App() {
           bullet.life -= dt;
         }
         if (bullet.life <= 0) return false;
-        if (bullet.kind === "laserPulse" || bullet.kind === "dragonFireball" || bullet.kind === "ninjaShuriken" || bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
+        if (bullet.kind === "laserPulse" || bullet.kind === "dragonFireball" || bullet.kind === "ninjaShuriken" || bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball" || bullet.kind === "serpentTail") {
           let bounced = false;
           const pad = 18 + bullet.r;
           if (bullet.x < pad) { bullet.x = pad; bullet.vx = Math.abs(bullet.vx); bounced = true; }
@@ -15028,16 +15371,19 @@ export default function App() {
             if (bullet.kind === "ninjaShuriken") bullet.homingAfterBounce = true;
             if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") bullet.tricksterBounced = true;
             if (bullet.kind !== "dragonFireball") {
-              const defaultBounces = bullet.kind === "laserPulse" ? 4 : bullet.kind === "ninjaShuriken" ? 1 : (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") ? ((game.balance.loki || BALANCE.loki).fireballBounces ?? 1) : 3;
+              const defaultBounces = bullet.kind === "laserPulse" ? 4 : bullet.kind === "ninjaShuriken" ? 1 : bullet.kind === "serpentTail" ? 4 : (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") ? ((game.balance.loki || BALANCE.loki).fireballBounces ?? 1) : 3;
               bullet.bouncesLeft = (bullet.bouncesLeft ?? defaultBounces) - 1;
               if (bullet.bouncesLeft < 0) return false;
             }
-            spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : bullet.kind === "ninjaShuriken" ? "#e2e8f0" : bullet.kind === "lokiFireball" ? "#34d399" : "#94a3b8", bullet.kind === "ninjaShuriken" ? 14 : 8);
+            spawnSparks(bullet.x, bullet.y, bullet.kind === "dragonFireball" ? "#f97316" : bullet.kind === "ninjaShuriken" ? "#e2e8f0" : bullet.kind === "serpentTail" ? "#f59e0b" : bullet.kind === "lokiFireball" ? "#34d399" : "#94a3b8", bullet.kind === "ninjaShuriken" ? 14 : 8);
             if (bullet.kind === "ninjaShuriken") playSound("wallBounce", 0.78, 180);
             if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") playSound("wallBounce", 0.58, 160);
+            if (bullet.kind === "serpentTail") playSound("wallBounce", 0.65, 110);
           }
         } else if (bullet.x < 18 || bullet.x > game.width - 18 || bullet.y < 18 || bullet.y > game.height - 18) {
-          if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
+          if (bullet.kind === "fireBenderFireball") {
+            triggerFireballExplosion(bullet);
+          } else if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
             spawnSparks(bullet.x, bullet.y, bullet.kind === "lokiFireball" ? "#fbbf24" : "#94a3b8", 12);
             playSound("explosion", 0.55, 70);
           } else if (bullet.kind === "sorcererRed") {
@@ -15126,6 +15472,11 @@ export default function App() {
           if (isBomberSelfDestructInvulnerable(target)) return false;
           if (isWreckerJumpInvulnerable(target)) return false;
 
+          if (bullet.kind === "fireBenderFireball") {
+            triggerFireballExplosion(bullet);
+            return false;
+          }
+
           // Sorcerer bullets hit
           if (bullet.kind === "sorcererRed") {
             triggerRedExplosion(bullet, target);
@@ -15182,6 +15533,36 @@ export default function App() {
             spawnSparks(bullet.x, bullet.y, "#fbbf24", 16);
             spawnImpactBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx), ["#ffffff", "#fde68a", "#fbbf24", "#d97706"], 1.45);
             playSound("explosion", 0.8, 100);
+            return false; // consume bullet
+          }
+          if (bullet.kind === "serpentTail") {
+            const damage = bullet.damage || 8;
+            if (target.type === "ninja") {
+              const healthBefore = target.health;
+              applyDamage(target, damage, `${bullet.ownerId}-serpent-tail-${game.simTime}`, game.simTime, 80);
+              if (target.health === healthBefore) return false;
+            } else {
+              target.health = clamp(target.health - damage, 0, MAX_HEALTH);
+            }
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: target.x + (Math.random() - 0.5) * 20, y: target.y - target.r - 5, vy: -60,
+              text: `-${damage}`, color: "#f59e0b", life: 0.8, maxLife: 0.8
+            });
+            // Apply knockback
+            const angle = Math.atan2(bullet.vy, bullet.vx);
+            target.vx += Math.cos(angle) * 380;
+            target.vy += Math.sin(angle) * 380;
+            
+            const stats = bullet.ownerId?.startsWith("left") ? game.stats.left : bullet.ownerId?.startsWith("right") ? game.stats.right : null;
+            if (stats) {
+              stats.damageDealt += damage;
+              stats.hitsLanded++;
+            }
+            
+            spawnSparks(bullet.x, bullet.y, "#f59e0b", 20);
+            spawnImpactBurst(bullet.x, bullet.y, angle, ["#ffffff", "#fde68a", "#fbbf24", "#dc2626"], 1.65);
+            playSound("explosion", 0.95, 120);
             return false; // consume bullet
           }
           if (target.type === "ninja") {
@@ -15695,6 +16076,340 @@ export default function App() {
         ctx.arc(hiltX - 23 + i * 7, 0, 2, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.restore();
+
+      drawHealthInsideBall(ball);
+    };
+
+    const drawFireBenderBall = (ball) => {
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+
+      // Zuko faces his opponent side
+      const facingLeft = ball.side === "right";
+      if (facingLeft) {
+        ctx.scale(-1, 1);
+      }
+
+      const r = ball.r;
+
+      // ─── 1. SHADOW / GLOW ───
+      // If Flame Wheel is active, draw a roaring fire aura around him!
+      if (ball.fireBenderState === "wheel") {
+        ctx.save();
+        const pulse = 1 + Math.sin(game.simTime * 0.04) * 0.15;
+        ctx.shadowColor = "#f97316";
+        ctx.shadowBlur = 24;
+        const auraGrad = ctx.createRadialGradient(0, 0, r * 0.8, 0, 0, r * 1.6 * pulse);
+        auraGrad.addColorStop(0, "rgba(239, 68, 68, 0.45)");
+        auraGrad.addColorStop(0.5, "rgba(249, 115, 22, 0.25)");
+        auraGrad.addColorStop(1, "rgba(220, 38, 38, 0)");
+        ctx.fillStyle = auraGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.6 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ─── 2. SHOULDER ARMOR (Renders behind the ball) ───
+      // Large gold curved shoulder plates sweeping out from the bottom
+      ctx.save();
+      ctx.fillStyle = "#b45309"; // Dark gold/bronze backing
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 2.5;
+
+      // Left shoulder sweep
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.4, r * 0.7);
+      ctx.quadraticCurveTo(-r * 1.3, r * 0.8, -r * 1.5, -r * 0.2); // sharp point sweeping up
+      ctx.quadraticCurveTo(-r * 1.1, -r * 0.1, -r * 0.7, r * 0.4);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      // Right shoulder sweep
+      ctx.beginPath();
+      ctx.moveTo(r * 0.4, r * 0.7);
+      ctx.quadraticCurveTo(r * 1.3, r * 0.8, r * 1.5, -r * 0.2);
+      ctx.quadraticCurveTo(r * 1.1, -r * 0.1, r * 0.7, r * 0.4);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      // Gold highlights on shoulders
+      ctx.fillStyle = "#eab308"; // Bright gold
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.5, r * 0.65);
+      ctx.quadraticCurveTo(-r * 1.25, r * 0.75, -r * 1.45, -r * 0.15);
+      ctx.quadraticCurveTo(-r * 1.2, -r * 0.08, -r * 0.75, r * 0.42);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(r * 0.5, r * 0.65);
+      ctx.quadraticCurveTo(r * 1.25, r * 0.75, r * 1.45, -r * 0.15);
+      ctx.quadraticCurveTo(r * 1.2, -r * 0.08, r * 0.75, r * 0.42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // ─── 3. TOP-KNOT CROWN (Outside main ball body) ───
+      ctx.save();
+      // Red band connecting topknot to head
+      ctx.fillStyle = "#991b1b";
+      ctx.fillRect(-r * 0.18, -r - 4, r * 0.36, 4);
+
+      // Gold flame crown
+      ctx.fillStyle = "#eab308";
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -r - 18); // center peak
+      ctx.quadraticCurveTo(-r * 0.12, -r - 10, -r * 0.25, -r - 12);
+      ctx.quadraticCurveTo(-r * 0.35, -r - 4, -r * 0.15, -r - 4);
+      ctx.lineTo(r * 0.15, -r - 4);
+      ctx.quadraticCurveTo(r * 0.35, -r - 4, r * 0.25, -r - 12);
+      ctx.quadraticCurveTo(r * 0.12, -r - 10, 0, -r - 18);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      // Inner gold details / flame ridges
+      ctx.fillStyle = "#facc15";
+      ctx.beginPath();
+      ctx.moveTo(0, -r - 15);
+      ctx.quadraticCurveTo(-r * 0.08, -r - 8, -r * 0.18, -r - 10);
+      ctx.quadraticCurveTo(-r * 0.25, -r - 5, -r * 0.1, -r - 5);
+      ctx.lineTo(r * 0.1, -r - 5);
+      ctx.quadraticCurveTo(r * 0.25, -r - 5, r * 0.18, -r - 10);
+      ctx.quadraticCurveTo(r * 0.08, -r - 8, 0, -r - 15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // ─── 4. FACE & HAIR (Main Ball Body) ───
+      // Face base (flesh tone beige)
+      ctx.fillStyle = "#fceade";
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Widow's peak spiky black hair along the top rim
+      ctx.fillStyle = "#1e293b"; // Dark charcoal black
+      ctx.beginPath();
+      ctx.arc(0, 0, r, -Math.PI, 0); // Upper half circle
+      ctx.lineTo(r * 0.9, -r * 0.2);
+      ctx.quadraticCurveTo(r * 0.5, -r * 0.4, 0, -r * 0.52); // widow's peak center point
+      ctx.quadraticCurveTo(-r * 0.5, -r * 0.4, -r * 0.9, -r * 0.2);
+      ctx.closePath();
+      ctx.fill();
+
+      // ─── 5. BURN SCAR (Over the left eye / right side of canvas) ───
+      ctx.save();
+      ctx.fillStyle = "rgba(153, 27, 27, 0.68)"; // Reddish burgundy base
+      ctx.beginPath();
+      // Organic irregular shape covering the left eye area
+      ctx.moveTo(r * 0.15, -r * 0.35);
+      ctx.quadraticCurveTo(r * 0.55, -r * 0.55, r * 0.88, -r * 0.35);
+      ctx.quadraticCurveTo(r * 0.95, 0, r * 0.82, r * 0.3);
+      ctx.quadraticCurveTo(r * 0.5, r * 0.42, r * 0.25, r * 0.18);
+      ctx.quadraticCurveTo(r * 0.12, -r * 0.1, r * 0.15, -r * 0.35);
+      ctx.closePath();
+      ctx.fill();
+
+      // Scar details
+      ctx.fillStyle = "rgba(127, 29, 29, 0.45)";
+      ctx.beginPath();
+      ctx.moveTo(r * 0.3, -r * 0.22);
+      ctx.quadraticCurveTo(r * 0.6, -r * 0.32, r * 0.82, -r * 0.18);
+      ctx.quadraticCurveTo(r * 0.76, r * 0.15, r * 0.45, r * 0.18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // ─── 6. EYES & FACE LINES ───
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+
+      // Right eye (normal, left side from our view)
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.55, -r * 0.12);
+      ctx.quadraticCurveTo(-r * 0.4, -r * 0.25, -r * 0.25, -r * 0.12); // upper eyelid
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.55, -r * 0.1);
+      ctx.quadraticCurveTo(-r * 0.4, -r * 0.02, -r * 0.25, -r * 0.1); // lower eyelid
+      ctx.stroke();
+
+      // Amber iris & pupil for right eye
+      ctx.fillStyle = "#d97706"; // Amber
+      ctx.beginPath();
+      ctx.arc(-r * 0.4, -r * 0.12, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#000000";
+      ctx.beginPath();
+      ctx.arc(-r * 0.4, -r * 0.12, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right eyebrow (angry slant)
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.62, -r * 0.3);
+      ctx.lineTo(-r * 0.22, -r * 0.2);
+      ctx.stroke();
+
+      // Left eye (scarred/squinted, right side from our view)
+      ctx.save();
+      ctx.strokeStyle = "#450a0a"; // Darker crimson/brown for scarred eye outline
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.32, -r * 0.08);
+      ctx.quadraticCurveTo(r * 0.5, -r * 0.18, r * 0.65, -r * 0.06);
+      ctx.stroke();
+
+      // Scarred amber iris
+      ctx.fillStyle = "#b45309";
+      ctx.beginPath();
+      ctx.arc(r * 0.48, -r * 0.07, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Left eyebrow (distorted angry slant)
+      ctx.beginPath();
+      ctx.moveTo(r * 0.26, -r * 0.22);
+      ctx.quadraticCurveTo(r * 0.45, -r * 0.32, r * 0.72, -r * 0.24);
+      ctx.stroke();
+      ctx.restore();
+
+      // Simple serious mouth line
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.2, r * 0.22);
+      ctx.quadraticCurveTo(0, r * 0.26, r * 0.2, r * 0.22);
+      ctx.stroke();
+
+      // ─── 7. COLLAR & ARMOR (Bottom overlapping part) ───
+      // Base brown-red chest plate
+      ctx.save();
+      ctx.fillStyle = "#3b0712"; // Deep dark burgundy chest
+      ctx.beginPath();
+      ctx.arc(0, 0, r, Math.PI * 0.15, Math.PI * 0.85); // bottom segment of ball
+      ctx.lineTo(r * 0.7, r * 0.7);
+      ctx.lineTo(0, r * 0.38); // V-neck dip point
+      ctx.lineTo(-r * 0.7, r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Crimson collar flaps
+      ctx.fillStyle = "#b91c1c"; // Crimson red
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.9, r * 0.42);
+      ctx.lineTo(-r * 0.2, r * 0.45);
+      ctx.lineTo(0, r * 0.85);
+      ctx.lineTo(-r * 0.6, r * 0.8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(r * 0.9, r * 0.42);
+      ctx.lineTo(r * 0.2, r * 0.45);
+      ctx.lineTo(0, r * 0.85);
+      ctx.lineTo(r * 0.6, r * 0.8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Gold collar trimming borders
+      ctx.strokeStyle = "#eab308";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.92, r * 0.4);
+      ctx.lineTo(-r * 0.18, r * 0.42);
+      ctx.lineTo(0, r * 0.86);
+      ctx.lineTo(r * 0.18, r * 0.42);
+      ctx.lineTo(r * 0.92, r * 0.4);
+      ctx.stroke();
+
+      // ─── 8. FIRE NATION SYMBOL ───
+      ctx.fillStyle = "#eab308";
+      ctx.translate(0, r * 0.7);
+      ctx.beginPath();
+      ctx.moveTo(0, -6); // middle flame tip
+      ctx.quadraticCurveTo(-3, 0, -5, -2); // left wing tip
+      ctx.quadraticCurveTo(-3, 4, 0, 5); // bottom center
+      ctx.quadraticCurveTo(3, 4, 5, -2); // right wing tip
+      ctx.quadraticCurveTo(3, 0, 0, -6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore(); // back to chest space
+
+      // Ball Stroke Border
+      ctx.strokeStyle = "#7f1d1d";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // ─── 9. FIRE WHIP VISUALS (Renders on top if active) ───
+      if (ball.fireBenderState === "whip") {
+        ctx.save();
+        const whipStart = ball.fireBenderStateUntil - 320;
+        const progress = clamp((game.simTime - whipStart) / 320, 0, 1);
+        const whipLen = 160 * Math.sin(progress * Math.PI);
+        
+        ctx.rotate(ball.fireBenderWhipAngle);
+        
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        
+        const segments = 12;
+        for (let i = 1; i <= segments; i++) {
+          const segRatio = i / segments;
+          const x = segRatio * whipLen;
+          const wave = Math.sin(segRatio * Math.PI * 3 - game.simTime * 0.08) * 8 * Math.sin(segRatio * Math.PI);
+          ctx.lineTo(x, wave);
+        }
+        
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        
+        ctx.shadowColor = "#f97316";
+        ctx.shadowBlur = 12;
+        
+        ctx.strokeStyle = "rgba(220, 38, 38, 0.4)";
+        ctx.lineWidth = 14;
+        ctx.stroke();
+        
+        ctx.strokeStyle = "rgba(249, 115, 22, 0.72)";
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        
+        ctx.strokeStyle = "#fde047";
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+        
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        
+        if (progress > 0.1 && progress < 0.9) {
+          ctx.translate(whipLen, 0);
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = "#fffbeb";
+          ctx.beginPath();
+          ctx.arc(0, 0, 7 + Math.random() * 5, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = "#facc15";
+          for (let i = 0; i < 4; i++) {
+            ctx.rotate(Math.PI / 2);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(12, -3);
+            ctx.lineTo(6, 2);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
       ctx.restore();
 
       drawHealthInsideBall(ball);
@@ -22235,71 +22950,163 @@ export default function App() {
         ctx.restore();
       }
 
-      const gold = ctx.createLinearGradient(0, -ball.r, 0, ball.r);
-      gold.addColorStop(0, "#fde68a");
-      gold.addColorStop(0.55, "#bfa449");
-      gold.addColorStop(1, "#5f501a");
-      ctx.fillStyle = gold;
-      ctx.strokeStyle = "#2f2508";
-      ctx.lineWidth = 2;
+      const r = ball.r;
+
+      // Soft face plate in the middle, framed by green/cream earth gear.
+      const faceGrad = ctx.createRadialGradient(-r * 0.24, -r * 0.2, r * 0.08, 0, r * 0.08, r * 0.9);
+      faceGrad.addColorStop(0, "#fff7d6");
+      faceGrad.addColorStop(0.58, "#f0d9a3");
+      faceGrad.addColorStop(1, "#c4ad6d");
+      ctx.fillStyle = faceGrad;
+      ctx.strokeStyle = "#21351d";
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.58, -ball.r * 0.02);
-      ctx.quadraticCurveTo(0, ball.r * 0.22, ball.r * 0.58, -ball.r * 0.02);
-      ctx.lineTo(ball.r * 0.36, ball.r * 0.84);
-      ctx.quadraticCurveTo(0, ball.r * 1.02, -ball.r * 0.36, ball.r * 0.84);
+      ctx.moveTo(-r * 0.78, -r * 0.04);
+      ctx.quadraticCurveTo(-r * 0.42, -r * 0.52, 0, -r * 0.48);
+      ctx.quadraticCurveTo(r * 0.42, -r * 0.52, r * 0.78, -r * 0.04);
+      ctx.quadraticCurveTo(r * 0.62, r * 0.72, 0, r * 0.84);
+      ctx.quadraticCurveTo(-r * 0.62, r * 0.72, -r * 0.78, -r * 0.04);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
+      // Rounded side cream knots.
       [-1, 1].forEach((side) => {
-        ctx.fillStyle = "#102a1d";
+        const knotGrad = ctx.createRadialGradient(side * r * 0.76, -r * 0.18, r * 0.05, side * r * 0.86, -r * 0.12, r * 0.28);
+        knotGrad.addColorStop(0, "#fffaf0");
+        knotGrad.addColorStop(0.62, "#e9ddb8");
+        knotGrad.addColorStop(1, "#b9a76d");
+        ctx.fillStyle = knotGrad;
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(side * r * 0.9, -r * 0.17, r * 0.21, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      // Green headband with gold band under the dark hair cap.
+      ctx.fillStyle = "#1f7a35";
+      ctx.strokeStyle = "#0d2817";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.92, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.lineTo(r * 0.78, -r * 0.38);
+      ctx.quadraticCurveTo(0, -r * 0.72, -r * 0.78, -r * 0.38);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      const headBandGold = ctx.createLinearGradient(0, -r * 0.76, 0, -r * 0.34);
+      headBandGold.addColorStop(0, "#fff2a8");
+      headBandGold.addColorStop(0.58, "#ecd36d");
+      headBandGold.addColorStop(1, "#8d7829");
+      ctx.fillStyle = headBandGold;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.76, Math.PI * 1.11, Math.PI * 1.89);
+      ctx.lineTo(r * 0.62, -r * 0.42);
+      ctx.quadraticCurveTo(0, -r * 0.57, -r * 0.62, -r * 0.42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#f8df83";
+      ctx.strokeStyle = "#2f2508";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.2, -r * 0.76, r * 0.4, r * 0.18, r * 0.07);
+      ctx.fill();
+      ctx.stroke();
+
+      // Heavy black hair cap and separated bangs.
+      const hairGrad = ctx.createLinearGradient(0, -r * 1.02, 0, r * 0.34);
+      hairGrad.addColorStop(0, "#34383b");
+      hairGrad.addColorStop(0.46, "#111518");
+      hairGrad.addColorStop(1, "#050708");
+      ctx.fillStyle = hairGrad;
+      ctx.strokeStyle = "#030712";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.94, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.quadraticCurveTo(r * 0.74, -r * 0.12, r * 0.5, r * 0.36);
+      ctx.quadraticCurveTo(r * 0.24, r * 0.04, 0, r * 0.14);
+      ctx.quadraticCurveTo(-r * 0.24, r * 0.04, -r * 0.5, r * 0.36);
+      ctx.quadraticCurveTo(-r * 0.74, -r * 0.12, -r * 0.94, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      const bangs = [
+        [-0.58, -0.43, -0.36, 0.22, -0.22, -0.22],
+        [-0.24, -0.52, -0.04, 0.42, 0.12, -0.28],
+        [0.13, -0.5, 0.33, 0.34, 0.47, -0.22],
+        [0.48, -0.42, 0.62, 0.18, 0.76, -0.18],
+      ];
+      bangs.forEach((p, index) => {
+        ctx.fillStyle = index % 2 === 0 ? "#171b1f" : "#0c0f12";
         ctx.strokeStyle = "#020617";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(side * ball.r * 0.34, ball.r * 0.18);
-        ctx.lineTo(side * ball.r * 0.75, ball.r * 0.36);
-        ctx.lineTo(side * ball.r * 0.62, ball.r * 0.82);
-        ctx.lineTo(side * ball.r * 0.25, ball.r * 0.68);
+        ctx.moveTo(p[0] * r, p[1] * r);
+        ctx.quadraticCurveTo(p[2] * r, p[3] * r, p[4] * r, p[5] * r);
+        ctx.lineTo((p[0] + 0.13) * r, (p[1] + 0.02) * r);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = "#d1d5db";
-        for (let i = 0; i < 3; i++) {
-          ctx.beginPath();
-          ctx.arc(side * ball.r * (0.43 + i * 0.05), ball.r * (0.38 + i * 0.16), 3.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
       });
 
-      ctx.fillStyle = "#0f2a1c";
-      ctx.strokeStyle = "#020617";
-      ctx.lineWidth = 2.8;
+      // Cream armor collar and green wrap at the bottom.
+      const collarGrad = ctx.createLinearGradient(0, r * 0.22, 0, r * 1.02);
+      collarGrad.addColorStop(0, "#fff4be");
+      collarGrad.addColorStop(0.54, "#d4c071");
+      collarGrad.addColorStop(1, "#756c2b");
+      ctx.fillStyle = collarGrad;
+      ctx.strokeStyle = "#273612";
+      ctx.lineWidth = 2.6;
       ctx.beginPath();
-      ctx.ellipse(0, -ball.r * 0.38, ball.r * 1.06, ball.r * 0.28, 0, Math.PI, 0);
-      ctx.lineTo(ball.r * 0.86, -ball.r * 0.1);
-      ctx.quadraticCurveTo(0, ball.r * 0.02, -ball.r * 0.86, -ball.r * 0.1);
+      ctx.moveTo(-r * 0.82, r * 0.42);
+      ctx.quadraticCurveTo(-r * 0.35, r * 0.82, 0, r * 0.88);
+      ctx.quadraticCurveTo(r * 0.35, r * 0.82, r * 0.82, r * 0.42);
+      ctx.lineTo(r * 0.58, r * 0.72);
+      ctx.quadraticCurveTo(0, r * 1.02, -r * 0.58, r * 0.72);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = "#facc15";
-      ctx.strokeStyle = "#1c1917";
+      ctx.fillStyle = "#0f5b27";
+      ctx.strokeStyle = "#0b2f17";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, -ball.r * 1.23);
-      ctx.lineTo(ball.r * 0.16, -ball.r * 0.82);
-      ctx.lineTo(-ball.r * 0.16, -ball.r * 0.82);
+      ctx.moveTo(-r * 0.34, r * 0.56);
+      ctx.lineTo(r * 0.34, r * 0.56);
+      ctx.lineTo(r * 0.2, r * 0.8);
+      ctx.lineTo(-r * 0.2, r * 0.8);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-      ctx.save();
-      ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = "#fde68a";
-      ctx.strokeStyle = "#1f2937";
-      ctx.lineWidth = 2;
-      ctx.fillRect(-ball.r * 0.13, -ball.r * 0.49, ball.r * 0.26, ball.r * 0.26);
-      ctx.strokeRect(-ball.r * 0.13, -ball.r * 0.49, ball.r * 0.26, ball.r * 0.26);
-      ctx.restore();
+      ctx.fillStyle = "rgba(38, 132, 55, 0.75)";
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.44, r * 0.7);
+      ctx.lineTo(r * 0.2, r * 0.52);
+      ctx.lineTo(r * 0.42, r * 0.62);
+      ctx.lineTo(-r * 0.15, r * 0.86);
+      ctx.closePath();
+      ctx.fill();
+
+      // Small earth-pin detail on the lower left collar.
+      ctx.strokeStyle = "#5f501a";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.68, r * 0.64);
+      ctx.lineTo(-r * 0.78, r * 0.88);
+      ctx.stroke();
+      ctx.fillStyle = "#d5b747";
+      ctx.strokeStyle = "#4a3f15";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.77, r * 0.57, r * 0.18, r * 0.07, r * 0.035);
+      ctx.fill();
+      ctx.stroke();
 
       ctx.lineWidth = 3;
       ctx.strokeStyle = config.stroke;
@@ -22514,6 +23321,7 @@ export default function App() {
       else if (ball.type === "fisherman") drawFishermanBall(ball);
       else if (ball.type === "blackSpider") drawBlackSpiderBall(ball);
       else if (ball.type === "earthSpiker") drawEarthSpikerBall(ball);
+      else if (ball.type === "fireBender") drawFireBenderBall(ball);
       else if (ball.type === "gazerBall") drawGazerBall(ball);
       else if (ball.type === "constellation") drawConstellationBall(ball);
       else if (ball.type === "fireSkull") drawFireSkullBall(ball);
@@ -22864,6 +23672,44 @@ export default function App() {
           coreGrad.addColorStop(1, "#f97316");
           ctx.fillStyle = coreGrad; ctx.fill();
           ctx.strokeStyle = "#fef3c7"; ctx.lineWidth = 2.5; ctx.stroke();
+        } else if (bullet.kind === "fireBenderFireball") {
+          ctx.shadowColor = "#dc2626";
+          ctx.shadowBlur = 18;
+          const pulse = 0.8 + Math.sin(game.simTime * 0.02) * 0.2;
+          const speedAngle = Math.atan2(bullet.vy, bullet.vx);
+          const tailLength = 24 + pulse * 10;
+          const tailWidth = bullet.r * (1.3 + pulse * 0.2);
+          const tailGrad = ctx.createLinearGradient(
+            bullet.x - Math.cos(speedAngle) * tailLength,
+            bullet.y - Math.sin(speedAngle) * tailLength,
+            bullet.x,
+            bullet.y
+          );
+          tailGrad.addColorStop(0, "rgba(185, 28, 28, 0)");
+          tailGrad.addColorStop(0.45, "rgba(220, 38, 38, 0.45)");
+          tailGrad.addColorStop(1, "rgba(251, 146, 60, 0.85)");
+          ctx.fillStyle = tailGrad;
+          ctx.beginPath();
+          ctx.moveTo(bullet.x + Math.cos(speedAngle) * bullet.r, bullet.y + Math.sin(speedAngle) * bullet.r);
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength - Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength + Math.cos(speedAngle) * tailWidth
+          );
+          ctx.lineTo(
+            bullet.x - Math.cos(speedAngle) * tailLength + Math.sin(speedAngle) * tailWidth,
+            bullet.y - Math.sin(speedAngle) * tailLength - Math.cos(speedAngle) * tailWidth
+          );
+          ctx.closePath();
+          ctx.fill();
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r + 6 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(220, 38, 38, 0.2)"; ctx.fill();
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+          const coreGrad = ctx.createRadialGradient(bullet.x - bullet.r * 0.35, bullet.y - bullet.r * 0.35, 1, bullet.x, bullet.y, bullet.r);
+          coreGrad.addColorStop(0, "#fffbeb");
+          coreGrad.addColorStop(0.35, "#f59e0b");
+          coreGrad.addColorStop(1, "#dc2626");
+          ctx.fillStyle = coreGrad; ctx.fill();
+          ctx.strokeStyle = "#fef3c7"; ctx.lineWidth = 2; ctx.stroke();
         } else if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
           const isReal = bullet.kind === "lokiFireball";
           ctx.shadowColor = isReal ? "#10b981" : "#94a3b8"; // Green for real, grey for illusion
@@ -24210,7 +25056,49 @@ export default function App() {
     const drawVenomPools = () => {
       if (!game.venomPools) return;
       game.venomPools.forEach((pool) => {
-        if (pool.isBlackWallWeb) {
+        if (pool.isFirePool) {
+          ctx.save();
+          const age = game.simTime - pool.createdTime;
+          const lifeRatio = 1 - age / pool.duration;
+          const alpha = Math.max(0, Math.min(0.85, lifeRatio * 1.5));
+          const pulse = 0.9 + Math.sin(game.simTime * 0.015 + pool.createdTime * 0.02) * 0.1;
+          
+          // Outer blazing orange ring
+          ctx.shadowColor = "#f97316";
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = `rgba(239, 68, 68, ${alpha * 0.18})`;
+          ctx.beginPath();
+          ctx.arc(pool.x, pool.y, pool.r * pulse, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Radial gradient for molten lava center
+          const grad = ctx.createRadialGradient(pool.x, pool.y, 2, pool.x, pool.y, pool.r * pulse);
+          grad.addColorStop(0, `rgba(254, 240, 138, ${alpha * 0.9})`); // Bright yellow core
+          grad.addColorStop(0.4, `rgba(249, 115, 22, ${alpha * 0.75})`); // Vibrant orange
+          grad.addColorStop(0.8, `rgba(220, 38, 38, ${alpha * 0.4})`); // Dark red edge
+          grad.addColorStop(1, `rgba(220, 38, 38, 0)`);
+          
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(pool.x, pool.y, pool.r * pulse, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw small rising fire flares / particles inside
+          ctx.fillStyle = `rgba(251, 146, 60, ${alpha * 0.8})`;
+          const numFlares = 5;
+          for (let i = 0; i < numFlares; i++) {
+            const seed = pool.createdTime + i * 500;
+            const angle = (i * Math.PI * 2) / numFlares + Math.sin(game.simTime * 0.005 + seed) * 0.4;
+            const dist = pool.r * 0.42 * (0.6 + Math.cos(game.simTime * 0.008 + seed) * 0.3);
+            const fx = pool.x + Math.cos(angle) * dist;
+            const fy = pool.y + Math.sin(angle) * dist - (game.simTime * 0.03 + seed * 0.1) % (pool.r * 0.35);
+            const fr = 4.5 * (1 - ((game.simTime * 0.03 + seed * 0.1) % (pool.r * 0.35)) / (pool.r * 0.35));
+            ctx.beginPath();
+            ctx.arc(fx, fy, Math.max(1, fr), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        } else if (pool.isBlackWallWeb) {
           if (pool.consumed) return;
           ctx.save();
           const age = game.simTime - pool.createdTime;
@@ -25346,6 +26234,8 @@ export default function App() {
                   if (ball.type === "fisherman") updateFisherman(ball, target, game.simTime, stepDt);
                   if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   if (ball.type === "earthSpiker") updateEarthSpiker(ball, target, game.simTime);
+                  if (ball.type === "fireBender") updateFireBender(ball, target, game.simTime, stepDt);
+                  if (ball.type === "serpent") updateSerpent(ball, target, game.simTime, stepDt);
                   if (ball.type === "gazerBall") updateGazerBall(ball, target, game.simTime, stepDt);
                   if (ball.type === "fireSkull") updateFireSkull(ball, target, game.simTime, stepDt);
                   if (ball.type === "eightBall") updateEightBall(ball, target, game.simTime);

@@ -670,6 +670,23 @@ export function useSoundEngine() {
       osc(ctx, dest, "sine", 750, 0.28, t + 0.04, 0.05, 900);
       osc(ctx, dest, "sawtooth", 900, 0.16, t + 0.04, 0.04, 1100);
       osc(ctx, dest, "sine", 120, 0.35, t + 0.05, 0.1, 45);
+    },
+    fireballShoot: (ctx, dest, t) => {
+      osc(ctx, dest, "sine", 180, 0.35, t, 0.18, 550);
+      noise(ctx, dest, 0.28, t, 0.16, 1200, 1.2, "bandpass");
+    },
+    fireballExplode: (ctx, dest, t) => {
+      noise(ctx, dest, 0.65, t, 0.35, 300, 0.5, "lowpass");
+      osc(ctx, dest, "sine", 95, 0.45, t, 0.3, 40);
+    },
+    fireWhip: (ctx, dest, t) => {
+      noise(ctx, dest, 0.72, t, 0.08, 3500, 2.5, "highpass");
+      noise(ctx, dest, 0.38, t + 0.02, 0.15, 1400, 1.0, "bandpass");
+      osc(ctx, dest, "sawtooth", 450, 0.32, t, 0.1, 120);
+    },
+    flameWheel: (ctx, dest, t) => {
+      noise(ctx, dest, 0.52, t, 0.8, 180, 0.8, "lowpass");
+      osc(ctx, dest, "sine", 58, 0.38, t, 0.8, 38);
     }
   });
 
