@@ -5149,7 +5149,7 @@ export default function App() {
       game.screenShake = Math.max(game.screenShake || 0, 5);
       game.floatingTexts = game.floatingTexts || [];
       game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -52, text: "BOW WAVE!", color: "#7dd3fc", life: 0.8, maxLife: 0.8 });
-      playSound("webShoot", 1.0, 120, { pan: (ball.x / game.width) * 2 - 1, depth: 0.08, room: 0.55 });
+      playAudioFile("/Wave%201.mp3", 0.92, 0, 1, `${ball.id}-wave-1-${game.simTime}`);
       const stats = ball.side === "left" ? game.stats.left : game.stats.right;
       if (stats) stats.totalShots++;
     };
@@ -6934,7 +6934,7 @@ export default function App() {
             game.screenShake = Math.max(game.screenShake || 0, 13);
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({ x: wave.x, y: wave.y - 24, vy: -48, text: "UNDERTOW ARMED!", color: "#e0f2fe", life: 0.75, maxLife: 0.75 });
-            playSound("wallSlam", 0.9, 85, { pan: (wave.x / game.width) * 2 - 1, depth: 0.08, room: 0.65 });
+            playAudioFile("/Wave%202.mp3", 1.05, 0, 1, `${wave.id}-wave-2`);
           } else if (wave.wallBounces >= maxBounces) {
             wave.mode = "fading";
             wave.fadeStartedAt = game.simTime;
@@ -19963,14 +19963,14 @@ export default function App() {
 
       ctx.save();
       ctx.translate(ball.x, ball.y);
-      const body = ctx.createRadialGradient(-10, -12, 2, 0, 0, ball.r * 1.06);
-      body.addColorStop(0, "#e0f2fe");
-      body.addColorStop(0.25, "#38bdf8");
-      body.addColorStop(0.7, "#0284c7");
-      body.addColorStop(1, "#075985");
-      ctx.fillStyle = body;
-      ctx.strokeStyle = "#bae6fd";
-      ctx.lineWidth = 3.5;
+      const s = ball.r / 30;
+      const skin = ctx.createRadialGradient(-8 * s, -10 * s, 1, 0, 1 * s, ball.r * 1.08);
+      skin.addColorStop(0, "#f2bd7c");
+      skin.addColorStop(0.62, "#d99550");
+      skin.addColorStop(1, "#9a5b31");
+      ctx.fillStyle = skin;
+      ctx.strokeStyle = "#2b211d";
+      ctx.lineWidth = 2.8 * s;
       ctx.shadowColor = ready ? "#7dd3fc" : "#0369a1";
       ctx.shadowBlur = ready ? 18 + pulse * 8 : 8;
       ctx.beginPath();
@@ -19979,24 +19979,110 @@ export default function App() {
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      ctx.strokeStyle = "rgba(224,242,254,0.88)";
-      ctx.lineWidth = 3;
+      // Navy coat beneath the thick white fur collar.
+      const coat = ctx.createLinearGradient(0, 11 * s, 0, 31 * s);
+      coat.addColorStop(0, "#334f7e");
+      coat.addColorStop(1, "#172b50");
+      ctx.fillStyle = coat;
+      ctx.strokeStyle = "#15223a";
+      ctx.lineWidth = 1.6 * s;
+      ctx.beginPath();
+      ctx.moveTo(-27 * s, 14 * s);
+      ctx.quadraticCurveTo(0, 24 * s, 27 * s, 14 * s);
+      ctx.lineTo(25 * s, 28 * s);
+      ctx.quadraticCurveTo(0, 33 * s, -25 * s, 28 * s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Rounded ears tucked under the hair.
+      ctx.fillStyle = "#d58c4d";
+      ctx.strokeStyle = "#6f4028";
+      ctx.lineWidth = 1.7 * s;
+      ctx.beginPath();
+      ctx.ellipse(-24.5 * s, 4 * s, 6.2 * s, 8.3 * s, -0.12, 0, Math.PI * 2);
+      ctx.ellipse(24.5 * s, 4 * s, 6.2 * s, 8.3 * s, 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "#8e552f";
+      ctx.lineWidth = 1.2 * s;
+      ctx.beginPath();
+      ctx.arc(-24 * s, 4 * s, 3.2 * s, -1.25, 1.25);
+      ctx.arc(24 * s, 4 * s, 3.2 * s, Math.PI - 1.25, Math.PI + 1.25);
+      ctx.stroke();
+
+      // Dark helmet-like hair cap, center peak, and long side locks.
+      const hair = ctx.createRadialGradient(-7 * s, -22 * s, 1, 0, -8 * s, 31 * s);
+      hair.addColorStop(0, "#57483f");
+      hair.addColorStop(0.55, "#342b27");
+      hair.addColorStop(1, "#171311");
+      ctx.fillStyle = hair;
+      ctx.strokeStyle = "#211a17";
+      ctx.lineWidth = 2.1 * s;
+      ctx.beginPath();
+      ctx.moveTo(-28 * s, 1 * s);
+      ctx.quadraticCurveTo(-27 * s, -24 * s, -7 * s, -29 * s);
+      ctx.quadraticCurveTo(0, -31 * s, 8 * s, -29 * s);
+      ctx.quadraticCurveTo(27 * s, -24 * s, 28 * s, 1 * s);
+      ctx.lineTo(22 * s, 9 * s);
+      ctx.lineTo(20 * s, -5 * s);
+      ctx.quadraticCurveTo(10 * s, -14 * s, 5 * s, -15 * s);
+      ctx.lineTo(0, -23 * s);
+      ctx.lineTo(-4 * s, -15 * s);
+      ctx.quadraticCurveTo(-12 * s, -14 * s, -20 * s, -5 * s);
+      ctx.lineTo(-22 * s, 9 * s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Goggle clips and hanging dark straps from the reference.
+      ctx.strokeStyle = "#211b18";
+      ctx.lineWidth = 3.8 * s;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(-ball.r * 0.72, ball.r * 0.25);
-      ctx.quadraticCurveTo(-ball.r * 0.35, -ball.r * 0.02, 0, ball.r * 0.24);
-      ctx.quadraticCurveTo(ball.r * 0.35, ball.r * 0.5, ball.r * 0.72, ball.r * 0.12);
+      ctx.moveTo(-13 * s, -13 * s);
+      ctx.quadraticCurveTo(-15 * s, -1 * s, -18 * s, 13 * s);
+      ctx.quadraticCurveTo(-19 * s, 17 * s, -16 * s, 19 * s);
+      ctx.moveTo(13 * s, -13 * s);
+      ctx.quadraticCurveTo(15 * s, -1 * s, 18 * s, 13 * s);
+      ctx.quadraticCurveTo(19 * s, 17 * s, 16 * s, 19 * s);
       ctx.stroke();
-      ctx.fillStyle = "#082f49";
+      ctx.fillStyle = "#8fb7f1";
+      ctx.strokeStyle = "#334b78";
+      ctx.lineWidth = 1.1 * s;
       ctx.beginPath();
-      ctx.ellipse(-9, -7, 3.4, 4.7, -0.12, 0, Math.PI * 2);
-      ctx.ellipse(9, -7, 3.4, 4.7, 0.12, 0, Math.PI * 2);
+      ctx.roundRect(-15.2 * s, -16.4 * s, 5 * s, 7 * s, 2 * s);
+      ctx.roundRect(10.2 * s, -16.4 * s, 5 * s, 7 * s, 2 * s);
       ctx.fill();
-      ctx.fillStyle = "#e0f2fe";
+      ctx.stroke();
+
+      // Puffy fur collar, built from overlapping tufts for a soft silhouette.
+      ctx.fillStyle = "#f8f7f2";
+      ctx.strokeStyle = "#b9b8b2";
+      ctx.lineWidth = 1.1 * s;
+      const furTufts = [
+        [-23, 15, 6], [-18, 18, 6.5], [-12, 20, 6.5], [-6, 22, 6.8],
+        [0, 23, 7], [6, 22, 6.8], [12, 20, 6.5], [18, 18, 6.5], [23, 15, 6]
+      ];
+      furTufts.forEach(([x, y, r]) => {
+        ctx.beginPath();
+        ctx.arc(x * s, y * s, r * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      // Pale blue clasp centered in the collar.
+      const clasp = ctx.createRadialGradient(-1.5 * s, 19.5 * s, 0.5, 0, 22 * s, 5 * s);
+      clasp.addColorStop(0, "#e0f7ff");
+      clasp.addColorStop(1, "#65b4d2");
+      ctx.fillStyle = clasp;
+      ctx.strokeStyle = "#315f78";
+      ctx.lineWidth = 1.5 * s;
       ctx.beginPath();
-      ctx.arc(-10, -9, 1.1, 0, Math.PI * 2);
-      ctx.arc(8, -9, 1.1, 0, Math.PI * 2);
+      ctx.arc(0, 22 * s, 4.6 * s, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
+
       if (ready) {
         ctx.globalAlpha = 0.55 + pulse * 0.35;
         ctx.strokeStyle = "#ffffff";
