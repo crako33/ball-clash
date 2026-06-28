@@ -43,6 +43,8 @@ const ALLOWED_AUDIO_FILES = new Set([
   "/spike%20hit2.mp3",
   "/Saber%20hit.mp3",
   "/warp%20drag.mp3",
+  "/Wave%201.mp3",
+  "/Wave%202.mp3",
 ]);
 
 const AUDIO_FILE_COOLDOWNS = Object.freeze({
@@ -67,6 +69,8 @@ const AUDIO_FILE_COOLDOWNS = Object.freeze({
   "/spike%20hit2.mp3": 0.08,
   "/Saber%20hit.mp3": 0.08,
   "/warp%20drag.mp3": 0.18,
+  "/Wave%201.mp3": 0.35,
+  "/Wave%202.mp3": 0.45,
 });
 
 const AUDIO_FILE_MAX_INSTANCES = Object.freeze({
@@ -81,6 +85,8 @@ const AUDIO_FILE_MAX_INSTANCES = Object.freeze({
   "/Saber%20hit.mp3": 3,
   "/laser%20fire.mp3": 2,
   "/big%20laser.mp3": 1,
+  "/Wave%201.mp3": 2,
+  "/Wave%202.mp3": 2,
 });
 
 const DEFAULT_SOUND_COOLDOWNS = Object.freeze({

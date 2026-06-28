@@ -66,22 +66,22 @@ const BALL_TYPES = {
   },
   wave: {
     id: "wave",
-    name: "Wave Ball",
-    shortName: "WAVE",
+    name: "Waver Ball",
+    shortName: "WAVR",
     color: "#0ea5e9",
     stroke: "#bae6fd",
     radius: 30,
-    description: "Blue tide fighter. Launches a damaging bow wave on cooldown; its first wall impact creates a huge rebounding undertow that drags and damages opponents.",
+    description: "Living tide fighter who launches bow waves, builds a dragging undertow after wall rebounds, and freezes enemies after repeated hits.",
     emoji: "WAVE",
-    visualTheme: "Living Tide / Ocean Ricochet",
-    colorPalette: "Deep Ocean Blue, Cyan Foam, White Spray",
-    facialAge: "Ageless water spirit",
-    personality: "Calm while charging, explosive on impact",
-    primaryWeapon: "Stored Tide Puddle",
+    visualTheme: "Cozy Winter Tide / Northern Ocean Guardian",
+    colorPalette: "Warm Amber, Snow White, Deep Navy, Glacial Blue",
+    facialAge: "Young winter-tide guardian",
+    personality: "Calm, compassionate, and fierce under pressure",
+    primaryWeapon: "Living Tide Current",
     signatureAbility: "Bow Wave / Rebounding Undertow",
     companion: "None",
-    specialVisualEffects: "Growing water pool, rolling foam crest, bubbles, and impact spray",
-    animeStyle: "High-energy elemental water fighter",
+    specialVisualEffects: "Gathering bow-wave crests, rolling foam, glacial freeze, and impact spray",
+    animeStyle: "High-energy winter-tide guardian",
     gameStyle: "Cooldown zoner whose bow wave transforms into a wide dragging rebound after striking a wall",
   },
   gun: {
@@ -762,7 +762,7 @@ const BALANCE = {
   eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
   yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
   boomerang: { cooldown: 2800, windup: 520, catchSpin: 420, throwSpeed: 880, returnSpeed: 980, duration: 2600, damage: 4, knockback: 520, hitCooldown: 280, projectileRadius: 25, maxBounces: 5, maxChainThrows: 3 },
-  wave: { cooldown: 5200, bowSpeed: 440, bowDamage: 4, bowRadius: 30, bowWidth: 76, waveLife: 7000, reboundSpeed: 340, reboundDamage: 7, reboundRadius: 58, reboundWidth: 154, dragSpeed: 480, dragDuration: 720, maxBounces: 4, dragAfterBounces: 2, fadeDuration: 700, hitCooldown: 650, rippleDamage: 0, rippleInterval: 760, rippleLife: 900, rippleMaxRadius: 94, rippleKnockback: 0 },
+  wave: { cooldown: 5200, bowSpeed: 440, bowDamage: 4, bowRadius: 30, bowWidth: 76, waveLife: 7000, reboundSpeed: 340, reboundDamage: 7, reboundRadius: 58, reboundWidth: 154, dragSpeed: 480, dragDuration: 720, maxBounces: 4, dragAfterBounces: 2, fadeDuration: 700, freezeHits: 5, freezeDuration: 2200, hitCooldown: 650, rippleDamage: 0, rippleInterval: 760, rippleLife: 900, rippleMaxRadius: 94, rippleKnockback: 0 },
   fireBender: { fireballDamage: 5, fireballCooldown: 1400, whipDamage: 8, whipCooldown: 3500, wheelDamage: 12, wheelCooldown: 7500, wheelDuration: 800, burnDuration: 1800 },
   serpent: { startSegments: 3, segmentDamage: 3, segmentHitCooldown: 420, maxSegments: 14, bouncesPerSegment: 2, segmentSpacing: 34, segmentRadius: 18, segmentBounceSpeed: 720 },
   loki: { cooldown: 3000, fireballCooldown: 1050, fireballSpeed: 980, fireballDamage: 6, illusionDuration: 7000, illusionFireballCooldown: 1550, illusionCount: 3, illusionDamage: 1, illusionKnockback: 180, swapStrikeDamage: 4, swapStrikeKnockback: 620, dodgeCooldown: 2100, fireballBounces: 1, fireballHomingTurn: 2.2 },
@@ -905,6 +905,7 @@ const mergeBalanceSettings = (base, saved = {}) => {
       merged[type].dragAfterBounces = settings.dragAfterBounces;
       merged[type].fadeDuration = settings.fadeDuration;
       merged[type].waveLife = settings.waveLife;
+      if (merged[type].freezeDuration === 1400) merged[type].freezeDuration = settings.freezeDuration;
     }
     if (type === "knife") {
       Object.assign(merged[type], {
@@ -5149,7 +5150,7 @@ export default function App() {
       game.screenShake = Math.max(game.screenShake || 0, 5);
       game.floatingTexts = game.floatingTexts || [];
       game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -52, text: "BOW WAVE!", color: "#7dd3fc", life: 0.8, maxLife: 0.8 });
-      playAudioFile("/Wave%201.mp3", 0.92, 0, 1, `${ball.id}-wave-1-${game.simTime}`);
+      playAudioFile("/Wave%201.mp3", 0.5, 0, 1, `${ball.id}-wave-1-${game.simTime}`);
       const stats = ball.side === "left" ? game.stats.left : game.stats.right;
       if (stats) stats.totalShots++;
     };
@@ -6934,7 +6935,7 @@ export default function App() {
             game.screenShake = Math.max(game.screenShake || 0, 13);
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({ x: wave.x, y: wave.y - 24, vy: -48, text: "UNDERTOW ARMED!", color: "#e0f2fe", life: 0.75, maxLife: 0.75 });
-            playAudioFile("/Wave%202.mp3", 1.05, 0, 1, `${wave.id}-wave-2`);
+            playAudioFile("/Wave%202.mp3", 0.58, 0, 1, `${wave.id}-wave-2`);
           } else if (wave.wallBounces >= maxBounces) {
             wave.mode = "fading";
             wave.fadeStartedAt = game.simTime;
@@ -6988,6 +6989,29 @@ export default function App() {
           const damage = wave.mode === "rebound" ? (bal.reboundDamage || 7) : (bal.bowDamage || 4);
           applyDamage(enemy, damage, `${wave.ownerId}-${wave.mode}-wave-${enemy.id}-${wave.id}`, game.simTime, bal.hitCooldown || 650);
           const dealt = before - enemy.health;
+          let freezeTriggered = false;
+          let waveHitStacks = 0;
+          if (dealt > 0) {
+            enemy.waveHitStacksByOwner = enemy.waveHitStacksByOwner || {};
+            waveHitStacks = (enemy.waveHitStacksByOwner[wave.ownerId] || 0) + 1;
+            const freezeHits = Math.max(1, bal.freezeHits || 5);
+            if (waveHitStacks >= freezeHits) {
+              const freezeDuration = bal.freezeDuration || 1400;
+              enemy.waveHitStacksByOwner[wave.ownerId] = 0;
+              enemy.paralyzedUntil = Math.max(enemy.paralyzedUntil || 0, game.simTime + freezeDuration);
+              enemy.skillLockedUntil = Math.max(enemy.skillLockedUntil || 0, game.simTime + freezeDuration);
+              enemy.waveFrozenUntil = Math.max(enemy.waveFrozenUntil || 0, game.simTime + freezeDuration);
+              enemy.vx = 0;
+              enemy.vy = 0;
+              freezeTriggered = true;
+              spawnSparks(enemy.x, enemy.y, "#e0f2fe", 34);
+              spawnImpactBurst(enemy.x, enemy.y, wave.angle, ["#ffffff", "#e0f2fe", "#7dd3fc", "#0ea5e9"], 1.65);
+              game.screenShake = Math.max(game.screenShake || 0, 12);
+              playSound("shieldBlock", 0.9, 210, { pan: (enemy.x / game.width) * 2 - 1, depth: 0.1, room: 0.62 });
+            } else {
+              enemy.waveHitStacksByOwner[wave.ownerId] = waveHitStacks;
+            }
+          }
           if (wave.mode !== "rebound") {
             enemy.vx += Math.cos(wave.angle) * 330;
             enemy.vy += Math.sin(wave.angle) * 330;
@@ -6999,7 +7023,16 @@ export default function App() {
           spawnImpactBurst(enemy.x, enemy.y, wave.angle, ["#ffffff", "#bae6fd", "#38bdf8", "#0369a1"], 1.35);
           game.screenShake = Math.max(game.screenShake || 0, wave.mode === "rebound" ? 12 : 6);
           game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({ x: enemy.x, y: enemy.y - enemy.r - 18, vy: -50, text: wave.mode === "rebound" ? "UNDERTOW!" : "BOW HIT!", color: "#7dd3fc", life: 0.7, maxLife: 0.7 });
+          const freezeHits = Math.max(1, bal.freezeHits || 5);
+          game.floatingTexts.push({
+            x: enemy.x,
+            y: enemy.y - enemy.r - 18,
+            vy: -50,
+            text: freezeTriggered ? "FROZEN!" : `${wave.mode === "rebound" ? "UNDERTOW" : "WAVE"} ${waveHitStacks}/${freezeHits}`,
+            color: freezeTriggered ? "#e0f2fe" : "#7dd3fc",
+            life: freezeTriggered ? 1.0 : 0.7,
+            maxLife: freezeTriggered ? 1.0 : 0.7
+          });
           playSound("wallSlam", 0.78, 100, { pan: (enemy.x / game.width) * 2 - 1, depth: 0.14, room: 0.55 });
         });
 
@@ -19979,36 +20012,29 @@ export default function App() {
       ctx.stroke();
       ctx.shadowBlur = 0;
 
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, ball.r - 1.4 * s, 0, Math.PI * 2);
+      ctx.clip();
       // Navy coat beneath the thick white fur collar.
       const coat = ctx.createLinearGradient(0, 11 * s, 0, 31 * s);
       coat.addColorStop(0, "#334f7e");
       coat.addColorStop(1, "#172b50");
       ctx.fillStyle = coat;
-      ctx.strokeStyle = "#15223a";
-      ctx.lineWidth = 1.6 * s;
       ctx.beginPath();
-      ctx.moveTo(-27 * s, 14 * s);
-      ctx.quadraticCurveTo(0, 24 * s, 27 * s, 14 * s);
-      ctx.lineTo(25 * s, 28 * s);
-      ctx.quadraticCurveTo(0, 33 * s, -25 * s, 28 * s);
+      ctx.moveTo(-ball.r, 13 * s);
+      ctx.quadraticCurveTo(0, 19 * s, ball.r, 13 * s);
+      ctx.lineTo(ball.r, ball.r);
+      ctx.lineTo(-ball.r, ball.r);
       ctx.closePath();
       ctx.fill();
-      ctx.stroke();
 
-      // Rounded ears tucked under the hair.
-      ctx.fillStyle = "#d58c4d";
-      ctx.strokeStyle = "#6f4028";
-      ctx.lineWidth = 1.7 * s;
+      // One soft curved seam; the sphere's outer outline supplies every exterior edge.
+      ctx.strokeStyle = "rgba(21,34,58,0.72)";
+      ctx.lineWidth = 1.25 * s;
       ctx.beginPath();
-      ctx.ellipse(-24.5 * s, 4 * s, 6.2 * s, 8.3 * s, -0.12, 0, Math.PI * 2);
-      ctx.ellipse(24.5 * s, 4 * s, 6.2 * s, 8.3 * s, 0.12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.strokeStyle = "#8e552f";
-      ctx.lineWidth = 1.2 * s;
-      ctx.beginPath();
-      ctx.arc(-24 * s, 4 * s, 3.2 * s, -1.25, 1.25);
-      ctx.arc(24 * s, 4 * s, 3.2 * s, Math.PI - 1.25, Math.PI + 1.25);
+      ctx.moveTo(-ball.r, 13 * s);
+      ctx.quadraticCurveTo(0, 19 * s, ball.r, 13 * s);
       ctx.stroke();
 
       // Dark helmet-like hair cap, center peak, and long side locks.
@@ -20056,13 +20082,37 @@ export default function App() {
       ctx.fill();
       ctx.stroke();
 
-      // Puffy fur collar, built from overlapping tufts for a soft silhouette.
-      ctx.fillStyle = "#f8f7f2";
-      ctx.strokeStyle = "#b9b8b2";
-      ctx.lineWidth = 1.1 * s;
+      // Oversized snow-white fur mantle from the updated reference.
+      const fur = ctx.createLinearGradient(0, 2 * s, 0, 27 * s);
+      fur.addColorStop(0, "#fffefa");
+      fur.addColorStop(0.58, "#f5f3ed");
+      fur.addColorStop(1, "#d8d6d0");
+      ctx.fillStyle = fur;
+      ctx.strokeStyle = "#9f9e9a";
+      ctx.lineWidth = 1.35 * s;
+      ctx.beginPath();
+      ctx.moveTo(-29 * s, 2 * s);
+      ctx.quadraticCurveTo(-25 * s, -1 * s, -21 * s, 3 * s);
+      ctx.quadraticCurveTo(-17 * s, 0, -13 * s, 4 * s);
+      ctx.quadraticCurveTo(-9 * s, 1 * s, -5 * s, 5 * s);
+      ctx.quadraticCurveTo(0, 2 * s, 5 * s, 5 * s);
+      ctx.quadraticCurveTo(9 * s, 1 * s, 13 * s, 4 * s);
+      ctx.quadraticCurveTo(17 * s, 0, 21 * s, 3 * s);
+      ctx.quadraticCurveTo(25 * s, -1 * s, 29 * s, 2 * s);
+      ctx.lineTo(28 * s, 15 * s);
+      ctx.quadraticCurveTo(23 * s, 20 * s, 17 * s, 19 * s);
+      ctx.quadraticCurveTo(12 * s, 23 * s, 6 * s, 20 * s);
+      ctx.quadraticCurveTo(0, 24 * s, -6 * s, 20 * s);
+      ctx.quadraticCurveTo(-12 * s, 23 * s, -17 * s, 19 * s);
+      ctx.quadraticCurveTo(-23 * s, 20 * s, -28 * s, 15 * s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Soft side and lower tufts keep the mantle fluffy at game scale.
       const furTufts = [
-        [-23, 15, 6], [-18, 18, 6.5], [-12, 20, 6.5], [-6, 22, 6.8],
-        [0, 23, 7], [6, 22, 6.8], [12, 20, 6.5], [18, 18, 6.5], [23, 15, 6]
+        [-27, 8, 6], [-22, 16, 6.2], [-13, 20, 6],
+        [0, 21.5, 6.6], [13, 20, 6], [22, 16, 6.2], [27, 8, 6]
       ];
       furTufts.forEach(([x, y, r]) => {
         ctx.beginPath();
@@ -20070,6 +20120,17 @@ export default function App() {
         ctx.fill();
         ctx.stroke();
       });
+
+      // Strap ends remain visible on top of the fur mantle.
+      ctx.strokeStyle = "#211b18";
+      ctx.lineWidth = 3.8 * s;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-14.5 * s, -7 * s);
+      ctx.quadraticCurveTo(-16 * s, 1 * s, -17.5 * s, 8 * s);
+      ctx.moveTo(14.5 * s, -7 * s);
+      ctx.quadraticCurveTo(16 * s, 1 * s, 17.5 * s, 8 * s);
+      ctx.stroke();
 
       // Pale blue clasp centered in the collar.
       const clasp = ctx.createRadialGradient(-1.5 * s, 19.5 * s, 0.5, 0, 22 * s, 5 * s);
@@ -20082,6 +20143,8 @@ export default function App() {
       ctx.arc(0, 22 * s, 4.6 * s, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+
+      ctx.restore();
 
       if (ready) {
         ctx.globalAlpha = 0.55 + pulse * 0.35;
@@ -21524,31 +21587,61 @@ export default function App() {
 
       if (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) {
         const progress = clamp((ball.paralyzedUntil - game.simTime) / 1200, 0, 1);
+        const waveFrozen = ball.waveFrozenUntil && game.simTime < ball.waveFrozenUntil;
         ctx.save();
         ctx.globalAlpha = 0.55 + progress * 0.3;
-        ctx.strokeStyle = "#38bdf8";
+        ctx.strokeStyle = waveFrozen ? "#e0f2fe" : "#38bdf8";
         ctx.lineWidth = 2.5;
-        ctx.shadowColor = "#67e8f9";
+        ctx.shadowColor = waveFrozen ? "#bae6fd" : "#67e8f9";
         ctx.shadowBlur = 14;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r + 9 + Math.sin(game.simTime * 0.02) * 3, 0, Math.PI * 2);
         ctx.stroke();
-        for (let i = 0; i < 5; i++) {
-          const angle = game.simTime * 0.012 + i * Math.PI * 0.4;
-          const inner = ball.r + 3;
-          const outer = ball.r + 16 + (i % 2) * 4;
-          const mid = (inner + outer) / 2;
-          ctx.beginPath();
-          ctx.moveTo(ball.x + Math.cos(angle) * inner, ball.y + Math.sin(angle) * inner);
-          ctx.lineTo(ball.x + Math.cos(angle + 0.13) * mid, ball.y + Math.sin(angle + 0.13) * mid);
-          ctx.lineTo(ball.x + Math.cos(angle - 0.08) * outer, ball.y + Math.sin(angle - 0.08) * outer);
-          ctx.stroke();
+        if (!waveFrozen) {
+          for (let i = 0; i < 5; i++) {
+            const angle = game.simTime * 0.012 + i * Math.PI * 0.4;
+            const inner = ball.r + 3;
+            const outer = ball.r + 16 + (i % 2) * 4;
+            const mid = (inner + outer) / 2;
+            ctx.beginPath();
+            ctx.moveTo(ball.x + Math.cos(angle) * inner, ball.y + Math.sin(angle) * inner);
+            ctx.lineTo(ball.x + Math.cos(angle + 0.13) * mid, ball.y + Math.sin(angle + 0.13) * mid);
+            ctx.lineTo(ball.x + Math.cos(angle - 0.08) * outer, ball.y + Math.sin(angle - 0.08) * outer);
+            ctx.stroke();
+          }
         }
-        ctx.fillStyle = "#67e8f9";
+        if (waveFrozen) {
+          const frost = ctx.createRadialGradient(
+            ball.x - ball.r * 0.3,
+            ball.y - ball.r * 0.35,
+            1,
+            ball.x,
+            ball.y,
+            ball.r + 7
+          );
+          frost.addColorStop(0, "rgba(255,255,255,0.72)");
+          frost.addColorStop(0.58, "rgba(240,249,255,0.5)");
+          frost.addColorStop(1, "rgba(186,230,253,0.22)");
+          ctx.globalAlpha = 0.5 + progress * 0.2;
+          ctx.fillStyle = frost;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.r + 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.45 + progress * 0.25;
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 2;
+          for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.r + 5 + i * 2, i * 1.7, i * 1.7 + 1.15);
+            ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = waveFrozen ? "#e0f2fe" : "#67e8f9";
         ctx.font = "bold 9px sans-serif";
         ctx.textAlign = "center";
         ctx.shadowBlur = 8;
-        ctx.fillText("ELECTRIFIED", ball.x, ball.y - ball.r - 14);
+        ctx.fillText(waveFrozen ? "FROZEN" : "ELECTRIFIED", ball.x, ball.y - ball.r - 14);
         ctx.restore();
       }
 
@@ -24671,6 +24764,8 @@ export default function App() {
               {renderSlider("Wall Bounces", "wave", "maxBounces", 2, 8, 1)}
               {renderSlider("Drag Starts After", "wave", "dragAfterBounces", 1, 4, 1, " bounces")}
               {renderSlider("Fade Duration", "wave", "fadeDuration", 250, 1600, 50, "ms")}
+              {renderSlider("Hits to Freeze", "wave", "freezeHits", 2, 10, 1)}
+              {renderSlider("Freeze Duration", "wave", "freezeDuration", 400, 3000, 100, "ms")}
               {renderSlider("Hit Cooldown", "wave", "hitCooldown", 100, 1400, 25, "ms")}
             </>
           )}
