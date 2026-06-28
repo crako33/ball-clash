@@ -71,18 +71,18 @@ const BALL_TYPES = {
     color: "#0ea5e9",
     stroke: "#bae6fd",
     radius: 30,
-    description: "Blue tide fighter. A puddle grows beneath it over time; once full, its next wall bounce knocks the stored wave loose on a crossing path that damages opponents.",
+    description: "Blue tide fighter. Launches a damaging bow wave on cooldown; its first wall impact creates a huge rebounding undertow that drags and damages opponents.",
     emoji: "WAVE",
     visualTheme: "Living Tide / Ocean Ricochet",
     colorPalette: "Deep Ocean Blue, Cyan Foam, White Spray",
     facialAge: "Ageless water spirit",
     personality: "Calm while charging, explosive on impact",
     primaryWeapon: "Stored Tide Puddle",
-    signatureAbility: "Rebound Wave",
+    signatureAbility: "Bow Wave / Rebounding Undertow",
     companion: "None",
     specialVisualEffects: "Growing water pool, rolling foam crest, bubbles, and impact spray",
     animeStyle: "High-energy elemental water fighter",
-    gameStyle: "Passive charge fighter that turns wall movement into angled wave pressure",
+    gameStyle: "Cooldown zoner whose bow wave transforms into a wide dragging rebound after striking a wall",
   },
   gun: {
     id: "gun",
@@ -762,7 +762,7 @@ const BALANCE = {
   eightBall: { cooldown: 6800, cueWindup: 760, cueStrikeDuration: 95, cuePullback: 125, poweredDuration: 4400, launchSpeed: 560, cueDamage: 2, cueHitCooldown: 600, hitDamage: 2, hitCooldown: 260, speedGainPerHit: 85, recoilBase: 360, recoilGainPerHit: 85, maxPowerStacks: 6, maxPoweredSpeed: 980 },
   yoYo: { cooldown: 3000, windup: 520, releasePause: 240, throwSpeed: 1100, returnSpeed: 1100, returnRecoil: 520, duration: 3800, damage: 4, damageGrowth: 2, maxDamage: 10, baseKnockback: 620, knockbackGrowth: 190, maxKnockback: 1550, hitCooldown: 320, yoYoRadius: 24, ricochetBounces: 3, wallInset: 30 },
   boomerang: { cooldown: 2800, windup: 520, catchSpin: 420, throwSpeed: 880, returnSpeed: 980, duration: 2600, damage: 4, knockback: 520, hitCooldown: 280, projectileRadius: 25, maxBounces: 5, maxChainThrows: 3 },
-  wave: { chargeTime: 5000, waveSpeed: 760, waveDamage: 5, waveRadius: 38, waveWidth: 86, waveLife: 1800, waveKnockback: 560, hitCooldown: 650, releaseAngle: 0.64, rippleDamage: 1, rippleInterval: 850, rippleLife: 900, rippleMaxRadius: 94, rippleKnockback: 170 },
+  wave: { cooldown: 5200, bowSpeed: 440, bowDamage: 4, bowRadius: 30, bowWidth: 76, waveLife: 7000, reboundSpeed: 340, reboundDamage: 7, reboundRadius: 58, reboundWidth: 154, dragSpeed: 480, dragDuration: 720, maxBounces: 4, dragAfterBounces: 2, fadeDuration: 700, hitCooldown: 650, rippleDamage: 0, rippleInterval: 760, rippleLife: 900, rippleMaxRadius: 94, rippleKnockback: 0 },
   fireBender: { fireballDamage: 5, fireballCooldown: 1400, whipDamage: 8, whipCooldown: 3500, wheelDamage: 12, wheelCooldown: 7500, wheelDuration: 800, burnDuration: 1800 },
   serpent: { startSegments: 3, segmentDamage: 3, segmentHitCooldown: 420, maxSegments: 14, bouncesPerSegment: 2, segmentSpacing: 34, segmentRadius: 18, segmentBounceSpeed: 720 },
   loki: { cooldown: 3000, fireballCooldown: 1050, fireballSpeed: 980, fireballDamage: 6, illusionDuration: 7000, illusionFireballCooldown: 1550, illusionCount: 3, illusionDamage: 1, illusionKnockback: 180, swapStrikeDamage: 4, swapStrikeKnockback: 620, dodgeCooldown: 2100, fireballBounces: 1, fireballHomingTurn: 2.2 },
@@ -896,6 +896,15 @@ const mergeBalanceSettings = (base, saved = {}) => {
     if (type === "hammer") {
       merged[type].spinSpeed = 0.02;
       merged[type].launchSpeed = 980;
+    }
+    if (type === "wave") {
+      if (merged[type].bowSpeed === 690) merged[type].bowSpeed = settings.bowSpeed;
+      if (merged[type].reboundSpeed === 560) merged[type].reboundSpeed = settings.reboundSpeed;
+      if (merged[type].dragSpeed === 720) merged[type].dragSpeed = settings.dragSpeed;
+      merged[type].maxBounces = settings.maxBounces;
+      merged[type].dragAfterBounces = settings.dragAfterBounces;
+      merged[type].fadeDuration = settings.fadeDuration;
+      merged[type].waveLife = settings.waveLife;
     }
     if (type === "knife") {
       Object.assign(merged[type], {
@@ -1601,7 +1610,8 @@ export default function App() {
       boomerangX: 0, boomerangY: 0, boomerangVx: 0, boomerangVy: 0, boomerangSpin: 0, boomerangAngle: side === "left" ? 0 : Math.PI,
       boomerangBouncesLeft: 0, boomerangHitAt: {}, boomerangChainThrows: 0, boomerangCatchSpinUntil: 0,
       // Wave Ball Specific
-      tideCharge: type === "wave" ? 0 : 0, tideReady: false, tideReadyFlashUntil: 0, tideReleaseFlashUntil: 0, tideReleaseSide: null,
+      tideCharge: 0, tideReady: false, tideReadyFlashUntil: 0, tideReleaseFlashUntil: 0, tideReleaseSide: null,
+      tideNextCastAt: type === "wave" ? 1800 : 0,
       tideNextRippleAt: type === "wave" ? 500 : 0, tideRippleSeq: 0,
       // Spore Specific
       nextSporeAt: 0, hydraGlowStacks: 0,
@@ -2063,9 +2073,9 @@ export default function App() {
       const charge = Math.round(clamp(ball.tideCharge || 0, 0, 1) * 100);
       const activeWaves = (game?.tideWaves || []).filter((wave) => wave.ownerId === ball.id).length;
       const activeRipples = (game?.tideRipples || []).filter((ripple) => ripple.ownerId === ball.id).length;
-      lines.push(`TIDE PUDDLE: ${ball.tideReady ? "FULL" : `${charge}% CHARGED`}`);
-      lines.push(`REBOUND WAVE: ${ball.tideReady ? "NEXT WALL BOUNCE" : "BUILDING"}`);
-      lines.push(`DAMAGE RIPPLES: ${activeRipples} ACTIVE`);
+      lines.push(`BOW WAVE: ${ball.tideReady ? "READY" : `${charge}% CHARGED`}`);
+      lines.push(`WALL REBOUND: ${activeWaves ? "ACTIVE" : "ARMS AFTER IMPACT"}`);
+      lines.push(`WATER RIPPLES: ${activeRipples} ACTIVE`);
       lines.push(`WAVES ACTIVE: ${activeWaves}`);
     } else if (ball.type === "wrecker") {
       lines.push(`CLOTHESLINE: ${ball.wreckerState === "charging" ? "CHARGING" : ball.wreckerState === "swinging" ? "SWINGING" : cooldown(ball.wreckerNextAttackAt)}`);
@@ -5100,46 +5110,45 @@ export default function App() {
       return { d: Math.hypot(ball.x - px, ball.y - py), px, py, t };
     };
 
-    const releaseTideWave = (ball, sideHit, impactX, impactY) => {
-      if (ball?.type !== "wave" || !ball.tideReady || !sideHit || !game.combatStarted) return;
+    const releaseTideWave = (ball, target) => {
+      if (ball?.type !== "wave" || !target || !game.combatStarted) return;
       const bal = game.balance.wave || BALANCE.wave;
-      const inward = sideHit === "left" ? { x: 1, y: 0 } :
-        sideHit === "right" ? { x: -1, y: 0 } :
-        sideHit === "top" ? { x: 0, y: 1 } : { x: 0, y: -1 };
-      const tangent = (sideHit === "left" || sideHit === "right")
-        ? { x: 0, y: -(Math.sign(ball.vy || 1)) }
-        : { x: -(Math.sign(ball.vx || 1)), y: 0 };
-      const angleOffset = bal.releaseAngle ?? 0.64;
-      const dirX = inward.x * Math.cos(angleOffset) + tangent.x * Math.sin(angleOffset);
-      const dirY = inward.y * Math.cos(angleOffset) + tangent.y * Math.sin(angleOffset);
+      const leadTime = Math.min(0.38, distance(ball, target) / Math.max(1, bal.bowSpeed || 690) * 0.45);
+      const aimX = target.x + (target.vx || 0) * leadTime;
+      const aimY = target.y + (target.vy || 0) * leadTime;
+      const aimDist = Math.max(1, Math.hypot(aimX - ball.x, aimY - ball.y));
+      const dirX = (aimX - ball.x) / aimDist;
+      const dirY = (aimY - ball.y) / aimDist;
       const angle = Math.atan2(dirY, dirX);
-      const startDistance = ball.r + (bal.waveRadius || 38) * 0.55;
+      const startDistance = ball.r + (bal.bowRadius || 30) + 8;
       game.tideWaves = game.tideWaves || [];
       game.tideWaves.push({
-        id: `${ball.id}-tide-${game.simTime}-${Math.random().toString(16).slice(2)}`,
+        id: `${ball.id}-bow-wave-${game.simTime}-${Math.random().toString(16).slice(2)}`,
         ownerId: ball.id,
         ownerSide: ball.side,
         x: ball.x + dirX * startDistance,
         y: ball.y + dirY * startDistance,
-        vx: dirX * (bal.waveSpeed || 760),
-        vy: dirY * (bal.waveSpeed || 760),
+        vx: dirX * (bal.bowSpeed || 690),
+        vy: dirY * (bal.bowSpeed || 690),
         angle,
         life: bal.waveLife || 1800,
         maxLife: bal.waveLife || 1800,
-        radius: bal.waveRadius || 38,
-        width: bal.waveWidth || 86,
+        radius: bal.bowRadius || 30,
+        width: bal.bowWidth || 76,
+        mode: "bow",
+        wallBounces: 0,
         hitIds: {},
         phase: Math.random() * Math.PI * 2,
       });
       ball.tideCharge = 0;
       ball.tideReady = false;
       ball.tideReleaseFlashUntil = game.simTime + 520;
-      ball.tideReleaseSide = sideHit;
-      spawnSparks(impactX, impactY, "#7dd3fc", 22);
-      spawnImpactBurst(impactX, impactY, angle, ["#ffffff", "#bae6fd", "#38bdf8", "#0369a1"], 1.45);
-      game.screenShake = Math.max(game.screenShake || 0, 10);
+      ball.tideNextCastAt = game.simTime + (bal.cooldown || 5200);
+      spawnSparks(ball.x + dirX * ball.r, ball.y + dirY * ball.r, "#7dd3fc", 18);
+      spawnImpactBurst(ball.x + dirX * ball.r, ball.y + dirY * ball.r, angle, ["#ffffff", "#bae6fd", "#38bdf8", "#0369a1"], 1.05);
+      game.screenShake = Math.max(game.screenShake || 0, 5);
       game.floatingTexts = game.floatingTexts || [];
-      game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -52, text: "REBOUND WAVE!", color: "#7dd3fc", life: 0.8, maxLife: 0.8 });
+      game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -52, text: "BOW WAVE!", color: "#7dd3fc", life: 0.8, maxLife: 0.8 });
       playSound("webShoot", 1.0, 120, { pan: (ball.x / game.width) * 2 - 1, depth: 0.08, room: 0.55 });
       const stats = ball.side === "left" ? game.stats.left : game.stats.right;
       if (stats) stats.totalShots++;
@@ -5175,9 +5184,6 @@ export default function App() {
         }
         if (ball.type === "earthSpiker" && sideHit) {
           plantEarthSpike(ball, bx, by, sideHit, Math.atan2(ball.vy, ball.vx));
-        }
-        if (ball.type === "wave" && sideHit) {
-          releaseTideWave(ball, sideHit, bx, by);
         }
         if (ball.wreckerSlammedByPunch) {
           ball.wreckerSlammedByPunch = false;
@@ -6790,9 +6796,13 @@ export default function App() {
       }
     };
 
-    const updateWaveBall = (ball, currentTime, stepDt) => {
+    const updateWaveBall = (ball, target, currentTime, stepDt) => {
       const bal = game.balance.wave || BALANCE.wave;
-      const visibleCharge = ball.tideReady ? 1 : clamp(ball.tideCharge || 0, 0, 1);
+      const cooldown = Math.max(500, bal.cooldown || 5200);
+      const castAt = ball.tideNextCastAt || currentTime;
+      const visibleCharge = clamp(1 - Math.max(0, castAt - currentTime) / cooldown, 0, 1);
+      ball.tideCharge = visibleCharge;
+      ball.tideReady = currentTime >= castAt;
       if (currentTime >= (ball.tideNextRippleAt || 0)) {
         const rippleLife = bal.rippleLife || 900;
         const rippleInterval = (bal.rippleInterval || 850) * (1 - visibleCharge * 0.22);
@@ -6815,9 +6825,6 @@ export default function App() {
         ball.tideNextRippleAt = currentTime + Math.max(300, rippleInterval);
       }
 
-      if (ball.tideReady) return;
-      const wasCharge = clamp(ball.tideCharge || 0, 0, 1);
-      ball.tideCharge = clamp(wasCharge + (stepDt * 1000) / Math.max(500, bal.chargeTime || 5000), 0, 1);
       if (canSpawnParticle() && Math.random() < 0.065 + ball.tideCharge * 0.08) {
         const a = Math.random() * Math.PI * 2;
         const spread = ball.r * (0.45 + Math.random() * (0.75 + ball.tideCharge * 0.7));
@@ -6832,13 +6839,9 @@ export default function App() {
           maxLife: 0.58,
         });
       }
-      if (ball.tideCharge < 1) return;
-      ball.tideReady = true;
-      ball.tideReadyFlashUntil = currentTime + 900;
-      spawnSparks(ball.x, ball.y + ball.r * 0.7, "#7dd3fc", 18);
-      game.floatingTexts = game.floatingTexts || [];
-      game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -48, text: "TIDE FULL!", color: "#bae6fd", life: 0.8, maxLife: 0.8 });
-      playSound("repulsorCharge", 0.58, 160, { pan: (ball.x / game.width) * 2 - 1, depth: 0.2, room: 0.46 });
+      if (!ball.tideReady || !target || !canStartSkillConnection(ball, target, game.balls, currentTime)) return;
+      ball.tideReadyFlashUntil = currentTime + 520;
+      releaseTideWave(ball, target);
     };
 
     const updateTideRipples = (dt) => {
@@ -6853,7 +6856,7 @@ export default function App() {
         ripple.radius = ripple.startRadius + (ripple.maxRadius - ripple.startRadius) * eased;
         ripple.phase += dt * 13;
 
-        game.balls.forEach((enemy) => {
+        if ((bal.rippleDamage || 0) > 0) game.balls.forEach((enemy) => {
           if (enemy.side === ripple.ownerSide || enemy.type === "cueBall" || enemy.health <= 0 || ripple.hitIds[enemy.id]) return;
           const dx = enemy.x - ripple.x;
           const dy = enemy.y - ripple.y;
@@ -6887,11 +6890,69 @@ export default function App() {
         if (!owner || owner.health <= 0 || owner.shattered) return false;
         const bal = game.balance.wave || BALANCE.wave;
         wave.life -= dt * 1000;
+        if (wave.mode === "fading") {
+          const fadeDrag = Math.pow(0.965, dt * 60);
+          wave.vx *= fadeDrag;
+          wave.vy *= fadeDrag;
+        }
         wave.x += wave.vx * dt;
         wave.y += wave.vy * dt;
         wave.phase += dt * 11;
 
-        if (canSpawnParticle() && Math.random() < 0.28) {
+        const edgePad = 18;
+        let wallHit = null;
+        if (wave.mode !== "fading") {
+          if (wave.x - wave.radius < edgePad) { wave.x = edgePad + wave.radius; wave.vx = Math.abs(wave.vx); wallHit = "left"; }
+          else if (wave.x + wave.radius > game.width - edgePad) { wave.x = game.width - edgePad - wave.radius; wave.vx = -Math.abs(wave.vx); wallHit = "right"; }
+          if (wave.y - wave.radius < edgePad) { wave.y = edgePad + wave.radius; wave.vy = Math.abs(wave.vy); wallHit = "top"; }
+          else if (wave.y + wave.radius > game.height - edgePad) { wave.y = game.height - edgePad - wave.radius; wave.vy = -Math.abs(wave.vy); wallHit = "bottom"; }
+        }
+
+        if (wallHit) {
+          wave.wallBounces = (wave.wallBounces || 0) + 1;
+          wave.angle = Math.atan2(wave.vy, wave.vx);
+          const dragAfter = bal.dragAfterBounces || 2;
+          const maxBounces = bal.maxBounces || 4;
+
+          if (wave.wallBounces === dragAfter) {
+            const speed = Math.max(1, Math.hypot(wave.vx, wave.vy));
+            wave.vx = (wave.vx / speed) * (bal.reboundSpeed || 340);
+            wave.vy = (wave.vy / speed) * (bal.reboundSpeed || 340);
+            wave.angle = Math.atan2(wave.vy, wave.vx);
+            wave.mode = "rebound";
+            wave.radius = bal.reboundRadius || 58;
+            wave.width = bal.reboundWidth || 154;
+            if (wallHit === "left") wave.x = edgePad + wave.radius;
+            else if (wallHit === "right") wave.x = game.width - edgePad - wave.radius;
+            else if (wallHit === "top") wave.y = edgePad + wave.radius;
+            else if (wallHit === "bottom") wave.y = game.height - edgePad - wave.radius;
+            wave.life = Math.max(wave.life, 2800);
+            wave.maxLife = Math.max(wave.maxLife, wave.life);
+            wave.hitIds = {};
+            spawnSparks(wave.x, wave.y, "#e0f2fe", 34);
+            spawnImpactBurst(wave.x, wave.y, wave.angle, ["#ffffff", "#bae6fd", "#38bdf8", "#075985"], 1.8);
+            game.screenShake = Math.max(game.screenShake || 0, 13);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({ x: wave.x, y: wave.y - 24, vy: -48, text: "UNDERTOW ARMED!", color: "#e0f2fe", life: 0.75, maxLife: 0.75 });
+            playSound("wallSlam", 0.9, 85, { pan: (wave.x / game.width) * 2 - 1, depth: 0.08, room: 0.65 });
+          } else if (wave.wallBounces >= maxBounces) {
+            wave.mode = "fading";
+            wave.fadeStartedAt = game.simTime;
+            wave.fadeDuration = bal.fadeDuration || 700;
+            wave.life = Math.min(wave.life, wave.fadeDuration);
+            wave.maxLife = Math.max(wave.maxLife, wave.life);
+            spawnSparks(wave.x, wave.y, "#bae6fd", 20);
+            spawnImpactBurst(wave.x, wave.y, wave.angle, ["#ffffff", "#bae6fd", "#38bdf8"], 1.0);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({ x: wave.x, y: wave.y - 18, vy: -34, text: "WAVE FADES", color: "#bae6fd", life: 0.55, maxLife: 0.55 });
+          } else {
+            spawnSparks(wave.x, wave.y, "#7dd3fc", 12 + wave.wallBounces * 3);
+            spawnImpactBurst(wave.x, wave.y, wave.angle, ["#e0f2fe", "#7dd3fc", "#0284c7"], 0.75 + wave.wallBounces * 0.12);
+            playSound("wallBounce", 0.55, 120, { pan: (wave.x / game.width) * 2 - 1, depth: 0.22, room: 0.5 });
+          }
+        }
+
+        if (canSpawnParticle() && Math.random() < Math.min(0.55, dt * (wave.mode === "rebound" ? 42 : 24))) {
           const side = (Math.random() - 0.5) * wave.width * 0.72;
           const nx = -Math.sin(wave.angle);
           const ny = Math.cos(wave.angle);
@@ -6900,34 +6961,45 @@ export default function App() {
             y: wave.y + ny * side,
             vx: -wave.vx * 0.08 + nx * (Math.random() - 0.5) * 70,
             vy: -wave.vy * 0.08 + ny * (Math.random() - 0.5) * 70 - 24,
-            color: Math.random() < 0.4 ? "#e0f2fe" : "#38bdf8",
-            radius: 1.5 + Math.random() * 3,
+            color: Math.random() < 0.48 ? "#f0f9ff" : wave.mode === "rebound" ? "#7dd3fc" : "#38bdf8",
+            radius: 1.5 + Math.random() * (wave.mode === "rebound" ? 4.5 : 3),
             life: 0.22 + Math.random() * 0.25,
             maxLife: 0.47,
           });
         }
 
-        game.balls.forEach((enemy) => {
-          if (enemy.side === wave.ownerSide || enemy.type === "cueBall" || enemy.health <= 0 || wave.hitIds[enemy.id]) return;
+        if (wave.mode !== "fading") game.balls.forEach((enemy) => {
+          if (enemy.side === wave.ownerSide || enemy.type === "cueBall" || enemy.health <= 0) return;
           const dx = enemy.x - wave.x;
           const dy = enemy.y - wave.y;
           const forward = dx * Math.cos(wave.angle) + dy * Math.sin(wave.angle);
           const across = -dx * Math.sin(wave.angle) + dy * Math.cos(wave.angle);
           if (Math.abs(forward) > wave.radius + enemy.r || Math.abs(across) > wave.width * 0.5 + enemy.r) return;
+          if (wave.mode === "rebound") {
+            const dragSpeed = bal.dragSpeed || 720;
+            enemy.vx = enemy.vx * 0.22 + Math.cos(wave.angle) * dragSpeed * 0.78;
+            enemy.vy = enemy.vy * 0.22 + Math.sin(wave.angle) * dragSpeed * 0.78;
+            enemy.waveDraggedUntil = game.simTime + (bal.dragDuration || 720);
+            enemy.knockbackActiveUntil = game.simTime + 180;
+          }
+          if (wave.hitIds[enemy.id]) return;
           wave.hitIds[enemy.id] = true;
           const before = enemy.health;
-          applyDamage(enemy, bal.waveDamage || 5, `${wave.ownerId}-rebound-wave-${enemy.id}-${wave.id}`, game.simTime, bal.hitCooldown || 650);
+          const damage = wave.mode === "rebound" ? (bal.reboundDamage || 7) : (bal.bowDamage || 4);
+          applyDamage(enemy, damage, `${wave.ownerId}-${wave.mode}-wave-${enemy.id}-${wave.id}`, game.simTime, bal.hitCooldown || 650);
           const dealt = before - enemy.health;
-          enemy.vx = Math.cos(wave.angle) * (bal.waveKnockback || 560);
-          enemy.vy = Math.sin(wave.angle) * (bal.waveKnockback || 560);
-          enemy.knockbackActiveUntil = game.simTime + 520;
+          if (wave.mode !== "rebound") {
+            enemy.vx += Math.cos(wave.angle) * 330;
+            enemy.vy += Math.sin(wave.angle) * 330;
+            enemy.knockbackActiveUntil = game.simTime + 260;
+          }
           const stats = wave.ownerSide === "left" ? game.stats.left : game.stats.right;
           if (stats && dealt > 0) { stats.damageDealt += dealt; stats.hitsLanded++; }
           spawnSparks(enemy.x, enemy.y, "#bae6fd", 24);
           spawnImpactBurst(enemy.x, enemy.y, wave.angle, ["#ffffff", "#bae6fd", "#38bdf8", "#0369a1"], 1.35);
-          game.screenShake = Math.max(game.screenShake || 0, 10);
+          game.screenShake = Math.max(game.screenShake || 0, wave.mode === "rebound" ? 12 : 6);
           game.floatingTexts = game.floatingTexts || [];
-          game.floatingTexts.push({ x: enemy.x, y: enemy.y - enemy.r - 18, vy: -50, text: "WAVE HIT!", color: "#7dd3fc", life: 0.7, maxLife: 0.7 });
+          game.floatingTexts.push({ x: enemy.x, y: enemy.y - enemy.r - 18, vy: -50, text: wave.mode === "rebound" ? "UNDERTOW!" : "BOW HIT!", color: "#7dd3fc", life: 0.7, maxLife: 0.7 });
           playSound("wallSlam", 0.78, 100, { pan: (enemy.x / game.width) * 2 - 1, depth: 0.14, room: 0.55 });
         });
 
@@ -19816,58 +19888,75 @@ export default function App() {
       const charge = clamp(ball.tideCharge || 0, 0, 1);
       const ready = Boolean(ball.tideReady);
       const pulse = 0.5 + Math.sin(game.simTime * 0.018) * 0.5;
-      const poolWidth = ball.r * (1.15 + charge * 1.8);
-      const poolHeight = ball.r * (0.62 + charge * 0.58);
       const swimSpeed = Math.hypot(ball.vx || 0, ball.vy || 0);
       const swimAngle = swimSpeed > 8 ? Math.atan2(ball.vy || 0, ball.vx || 0) : 0;
       const wakeStretch = clamp(swimSpeed / 520, 0, 1);
+      const storedLength = ball.r * (0.8 + charge * 1.65 + wakeStretch * 0.35);
+      const storedWidth = ball.r * (0.72 + charge * 1.35);
+      const flow = game.simTime * 0.012;
 
       ctx.save();
       ctx.translate(ball.x, ball.y);
       ctx.rotate(swimAngle);
-      ctx.globalAlpha = 0.54 + charge * 0.34;
       ctx.shadowColor = ready ? "#bae6fd" : "#0284c7";
-      ctx.shadowBlur = ready ? 18 + pulse * 10 : 8 + charge * 9;
-      const waterOffset = -ball.r * (0.12 + wakeStretch * 0.22);
-      const poolGradient = ctx.createRadialGradient(ball.r * 0.2, ball.r * 0.36, 1, waterOffset, ball.r * 0.5, poolWidth);
-      poolGradient.addColorStop(0, ready ? "rgba(224,242,254,0.95)" : "rgba(56,189,248,0.88)");
-      poolGradient.addColorStop(0.45, "rgba(14,165,233,0.78)");
-      poolGradient.addColorStop(1, "rgba(3,105,161,0)");
-      ctx.fillStyle = poolGradient;
+      ctx.shadowBlur = ready ? 20 + pulse * 10 : 7 + charge * 11;
+
+      // Stored water forms a compact bow wave instead of a flat oval puddle.
+      const storedGradient = ctx.createLinearGradient(-storedLength, 0, ball.r * 1.05, 0);
+      storedGradient.addColorStop(0, "rgba(3,105,161,0)");
+      storedGradient.addColorStop(0.42, `rgba(14,165,233,${0.2 + charge * 0.34})`);
+      storedGradient.addColorStop(0.8, `rgba(56,189,248,${0.48 + charge * 0.28})`);
+      storedGradient.addColorStop(1, ready ? "rgba(224,242,254,0.9)" : "rgba(125,211,252,0.76)");
+      ctx.fillStyle = storedGradient;
+      ctx.globalAlpha = 0.45 + charge * 0.42;
       ctx.beginPath();
-      for (let i = 0; i <= 28; i++) {
-        const a = (i / 28) * Math.PI * 2;
-        const flow = Math.sin(a * 3 + game.simTime * 0.014) * (2 + charge * 3);
-        const backWake = Math.max(0, -Math.cos(a)) * wakeStretch * ball.r * 0.7;
-        const px = waterOffset + Math.cos(a) * (poolWidth + flow + backWake);
-        const py = ball.r * 0.52 + Math.sin(a) * (poolHeight + flow * 0.45);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
+      ctx.moveTo(-storedLength, -storedWidth * 0.12);
+      ctx.quadraticCurveTo(-ball.r * 0.25, -storedWidth * (0.52 + Math.sin(flow) * 0.035), ball.r * 0.88, -storedWidth * 0.42);
+      ctx.quadraticCurveTo(ball.r * (1.18 + charge * 0.12), 0, ball.r * 0.88, storedWidth * 0.42);
+      ctx.quadraticCurveTo(-ball.r * 0.25, storedWidth * (0.52 + Math.sin(flow + 1.8) * 0.035), -storedLength, storedWidth * 0.12);
       ctx.closePath();
       ctx.fill();
 
-      ctx.globalAlpha = 0.52 + charge * 0.32;
-      ctx.strokeStyle = "#bae6fd";
-      ctx.lineWidth = 1.8 + charge * 1.6;
-      for (let ring = 0; ring < 3; ring++) {
-        const ripplePhase = (game.simTime * 0.0015 + ring / 3) % 1;
-        const ringWidth = poolWidth * (0.28 + ripplePhase * 0.62);
-        const ringHeight = poolHeight * (0.3 + ripplePhase * 0.55);
-        ctx.globalAlpha = (0.62 - ripplePhase * 0.44) * (0.65 + charge * 0.35);
+      // Layered flowing crests make the accumulation feel like moving water.
+      ctx.lineCap = "round";
+      for (let crest = 0; crest < 3; crest++) {
+        const back = crest * storedLength * 0.27;
+        const crestWidth = storedWidth * (1 - crest * 0.19);
+        const wobble = Math.sin(flow + crest * 1.7) * (1.2 + charge * 2.2);
+        ctx.globalAlpha = (0.34 + charge * 0.24) * (1 - crest * 0.18);
+        ctx.strokeStyle = crest === 0 ? "#f0f9ff" : "#7dd3fc";
+        ctx.lineWidth = Math.max(1.4, 3.6 + charge * 2.2 - crest * 1.05);
         ctx.beginPath();
-        ctx.ellipse(waterOffset - wakeStretch * ring * 5, ball.r * 0.5, ringWidth, ringHeight, 0, 0, Math.PI * 2);
+        ctx.moveTo(ball.r * 0.72 - back, -crestWidth * 0.42);
+        ctx.quadraticCurveTo(ball.r * (1.02 - crest * 0.18) - back + wobble, -crestWidth * 0.2, ball.r * 0.7 - back, 0);
+        ctx.quadraticCurveTo(ball.r * (1.05 - crest * 0.18) - back - wobble, crestWidth * 0.2, ball.r * 0.72 - back, crestWidth * 0.42);
         ctx.stroke();
       }
 
-      if (wakeStretch > 0.08) {
-        ctx.globalAlpha = 0.42 + wakeStretch * 0.38;
-        ctx.lineWidth = 2.2;
-        for (let wake = -1; wake <= 1; wake++) {
+      ctx.strokeStyle = "#bae6fd";
+      ctx.lineWidth = 1.5 + charge;
+      for (let wake = -1; wake <= 1; wake += 2) {
+        ctx.globalAlpha = 0.2 + charge * 0.24 + wakeStretch * 0.18;
+        for (let trail = 0; trail < 2; trail++) {
+          const y = wake * storedWidth * (0.2 + trail * 0.14);
           ctx.beginPath();
-          ctx.moveTo(-ball.r * 0.55, wake * ball.r * 0.28 + ball.r * 0.45);
-          ctx.quadraticCurveTo(-poolWidth * (0.55 + wakeStretch * 0.25), wake * ball.r * 0.48 + ball.r * 0.45, -poolWidth * (0.82 + wakeStretch * 0.18), wake * ball.r * 0.64 + ball.r * 0.45);
+          ctx.moveTo(-ball.r * 0.25, y);
+          ctx.quadraticCurveTo(-storedLength * 0.58, y + wake * (5 + Math.sin(flow + trail) * 2), -storedLength * (0.88 + trail * 0.08), y * 0.55);
           ctx.stroke();
+        }
+      }
+
+      if (charge > 0.55) {
+        ctx.fillStyle = "#f0f9ff";
+        ctx.globalAlpha = 0.35 + charge * 0.45;
+        const foamCount = ready ? 7 : 4;
+        for (let i = 0; i < foamCount; i++) {
+          const foamPhase = flow * 0.7 + i * 1.91;
+          const fx = ball.r * (0.62 + Math.sin(foamPhase) * 0.28);
+          const fy = (i / Math.max(1, foamCount - 1) - 0.5) * storedWidth * 0.82 + Math.cos(foamPhase) * 2;
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1.2 + charge * 1.5 + (i % 2), 0, Math.PI * 2);
+          ctx.fill();
         }
       }
       ctx.restore();
@@ -19956,43 +20045,60 @@ export default function App() {
     const drawTideWaves = () => {
       if (!game.tideWaves?.length) return;
       game.tideWaves.forEach((wave) => {
-        const lifeAlpha = clamp(wave.life / Math.max(1, wave.maxLife), 0, 1);
-        const foam = Math.sin(wave.phase) * 4;
+        const lifeAlpha = wave.mode === "fading"
+          ? clamp(wave.life / Math.max(1, wave.fadeDuration || 700), 0, 1)
+          : clamp(wave.life / Math.max(1, wave.maxLife), 0, 1);
+        const isRebound = wave.mode === "rebound" || (wave.wallBounces || 0) >= 2;
+        const foam = Math.sin(wave.phase) * (isRebound ? 7 : 4);
+        const surge = 1 + Math.sin(wave.phase * 0.55) * (isRebound ? 0.045 : 0.025);
         ctx.save();
         ctx.translate(wave.x, wave.y);
         ctx.rotate(wave.angle);
         ctx.globalAlpha = Math.min(1, lifeAlpha * 1.35);
-        ctx.shadowColor = "#38bdf8";
-        ctx.shadowBlur = 20;
-        const trail = ctx.createLinearGradient(-wave.radius * 2.2, 0, wave.radius, 0);
+        ctx.shadowColor = isRebound ? "#7dd3fc" : "#38bdf8";
+        ctx.shadowBlur = isRebound ? 28 : 18;
+
+        // Layered translucent water gives the wave depth without expensive per-frame particles.
+        const trail = ctx.createLinearGradient(-wave.radius * (isRebound ? 2.8 : 2.2), 0, wave.radius, 0);
         trail.addColorStop(0, "rgba(2,132,199,0)");
-        trail.addColorStop(0.45, "rgba(14,165,233,0.42)");
-        trail.addColorStop(1, "rgba(125,211,252,0.9)");
+        trail.addColorStop(0.38, isRebound ? "rgba(3,105,161,0.48)" : "rgba(14,165,233,0.38)");
+        trail.addColorStop(0.76, isRebound ? "rgba(14,165,233,0.84)" : "rgba(56,189,248,0.72)");
+        trail.addColorStop(1, "rgba(186,230,253,0.94)");
         ctx.fillStyle = trail;
         ctx.beginPath();
-        ctx.moveTo(-wave.radius * 2.2, -wave.width * 0.32);
-        ctx.quadraticCurveTo(-wave.radius * 0.3, -wave.width * 0.6, wave.radius * 0.82, -wave.width * 0.43);
-        ctx.quadraticCurveTo(wave.radius * 1.18, 0, wave.radius * 0.82, wave.width * 0.43);
-        ctx.quadraticCurveTo(-wave.radius * 0.3, wave.width * 0.6, -wave.radius * 2.2, wave.width * 0.32);
+        ctx.moveTo(-wave.radius * (isRebound ? 2.8 : 2.2), -wave.width * 0.3);
+        ctx.quadraticCurveTo(-wave.radius * 0.25, -wave.width * 0.61 * surge, wave.radius * 0.8, -wave.width * 0.45);
+        ctx.quadraticCurveTo(wave.radius * (isRebound ? 1.32 : 1.12), 0, wave.radius * 0.8, wave.width * 0.45);
+        ctx.quadraticCurveTo(-wave.radius * 0.25, wave.width * 0.61 * surge, -wave.radius * (isRebound ? 2.8 : 2.2), wave.width * 0.3);
         ctx.closePath();
         ctx.fill();
 
+        ctx.globalAlpha *= isRebound ? 0.46 : 0.34;
+        ctx.fillStyle = "#e0f2fe";
+        for (let layer = 0; layer < 3; layer++) {
+          const y = (layer - 1) * wave.width * 0.24;
+          ctx.beginPath();
+          ctx.ellipse(-wave.radius * (0.15 + layer * 0.2), y, wave.radius * (1.05 + layer * 0.16), wave.width * 0.14, Math.sin(wave.phase + layer) * 0.08, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.globalAlpha = Math.min(1, lifeAlpha * 1.35);
         ctx.shadowColor = "#e0f2fe";
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = isRebound ? 18 : 11;
         ctx.strokeStyle = "#f0f9ff";
-        ctx.lineWidth = 6;
+        ctx.lineWidth = isRebound ? 9 : 5.5;
         ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(wave.radius * 0.62, -wave.width * 0.42);
-        ctx.quadraticCurveTo(wave.radius * (1.05 + foam * 0.008), -wave.width * 0.2, wave.radius * 0.72, 0);
-        ctx.quadraticCurveTo(wave.radius * (1.12 - foam * 0.008), wave.width * 0.2, wave.radius * 0.62, wave.width * 0.42);
+        ctx.quadraticCurveTo(wave.radius * (1.08 + foam * 0.009), -wave.width * 0.21, wave.radius * 0.72, 0);
+        ctx.quadraticCurveTo(wave.radius * (1.14 - foam * 0.009), wave.width * 0.21, wave.radius * 0.62, wave.width * 0.42);
         ctx.stroke();
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = isRebound ? 3.5 : 2.25;
         ctx.strokeStyle = "#bae6fd";
-        for (let i = -2; i <= 2; i++) {
+        for (let i = isRebound ? -3 : -2; i <= (isRebound ? 3 : 2); i++) {
           const y = i * wave.width * 0.16;
           ctx.beginPath();
-          ctx.arc(wave.radius * 0.35 + Math.sin(wave.phase + i) * 5, y, 3 + (i & 1), 0, Math.PI * 2);
+          ctx.arc(wave.radius * 0.34 + Math.sin(wave.phase + i * 0.8) * (isRebound ? 9 : 5), y, (isRebound ? 4 : 3) + Math.abs(i % 2), 0, Math.PI * 2);
           ctx.stroke();
         }
         ctx.restore();
@@ -23919,7 +24025,7 @@ export default function App() {
                   if (ball.type === "eightBall") updateEightBall(ball, target, game.simTime);
                   if (ball.type === "yoYo") updateYoYo(ball, target, game.simTime, stepDt);
                   if (ball.type === "boomerang") updateBoomerang(ball, target, game.simTime, stepDt);
-                  if (ball.type === "wave") updateWaveBall(ball, game.simTime, stepDt);
+                  if (ball.type === "wave") updateWaveBall(ball, target, game.simTime, stepDt);
                   
                   if (ball.type === "shield") updateShield(ball, target, game.simTime, stepDt);
                   if (ball.type === "loki") updateLoki(ball, target, game.simTime, stepDt);
@@ -24463,19 +24569,23 @@ export default function App() {
           )}
           {type === "wave" && (
             <>
-              {renderSlider("Tide Fill Time", "wave", "chargeTime", 1500, 12000, 100, "ms")}
-              {renderSlider("Ripple Damage", "wave", "rippleDamage", 1, 8, 1)}
+              {renderSlider("Bow Wave Cooldown", "wave", "cooldown", 1500, 12000, 100, "ms")}
               {renderSlider("Ripple Interval", "wave", "rippleInterval", 300, 2200, 50, "ms")}
               {renderSlider("Ripple Reach", "wave", "rippleMaxRadius", 50, 180, 2, "px")}
-              {renderSlider("Ripple Knockback", "wave", "rippleKnockback", 20, 500, 10, "px/s")}
-              {renderSlider("Wave Damage", "wave", "waveDamage", 1, 20, 1)}
-              {renderSlider("Wave Speed", "wave", "waveSpeed", 300, 1400, 20, "px/s")}
-              {renderSlider("Wave Width", "wave", "waveWidth", 40, 180, 2, "px")}
-              {renderSlider("Wave Depth", "wave", "waveRadius", 16, 70, 2, "px")}
-              {renderSlider("Wave Lifetime", "wave", "waveLife", 600, 4000, 100, "ms")}
-              {renderSlider("Wave Knockback", "wave", "waveKnockback", 100, 1200, 20, "px/s")}
+              {renderSlider("Bow Damage", "wave", "bowDamage", 1, 20, 1)}
+              {renderSlider("Bow Speed", "wave", "bowSpeed", 300, 1400, 20, "px/s")}
+              {renderSlider("Bow Width", "wave", "bowWidth", 40, 140, 2, "px")}
+              {renderSlider("Rebound Damage", "wave", "reboundDamage", 1, 30, 1)}
+              {renderSlider("Rebound Speed", "wave", "reboundSpeed", 250, 1200, 20, "px/s")}
+              {renderSlider("Rebound Width", "wave", "reboundWidth", 80, 260, 2, "px")}
+              {renderSlider("Rebound Depth", "wave", "reboundRadius", 25, 100, 2, "px")}
+              {renderSlider("Undertow Drag", "wave", "dragSpeed", 200, 1300, 20, "px/s")}
+              {renderSlider("Drag Duration", "wave", "dragDuration", 200, 1600, 20, "ms")}
+              {renderSlider("Wave Lifetime", "wave", "waveLife", 2000, 10000, 100, "ms")}
+              {renderSlider("Wall Bounces", "wave", "maxBounces", 2, 8, 1)}
+              {renderSlider("Drag Starts After", "wave", "dragAfterBounces", 1, 4, 1, " bounces")}
+              {renderSlider("Fade Duration", "wave", "fadeDuration", 250, 1600, 50, "ms")}
               {renderSlider("Hit Cooldown", "wave", "hitCooldown", 100, 1400, 25, "ms")}
-              {renderSlider("Rebound Angle", "wave", "releaseAngle", 0.15, 1.25, 0.05)}
             </>
           )}
           {type === "trident" && (
