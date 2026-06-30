@@ -1949,6 +1949,11 @@ export default function App() {
 
     if (isSaberType(ball.type)) {
       lines.push(`SABER SLASH: ${ball.saberSlashActive ? "SLASHING" : cooldown(ball.nextSlashAt)}`);
+      if (ball.type === "darkSaber") {
+        lines.push(`LIGHTNING: ${ball.darkSaberLightningActiveUntil && currentTime < ball.darkSaberLightningActiveUntil ? "STRIKING" : cooldown(ball.darkSaberLightningNextAt)}`);
+      } else {
+        lines.push(`BOOMERANG: ${ball.saberThrowState && ball.saberThrowState !== "idle" ? "ACTIVE" : cooldown(ball.saberThrowNextAt)}`);
+      }
     } else if (ball.type === "spore") {
       const hydras = (game?.cacti || []).filter((cactus) => cactus.ownerId === ball.id);
       const charges = hydras.reduce((total, hydra) => total + Math.max(0, hydra.charges || 0), 0);
@@ -15317,34 +15322,38 @@ export default function App() {
           ctx.fill();
         });
       } else {
-        // --- SITH LORD / DARTH VADER DOME DESIGN ---
-        // 1. Cheekguards / Earguards (flaps flanking helmet on left & right)
+        // --- SITH LORD / CLASSIC DARTH VADER DOME DESIGN ---
+        // 1. Cheekguards / Flared Sweeping Collar Hood (flaps flanking helmet on left & right)
         [-1, 1].forEach((side) => {
           ctx.save();
-          ctx.strokeStyle = "#ef4444";
-          ctx.lineWidth = 3.5;
-          ctx.fillStyle = "#0d0e11";
-          
+          ctx.fillStyle = "#0c0d10";
+          ctx.strokeStyle = "#000000";
+          ctx.lineWidth = 4;
           ctx.beginPath();
-          // Start high on the side of the helmet dome:
-          ctx.moveTo(side * ball.r * 0.65, -ball.r * 0.42);
-          // Curve outward to flared top corner:
-          ctx.lineTo(side * ball.r * 1.15, -ball.r * 0.28);
-          // Drop down to flared lower corner:
-          ctx.lineTo(side * ball.r * 1.12, ball.r * 0.6);
-          // Bevel to the inside:
-          ctx.lineTo(side * ball.r * 0.72, ball.r * 0.35);
+          // Start high near the top crown of the head:
+          ctx.moveTo(side * ball.r * 0.45, -ball.r * 0.7);
+          // Flare out sweeping far down:
+          ctx.bezierCurveTo(
+            side * ball.r * 1.1, -ball.r * 0.4,
+            side * ball.r * 1.25, ball.r * 0.2,
+            side * ball.r * 1.2, ball.r * 0.75
+          );
+          // Bottom inside curve:
+          ctx.lineTo(side * ball.r * 0.65, ball.r * 0.45);
           ctx.closePath();
           ctx.fill();
           ctx.stroke();
-          
-          // Inner detail bevel line:
-          ctx.strokeStyle = "#25262c";
-          ctx.lineWidth = 1.8;
+
+          // Glossy reflection stripe on the sweeping collar edges
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+          ctx.lineWidth = 2.2;
           ctx.beginPath();
-          ctx.moveTo(side * ball.r * 0.7, -ball.r * 0.35);
-          ctx.lineTo(side * ball.r * 1.08, -ball.r * 0.24);
-          ctx.lineTo(side * ball.r * 1.05, ball.r * 0.52);
+          ctx.moveTo(side * ball.r * 0.7, -ball.r * 0.6);
+          ctx.bezierCurveTo(
+            side * ball.r * 1.05, -ball.r * 0.35,
+            side * ball.r * 1.18, ball.r * 0.15,
+            side * ball.r * 1.15, ball.r * 0.65
+          );
           ctx.stroke();
           ctx.restore();
         });
@@ -15352,10 +15361,11 @@ export default function App() {
         // 2. Base Spherical Helmet Dome
         ctx.beginPath();
         ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-        const helmetGrad = ctx.createRadialGradient(-ball.r * 0.2, -ball.r * 0.3, ball.r * 0.1, 0, 0, ball.r);
-        helmetGrad.addColorStop(0, "#25262b");
-        helmetGrad.addColorStop(0.5, "#141518");
-        helmetGrad.addColorStop(1, "#070809");
+        const helmetGrad = ctx.createRadialGradient(-ball.r * 0.22, -ball.r * 0.35, ball.r * 0.05, 0, 0, ball.r);
+        helmetGrad.addColorStop(0, "#4a4c54"); // Specular dome reflection
+        helmetGrad.addColorStop(0.35, "#141518");
+        helmetGrad.addColorStop(0.85, "#060708");
+        helmetGrad.addColorStop(1, "#000000");
         ctx.fillStyle = helmetGrad;
         ctx.fill();
 
@@ -15365,129 +15375,166 @@ export default function App() {
         ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 3. Center Ridge (Forehead Mohawk Ridge) with parallel red lines
-        ctx.save();
-        ctx.fillStyle = "#111215";
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 2;
+        // Top central specular glare spots (giving it a highly polished plastic/metallic finish)
+        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
         ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.15, -ball.r * 1.0);
-        ctx.lineTo(-ball.r * 0.12, -ball.r * 0.28);
-        ctx.lineTo(ball.r * 0.12, -ball.r * 0.28);
-        ctx.lineTo(ball.r * 0.15, -ball.r * 1.0);
+        ctx.ellipse(-ball.r * 0.12, -ball.r * 0.55, ball.r * 0.08, ball.r * 0.18, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Center Ridge (Forehead Mohawk Ridge) with parallel black details
+        ctx.save();
+        ctx.fillStyle = "#0c0d10";
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.1, -ball.r * 1.0);
+        ctx.lineTo(-ball.r * 0.08, -ball.r * 0.2);
+        ctx.lineTo(ball.r * 0.08, -ball.r * 0.2);
+        ctx.lineTo(ball.r * 0.1, -ball.r * 1.0);
         ctx.closePath();
         ctx.fill();
-        ctx.stroke();
 
         // Center seam line
         ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(0, -ball.r * 0.98);
-        ctx.lineTo(0, -ball.r * 0.3);
+        ctx.moveTo(0, -ball.r);
+        ctx.lineTo(0, -ball.r * 0.22);
+        ctx.stroke();
+
+        // Specular highlight line along the seam edge
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(1.5, -ball.r);
+        ctx.lineTo(1.5, -ball.r * 0.22);
         ctx.stroke();
         ctx.restore();
 
-        // 4. Curved helmet creases/bevels on the upper dome
-        ctx.strokeStyle = "#23242a";
-        ctx.lineWidth = 2.2;
-        // Left top crease
+        // 4. Curved helmet brow rim (swoops down in a "V" above eyes)
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 5.5;
         ctx.beginPath();
-        ctx.arc(-ball.r * 0.3, -ball.r * 0.6, ball.r * 0.5, Math.PI, Math.PI * 1.5);
+        ctx.moveTo(-ball.r * 0.72, -ball.r * 0.22);
+        ctx.quadraticCurveTo(0, -ball.r * 0.12, ball.r * 0.72, -ball.r * 0.22);
         ctx.stroke();
-        // Right top crease
+        
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
-        ctx.arc(ball.r * 0.3, -ball.r * 0.6, ball.r * 0.5, Math.PI * 1.5, Math.PI * 2);
+        ctx.moveTo(-ball.r * 0.65, -ball.r * 0.24);
+        ctx.quadraticCurveTo(0, -ball.r * 0.16, ball.r * 0.65, -ball.r * 0.24);
         ctx.stroke();
 
-        // 5. Angry Sith Glowing Eyes
+        // 5. Glossy Dark Visor Lenses (bulbous eyes)
         [-1, 1].forEach((side) => {
           ctx.save();
-          // Eye socket shadow
-          ctx.fillStyle = "#040405";
+          // Socket recess shadow
+          ctx.fillStyle = "#020304";
           ctx.beginPath();
-          ctx.moveTo(side * ball.r * 0.16, -ball.r * 0.18);
-          ctx.lineTo(side * ball.r * 0.68, -ball.r * 0.08);
-          ctx.lineTo(side * ball.r * 0.56, ball.r * 0.08);
-          ctx.lineTo(side * ball.r * 0.2, -ball.r * 0.02);
-          ctx.closePath();
+          ctx.ellipse(side * ball.r * 0.34, -ball.r * 0.05, ball.r * 0.24, ball.r * 0.16, side * 0.08, 0, Math.PI * 2);
           ctx.fill();
 
-          // Angled, glowing red slit lens
-          ctx.fillStyle = "#ef4444";
-          ctx.shadowColor = "#f43f5e";
-          ctx.shadowBlur = 8;
+          // Lens clipping path for reflection
           ctx.beginPath();
-          ctx.moveTo(side * ball.r * 0.24, -ball.r * 0.12);
-          ctx.lineTo(side * ball.r * 0.64, -ball.r * 0.04);
-          ctx.lineTo(side * ball.r * 0.44, ball.r * 0.03);
-          ctx.lineTo(side * ball.r * 0.26, -ball.r * 0.04);
-          ctx.closePath();
+          ctx.ellipse(side * ball.r * 0.33, -ball.r * 0.06, ball.r * 0.22, ball.r * 0.14, side * 0.08, 0, Math.PI * 2);
+          ctx.clip();
+
+          // Dark glossy gradient
+          const lensGrad = ctx.createLinearGradient(side * ball.r * 0.2, -ball.r * 0.18, side * ball.r * 0.45, ball.r * 0.06);
+          lensGrad.addColorStop(0, "#2c2d33");
+          lensGrad.addColorStop(0.4, "#0d0e11");
+          lensGrad.addColorStop(1, "#020203");
+          ctx.fillStyle = lensGrad;
+          ctx.fill();
+
+          // White specular glare dot inside lens
+          ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+          ctx.beginPath();
+          ctx.ellipse(side * ball.r * 0.24, -ball.r * 0.1, ball.r * 0.06, ball.r * 0.03, side * 0.1 + 0.2, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         });
 
-        // 6. Angled crease below eyes (cheek structures)
-        ctx.strokeStyle = "#1d1e23";
+        // 6. Silver Nose Bridge Detail
+        ctx.fillStyle = "#52545c"; 
+        ctx.strokeStyle = "#1b1c20";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -ball.r * 0.12);
+        ctx.lineTo(-ball.r * 0.06, ball.r * 0.08);
+        ctx.lineTo(ball.r * 0.06, ball.r * 0.08);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // 7. Sleek glossy cheek highlights (creases)
+        ctx.strokeStyle = "#2c2e35";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.35, ball.r * 0.1);
-        ctx.lineTo(-ball.r * 0.68, ball.r * 0.32);
+        ctx.arc(-ball.r * 0.35, ball.r * 0.12, ball.r * 0.22, Math.PI * 0.2, Math.PI * 0.8);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(ball.r * 0.35, ball.r * 0.1);
-        ctx.lineTo(ball.r * 0.68, ball.r * 0.32);
+        ctx.arc(ball.r * 0.35, ball.r * 0.12, ball.r * 0.22, Math.PI * 0.2, Math.PI * 0.8);
         ctx.stroke();
 
-        // 7. Hexagonal Respirator Mouth Grill (pointing down, with red outline)
+        // 8. Triangular Respirator Mouth Grill (with silver outline and nozzles)
         ctx.save();
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 3.5;
-        ctx.fillStyle = "#0a0b0d";
-        
+        // Dark backplate of respirator triangle:
+        ctx.fillStyle = "#0c0d10";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.2, ball.r * 0.24);
-        ctx.lineTo(ball.r * 0.2, ball.r * 0.24);
-        ctx.lineTo(ball.r * 0.36, ball.r * 0.44);
-        ctx.lineTo(ball.r * 0.26, ball.r * 0.72);
-        ctx.lineTo(-ball.r * 0.26, ball.r * 0.72);
-        ctx.lineTo(-ball.r * 0.36, ball.r * 0.44);
+        ctx.moveTo(0, ball.r * 0.12);
+        ctx.lineTo(ball.r * 0.25, ball.r * 0.58);
+        ctx.lineTo(-ball.r * 0.25, ball.r * 0.58);
         ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        ctx.fill(); ctx.stroke();
 
-        // Hexagon inner vertical grill slits
-        for (let dx = -14; dx <= 14; dx += 6.5) {
-          const xVal = (dx / 50) * ball.r;
+        // Vertical silver lines (grill vents)
+        ctx.strokeStyle = "#5a5c66";
+        ctx.lineWidth = 2;
+        [-9, -5, 0, 5, 9].forEach((offset) => {
+          const xVal = (offset / 40) * ball.r;
+          const topY = ball.r * 0.16;
+          const bottomY = ball.r * 0.56;
           ctx.save();
-          // Clip path inside the respirator
           ctx.beginPath();
-          ctx.moveTo(-ball.r * 0.17, ball.r * 0.26);
-          ctx.lineTo(ball.r * 0.17, ball.r * 0.26);
-          ctx.lineTo(ball.r * 0.32, ball.r * 0.44);
-          ctx.lineTo(ball.r * 0.23, ball.r * 0.7);
-          ctx.lineTo(-ball.r * 0.23, ball.r * 0.7);
-          ctx.lineTo(-ball.r * 0.32, ball.r * 0.44);
+          ctx.moveTo(0, ball.r * 0.14);
+          ctx.lineTo(ball.r * 0.23, ball.r * 0.56);
+          ctx.lineTo(-ball.r * 0.23, ball.r * 0.56);
           ctx.closePath();
           ctx.clip();
-
-          // Black grill slat
-          ctx.strokeStyle = "#000000";
-          ctx.lineWidth = 4;
           ctx.beginPath();
-          ctx.moveTo(xVal, ball.r * 0.2);
-          ctx.lineTo(xVal, ball.r * 0.8);
-          ctx.stroke();
-
-          // Slat highlight
-          ctx.strokeStyle = "#2a2b30";
-          ctx.lineWidth = 1.2;
-          ctx.beginPath();
-          ctx.moveTo(xVal + 1, ball.r * 0.2);
-          ctx.lineTo(xVal + 1, ball.r * 0.8);
+          ctx.moveTo(xVal, topY);
+          ctx.lineTo(xVal, bottomY);
           ctx.stroke();
           ctx.restore();
-        }
+        });
+
+        // Silver outer trim border:
+        ctx.strokeStyle = "#8e919e";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.25, ball.r * 0.58);
+        ctx.lineTo(0, ball.r * 0.12);
+        ctx.lineTo(ball.r * 0.25, ball.r * 0.58);
+        ctx.stroke();
+
+        // Circular silver nozzles at bottom-left and bottom-right corners
+        [-1, 1].forEach((side) => {
+          const nx = side * ball.r * 0.25;
+          const ny = ball.r * 0.58;
+          ctx.fillStyle = "#d1d5db";
+          ctx.strokeStyle = "#374151";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(nx, ny, ball.r * 0.05, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+
+          // Small black center dot inside nozzle
+          ctx.fillStyle = "#000000";
+          ctx.beginPath();
+          ctx.arc(nx, ny, ball.r * 0.02, 0, Math.PI * 2);
+          ctx.fill();
+        });
         ctx.restore();
       }
       ctx.restore();
@@ -24371,7 +24418,7 @@ export default function App() {
                 const isBlackSpiderPulled = game.balls.some(b => (b.type === "blackSpider" || b.type === "spider") && b.bsHookedTargetId === ball.id && (b.bsSkillState === "pulling" || b.bsSkillState === "spinning"));
                 const isFishermanPulled = ball.fishermanPulledUntil && game.simTime < ball.fishermanPulledUntil;
                 const isGoblinGrabbed = game.balls.some(b => b.type === "bomber" && b.goblinState === "carrying" && b.goblinTargetId === ball.id);
-                if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
+if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                   const bal = { ...BALANCE.knife, ...game.balance?.knife };
                   const isDarkSaber = ball.type === "darkSaber";
                   const saberSpark = isDarkSaber ? "#ef4444" : "#bbf7d0";
@@ -24383,19 +24430,35 @@ export default function App() {
                   const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
                   const closeFactor = clamp(1 - (dist - (ball.r + target.r + 8)) / 125, 0, 1);
                   
-                  if (ball.saberSlashActive) {
-                    const p = (game.simTime - ball.saberSlashStart) / ball.saberSlashDuration;
-                    if (p >= 1) {
-                      ball.saberSlashActive = false;
-                    } else {
-                      ball.spinAngle = ball.saberSlashBase + ball.saberSlashDir * (-1.35 + p * 2.7);
-                    }
-                  }
+                  const isSaberSpinDisabled = 
+                    (ball.spinLockedUntil && game.simTime < ball.spinLockedUntil) ||
+                    (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) ||
+                    (ball.skillLockedUntil && game.simTime < ball.skillLockedUntil) ||
+                    (ball.webTrappedUntil && game.simTime < ball.webTrappedUntil) ||
+                    (ball.laserBounceWallBouncesLeft || 0) > 0 ||
+                    isGrabbedByArm ||
+                    isBlackSpiderPulled ||
+                    isFishermanPulled ||
+                    isGoblinGrabbed ||
+                    (ball.type === "darkSaber" && ball.darkSaberLightningActiveUntil && game.simTime < ball.darkSaberLightningActiveUntil);
 
-                  if (!ball.saberSlashActive) {
-                    if (!ball.saberSpinDirection) ball.saberSpinDirection = 1;
-                    const spinMult = 1 + closeFactor * ((bal.nearSpinMult || 1.9) - 1);
-                    ball.spinAngle = (ball.spinAngle || 0) + Math.abs(bal.spinSpeed) * spinMult * ball.saberSpinDirection;
+                  if (!isSaberSpinDisabled) {
+                    if (ball.saberSlashActive) {
+                      const p = (game.simTime - ball.saberSlashStart) / ball.saberSlashDuration;
+                      if (p >= 1) {
+                        ball.saberSlashActive = false;
+                      } else {
+                        ball.spinAngle = ball.saberSlashBase + ball.saberSlashDir * (-1.35 + p * 2.7);
+                      }
+                    }
+
+                    if (!ball.saberSlashActive) {
+                      if (!ball.saberSpinDirection) ball.saberSpinDirection = 1;
+                      const spinMult = 1 + closeFactor * ((bal.nearSpinMult || 1.9) - 1);
+                      ball.spinAngle = (ball.spinAngle || 0) + Math.abs(bal.spinSpeed) * spinMult * ball.saberSpinDirection;
+                    }
+                  } else {
+                    ball.saberSlashActive = false;
                   }
 
                   const bladeStart = {
@@ -24539,6 +24602,23 @@ export default function App() {
                       target.webHitFlashUntil = game.simTime + 250;
                       target.webHitFlashColor = "#a855f7"; // purple!
                       
+                      const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+                      if (dist < 180) {
+                        const pushAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+                        target.vx = Math.cos(pushAngle) * 980;
+                        target.vy = Math.sin(pushAngle) * 980;
+                        game.floatingTexts = game.floatingTexts || [];
+                        game.floatingTexts.push({
+                          x: target.x,
+                          y: target.y - target.r - 18,
+                          vy: -55,
+                          text: "LIGHTNING BLAST!",
+                          color: "#c084fc",
+                          life: 0.75,
+                          maxLife: 0.75
+                        });
+                      }
+                      
                       spawnSparks(target.x, target.y, "#c084fc", 25);
                       spawnImpactBurst(target.x, target.y, Math.atan2(target.y - ball.y, target.x - ball.x), ["#ffffff", "#c084fc", "#a855f7", "#581c87"], 1.6);
                       game.screenShake = Math.max(game.screenShake || 0, 20);
@@ -24664,7 +24744,8 @@ export default function App() {
               game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime) ||
               game.balls.some(b => b.type === "blackSpider" && b.blackSimpleTargetId === ball.id && b.blackSimpleState && !["idle", "web_wall"].includes(b.blackSimpleState)) ||
               game.balls.some(b => b.type === "fisherman" && b.fishTargetId === ball.id && b.fishState === "pulling") ||
-              game.balls.some(b => b.type === "goblin" && b.goblinGrabTargetId === ball.id && b.goblinState === "slamming");
+              game.balls.some(b => b.type === "goblin" && b.goblinGrabTargetId === ball.id && b.goblinState === "slamming") ||
+              (ball.type === "darkSaber" && ball.darkSaberLightningActiveUntil && game.simTime < ball.darkSaberLightningActiveUntil);
 
             if (!isSaberSpinDisabled) {
               const nearestEnemy = game.balls
@@ -25322,7 +25403,16 @@ export default function App() {
             {/* Fighter names, skill state & match status */}
             <div className="grid gap-4 sm:grid-cols-3">
               <Card className="rounded-2xl border-slate-900 bg-slate-900/30 backdrop-blur-sm p-5 text-center shadow-lg">
-                <div className="truncate text-[26px] font-black" style={{ color: selectedBalls[0] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[0]]?.color, fontFamily: '"Arial Black", Impact, sans-serif', WebkitTextStroke: `2px ${selectedBalls[0] === "eightBall" ? "#000000" : "#020617"}`, paintOrder: "stroke fill", textShadow: `0 0 ${selectedBalls[0] === "eightBall" ? 22 : 14}px ${selectedBalls[0] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[0]]?.color}` }}>
+                <div 
+                  className="truncate text-[26px] font-black" 
+                  style={{ 
+                    color: selectedBalls[0] === "darkSaber" ? "#000000" : (selectedBalls[0] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[0]]?.color), 
+                    fontFamily: '"Arial Black", Impact, sans-serif', 
+                    WebkitTextStroke: selectedBalls[0] === "darkSaber" ? "2px #ef4444" : `2px ${selectedBalls[0] === "eightBall" ? "#000000" : "#020617"}`, 
+                    paintOrder: "stroke fill", 
+                    textShadow: selectedBalls[0] === "darkSaber" ? "0 0 16px #ef4444, 0 0 4px #ef4444" : `0 0 ${selectedBalls[0] === "eightBall" ? 22 : 14}px ${selectedBalls[0] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[0]]?.color}` 
+                  }}
+                >
                   {gameState.leftName}
                 </div>
                 <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em] text-white">
@@ -25331,7 +25421,16 @@ export default function App() {
               </Card>
 
               <Card className="rounded-2xl border-slate-900 bg-slate-900/30 backdrop-blur-sm p-5 text-center shadow-lg">
-                <div className="truncate text-[26px] font-black" style={{ color: selectedBalls[1] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[1]]?.color, fontFamily: '"Arial Black", Impact, sans-serif', WebkitTextStroke: `2px ${selectedBalls[1] === "eightBall" ? "#000000" : "#020617"}`, paintOrder: "stroke fill", textShadow: `0 0 ${selectedBalls[1] === "eightBall" ? 22 : 14}px ${selectedBalls[1] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[1]]?.color}` }}>
+                <div 
+                  className="truncate text-[26px] font-black" 
+                  style={{ 
+                    color: selectedBalls[1] === "darkSaber" ? "#000000" : (selectedBalls[1] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[1]]?.color), 
+                    fontFamily: '"Arial Black", Impact, sans-serif', 
+                    WebkitTextStroke: selectedBalls[1] === "darkSaber" ? "2px #ef4444" : `2px ${selectedBalls[1] === "eightBall" ? "#000000" : "#020617"}`, 
+                    paintOrder: "stroke fill", 
+                    textShadow: selectedBalls[1] === "darkSaber" ? "0 0 16px #ef4444, 0 0 4px #ef4444" : `0 0 ${selectedBalls[1] === "eightBall" ? 22 : 14}px ${selectedBalls[1] === "eightBall" ? "#000000" : BALL_TYPES[selectedBalls[1]]?.color}` 
+                  }}
+                >
                   {gameState.rightName}
                 </div>
                 <div className="mt-3 whitespace-pre-line text-[11px] leading-5 font-black uppercase tracking-[0.12em] text-white">
