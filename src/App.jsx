@@ -191,18 +191,18 @@ const BALL_TYPES = {
     color: "#020617",
     stroke: "#f1f5f9",
     radius: 30,
-    description: "Venom-style string fighter. Fires a slimy tendril, lunges in, slow-spins the target once, then slams them into walls twice before leaving black web.",
+    description: "Monstrous string hunter. A missed shot becomes black wall web; a hit pulls its prey through one left spin-slam, a second pull, and one right spin-throw that leaves web on the wall.",
     emoji: "🕷️",
     visualTheme: "Symbiote Hunter / Corner Slammer",
     colorPalette: "Deep Onyx, Chalk White, Blood Red",
     facialAge: "Early 20s (Dark eye-paint, intense expressionless face)",
     personality: "Brooding, calculated, intense",
-    primaryWeapon: "Slimy Tendril Web and Black Wall Web",
-    signatureAbility: "Tendril lunge into one slow spin and two attached wall slams",
+    primaryWeapon: "Single black capture string",
+    signatureAbility: "Left-Right String Spin Slam",
     companion: "None",
     specialVisualEffects: "Curving black tendril, slime droplets, slow spin circle, black string slam trails, black wall web",
     animeStyle: "Gritty dark cyberpunk anti-hero with high-contrast inks",
-    gameStyle: "Predatory string grappler that keeps the web attached through spin and double wall slam",
+    gameStyle: "Single-string grappler with a dodgeable shot and a fixed left-right 360-degree tether combo",
   },
   earthSpiker: {
     id: "earthSpiker",
@@ -725,7 +725,7 @@ const FIGHT_INTRO_DURATION = 2050;
 const FIGHT_INTRO_IMPACT_AT = 1550;
 
 const BALANCE = {
-  knife: { damage: 2, cooldown: 360, bladeLength: 78, spinSpeed: 0.09, nearSpinMult: 1.9, nearSlashDuration: 120, farSlashDuration: 170, secCooldown: 3500, secDamage: 5 },
+  knife: { damage: 2, cooldown: 360, bladeLength: 78, spinSpeed: 0.09, nearSpinMult: 1.9, nearSlashDuration: 120, farSlashDuration: 170 },
   gun: { bulletDamage: 2, bulletSpeed: 550, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 900, latchCooldown: 3200, latchDistance: 10, secCooldown: 6200, mistWindup: 260, mistDuration: 520, mistSpeed: 920, mistDamage: 7, mistHeal: 4, mistKnockback: 420, cloneRadius: 17, cloneLife: 7000 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, recoilForce: 180, armorRequired: 5 },
@@ -755,6 +755,8 @@ const BALANCE = {
     tripleBiteDamage1: 2, tripleBiteDamage2: 2, tripleBiteDamage3: 5, tripleBiteDuration: 1020,
     tendrilSwingDuration: 860, tendrilSwingRadius: 78, swingSlamDamage: 5, swingSlamLock: 900,
     livingGooRadius: 58, livingGooDuration: 5200, gooLeapDamage: 5, gooBuffBonus: 4, gooBuffDuration: 5200,
+    twinCooldown: 8200, twinCastTime: 360, twinHoldDuration: 980, twinStrikeDamage: 2, twinStrikeCount: 3, twinFinalDamage: 5, twinLaunchSpeed: 900,
+    simpleCooldown: 4600, singleStringSpeed: 920, singlePullTime: 260, singleImpactDamage: 7, simpleBounceSpeed: 820, simpleBounceCount: 3,
   },
   earthSpiker: { spikeDamage: 1, spikeLength: 40, spikeWidth: 22, maxSpikes: 12, pushCooldown: 2600, pushDamage: 6, pushGrowLength: 34, pushRange: 420, spikeHitCooldown: 520 },
   gazerBall: { chargeDuration: 320, cooldown: 1350, beamDamage: 4, beamKnockback: 720, beamWidth: 4, stunDuration: 420, recoilForce: 620, ricochetSpeed: 1200, ricochetLife: 3500, maxBounces: 5, ricochetDmg: [14, 11, 8, 6, 4], ricochetKb: [520, 420, 320, 220, 140], focusInterval: 700, maxFocusStacks: 5, focusBonus: 0.08, ultDuration: 5500, ultWidthMult: 1.7, ultMaxBounces: 10, ultCDRMult: 0.45, postFireSlowDuration: 260 },
@@ -1103,6 +1105,8 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (ball.type === "wrecker" && ["charging", "swinging"].includes(ball.wreckerState)) return true;
   if (ball.tridentPinnedUntil && ball.tridentPinnedUntil > currentTime) return true;
   if ((ball.type === "blackSpider" || ball.type === "spider") && ball.bsSkillState && ball.bsSkillState !== "idle") return true;
+  if (ball.type === "blackSpider" && ball.blackTwinState && ball.blackTwinState !== "idle") return true;
+  if (ball.type === "blackSpider" && ball.blackSimpleState && !["idle", "web_wall"].includes(ball.blackSimpleState)) return true;
 
   return balls.some((other) => {
     if (!other || other.id === ball.id) return false;
@@ -1112,6 +1116,8 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
     if (other.tridentTargetId === ball.id && (other.tridentState === "thrown" || other.tridentState === "stuck")) return true;
     if (other.type === "wrecker" && other.wreckerActionTargetId === ball.id && ["swinging"].includes(other.wreckerState)) return true;
     if ((other.type === "blackSpider" || other.type === "spider") && other.bsHookedTargetId === ball.id && (other.bsSkillState === "pulling" || other.bsSkillState === "spinning")) return true;
+    if (other.type === "blackSpider" && other.blackTwinTargetId === ball.id && other.blackTwinState && other.blackTwinState !== "idle") return true;
+    if (other.type === "blackSpider" && other.blackSimpleTargetId === ball.id && other.blackSimpleState && !["idle", "web_wall"].includes(other.blackSimpleState)) return true;
     return false;
   });
 };
@@ -1334,6 +1340,7 @@ export default function App() {
   const animationRef = useRef(null);
   const recordingCanvasRef = useRef(null);
   const recordingSilhouetteImageRef = useRef(null);
+  const blackSpiderImageRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordingFrameRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -1542,6 +1549,16 @@ export default function App() {
       blackVenomBiteAngle: side === "left" ? 0 : Math.PI,
       blackVenomBiteHit: false,
       blackVenomBiteNextAt: type === "blackSpider" ? 2200 : 0,
+      blackTwinState: "idle", blackTwinNextAt: type === "blackSpider" ? 2800 : 0, blackTwinTargetId: null,
+      blackTwinAnchorAX: 0, blackTwinAnchorAY: 0, blackTwinAnchorBX: 0, blackTwinAnchorBY: 0,
+      blackTwinStateUntil: 0, blackTwinStartedAt: 0, blackTwinNextStrikeAt: 0, blackTwinStrikeCount: 0,
+      blackTwinCaptureX: 0, blackTwinCaptureY: 0,
+      blackSimpleState: "idle", blackSimpleTargetId: null, blackSimpleNextAt: type === "blackSpider" ? 1800 : 0,
+      blackSimpleStateStartedAt: 0, blackSimpleStateUntil: 0, blackSimpleHitDone: false,
+      blackSimpleStartX: 0, blackSimpleStartY: 0, blackSimpleEndX: 0, blackSimpleEndY: 0,
+      blackSimpleProjectileX: 0, blackSimpleProjectileY: 0, blackSimpleWall: null,
+      blackSimpleWallNextAt: type === "blackSpider" ? 3600 : 0,
+      blackLegStacks: 0,
       // Earth Spiker Specific
       nextEarthSpikePushAt: type === "earthSpiker" ? 1200 : 0,
       earthSpikePushUntil: 0,
@@ -1657,6 +1674,7 @@ export default function App() {
       armSpringY: 0,
       // Secondary Skills State
       nextSecondaryAt: 0,
+      saberSpinAccum: 0,
       lokiIllusions: [],
       lokiNextFireballAt: 0,
       knifeBladeState: "rotating",
@@ -1930,10 +1948,7 @@ export default function App() {
     const lines = [`STATUS: ${condition}`];
 
     if (isSaberType(ball.type)) {
-      const bladeState = String(ball.knifeBladeState || "rotating").toUpperCase();
       lines.push(`SABER SLASH: ${ball.saberSlashActive ? "SLASHING" : cooldown(ball.nextSlashAt)}`);
-      const throwState = bladeState === "ROTATING" ? cooldown(ball.nextSecondaryAt) : bladeState === "CHARGING" ? "CHARGE THROW" : bladeState === "THROWN" ? "SABER OUT" : "RETURNING";
-      lines.push(`SABER THROW: ${throwState}`);
     } else if (ball.type === "spore") {
       const hydras = (game?.cacti || []).filter((cactus) => cactus.ownerId === ball.id);
       const charges = hydras.reduce((total, hydra) => total + Math.max(0, hydra.charges || 0), 0);
@@ -2017,6 +2032,11 @@ export default function App() {
       lines.push(`WEB ARMOR: ${ball.webShieldActive ? "ACTIVE - SPEED UP" : "INACTIVE"}`);
     } else if (ball.type === "blackSpider") {
       const blackSpiderBal = game?.balance?.blackSpider || BALANCE.blackSpider;
+      const comboNames = { single_shot: "STRING FLYING", single_pull_one: "FIRST PULL", single_spin_left: "360 LEFT SPIN", single_slam_one: "LEFT SLAM", single_pull_two: "SECOND PULL", single_spin_right: "360 RIGHT SPIN", single_recoil: "RECOILING" };
+      lines.push(`BLACK STRING REEL: ${comboNames[ball.blackSimpleState] || cooldown(ball.blackSimpleNextAt)}`);
+      lines.push("MISS: LEAVES BLACK WALL WEB");
+      lines.push(`PERMANENT LEG GROWTH: ${ball.blackLegStacks || 0}/6`);
+      return lines.join("\n");
       const armorMax = blackSpiderBal.slimeMaxStacks || 6;
       const armorStacks = Math.min(armorMax, Math.max(0, Math.floor(ball.blackSlimeArmorStacks || 0)));
       const maxStringHits = Math.max(1, Math.min(blackSpiderBal.slimeMaxHits || 6, (blackSpiderBal.slimeBaseHits || 2) + Math.floor(armorStacks * (Number.isFinite(blackSpiderBal.slimeHitsPerStack) ? blackSpiderBal.slimeHitsPerStack : 0.5))));
@@ -2031,6 +2051,8 @@ export default function App() {
         ? { shooting: "CURVING SHOT", pulling: "PULLING", webBouncing: "BOUNCING", spinDrag: "360° SPIN DRAG" }[ball.webState] || String(ball.webState).toUpperCase()
         : ({ shooting: "CURVING SHOT", pulling_self: "STRING LUNGE", string_spin: "SLOW SPIN", string_slam: "WALL SLAM", pulling_target: "YANKING PREY", pulling: "YANKING PREY" }[ball.blackWebState] || cooldown(ball.blackWebNextAt));
       const wallWebs = (game?.webSplatters || []).filter((splat) => splat.ownerId === ball.id && splat.isBlackSpider).length;
+      const twinState = { casting: "ANCHORING", coffin: `STRIKING ${ball.blackTwinStrikeCount || 0}/${blackSpiderBal.twinStrikeCount || 3}` }[ball.blackTwinState] || cooldown(ball.blackTwinNextAt);
+      lines.push(`TWIN WEB COFFIN: ${twinState}`);
       lines.push(`BLACK WEB STRING: ${bites}/${maxStringHits} ${webState}`);
       lines.push(`WEB PULL: ${ball.webState === "idle" ? cooldown(ball.nextShotAt || ball.blackWebNextAt) : "ACTIVE"}`);
       lines.push(`SLIME ARMOR: ${armorStacks}/${armorMax}`);
@@ -3081,6 +3103,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const image = new Image();
+    image.src = "/black_monster_mouth_ball.svg";
+    blackSpiderImageRef.current = image;
+    return () => {
+      blackSpiderImageRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       stopMatchMusic();
       if (recordingFrameRef.current) cancelAnimationFrame(recordingFrameRef.current);
@@ -3092,7 +3123,8 @@ export default function App() {
   const runTournament = (roundsCount) => {
     setSimulatingTournament(true);
     setTimeout(() => {
-      const balance = { ...BALANCE, ...gameRef.current.balance };
+      const game = gameRef.current;
+      const balance = { ...BALANCE, ...game.balance };
       let leftWins = 0, rightWins = 0, totalDuration = 0;
       let leftRemainingHpTotal = 0, rightRemainingHpTotal = 0;
       const leftType = selectedBalls[0], rightType = selectedBalls[1];
@@ -3343,110 +3375,45 @@ export default function App() {
             if (isGoblinGrabbed) return;
             if (simTime >= OPENING_SKILL_DELAY) {
               if (isSaberType(ball.type)) {
-                const bal = balance.knife;
-                if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
+                const bal = { ...BALANCE.knife, ...balance?.knife };
+                ball.knifeBladeState = "rotating";
                 
-                if (ball.knifeBladeState === "rotating") {
-                  const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
-                  const maxSlashRange = ball.r + bal.bladeLength + 22;
-                  const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                  
-                  if (ball.saberSlashActive === undefined) {
+                const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
+                const maxSlashRange = ball.r + bal.bladeLength + 22;
+                const targetAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+                
+                if (ball.saberSlashActive === undefined) {
+                  ball.saberSlashActive = false;
+                }
+
+                if (dist < maxSlashRange && !ball.saberSlashActive && simTime >= (ball.nextSlashAt || 0)) {
+                  const closeFactor = clamp(1 - (dist - (ball.r + enemy.r + 8)) / 125, 0, 1);
+                  ball.saberSlashActive = true;
+                  ball.saberSlashStart = simTime;
+                  ball.saberSlashDuration = (bal.nearSlashDuration || 120) + (1 - closeFactor) * ((bal.farSlashDuration || 170) - (bal.nearSlashDuration || 120));
+                  ball.saberSlashDir = Math.random() < 0.5 ? 1 : -1;
+                  ball.saberSlashBase = targetAngle;
+                  ball.nextSlashAt = simTime + (bal.cooldown || 390);
+                }
+
+                if (ball.saberSlashActive) {
+                  const p = (simTime - ball.saberSlashStart) / ball.saberSlashDuration;
+                  if (p >= 1) {
                     ball.saberSlashActive = false;
-                  }
-
-                  if (dist < maxSlashRange && !ball.saberSlashActive && simTime >= (ball.nextSlashAt || 0)) {
-                    const closeFactor = clamp(1 - (dist - (ball.r + enemy.r + 8)) / 125, 0, 1);
-                    ball.saberSlashActive = true;
-                    ball.saberSlashStart = simTime;
-                    ball.saberSlashDuration = (bal.nearSlashDuration || 120) + (1 - closeFactor) * ((bal.farSlashDuration || 170) - (bal.nearSlashDuration || 120));
-                    ball.saberSlashDir = Math.random() < 0.5 ? 1 : -1;
-                    ball.saberSlashBase = targetAngle;
-                    ball.nextSlashAt = simTime + (bal.cooldown || 390);
-                  }
-
-                  if (ball.saberSlashActive) {
-                    const p = (simTime - ball.saberSlashStart) / ball.saberSlashDuration;
-                    if (p >= 1) {
-                      ball.saberSlashActive = false;
-                      const breath = Math.sin(simTime * 0.006) * 0.12;
-                      ball.spinAngle = targetAngle + breath;
-                    } else {
-                      ball.spinAngle = ball.saberSlashBase + ball.saberSlashDir * (-1.35 + p * 2.7);
-                      const bladeEndX = ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength);
-                      const bladeEndY = ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength);
-                      const distToBlade = linePointDist(enemy.x, enemy.y, ball.x, ball.y, bladeEndX, bladeEndY);
-                      if (distToBlade < enemy.r + 14) {
-                        localApplyDamage(enemy, bal.damage, `${ball.id}-saber-slash-hit-${ball.saberSlashStart}`, 150);
-                      }
-                    }
-                  } else {
                     const breath = Math.sin(simTime * 0.006) * 0.12;
                     ball.spinAngle = targetAngle + breath;
-                  }
-
-                  if (dist >= 120 && dist <= 270 && simTime >= (ball.nextSecondaryAt || 0) && !ball.saberSlashActive) {
-                    const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                    const windupSide = Math.random() < 0.5 ? -1 : 1;
-                    const windupAngle = angle - windupSide * 1.85;
-                    ball.knifeBladeState = "charging";
-                    ball.knifeBladeChargeUntil = simTime + 430;
-                    ball.knifeBladeWindupSide = windupSide;
-                    ball.knifeBladeX = ball.x + Math.cos(windupAngle) * (ball.r + 34);
-                    ball.knifeBladeY = ball.y + Math.sin(windupAngle) * (ball.r + 34);
-                    ball.knifeBladeTargetX = enemy.x;
-                    ball.knifeBladeTargetY = enemy.y;
-                    ball.knifeBladeVx = 0;
-                    ball.knifeBladeVy = 0;
-                    ball.knifeBladeAngle = windupAngle + windupSide * Math.PI / 2;
-                    ball.spinAngle = windupAngle;
-                    playSound("webShoot", 0.7, 140);
+                  } else {
+                    ball.spinAngle = ball.saberSlashBase + ball.saberSlashDir * (-1.35 + p * 2.7);
+                    const bladeEndX = ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength);
+                    const bladeEndY = ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength);
+                    const distToBlade = linePointDist(enemy.x, enemy.y, ball.x, ball.y, bladeEndX, bladeEndY);
+                    if (distToBlade < enemy.r + 14) {
+                      localApplyDamage(enemy, bal.damage, `${ball.id}-saber-slash-hit-${ball.saberSlashStart}`, 150);
+                    }
                   }
                 } else {
-                  if (ball.knifeBladeState === "charging") {
-                    const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-                    const chargeProgress = clamp(1 - ((ball.knifeBladeChargeUntil || simTime) - simTime) / 430, 0, 1);
-                    const windupSide = ball.knifeBladeWindupSide || 1;
-                    const windupEase = 1 - Math.pow(1 - chargeProgress, 3);
-                    const arcAngle = angle - windupSide * (1.85 * (1 - windupEase));
-                    const tangentAngle = arcAngle + windupSide * (Math.PI / 2) * (1 - windupEase) + windupSide * Math.sin(chargeProgress * Math.PI) * 0.35;
-                    const holdDistance = ball.r + 32 + Math.sin(chargeProgress * Math.PI) * 16;
-                    ball.spinAngle = arcAngle;
-                    ball.knifeBladeAngle = tangentAngle;
-                    ball.knifeBladeX = ball.x + Math.cos(arcAngle) * holdDistance;
-                    ball.knifeBladeY = ball.y + Math.sin(arcAngle) * holdDistance;
-                    if (simTime >= (ball.knifeBladeChargeUntil || 0)) {
-                      ball.knifeBladeState = "thrown";
-                      ball.knifeBladeThrownAt = simTime;
-                      ball.knifeBladeReturnAt = simTime + 720;
-                      ball.knifeBladeVx = Math.cos(angle) * 660;
-                      ball.knifeBladeVy = Math.sin(angle) * 660;
-                      ball.knifeBladeAngle = angle;
-                      ball.nextSecondaryAt = simTime + bal.secCooldown;
-                    }
-                  } else if (ball.knifeBladeState === "thrown") {
-                    ball.knifeBladeAngle = Math.atan2(ball.knifeBladeVy, ball.knifeBladeVx);
-                    ball.knifeBladeX += ball.knifeBladeVx * dt;
-                    ball.knifeBladeY += ball.knifeBladeVy * dt;
-                    const farFromOwner = Math.hypot(ball.knifeBladeX - ball.x, ball.knifeBladeY - ball.y) > 360;
-                    if (simTime >= (ball.knifeBladeReturnAt || 0) || farFromOwner) {
-                      ball.knifeBladeState = "returning";
-                    }
-                  } else if (ball.knifeBladeState === "returning") {
-                    const returnAngle = Math.atan2(ball.y - ball.knifeBladeY, ball.x - ball.knifeBladeX);
-                    ball.knifeBladeVx = Math.cos(returnAngle) * 760;
-                    ball.knifeBladeVy = Math.sin(returnAngle) * 760;
-                    ball.knifeBladeAngle = returnAngle;
-                    ball.knifeBladeX += ball.knifeBladeVx * dt;
-                    ball.knifeBladeY += ball.knifeBladeVy * dt;
-                    if (Math.hypot(ball.x - ball.knifeBladeX, ball.y - ball.knifeBladeY) < ball.r + 10) {
-                      ball.knifeBladeState = "rotating";
-                    }
-                  }
-                  
-                  if (ball.knifeBladeState !== "charging" && Math.hypot(ball.knifeBladeX - enemy.x, ball.knifeBladeY - enemy.y) < enemy.r + 16) {
-                    localApplyDamage(enemy, bal.secDamage, `${ball.id}-knife-sec-${enemy.id}`, 300);
-                  }
+                  const breath = Math.sin(simTime * 0.006) * 0.12;
+                  ball.spinAngle = targetAngle + breath;
                 }
               }
               if (ball.type === "gun" || ball.type === "arm") {
@@ -4729,7 +4696,10 @@ export default function App() {
 
       // Play damage sound effects based on the source
       if (keyLower.includes("saber") || keyLower.includes("-knife-hit") || keyLower.includes("-knife-sec")) {
-        playAudioFile("/Saber%20hit.mp3", 0.95, 0, game.simulationSpeed || 1, `${cooldownKey}-saber-hit`);
+        const isDark = keyLower.includes("darksaber") || keyLower.includes("dark-saber");
+        const hitDetune = isDark ? -320 : 0;
+        const hitPlayback = (game.simulationSpeed || 1) * (isDark ? 0.84 : 1.08);
+        playAudioFile("/Saber%20hit.mp3", 0.95, hitDetune, hitPlayback, `${cooldownKey}-saber-hit`);
       } else if (keyLower.includes("knife")) {
         playSound("knifeHit", 1, 80);
       } else if (keyLower.includes("wallspike")) {
@@ -4993,7 +4963,7 @@ export default function App() {
       spawnSparks(shieldBall.x + Math.cos(impactAngle) * shieldBall.r, shieldBall.y + Math.sin(impactAngle) * shieldBall.r, "#60a5fa", 6);
     };
 
-    const leaveSpiderWebSplatter = (owner, x, y, wall, impactAngle = 0, activationDelay = 0) => {
+    const leaveSpiderWebSplatter = (owner, x, y, wall, impactAngle = 0, activationDelay = 0, canTriggerTrap = true) => {
       if (!owner || (owner.type !== "spider" && owner.type !== "blackSpider")) return;
       const isBlackSpider = owner.type === "blackSpider";
       const splatX = wall === "left" ? 0 : wall === "right" ? game.width : clamp(x, 0, game.width);
@@ -5008,6 +4978,7 @@ export default function App() {
         wall,
         r: 42,
         isBlackSpider,
+        canTriggerTrap,
         createdAt: game.simTime,
         activeAt: game.simTime + activationDelay,
       });
@@ -5166,6 +5137,30 @@ export default function App() {
       if (ball.y + ball.r > game.height - pad) { ball.y = game.height - pad - ball.r; ball.vy = -Math.abs(ball.vy); bounced = true; by = game.height - pad; sideHit = "bottom"; }
       if (bounced) {
         spawnDust(bx, by, 5);
+        if (ball.type === "blackSpider" && ball.blackSimpleState === "rebound" && (ball.blackSimpleSelfBouncesLeft || 0) > 0) {
+          ball.blackSimpleSelfBouncesLeft--;
+          spawnImpactBurst(bx, by, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#020617", "#64748b"], 1.05);
+          game.screenShake = Math.max(game.screenShake || 0, 7);
+          if (ball.blackSimpleSelfBouncesLeft <= 0) ball.blackSimpleStateUntil = Math.min(ball.blackSimpleStateUntil || game.simTime, game.simTime + 180);
+        }
+        if ((ball.blackSpiderBouncesLeft || 0) > 0) {
+          const source = game.balls.find((candidate) => candidate.id === ball.blackSpiderBounceSourceId && candidate.type === "blackSpider");
+          const remaining = ball.blackSpiderBouncesLeft;
+          ball.blackSpiderBouncesLeft = Math.max(0, remaining - 1);
+          const speed = (game.balance.blackSpider || BALANCE.blackSpider).simpleBounceSpeed || 780;
+          const currentSpeed = Math.max(1, Math.hypot(ball.vx, ball.vy));
+          ball.vx = (ball.vx / currentSpeed) * speed;
+          ball.vy = (ball.vy / currentSpeed) * speed;
+          if (source && remaining === 1 && sideHit) {
+            leaveSpiderWebSplatter(source, bx, by, sideHit, Math.atan2(ball.vy, ball.vx), 120, false);
+          }
+          spawnImpactBurst(bx, by, Math.atan2(ball.vy, ball.vx), ["#ffffff", "#020617", "#475569"], 1.2);
+          game.screenShake = Math.max(game.screenShake || 0, 9);
+          if (ball.blackSpiderBouncesLeft <= 0) {
+            ball.skillLockedUntil = Math.min(ball.skillLockedUntil || game.simTime, game.simTime + 220);
+            ball.ragdollUntil = Math.min(ball.ragdollUntil || game.simTime, game.simTime + 220);
+          }
+        }
         if (ball.type === "serpent") {
           const serpentBal = game.balance.serpent || BALANCE.serpent;
           const maxSegs = serpentBal.maxSegments || 10;
@@ -9425,6 +9420,560 @@ export default function App() {
     const updateBlackSpider = (ball, target, currentTime, stepDt) => {
       const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
 
+      // Current Black Spider kit: one dodgeable string, then a fast self-pull.
+      // This return keeps the older experimental combo code below dormant.
+      if (ball.type === "blackSpider") {
+        const state = ball.blackSimpleState || "idle";
+        const victim = game.balls.find((candidate) => candidate.id === ball.blackSimpleTargetId && candidate.health > 0);
+
+        const simpleDamage = (v, amount, label, key, lockMs = 300) => {
+          if (!v || v.health <= 0) return;
+          const before = v.health;
+          applyDamage(v, amount, `${ball.id}-simple-${key}`, currentTime, 180);
+          const dealt = before - v.health;
+          if (dealt <= 0) return;
+          v.skillLockedUntil = Math.max(v.skillLockedUntil || 0, currentTime + lockMs);
+          v.webHitFlashUntil = currentTime + 220;
+          v.webHitFlashColor = "#020617";
+          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+          if (stats) { stats.damageDealt += dealt; stats.hitsLanded++; }
+          spawnSparks(v.x, v.y, "#e2e8f0", 20);
+          spawnImpactBurst(v.x, v.y, Math.atan2(v.y - ball.y, v.x - ball.x), ["#ffffff", "#020617", "#475569"], 1.3);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({ x: v.x, y: v.y - v.r - 16, vy: -48, text: `${label} -${dealt}`, color: "#f8fafc", life: 0.7, maxLife: 0.7 });
+        };
+
+        if (state === "single_shot") {
+          ball.blackSimpleProjectileX += ball.blackSimpleProjectileVx * stepDt;
+          ball.blackSimpleProjectileY += ball.blackSimpleProjectileVy * stepDt;
+          const hit = game.balls.find((candidate) => candidate.side !== ball.side && candidate.health > 0 && candidate.type !== "cueBall" && Math.hypot(candidate.x - ball.blackSimpleProjectileX, candidate.y - ball.blackSimpleProjectileY) <= candidate.r + 8);
+          if (hit) {
+            ball.blackSimpleState = "single_pull_one";
+            ball.blackSimpleTargetId = hit.id;
+            ball.blackSimpleStateStartedAt = currentTime;
+            ball.blackSimpleStateUntil = currentTime + (bsBal.singlePullTime || 260);
+            ball.blackSimpleStartX = ball.x;
+            ball.blackSimpleStartY = ball.y;
+            ball.blackSimpleVictimStartX = hit.x;
+            ball.blackSimpleVictimStartY = hit.y;
+            hit.vx = 0; hit.vy = 0;
+            hit.paralyzedUntil = currentTime + (bsBal.singlePullTime || 260) + 120;
+            hit.skillLockedUntil = Math.max(hit.skillLockedUntil || 0, hit.paralyzedUntil);
+            playSound("webHit", 0.95, 70);
+            game.screenShake = Math.max(game.screenShake || 0, 15);
+            return;
+          }
+          const pad = 18;
+          let wall = null;
+          if (ball.blackSimpleProjectileX <= pad) wall = "left";
+          else if (ball.blackSimpleProjectileX >= game.width - pad) wall = "right";
+          else if (ball.blackSimpleProjectileY <= pad) wall = "top";
+          else if (ball.blackSimpleProjectileY >= game.height - pad) wall = "bottom";
+          if (wall) {
+            ball.blackSimpleProjectileX = clamp(ball.blackSimpleProjectileX, 0, game.width);
+            ball.blackSimpleProjectileY = clamp(ball.blackSimpleProjectileY, 0, game.height);
+            leaveSpiderWebSplatter(ball, ball.blackSimpleProjectileX, ball.blackSimpleProjectileY, wall, ball.blackSimpleAimAngle || 0, 120, false);
+            ball.blackSimpleState = "idle";
+            ball.blackSimpleTargetId = null;
+            ball.blackSimpleNextAt = currentTime + (bsBal.simpleCooldown || 4600);
+            game.floatingTexts.push({ x: ball.blackSimpleProjectileX, y: ball.blackSimpleProjectileY, vy: -40, text: "BLACK WEB", color: "#f8fafc", life: 0.7, maxLife: 0.7 });
+          }
+          return;
+        }
+
+        if (["single_pull_one", "single_slam_one", "single_pull_two", "single_spin_left", "single_slam_two", "auto_string", "auto_pull", "auto_spin", "auto_slam", "max_stack_slam"].includes(state)) {
+          if (!victim) {
+            ball.blackSimpleState = "idle";
+            ball.blackSimpleNextAt = currentTime + (bsBal.simpleCooldown || 4600) * 0.5;
+            return;
+          }
+          ball.vx = 0; ball.vy = 0; victim.vx = 0; victim.vy = 0;
+          victim.paralyzedUntil = Math.max(victim.paralyzedUntil || 0, currentTime + 100);
+
+          if (state === "auto_string") {
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              ball.blackSimpleState = "auto_pull";
+              ball.blackSimpleStateStartedAt = currentTime;
+              ball.blackSimpleStateUntil = currentTime + (bsBal.singlePullTime || 260);
+              ball.blackSimpleStartX = ball.x;
+              ball.blackSimpleStartY = ball.y;
+              ball.blackSimpleVictimStartX = victim.x;
+              ball.blackSimpleVictimStartY = victim.y;
+              victim.vx = 0; victim.vy = 0;
+              victim.paralyzedUntil = currentTime + (bsBal.singlePullTime || 260) + 120;
+            }
+            return;
+          }
+
+          if (state === "max_stack_slam") {
+            const angle = ball.blackSimpleAimAngle || 0;
+            ball.vx = Math.cos(angle) * 1200;
+            ball.vy = Math.sin(angle) * 1200;
+            const dist = Math.hypot(victim.x - ball.x, victim.y - ball.y);
+            const hitTarget = dist <= ball.r + victim.r + 14;
+            if (hitTarget || currentTime >= ball.blackSimpleStateUntil) {
+              const launchAngle = Math.atan2(victim.y - ball.y, victim.x - ball.x);
+              const before = victim.health;
+              const slamDamage = Math.floor((bsBal.simpleSlamDamage || 6) * 1.5);
+              applyDamage(victim, slamDamage, `${ball.id}-max-slam-${victim.id}`, currentTime, 500);
+              const dealt = before - victim.health;
+              const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+              if (stats && dealt > 0) { stats.damageDealt += dealt; stats.hitsLanded++; }
+              
+              victim.paralyzedUntil = currentTime;
+              victim.vx = Math.cos(launchAngle) * (bsBal.simpleBounceSpeed || 820) * 1.25;
+              victim.vy = Math.sin(launchAngle) * (bsBal.simpleBounceSpeed || 820) * 1.25;
+              victim.blackSpiderBouncesLeft = 3;
+              victim.blackSpiderBounceSourceId = ball.id;
+              victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + 2000);
+              victim.ragdollUntil = Math.max(victim.ragdollUntil || 0, currentTime + 2000);
+              
+              ball.vx = -Math.cos(launchAngle) * 520;
+              ball.vy = -Math.sin(launchAngle) * 520;
+              ball.blackSimpleState = "single_recoil";
+              ball.blackSimpleStateUntil = currentTime + 420;
+              ball.blackSimpleNextAt = currentTime + (bsBal.simpleCooldown || 4600);
+              spawnImpactBurst(victim.x, victim.y, launchAngle, ["#ffffff", "#020617", "#dc2626"], 2.0);
+              game.screenShake = Math.max(game.screenShake || 0, 50);
+              playSound("wallSlam", 1.1, 90);
+              playAudioFile("/spider%20bite.mp3", 1.0, 0, 0.9, `${ball.id}-max-impact-${currentTime}`);
+            }
+            return;
+          }
+
+          if (state === "single_pull_one" || state === "single_pull_two" || state === "auto_pull") {
+            const duration = bsBal.singlePullTime || 260;
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / duration, 0, 1);
+            const startX = ball.blackSimpleVictimStartX;
+            const startY = ball.blackSimpleVictimStartY;
+            const angle = Math.atan2(startY - ball.y, startX - ball.x);
+            const radius = ball.r + victim.r + 10;
+            const endX = ball.x + Math.cos(angle) * radius;
+            const endY = ball.y + Math.sin(angle) * radius;
+            const eased = 1 - Math.pow(1 - progress, 3);
+            victim.x = startX + (endX - startX) * eased;
+            victim.y = startY + (endY - startY) * eased;
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              if (state === "single_pull_one") {
+                ball.blackSimpleState = "single_slam_one";
+                ball.blackSimpleStateStartedAt = currentTime;
+                ball.blackSimpleStateUntil = currentTime + 180;
+                ball.blackSimpleVictimStartX = victim.x;
+                ball.blackSimpleVictimStartY = victim.y;
+                const slamAngle = Math.atan2(victim.y - ball.y, victim.x - ball.x);
+                ball.blackSimpleEndX = clamp(victim.x + Math.cos(slamAngle) * 125, victim.r + 18, game.width - victim.r - 18);
+                ball.blackSimpleEndY = clamp(victim.y + Math.sin(slamAngle) * 125, victim.r + 18, game.height - victim.r - 18);
+                playSound("wallSlam", 0.95, 75);
+                game.screenShake = Math.max(game.screenShake || 0, 25);
+              } else if (state === "single_pull_two") {
+                ball.blackSimpleState = "single_spin_left";
+                ball.blackSimpleStateStartedAt = currentTime;
+                ball.blackSimpleStateUntil = currentTime + 480;
+                ball.blackSimpleSpinStartAngle = Math.atan2(victim.y - ball.y, victim.x - ball.x);
+                playSound("webSpin", 0.92, 70);
+              } else {
+                ball.blackSimpleState = "auto_spin";
+                ball.blackSimpleStateStartedAt = currentTime;
+                ball.blackSimpleStateUntil = currentTime + 480;
+                ball.blackSimpleSpinStartAngle = Math.atan2(victim.y - ball.y, victim.x - ball.x);
+                playSound("webSpin", 0.92, 70);
+              }
+            }
+            return;
+          }
+
+          if (state === "single_spin_left" || state === "auto_spin") {
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / 480, 0, 1);
+            const spinAngle = (ball.blackSimpleSpinStartAngle || 0) + progress * Math.PI * 2;
+            const radius = ball.r + victim.r + 10;
+            victim.x = ball.x + Math.cos(spinAngle) * radius;
+            victim.y = ball.y + Math.sin(spinAngle) * radius;
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              const left = state === "single_spin_left";
+              ball.blackSimpleState = left ? "single_slam_two" : "auto_slam";
+              ball.blackSimpleStateStartedAt = currentTime;
+              ball.blackSimpleStateUntil = currentTime + 220;
+              ball.blackSimpleVictimStartX = victim.x;
+              ball.blackSimpleVictimStartY = victim.y;
+              const slamAngle = spinAngle + Math.PI / 2;
+              ball.blackSimpleEndX = clamp(victim.x + Math.cos(slamAngle) * 160, victim.r + 18, game.width - victim.r - 18);
+              ball.blackSimpleEndY = clamp(victim.y + Math.sin(slamAngle) * 160, victim.r + 18, game.height - victim.r - 18);
+              playSound("wallSlam", 1.0, 80);
+              game.screenShake = Math.max(game.screenShake || 0, 45);
+            }
+            return;
+          }
+
+          if (state === "single_slam_one") {
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / 180, 0, 1);
+            victim.x = ball.blackSimpleVictimStartX + (ball.blackSimpleEndX - ball.blackSimpleVictimStartX) * progress;
+            victim.y = ball.blackSimpleVictimStartY + (ball.blackSimpleEndY - ball.blackSimpleVictimStartY) * progress;
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              const before = victim.health;
+              applyDamage(victim, 3, `${ball.id}-pull-slam-${victim.id}`, currentTime, 300);
+              const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+              if (stats && victim.health < before) { stats.damageDealt += before - victim.health; stats.hitsLanded++; }
+              spawnImpactBurst(victim.x, victim.y, Math.atan2(victim.y - ball.y, victim.x - ball.x), ["#ffffff", "#111827", "#991b1b"], 1.15);
+              
+              ball.blackSimpleState = "single_pull_two";
+              ball.blackSimpleStateStartedAt = currentTime;
+              ball.blackSimpleStateUntil = currentTime + (bsBal.singlePullTime || 260);
+              ball.blackSimpleStartX = ball.x;
+              ball.blackSimpleStartY = ball.y;
+              ball.blackSimpleVictimStartX = victim.x;
+              ball.blackSimpleVictimStartY = victim.y;
+              game.screenShake = Math.max(game.screenShake || 0, 25);
+            }
+            return;
+          }
+
+          if (state === "single_slam_two" || state === "auto_slam") {
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / 220, 0, 1);
+            victim.x = ball.blackSimpleVictimStartX + (ball.blackSimpleEndX - ball.blackSimpleVictimStartX) * progress;
+            victim.y = ball.blackSimpleVictimStartY + (ball.blackSimpleEndY - ball.blackSimpleVictimStartY) * progress;
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              const launchAngle = Math.atan2(victim.y - ball.y, victim.x - ball.x);
+              const before = victim.health;
+              applyDamage(victim, 6, `${ball.id}-final-slam-${victim.id}`, currentTime, 500);
+              const dealt = before - victim.health;
+              const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+              if (stats && dealt > 0) { stats.damageDealt += dealt; stats.hitsLanded++; }
+              
+              victim.paralyzedUntil = currentTime;
+              victim.vx = Math.cos(launchAngle) * (bsBal.simpleBounceSpeed || 820);
+              victim.vy = Math.sin(launchAngle) * (bsBal.simpleBounceSpeed || 820);
+              victim.blackSpiderBouncesLeft = 2;
+              victim.blackSpiderBounceSourceId = ball.id;
+              victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + 1600);
+              victim.ragdollUntil = Math.max(victim.ragdollUntil || 0, currentTime + 1600);
+              
+              ball.vx = -Math.cos(launchAngle) * 420;
+              ball.vy = -Math.sin(launchAngle) * 420;
+              ball.blackSimpleState = "single_recoil";
+              ball.blackSimpleStateUntil = currentTime + 420;
+              ball.blackSimpleNextAt = currentTime + (bsBal.simpleCooldown || 4600);
+              spawnImpactBurst(victim.x, victim.y, launchAngle, ["#ffffff", "#020617", "#7f1d1d"], 1.75);
+              game.screenShake = Math.max(game.screenShake || 0, 45);
+              playAudioFile("/spider%20bite.mp3", 0.9, 0, 1, `${ball.id}-monster-impact-${currentTime}`);
+            }
+            return;
+          }
+        }
+
+        if (state === "single_recoil") {
+          if (currentTime >= ball.blackSimpleStateUntil) {
+            ball.blackSimpleState = "idle";
+            ball.blackSimpleTargetId = null;
+          }
+          return;
+        }
+
+        // Disable legacy states
+        ball.blackTwinState = "idle"; ball.blackWebState = "idle"; ball.blackVenomBiteState = "idle";
+        ball.bsSkillState = "idle"; ball.webState = "idle";
+        
+        if (target && currentTime >= (ball.blackSimpleNextAt || 0) && canStartSkillConnection(ball, target, game.balls, currentTime)) {
+          const maxStacks = Math.max(1, bsBal.slimeMaxStacks || 6);
+          const hasMaxStack = (ball.blackSlimeArmorStacks || 0) >= maxStacks;
+          const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+          const isNear = dist < 220;
+          
+          if (hasMaxStack && isNear) {
+            ball.blackSlimeArmorStacks = 0;
+            const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+            ball.blackSimpleState = "max_stack_slam";
+            ball.blackSimpleTargetId = target.id;
+            ball.blackSimpleStateStartedAt = currentTime;
+            ball.blackSimpleStateUntil = currentTime + 220;
+            ball.blackSimpleStartX = ball.x;
+            ball.blackSimpleStartY = ball.y;
+            ball.blackSimpleAimAngle = angle;
+            
+            ball.vx = Math.cos(angle) * 1200;
+            ball.vy = Math.sin(angle) * 1200;
+            
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -50, text: "MAX STACK SLAM!", color: "#f8fafc", life: 0.8, maxLife: 0.8 });
+            playSound("hammerCharge", 1.0, 95);
+            return;
+          }
+
+          const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+          ball.blackSimpleState = "single_shot";
+          ball.blackSimpleTargetId = null;
+          ball.blackSimpleProjectileX = ball.x;
+          ball.blackSimpleProjectileY = ball.y;
+          ball.blackSimpleProjectileVx = Math.cos(angle) * (bsBal.singleStringSpeed || 920);
+          ball.blackSimpleProjectileVy = Math.sin(angle) * (bsBal.singleStringSpeed || 920);
+          ball.blackSimpleAimAngle = angle;
+          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 18, vy: -42, text: "BLACK STRING!", color: "#f8fafc", life: 0.7, maxLife: 0.7 });
+          playSound("webShoot", 0.95, 65);
+        }
+        return;
+      }
+
+      if (ball.type === "blackSpider") {
+        const simpleDamage = (victim, amount, label, key, lockMs = 300) => {
+          if (!victim || victim.health <= 0) return;
+          const before = victim.health;
+          applyDamage(victim, amount, `${ball.id}-simple-${key}`, currentTime, 180);
+          const dealt = before - victim.health;
+          if (dealt <= 0) return;
+          victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + lockMs);
+          victim.webHitFlashUntil = currentTime + 220;
+          victim.webHitFlashColor = "#020617";
+          const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+          if (stats) { stats.damageDealt += dealt; stats.hitsLanded++; }
+          spawnSparks(victim.x, victim.y, "#e2e8f0", 20);
+          spawnImpactBurst(victim.x, victim.y, Math.atan2(victim.y - ball.y, victim.x - ball.x), ["#ffffff", "#020617", "#475569"], 1.3);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({ x: victim.x, y: victim.y - victim.r - 16, vy: -48, text: `${label} -${dealt}`, color: "#f8fafc", life: 0.7, maxLife: 0.7 });
+        };
+
+        const nearestSimpleWall = (victim) => {
+          const pad = (victim?.r || 30) + 18;
+          const walls = [
+            { wall: "left", d: victim.x, x: pad, y: victim.y, webX: 0, webY: victim.y, angle: Math.PI },
+            { wall: "right", d: game.width - victim.x, x: game.width - pad, y: victim.y, webX: game.width, webY: victim.y, angle: 0 },
+            { wall: "top", d: victim.y, x: victim.x, y: pad, webX: victim.x, webY: 0, angle: -Math.PI / 2 },
+            { wall: "bottom", d: game.height - victim.y, x: victim.x, y: game.height - pad, webX: victim.x, webY: game.height, angle: Math.PI / 2 },
+          ];
+          return walls.sort((a, b) => a.d - b.d)[0];
+        };
+
+        const simpleWallAnchor = (angle) => {
+          const dx = Math.cos(angle);
+          const dy = Math.sin(angle);
+          const hits = [];
+          if (dx < -0.001) hits.push((ball.r - ball.x) / dx);
+          if (dx > 0.001) hits.push((game.width - ball.r - ball.x) / dx);
+          if (dy < -0.001) hits.push((ball.r - ball.y) / dy);
+          if (dy > 0.001) hits.push((game.height - ball.r - ball.y) / dy);
+          const distance = Math.min(...hits.filter((value) => value > 0));
+          return { x: ball.x + dx * distance, y: ball.y + dy * distance };
+        };
+
+        const beginSimpleRebound = (angle, targetId, bounces = 1) => {
+          ball.blackSimpleState = "rebound";
+          ball.blackSimpleTargetId = targetId;
+          ball.blackSimpleStateStartedAt = currentTime;
+          ball.blackSimpleStateUntil = currentTime + 1500;
+          ball.blackSimpleSelfBouncesLeft = bounces;
+          ball.vx = -Math.cos(angle) * 560;
+          ball.vy = -Math.sin(angle) * 560;
+        };
+
+        const victim = game.balls.find((candidate) => candidate.id === ball.blackSimpleTargetId && candidate.health > 0);
+        const state = ball.blackSimpleState || "idle";
+        if (state !== "idle") {
+          if (state !== "rebound") {
+            ball.vx *= 0.82;
+            ball.vy *= 0.82;
+          }
+
+          if (state === "web_wall") {
+            if (currentTime >= (ball.blackSimpleStateUntil || 0)) {
+              leaveSpiderWebSplatter(ball, ball.blackSimpleEndX, ball.blackSimpleEndY, ball.blackSimpleWall, ball.blackVenomBiteAngle || 0, 120);
+              spawnImpactBurst(ball.blackSimpleEndX, ball.blackSimpleEndY, ball.blackVenomBiteAngle || 0, ["#ffffff", "#020617", "#64748b"], 1.25);
+              playSound("webHit", 0.82, 85, { pan: (ball.blackSimpleEndX / game.width) * 2 - 1, depth: 0.1, room: 0.55 });
+              ball.blackSimpleState = "idle";
+              ball.blackSimpleWallNextAt = currentTime + (bsBal.simpleWallWebCooldown || 6800);
+            }
+            return;
+          }
+
+          if (!victim) {
+            ball.blackSimpleState = "idle";
+            ball.blackSimpleTargetId = null;
+            ball.blackSimpleNextAt = currentTime + (bsBal.simpleCooldown || 5200) * 0.45;
+            return;
+          }
+
+          if (state === "rebound") {
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              ball.blackSimpleState = "idle";
+              ball.blackSimpleTargetId = null;
+              ball.blackSimpleSelfBouncesLeft = 0;
+              ball.blackSimpleNextAt = currentTime + (bsBal.simpleCooldown || 5200);
+            }
+            return;
+          }
+
+          if (state === "trap_pull") {
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / Math.max(1, bsBal.trapPullTime || 520), 0, 1);
+            const angle = Math.atan2(ball.y - ball.blackSimpleStartY, ball.x - ball.blackSimpleStartX);
+            const stop = ball.r + victim.r + 8;
+            const endX = ball.x - Math.cos(angle) * stop;
+            const endY = ball.y - Math.sin(angle) * stop;
+            victim.x = ball.blackSimpleStartX + (endX - ball.blackSimpleStartX) * (1 - Math.pow(1 - progress, 3));
+            victim.y = ball.blackSimpleStartY + (endY - ball.blackSimpleStartY) * (1 - Math.pow(1 - progress, 3));
+            victim.vx = 0; victim.vy = 0;
+            victim.paralyzedUntil = Math.max(victim.paralyzedUntil || 0, currentTime + 100);
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              ball.blackSimpleState = "trap_spin";
+              ball.blackSimpleStateStartedAt = currentTime;
+              ball.blackSimpleStateUntil = currentTime + 540;
+              ball.blackSimpleSpinStartAngle = Math.atan2(victim.y - ball.y, victim.x - ball.x);
+              playSound("webSpin", 0.9, 80);
+            }
+            return;
+          }
+
+          if (state === "trap_spin" || state === "spin_throw") {
+            const duration = state === "trap_spin" ? 540 : 620;
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / duration, 0, 1);
+            const turns = state === "trap_spin" ? 1.6 : 2.25;
+            const radius = ball.r + victim.r + 20 + Math.sin(progress * Math.PI) * 18;
+            const spinAngle = (ball.blackSimpleSpinStartAngle || 0) + progress * Math.PI * 2 * turns;
+            victim.x = ball.x + Math.cos(spinAngle) * radius;
+            victim.y = ball.y + Math.sin(spinAngle) * radius;
+            victim.vx = 0; victim.vy = 0;
+            victim.paralyzedUntil = Math.max(victim.paralyzedUntil || 0, currentTime + 120);
+            victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + 180);
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              const launchAngle = spinAngle;
+              const trap = state === "trap_spin";
+              simpleDamage(victim, trap ? (bsBal.trapDamage || 4) : (bsBal.simpleSlamDamage || 6), trap ? "WEB SPIN SLAM" : "V-SPIN THROW", `${state}-${victim.id}`, 1500);
+              victim.paralyzedUntil = currentTime;
+              victim.vx = Math.cos(launchAngle) * (bsBal.simpleBounceSpeed || 780) * (trap ? 0.86 : 1);
+              victim.vy = Math.sin(launchAngle) * (bsBal.simpleBounceSpeed || 780) * (trap ? 0.86 : 1);
+              victim.blackSpiderBouncesLeft = trap ? 2 : (bsBal.simpleBounceCount || 4);
+              victim.blackSpiderBounceSourceId = ball.id;
+              victim.skillLockedUntil = Math.max(victim.skillLockedUntil || 0, currentTime + (trap ? 1500 : 2600));
+              victim.ragdollUntil = Math.max(victim.ragdollUntil || 0, currentTime + (trap ? 1500 : 2600));
+              beginSimpleRebound(launchAngle, victim.id, trap ? 1 : 2);
+              if (trap) ball.blackSimpleWallNextAt = currentTime + (bsBal.simpleWallWebCooldown || 6800);
+              game.screenShake = Math.max(game.screenShake || 0, trap ? 12 : 15);
+              playSound("wallSlam", 1.0, 70);
+            }
+            return;
+          }
+
+          if (state === "string") {
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / Math.max(1, (bsBal.simpleStringTime || 380)), 0, 1);
+            ball.blackSimpleProjectileX = progress;
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              ball.blackSimpleState = "charge";
+              ball.blackSimpleStateStartedAt = currentTime;
+              ball.blackSimpleStateUntil = currentTime + (bsBal.simpleChargeTime || 320);
+              ball.blackSimpleHitDone = false;
+              playSound("webHit", 0.78, 110);
+            }
+            return;
+          }
+
+          if (state === "charge") {
+            ball.vx = 0; ball.vy = 0;
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              ball.blackSimpleState = "bite";
+              ball.blackSimpleStateStartedAt = currentTime;
+              ball.blackSimpleStateUntil = currentTime + (bsBal.simpleBiteTime || 300);
+              ball.blackSimpleStartX = ball.x;
+              ball.blackSimpleStartY = ball.y;
+              ball.blackSimpleHitDone = false;
+              playSound("hammerCharge", 0.76, 85);
+            }
+            return;
+          }
+
+          if (state === "bite") {
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / Math.max(1, (bsBal.simpleBiteTime || 360)), 0, 1);
+            const pullX = ball.blackSimplePullX ?? ball.x;
+            const pullY = ball.blackSimplePullY ?? ball.y;
+            const eased = 1 - Math.pow(1 - progress, 3);
+            ball.x = ball.blackSimpleStartX + (pullX - ball.blackSimpleStartX) * eased;
+            ball.y = ball.blackSimpleStartY + (pullY - ball.blackSimpleStartY) * eased;
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              const stacks = Math.min(6, Math.max(0, ball.blackLegStacks || 0));
+              const caught = game.balls
+                .filter((candidate) => candidate.side !== ball.side && candidate.health > 0 && candidate.type !== "cueBall")
+                .sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0];
+              const catchRadius = ball.r + (caught?.r || 0) + 12 + (stacks === 6 ? ball.r * 2.6 : stacks * 3);
+              if (caught && Math.hypot(caught.x - ball.x, caught.y - ball.y) <= catchRadius) {
+                ball.blackSimpleTargetId = caught.id;
+                simpleDamage(caught, bsBal.simpleBiteDamage || 3, "V-STRING SLAM", `v-slam-${caught.id}`, 900);
+                game.screenShake = Math.max(game.screenShake || 0, 15);
+                ball.blackSimpleState = "spin_throw";
+                ball.blackSimpleStateStartedAt = currentTime;
+                ball.blackSimpleStateUntil = currentTime + 620;
+                ball.blackSimpleSpinStartAngle = Math.atan2(caught.y - ball.y, caught.x - ball.x);
+                playSound("webSpin", 0.95, 70);
+              } else {
+                leaveSpiderWebSplatter(ball, ball.x, ball.y, null, 0, 180, false);
+                game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 18, vy: -42, text: "V-SLAM MISSED", color: "#cbd5e1", life: 0.75, maxLife: 0.75 });
+                beginSimpleRebound(ball.blackSimplePullAngle || 0, victim.id, 2);
+              }
+            }
+            return;
+          }
+
+          if (state === "slam") {
+            const progress = clamp((currentTime - ball.blackSimpleStateStartedAt) / Math.max(1, (bsBal.simpleSlamTime || 480)), 0, 1);
+            const eased = 1 - Math.pow(1 - progress, 2);
+            victim.x = ball.blackSimpleStartX + (ball.blackSimpleEndX - ball.blackSimpleStartX) * eased;
+            victim.y = ball.blackSimpleStartY + (ball.blackSimpleEndY - ball.blackSimpleStartY) * eased;
+            victim.vx = 0; victim.vy = 0;
+            victim.paralyzedUntil = Math.max(victim.paralyzedUntil || 0, currentTime + 100);
+            if (currentTime >= ball.blackSimpleStateUntil) {
+              simpleDamage(victim, bsBal.simpleSlamDamage || 6, "WEB SLAM", `slam-${victim.id}`, 900);
+              leaveSpiderWebSplatter(ball, ball.blackSimpleWebX, ball.blackSimpleWebY, ball.blackSimpleWall, ball.blackVenomBiteAngle || 0, 120);
+              victim.vx = -Math.cos(ball.blackVenomBiteAngle || 0) * 420;
+              victim.vy = -Math.sin(ball.blackVenomBiteAngle || 0) * 420;
+              game.screenShake = Math.max(game.screenShake || 0, 14);
+              playSound("wallSlam", 1.0, 80);
+              ball.blackSimpleState = "idle";
+              ball.blackSimpleTargetId = null;
+              ball.blackSimpleNextAt = currentTime + (bsBal.simpleCooldown || 5200);
+            }
+            return;
+          }
+        }
+
+        // Exactly two skills: the combo takes priority, then the standalone wall web.
+        ball.blackTwinState = "idle";
+        ball.blackWebState = "idle";
+        ball.blackVenomBiteState = "idle";
+        ball.bsSkillState = "idle";
+        ball.webState = "idle";
+
+        if (target && currentTime >= (ball.blackSimpleNextAt || 0) && canStartSkillConnection(ball, target, game.balls, currentTime)) {
+          const aim = Math.atan2(target.y - ball.y, target.x - ball.x);
+          // Open the wall-anchored V toward the opponent instead of behind Black Spider.
+          const anchorA = simpleWallAnchor(aim + 0.62);
+          const anchorB = simpleWallAnchor(aim - 0.62);
+          const pullAnchor = simpleWallAnchor(aim);
+          ball.blackSimpleState = "string";
+          ball.blackSimpleTargetId = target.id;
+          ball.blackSimpleStateStartedAt = currentTime;
+          ball.blackSimpleStateUntil = currentTime + (bsBal.simpleStringTime || 380);
+          ball.blackSimpleStartX = ball.x; ball.blackSimpleStartY = ball.y;
+          ball.blackSimpleProjectileX = 0; ball.blackSimpleProjectileY = 0;
+          ball.blackTwinAnchorAX = anchorA.x; ball.blackTwinAnchorAY = anchorA.y;
+          ball.blackTwinAnchorBX = anchorB.x; ball.blackTwinAnchorBY = anchorB.y;
+          ball.blackSimplePullX = pullAnchor.x; ball.blackSimplePullY = pullAnchor.y;
+          ball.blackSimplePullAngle = aim;
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -46, text: "STRING BITE SLAM!", color: "#f8fafc", life: 0.8, maxLife: 0.8 });
+          playSound("webShoot", 0.92, 70);
+          return;
+        }
+
+        if (target && currentTime >= (ball.blackSimpleWallNextAt || 0)) {
+          const wall = nearestSimpleWall(target);
+          ball.blackSimpleState = "web_wall";
+          ball.blackSimpleStateStartedAt = currentTime;
+          ball.blackSimpleStateUntil = currentTime + 320;
+          ball.blackSimpleEndX = wall.webX; ball.blackSimpleEndY = wall.webY;
+          ball.blackSimpleWall = wall.wall;
+          ball.blackVenomBiteAngle = wall.angle;
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 20, vy: -42, text: "BLACK WEB WALL!", color: "#cbd5e1", life: 0.75, maxLife: 0.75 });
+          playSound("webShoot", 0.75, 115);
+          return;
+        }
+        return;
+      }
+
       if (ball.type === "blackSpider") {
         if (!ball.blackVenomBiteState) ball.blackVenomBiteState = "idle";
         if (!ball.blackWebState) ball.blackWebState = "idle";
@@ -9541,6 +10090,121 @@ export default function App() {
           const hit = candidates.sort((a, b) => a.t - b.t)[0] || { wall: "right", x: game.width - pad, y: ball.y };
           return { ...hit, x: clamp(hit.x, pad, game.width - pad), y: clamp(hit.y, pad, game.height - pad) };
         };
+
+        const getTwinWallAnchor = (x, y, dx, dy) => {
+          const pad = 14;
+          const hits = [];
+          if (Math.abs(dx) > 0.001) {
+            const tx = dx > 0 ? (game.width - pad - x) / dx : (pad - x) / dx;
+            if (tx > 0) hits.push({ t: tx, x: x + dx * tx, y: y + dy * tx });
+          }
+          if (Math.abs(dy) > 0.001) {
+            const ty = dy > 0 ? (game.height - pad - y) / dy : (pad - y) / dy;
+            if (ty > 0) hits.push({ t: ty, x: x + dx * ty, y: y + dy * ty });
+          }
+          const hit = hits.sort((a, b) => a.t - b.t)[0] || { x, y };
+          return { x: clamp(hit.x, pad, game.width - pad), y: clamp(hit.y, pad, game.height - pad) };
+        };
+
+        const twinVictim = game.balls.find((candidate) => candidate.id === ball.blackTwinTargetId && candidate.health > 0);
+        if (ball.blackTwinState && ball.blackTwinState !== "idle") {
+          if (!twinVictim) {
+            ball.blackTwinState = "idle";
+            ball.blackTwinTargetId = null;
+            ball.blackTwinNextAt = currentTime + (bsBal.twinCooldown || 8200) * 0.45;
+            return;
+          }
+
+          ball.vx *= 0.82;
+          ball.vy *= 0.82;
+          if (ball.blackTwinState === "casting") {
+            twinVictim.skillLockedUntil = Math.max(twinVictim.skillLockedUntil || 0, currentTime + 120);
+            if (currentTime >= (ball.blackTwinStateUntil || 0)) {
+              ball.blackTwinState = "coffin";
+              ball.blackTwinStartedAt = currentTime;
+              ball.blackTwinStateUntil = currentTime + (bsBal.twinHoldDuration || 980);
+              ball.blackTwinNextStrikeAt = currentTime + 150;
+              ball.blackTwinStrikeCount = 0;
+              ball.blackTwinCaptureX = twinVictim.x;
+              ball.blackTwinCaptureY = twinVictim.y;
+              spawnImpactBurst(twinVictim.x, twinVictim.y, 0, ["#ffffff", "#94a3b8", "#020617"], 1.25);
+              playSound("webHit", 0.95, 65, { pan: (twinVictim.x / game.width) * 2 - 1, depth: 0.08, room: 0.58 });
+            }
+            return;
+          }
+
+          twinVictim.x = ball.blackTwinCaptureX;
+          twinVictim.y = ball.blackTwinCaptureY;
+          twinVictim.vx = 0;
+          twinVictim.vy = 0;
+          twinVictim.paralyzedUntil = Math.max(twinVictim.paralyzedUntil || 0, currentTime + 120);
+          twinVictim.skillLockedUntil = Math.max(twinVictim.skillLockedUntil || 0, currentTime + 180);
+
+          const strikeCount = bsBal.twinStrikeCount || 3;
+          while ((ball.blackTwinStrikeCount || 0) < strikeCount && currentTime >= (ball.blackTwinNextStrikeAt || 0)) {
+            const hitIndex = ball.blackTwinStrikeCount || 0;
+            const side = hitIndex % 2 === 0 ? -1 : 1;
+            const ax = ball.blackTwinAnchorBX - ball.blackTwinAnchorAX;
+            const ay = ball.blackTwinAnchorBY - ball.blackTwinAnchorAY;
+            const len = Math.max(1, Math.hypot(ax, ay));
+            const nx = ax / len;
+            const ny = ay / len;
+            ball.x = clamp(twinVictim.x + nx * side * (ball.r + twinVictim.r + 20), ball.r + 18, game.width - ball.r - 18);
+            ball.y = clamp(twinVictim.y + ny * side * (ball.r + twinVictim.r + 20), ball.r + 18, game.height - ball.r - 18);
+            const attackAngle = Math.atan2(twinVictim.y - ball.y, twinVictim.x - ball.x);
+            applyBlackSpiderDamage(twinVictim, bsBal.twinStrikeDamage || 2, `CROSS BITE ${hitIndex + 1}`, `twin-${hitIndex}-${twinVictim.id}`, attackAngle, 280, true);
+            ball.blackTwinStrikeCount = hitIndex + 1;
+            ball.blackTwinNextStrikeAt += Math.max(170, (bsBal.twinHoldDuration || 980) / (strikeCount + 1));
+            ball.fangFlashUntil = currentTime + 180;
+            playAudioFile("/spider%20bite.mp3", 0.82, hitIndex * 0.02, 0.96 + hitIndex * 0.08, `${ball.id}-twin-bite-${hitIndex}-${currentTime}`);
+          }
+
+          if (currentTime >= (ball.blackTwinStateUntil || 0)) {
+            const distances = [
+              { d: twinVictim.x, angle: Math.PI },
+              { d: game.width - twinVictim.x, angle: 0 },
+              { d: twinVictim.y, angle: -Math.PI / 2 },
+              { d: game.height - twinVictim.y, angle: Math.PI / 2 },
+            ].sort((a, b) => a.d - b.d);
+            const launchAngle = distances[0].angle;
+            applyBlackSpiderDamage(twinVictim, bsBal.twinFinalDamage || 5, "WEB COFFIN", `twin-final-${twinVictim.id}`, launchAngle, 950, true);
+            twinVictim.paralyzedUntil = currentTime;
+            twinVictim.vx = Math.cos(launchAngle) * (bsBal.twinLaunchSpeed || 900);
+            twinVictim.vy = Math.sin(launchAngle) * (bsBal.twinLaunchSpeed || 900);
+            twinVictim.ragdollUntil = Math.max(twinVictim.ragdollUntil || 0, currentTime + 850);
+            createBlackWallWeb(twinVictim.x, twinVictim.y);
+            spawnImpactBurst(twinVictim.x, twinVictim.y, launchAngle, ["#ffffff", "#020617", "#475569"], 2.0);
+            game.floatingTexts.push({ x: twinVictim.x, y: twinVictim.y - twinVictim.r - 22, vy: -58, text: "TWIN WEB COFFIN!", color: "#f8fafc", life: 1, maxLife: 1 });
+            ball.blackTwinState = "idle";
+            ball.blackTwinTargetId = null;
+            ball.blackTwinNextAt = currentTime + (bsBal.twinCooldown || 8200);
+          }
+          return;
+        }
+
+        if (currentTime >= (ball.blackTwinNextAt || 0) && target &&
+            (ball.blackWebState || "idle") === "idle" && (ball.blackVenomBiteState || "idle") === "idle" &&
+            (ball.bsSkillState || "idle") === "idle" && canStartSkillConnection(ball, target, game.balls, currentTime)) {
+          const aim = Math.atan2(target.y - ball.y, target.x - ball.x);
+          const px = -Math.sin(aim);
+          const py = Math.cos(aim);
+          const anchorA = getTwinWallAnchor(target.x, target.y, px, py);
+          const anchorB = getTwinWallAnchor(target.x, target.y, -px, -py);
+          ball.blackTwinAnchorAX = anchorA.x;
+          ball.blackTwinAnchorAY = anchorA.y;
+          ball.blackTwinAnchorBX = anchorB.x;
+          ball.blackTwinAnchorBY = anchorB.y;
+          ball.blackTwinTargetId = target.id;
+          ball.blackTwinState = "casting";
+          ball.blackTwinStartedAt = currentTime;
+          ball.blackTwinStateUntil = currentTime + (bsBal.twinCastTime || 360);
+          ball.blackTwinStrikeCount = 0;
+          target.skillLockedUntil = Math.max(target.skillLockedUntil || 0, ball.blackTwinStateUntil + 120);
+          game.floatingTexts = game.floatingTexts || [];
+          game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -48, text: "TWIN WEB!", color: "#e2e8f0", life: 0.75, maxLife: 0.75 });
+          playSound("webShoot", 1.0, 45, { pan: (ball.x / game.width) * 2 - 1, depth: 0.06, room: 0.6 });
+          return;
+        }
 
         const startBlackStringSlam = (victim, slamIndex, angle) => {
           const slamPoint = getBlackSpiderWallPoint(angle, victim);
@@ -13227,12 +13891,12 @@ export default function App() {
             if (game.simTime < (splat.ownerIgnoreUntil || 0)) return;
             ownerTouching = true;
             if (splat.ownerTouching) return;
-            addBlackSlimeArmor(ball, 1, splat.x, splat.y);
+            ball.blackLegStacks = Math.min(6, (ball.blackLegStacks || 0) + 1);
             consumed = true;
             game.floatingTexts = game.floatingTexts || [];
             game.floatingTexts.push({
               x: ball.x, y: ball.y - ball.r - 44, vy: -42,
-              text: "SLIME STICK",
+              text: `LEG GROWTH ${ball.blackLegStacks}/6`,
               color: "#f8fafc",
               life: 0.7,
               maxLife: 0.7
@@ -13275,32 +13939,30 @@ export default function App() {
               });
             }
             const blackSpiderOwner = game.balls.find((candidate) => candidate.id === splat.ownerId && candidate.type === "blackSpider");
-            if (blackSpiderOwner && canStartSkillConnection(blackSpiderOwner, ball, game.balls, game.simTime)) {
+            if (blackSpiderOwner && splat.canTriggerTrap !== false) {
               const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
-              const angle = Math.atan2(ball.y - blackSpiderOwner.y, ball.x - blackSpiderOwner.x);
-              addBlackSlimeArmor(blackSpiderOwner, 1, splat.x, splat.y);
+              blackSpiderOwner.blackSimpleState = "auto_string";
+              blackSpiderOwner.blackSimpleTargetId = ball.id;
+              blackSpiderOwner.blackSimpleStateStartedAt = game.simTime;
+              blackSpiderOwner.blackSimpleStateUntil = game.simTime + 180;
+              // Clear other states
               blackSpiderOwner.blackWebState = "idle";
-              blackSpiderOwner.webState = "pulling";
-              blackSpiderOwner.webTargetId = ball.id;
-              blackSpiderOwner.webBouncesLeft = getBlackSpiderStringSlamCount(blackSpiderOwner);
-              blackSpiderOwner.webLastTargetX = ball.x;
-              blackSpiderOwner.webLastTargetY = ball.y;
-              blackSpiderOwner.webStateUntil = game.simTime + (bsBal.blackWebPullDuration || bsBal.slamPullDuration || game.balance.spider.pullDuration);
+              blackSpiderOwner.webState = "idle";
+              blackSpiderOwner.webTargetId = null;
+              blackSpiderOwner.webBouncesLeft = 0;
               blackSpiderOwner.blackWebTargetId = null;
-              blackSpiderOwner.blackComboTargetId = ball.id;
+              blackSpiderOwner.blackComboTargetId = null;
               blackSpiderOwner.blackWebAttachedUntil = 0;
-              blackSpiderOwner.webX = ball.x;
-              blackSpiderOwner.webY = ball.y;
-              blackSpiderOwner.blackVenomBiteAngle = angle;
               blackSpiderOwner.blackWebNextAt = game.simTime + (bsBal.blackWebCooldown || 3200);
               blackSpiderOwner.nextShotAt = blackSpiderOwner.blackWebNextAt;
-              ball.skillLockedUntil = Math.max(ball.skillLockedUntil || 0, game.simTime + (bsBal.blackWebLock || 900));
-              ball.spinLockedUntil = Math.max(ball.spinLockedUntil || 0, game.simTime + (bsBal.blackWebLock || 900));
+              ball.skillLockedUntil = Math.max(ball.skillLockedUntil || 0, game.simTime + 900);
+              ball.spinLockedUntil = Math.max(ball.spinLockedUntil || 0, game.simTime + 900);
               game.floatingTexts = game.floatingTexts || [];
               game.floatingTexts.push({
                 x: blackSpiderOwner.x, y: blackSpiderOwner.y - blackSpiderOwner.r - 22, vy: -42,
-                text: "BLACK WEB STRING", color: "#f8fafc", life: 0.75, maxLife: 0.75
+                text: "TRAP STRING!", color: "#f8fafc", life: 0.75, maxLife: 0.75
               });
+              playSound("webShoot", 0.95, 65);
             }
             consumed = true;
             game.floatingTexts = game.floatingTexts || [];
@@ -14503,116 +15165,407 @@ export default function App() {
       ctx.fillText(Math.round(ball.health), ball.x, ball.y);
       ctx.restore();
     };
-
     const drawKnifeBall = (ball) => {
       const config = BALL_TYPES[ball.type] || BALL_TYPES.knife;
       const dark = ball.type === "darkSaber";
+      const bal = { ...BALANCE.knife, ...game.balance?.knife };
+      const bladeLength = bal.bladeLength || 78;
+
+      // --- Draw Thrown Spinning Sword (World coordinates) ---
+      if (!dark && (ball.saberThrowState === "thrown" || ball.saberThrowState === "stationary" || ball.saberThrowState === "returning")) {
+        ctx.save();
+        ctx.translate(ball.saberThrowX, ball.saberThrowY);
+        ctx.rotate(ball.saberThrowAngle || 0);
+        
+        const hiltX = - 8;
+        const tipX = bladeLength;
+        const saberColor = "#22c55e";
+        const saberLight = "#bbf7d0";
+        const saberWhite = "#ecfdf5";
+        const saberGrad = ctx.createLinearGradient(hiltX, 0, tipX, 0);
+        saberGrad.addColorStop(0, saberLight);
+        saberGrad.addColorStop(0.5, saberColor);
+        saberGrad.addColorStop(1, saberWhite);
+        ctx.shadowColor = saberColor;
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = saberGrad;
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(tipX, 0); ctx.stroke();
+        
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = saberWhite;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(tipX - 4, 0); ctx.stroke();
+        
+        // draw hilt
+        ctx.fillStyle = "#374151"; ctx.fillRect(hiltX, -5, 16, 10);
+        ctx.fillStyle = "#d1d5db"; ctx.fillRect(hiltX + 2, -3, 4, 6);
+        ctx.restore();
+      }
+
+      // --- Draw Purple Lightning Strike (World coordinates) ---
+      if (dark && ball.darkSaberLightningActiveUntil && game.simTime < ball.darkSaberLightningActiveUntil) {
+        const victim = game.balls.find(candidate => candidate.id === ball.darkSaberLightningTargetId);
+        if (victim) {
+          ctx.save();
+          ctx.strokeStyle = "#c084fc";
+          ctx.lineWidth = 4.5;
+          ctx.shadowColor = "#a855f7";
+          ctx.shadowBlur = 15;
+          
+          const steps = 6;
+          const dx = victim.x - ball.x;
+          const dy = victim.y - ball.y;
+          const dist = Math.hypot(dx, dy);
+          const angle = Math.atan2(dy, dx);
+          const points = [{ x: ball.x, y: ball.y }];
+          
+          for (let i = 1; i < steps; i++) {
+            const ratio = i / steps;
+            const noise = Math.sin(game.simTime * 0.05 + i * 1.5) * 14;
+            const px = ball.x + Math.cos(angle) * dist * ratio - Math.sin(angle) * noise;
+            const py = ball.y + Math.sin(angle) * dist * ratio + Math.cos(angle) * noise;
+            points.push({ x: px, y: py });
+          }
+          points.push({ x: victim.x, y: victim.y });
+          
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+          }
+          ctx.stroke();
+          
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.8;
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
       const saberColor = dark ? "#ef4444" : "#22c55e";
       const saberLight = dark ? "#fecaca" : "#bbf7d0";
       const saberWhite = dark ? "#fff1f2" : "#ecfdf5";
       const saberDeep = dark ? "#7f1d1d" : "#15803d";
       const flashFill = dark ? "rgba(239, 68, 68, 0.35)" : "rgba(74, 222, 128, 0.35)";
-      const bal = game.balance.knife || BALANCE.knife;
-      ctx.save(); ctx.translate(ball.x, ball.y);
-      if (!dark) [-1, 1].forEach((side) => {
-        const earGrad = ctx.createLinearGradient(side * ball.r * 0.65, -ball.r * 0.22, side * (ball.r + 34), -ball.r * 0.28);
-        earGrad.addColorStop(0, "#bbf7d0");
-        earGrad.addColorStop(0.58, "#22c55e");
-        earGrad.addColorStop(1, "#15803d");
-        ctx.fillStyle = earGrad;
-        ctx.strokeStyle = "#14532d";
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
-        ctx.moveTo(side * ball.r * 0.68, -ball.r * 0.25);
-        ctx.quadraticCurveTo(side * (ball.r + 16), -ball.r * 0.55, side * (ball.r + 35), -ball.r * 0.24);
-        ctx.quadraticCurveTo(side * (ball.r + 12), -ball.r * 0.05, side * ball.r * 0.7, ball.r * 0.06);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(236, 253, 245, 0.78)";
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.moveTo(side * ball.r * 0.9, -ball.r * 0.18);
-        ctx.quadraticCurveTo(side * (ball.r + 16), -ball.r * 0.3, side * (ball.r + 27), -ball.r * 0.21);
-        ctx.stroke();
-      });
-      ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-      if (dark) {
-        const bodyGrad = ctx.createRadialGradient(-ball.r * 0.28, -ball.r * 0.28, 2, 0, 0, ball.r * 1.1);
-        bodyGrad.addColorStop(0, "#475569");
-        bodyGrad.addColorStop(0.4, "#020617");
-        bodyGrad.addColorStop(1, "#000000");
-        ctx.fillStyle = bodyGrad;
-      } else {
-        ctx.fillStyle = config.color;
-      }
-      ctx.fill();
-      ctx.lineWidth = 4; ctx.strokeStyle = config.stroke; ctx.stroke();
-      if (dark) {
-        ctx.save();
-        ctx.shadowColor = "#ef4444";
-        ctx.shadowBlur = 12;
-        ctx.strokeStyle = "rgba(239, 68, 68, 0.82)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, ball.r * 0.68, -0.82, 0.82);
-        ctx.stroke();
-        ctx.fillStyle = "#ef4444";
-        [-1, 1].forEach((side) => {
-          ctx.beginPath();
-          ctx.ellipse(ball.r * 0.2, side * ball.r * 0.32, ball.r * 0.18, ball.r * 0.08, side * 0.2, 0, Math.PI * 2);
-          ctx.fill();
-        });
-        ctx.restore();
-      }
-      ctx.restore();
+      const spinAngle = ball.spinAngle || 0;
+      const dir = ball.saberSpinDirection || 1;
+      const saberSlashActive = ball.saberSlashActive || false;
+      const saberSlashStart = ball.saberSlashStart || 0;
+      const saberSlashDuration = ball.saberSlashDuration || 120;
+      const saberSlashBase = ball.saberSlashBase || 0;
+      const saberSlashDir = ball.saberSlashDir || 1;
+      const saberSlashFlashUntil = ball.saberSlashFlashUntil || 0;
 
-      const bladeState = ball.knifeBladeState || "rotating";
-      if (bladeState === "rotating") {
-        if (ball.saberSlashFlashUntil && game.simTime < ball.saberSlashFlashUntil) {
-          const p = clamp((ball.saberSlashFlashUntil - game.simTime) / 260, 0, 1);
-          ctx.save();
-          ctx.globalAlpha = 0.72 * p;
-          ctx.strokeStyle = dark ? "#fca5a5" : "#86efac";
-          ctx.shadowColor = saberColor;
-          ctx.shadowBlur = 18;
-          ctx.lineWidth = 12;
-          ctx.lineCap = "round";
+      ctx.save(); ctx.translate(ball.x, ball.y);
+      if (!dark) {
+        // Draw Pointed Elf Ears
+        [-1, 1].forEach((side) => {
+          const earGrad = ctx.createLinearGradient(side * ball.r * 0.65, -ball.r * 0.22, side * (ball.r + 52), -ball.r * 0.55);
+          earGrad.addColorStop(0, "#bbf7d0");
+          earGrad.addColorStop(0.58, "#22c55e");
+          earGrad.addColorStop(1, "#15803d");
+          ctx.fillStyle = earGrad;
+          ctx.strokeStyle = "#14532d";
+          ctx.lineWidth = 2.4;
           ctx.beginPath();
-          const dir = ball.saberSpinDirection || 1;
-          ctx.arc(ball.x, ball.y, ball.r + bal.bladeLength * 0.82, ball.spinAngle - dir * 1.2, ball.spinAngle + dir * 0.36, dir < 0);
-          ctx.stroke();
-          ctx.strokeStyle = saberWhite;
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(ball.x, ball.y, ball.r + bal.bladeLength * 0.66, ball.spinAngle - dir * 0.9, ball.spinAngle + dir * 0.24, dir < 0);
-          ctx.stroke();
-          ctx.restore();
-        }
-        if (ball.saberSlashActive && game.simTime < ball.saberSlashStart + ball.saberSlashDuration) {
-          const p = (game.simTime - ball.saberSlashStart) / ball.saberSlashDuration;
-          ctx.save();
-          ctx.globalAlpha = Math.max(0, 0.6 * (1 - p));
-          ctx.fillStyle = flashFill;
-          ctx.strokeStyle = dark ? "#ef4444" : "#4ade80";
-          ctx.shadowColor = saberColor;
-          ctx.shadowBlur = 16;
-          ctx.lineWidth = 6;
-          ctx.beginPath();
-          ctx.moveTo(ball.x, ball.y);
-          const startAngle = ball.saberSlashBase - ball.saberSlashDir * 1.35;
-          const currentAngle = ball.spinAngle;
-          ctx.arc(ball.x, ball.y, ball.r + bal.bladeLength, startAngle, currentAngle, ball.saberSlashDir < 0);
+          ctx.moveTo(side * ball.r * 0.5, -ball.r * 0.3);
+          ctx.quadraticCurveTo(side * (ball.r + 20), -ball.r * 0.85, side * (ball.r + 52), -ball.r * 0.55); // long pointed tip
+          ctx.quadraticCurveTo(side * (ball.r + 18), -ball.r * 0.1, side * ball.r * 0.65, ball.r * 0.15);
           ctx.closePath();
           ctx.fill();
           ctx.stroke();
+
+          // Highlight line inside the ear
+          ctx.strokeStyle = "rgba(236, 253, 245, 0.78)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(side * ball.r * 0.75, -ball.r * 0.25);
+          ctx.quadraticCurveTo(side * (ball.r + 20), -ball.r * 0.55, side * (ball.r + 42), -ball.r * 0.45);
+          ctx.stroke();
+        });
+
+        // Draw regular green Saber Ball body
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+        ctx.fillStyle = config.color;
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = config.stroke;
+        ctx.stroke();
+
+        // Let's add cute eyes to make it optimized and premium!
+        ctx.fillStyle = "#ffffff";
+        [-1, 1].forEach((side) => {
+          ctx.beginPath();
+          ctx.arc(side * ball.r * 0.32, -ball.r * 0.15, ball.r * 0.16, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#0d5c2e";
+          ctx.beginPath();
+          ctx.arc(side * ball.r * 0.32 + side * 1.5, -ball.r * 0.15, ball.r * 0.08, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(side * ball.r * 0.32 + side * 0.5, -ball.r * 0.18, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else {
+        // --- TACTICAL BLACKSKULL HELMET DESIGN ---
+        // 1. Base Helmet Shape (Dark metallic carbon gradient)
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+        const helmetGrad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.35, ball.r * 0.1, 0, 0, ball.r);
+        helmetGrad.addColorStop(0, "#4f5562"); // metallic dome highlight
+        helmetGrad.addColorStop(0.48, "#181b21");
+        helmetGrad.addColorStop(0.85, "#0b0c0f");
+        helmetGrad.addColorStop(1, "#020203");
+        ctx.fillStyle = helmetGrad;
+        ctx.fill();
+
+        // 2. Forehead NVG Mount Plate & Brow Ridge
+        ctx.strokeStyle = "#08090b";
+        ctx.lineWidth = 3.5;
+        // Draw NVG Mount center plate
+        ctx.fillStyle = "#272c35";
+        ctx.beginPath();
+        ctx.moveTo(-12, -ball.r * 0.8);
+        ctx.lineTo(12, -ball.r * 0.8);
+        ctx.lineTo(16, -ball.r * 0.5);
+        ctx.lineTo(10, -ball.r * 0.35);
+        ctx.lineTo(-10, -ball.r * 0.35);
+        ctx.lineTo(-16, -ball.r * 0.5);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        
+        // NVG inner mount detail
+        ctx.fillStyle = "#0c0d10";
+        ctx.fillRect(-6, -ball.r * 0.72, 12, 18);
+        ctx.strokeRect(-6, -ball.r * 0.72, 12, 18);
+        
+        // Brow line / Visor rim
+        ctx.strokeStyle = "#0c0e12";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0, -ball.r * 0.1, ball.r * 0.95, -Math.PI + 0.35, -0.35);
+        ctx.stroke();
+
+        // 3. Eye Sockets / Visor Lenses (Skull design)
+        ctx.strokeStyle = "#050608";
+        ctx.lineWidth = 2.5;
+        
+        // Left Eye Socket
+        ctx.fillStyle = "#030405";
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.65, -ball.r * 0.1);
+        ctx.quadraticCurveTo(-ball.r * 0.35, -ball.r * 0.3, -ball.r * 0.08, -ball.r * 0.1);
+        ctx.quadraticCurveTo(-ball.r * 0.1, ball.r * 0.2, -ball.r * 0.35, ball.r * 0.24);
+        ctx.quadraticCurveTo(-ball.r * 0.6, ball.r * 0.15, -ball.r * 0.65, -ball.r * 0.1);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        
+        // Right Eye Socket
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.65, -ball.r * 0.1);
+        ctx.quadraticCurveTo(ball.r * 0.35, -ball.r * 0.3, ball.r * 0.08, -ball.r * 0.1);
+        ctx.quadraticCurveTo(ball.r * 0.1, ball.r * 0.2, ball.r * 0.35, ball.r * 0.24);
+        ctx.quadraticCurveTo(ball.r * 0.6, ball.r * 0.15, ball.r * 0.65, -ball.r * 0.1);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // Lens Glowing / Reflective Details
+        // Left Lens: Dark polarized reflection
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.65, -ball.r * 0.1);
+        ctx.quadraticCurveTo(-ball.r * 0.35, -ball.r * 0.3, -ball.r * 0.08, -ball.r * 0.1);
+        ctx.quadraticCurveTo(-ball.r * 0.1, ball.r * 0.2, -ball.r * 0.35, ball.r * 0.24);
+        ctx.quadraticCurveTo(-ball.r * 0.6, ball.r * 0.15, -ball.r * 0.65, -ball.r * 0.1);
+        ctx.closePath();
+        ctx.clip();
+        
+        const leftReflection = ctx.createLinearGradient(-ball.r * 0.6, -ball.r * 0.25, -ball.r * 0.2, ball.r * 0.15);
+        leftReflection.addColorStop(0, "rgba(71, 85, 105, 0.45)");
+        leftReflection.addColorStop(0.5, "rgba(15, 23, 42, 0.95)");
+        leftReflection.addColorStop(1, "rgba(2, 6, 23, 1)");
+        ctx.fillStyle = leftReflection;
+        ctx.fill();
+        ctx.restore();
+
+        // Right Lens: Gold/Green tactical HUD reflection (matching reference image!)
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.65, -ball.r * 0.1);
+        ctx.quadraticCurveTo(ball.r * 0.35, -ball.r * 0.3, ball.r * 0.08, -ball.r * 0.1);
+        ctx.quadraticCurveTo(ball.r * 0.1, ball.r * 0.2, ball.r * 0.35, ball.r * 0.24);
+        ctx.quadraticCurveTo(ball.r * 0.6, ball.r * 0.15, ball.r * 0.65, -ball.r * 0.1);
+        ctx.closePath();
+        ctx.clip();
+        
+        const rightReflection = ctx.createLinearGradient(ball.r * 0.15, -ball.r * 0.2, ball.r * 0.55, ball.r * 0.18);
+        rightReflection.addColorStop(0, "#064e3b");
+        rightReflection.addColorStop(0.35, "#047857");
+        rightReflection.addColorStop(0.72, "#b45309");
+        rightReflection.addColorStop(1, "#f59e0b");
+        ctx.fillStyle = rightReflection;
+        ctx.fill();
+        
+        // Add subtle horizontal glare line across the lens
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.1, -ball.r * 0.05);
+        ctx.lineTo(ball.r * 0.6, -ball.r * 0.08);
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. Central Skull Nasal Cavity (Inverted tactical vent shape)
+        ctx.fillStyle = "#020304";
+        ctx.strokeStyle = "#11141a";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, ball.r * 0.02);
+        ctx.bezierCurveTo(-5, ball.r * 0.06, -7, ball.r * 0.26, -2, ball.r * 0.34);
+        ctx.lineTo(0, ball.r * 0.24);
+        ctx.lineTo(2, ball.r * 0.34);
+        ctx.bezierCurveTo(7, ball.r * 0.26, 5, ball.r * 0.06, 0, ball.r * 0.02);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // 5. Tactical Cheek Mesh Vents (Left & Right bottom)
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(side * ball.r * 0.45, ball.r * 0.32);
+          ctx.lineTo(side * ball.r * 0.72, ball.r * 0.28);
+          ctx.lineTo(side * ball.r * 0.64, ball.r * 0.64);
+          ctx.lineTo(side * ball.r * 0.35, ball.r * 0.68);
+          ctx.closePath();
+          ctx.clip();
+          
+          // Draw metallic mesh grid pattern
+          ctx.fillStyle = "#0c0d10";
+          ctx.fillRect(side * ball.r * 0.8, ball.r * 0.2, ball.r * -0.5, ball.r * 0.5);
+          ctx.strokeStyle = "#2d3139";
+          ctx.lineWidth = 1.2;
+          for (let offset = -40; offset < 40; offset += 4) {
+            ctx.beginPath();
+            ctx.moveTo(side * ball.r * 0.5 + offset, ball.r * 0.2);
+            ctx.lineTo(side * ball.r * 0.5 + offset + 20, ball.r * 0.7);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(side * ball.r * 0.5 + offset + 20, ball.r * 0.2);
+            ctx.lineTo(side * ball.r * 0.5 + offset, ball.r * 0.7);
+            ctx.stroke();
+          }
           ctx.restore();
+          
+          // Vent borders
+          ctx.strokeStyle = "#1b1e24";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(side * ball.r * 0.45, ball.r * 0.32);
+          ctx.lineTo(side * ball.r * 0.72, ball.r * 0.28);
+          ctx.lineTo(side * ball.r * 0.64, ball.r * 0.64);
+          ctx.lineTo(side * ball.r * 0.35, ball.r * 0.68);
+          ctx.closePath();
+          ctx.stroke();
+        });
+
+        // 6. Skull Teeth & Jaw Shield (Bottom center)
+        ctx.fillStyle = "#1e2229";
+        ctx.strokeStyle = "#08090a";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.ellipse(0, ball.r * 0.56, ball.r * 0.32, ball.r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        
+        // Draw individual tactical skull teeth
+        ctx.fillStyle = "#0f1114";
+        ctx.strokeStyle = "#2d323b";
+        ctx.lineWidth = 1.2;
+        const toothWidth = ball.r * 0.052;
+        const toothHeight = ball.r * 0.13;
+        for (let i = -4; i <= 4; i++) {
+          const toothX = i * toothWidth * 1.15;
+          const curveOffset = Math.cos(i * 0.32) * ball.r * 0.04;
+          const toothY = ball.r * 0.52 + curveOffset;
+          
+          ctx.beginPath();
+          ctx.roundRect(toothX - toothWidth / 2, toothY - toothHeight / 2, toothWidth, toothHeight, 1.5);
+          ctx.fill(); ctx.stroke();
         }
 
+        // 7. Tactical Rivets, Screws, and Plates
+        ctx.fillStyle = "#475569";
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 1;
+        [[-16, -ball.r * 0.76], [16, -ball.r * 0.76], [-20, -ball.r * 0.52], [20, -ball.r * 0.52]].forEach(([rx, ry]) => {
+          ctx.beginPath();
+          ctx.arc(rx, ry, 2.4, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        });
+        
+        // Outer helmet edge outline
+        ctx.strokeStyle = "#090a0c";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      if (saberSlashFlashUntil && game.simTime < saberSlashFlashUntil) {
+        const p = clamp((saberSlashFlashUntil - game.simTime) / 260, 0, 1);
+        ctx.save();
+        ctx.globalAlpha = 0.72 * p;
+        ctx.strokeStyle = dark ? "#fca5a5" : "#86efac";
+        ctx.shadowColor = saberColor;
+        ctx.shadowBlur = 18;
+        ctx.lineWidth = 12;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + bladeLength * 0.82, spinAngle - dir * 1.2, spinAngle + dir * 0.36, dir < 0);
+        ctx.stroke();
+        ctx.strokeStyle = saberWhite;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + bladeLength * 0.66, spinAngle - dir * 0.9, spinAngle + dir * 0.24, dir < 0);
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (saberSlashActive && game.simTime < saberSlashStart + saberSlashDuration) {
+        const p = (game.simTime - saberSlashStart) / saberSlashDuration;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 0.6 * (1 - p));
+        ctx.fillStyle = flashFill;
+        ctx.strokeStyle = dark ? "#ef4444" : "#4ade80";
+        ctx.shadowColor = saberColor;
+        ctx.shadowBlur = 16;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        const startAngle = saberSlashBase - saberSlashDir * 1.35;
+        const currentAngle = spinAngle;
+        ctx.arc(ball.x, ball.y, ball.r + bladeLength, startAngle, currentAngle, saberSlashDir < 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (dark || (ball.saberThrowState !== "thrown" && ball.saberThrowState !== "stationary" && ball.saberThrowState !== "returning")) {
         ctx.save(); ctx.translate(ball.x, ball.y);
-        ctx.rotate(ball.spinAngle);
+        ctx.rotate(spinAngle);
         const hiltX = ball.r - 8;
-        const tipX = ball.r + bal.bladeLength;
+        const tipX = ball.r + bladeLength;
         const saberGrad = ctx.createLinearGradient(hiltX, 0, tipX, 0);
         saberGrad.addColorStop(0, saberLight);
         saberGrad.addColorStop(0.5, saberColor);
@@ -14630,85 +15583,8 @@ export default function App() {
         ctx.fillStyle = "#374151"; ctx.fillRect(hiltX, -5, 16, 10);
         ctx.fillStyle = "#d1d5db"; ctx.fillRect(hiltX + 2, -3, 4, 6);
         ctx.restore();
-      } else if (bladeState === "charging") {
-        const chargeProgress = clamp(1 - ((ball.knifeBladeChargeUntil || game.simTime) - game.simTime) / 430, 0, 1);
-        const pulse = 0.65 + Math.sin(game.simTime * 0.08) * 0.25 + chargeProgress * 0.55;
-        ctx.save();
-        ctx.translate(ball.x, ball.y);
-        ctx.globalAlpha = 0.45 + chargeProgress * 0.35;
-        ctx.strokeStyle = saberLight;
-        ctx.shadowColor = saberColor;
-        ctx.shadowBlur = 18 + chargeProgress * 18;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        const side = ball.knifeBladeWindupSide || 1;
-        const holdAngle = Math.atan2((ball.knifeBladeY || ball.y) - ball.y, (ball.knifeBladeX || ball.x) - ball.x);
-        ctx.arc(0, 0, ball.r + 28 + pulse * 8, holdAngle - side * 0.9, holdAngle + side * 0.35, side < 0);
-        ctx.stroke();
-        ctx.strokeStyle = dark ? "rgba(254, 202, 202, 0.72)" : "rgba(236, 253, 245, 0.72)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(holdAngle) * (ball.r + 8), Math.sin(holdAngle) * (ball.r + 8));
-        ctx.lineTo(Math.cos(holdAngle) * (ball.r + 32), Math.sin(holdAngle) * (ball.r + 32));
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.save();
-        ctx.translate(ball.knifeBladeX || ball.x, ball.knifeBladeY || ball.y);
-        ctx.rotate(ball.knifeBladeAngle || ball.spinAngle || 0);
-        ctx.globalAlpha = 1;
-        const chargeBladeLength = Math.max(34, bal.bladeLength * (0.74 + chargeProgress * 0.08));
-        const chargeGrad = ctx.createLinearGradient(0, 0, chargeBladeLength, 0);
-        chargeGrad.addColorStop(0, saberLight);
-        chargeGrad.addColorStop(0.58, saberColor);
-        chargeGrad.addColorStop(1, saberWhite);
-        ctx.strokeStyle = saberColor;
-        ctx.strokeStyle = chargeGrad;
-        ctx.lineWidth = 9;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(chargeBladeLength, 0);
-        ctx.stroke();
-        ctx.strokeStyle = saberWhite;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(4, 0);
-        ctx.lineTo(chargeBladeLength - 5, 0);
-        ctx.stroke();
-        ctx.fillStyle = "#374151";
-        ctx.fillRect(-16, -5.5, 18, 11);
-        ctx.fillStyle = "#d1d5db";
-        ctx.fillRect(-13, -8, 6, 16);
-        ctx.restore();
-      } else {
-        ctx.save(); ctx.translate(ball.knifeBladeX, ball.knifeBladeY);
-        ctx.rotate(ball.knifeBladeAngle || 0);
-        const tipX = Math.max(32, bal.bladeLength - 8);
-        ctx.shadowColor = saberColor;
-        ctx.shadowBlur = 14;
-        const thrownGrad = ctx.createLinearGradient(0, 0, tipX, 0);
-        thrownGrad.addColorStop(0, saberLight);
-        thrownGrad.addColorStop(0.6, saberColor);
-        thrownGrad.addColorStop(1, saberWhite);
-        ctx.strokeStyle = thrownGrad;
-        ctx.lineWidth = 8;
-        ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(tipX, 0); ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = saberWhite;
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(tipX - 4, 0); ctx.stroke();
-        ctx.fillStyle = "#1f2937";
-        ctx.fillRect(-16, -5.5, 18, 11);
-        ctx.fillStyle = "#9ca3af";
-        ctx.fillRect(-13, -8, 6, 16);
-        ctx.fillStyle = saberWhite;
-        ctx.beginPath();
-        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
       }
+
       drawHealthInsideBall(ball);
     };
 
@@ -16988,494 +17864,39 @@ export default function App() {
     const drawBlackSpiderBall = (ball) => {
       const config = BALL_TYPES.blackSpider || { color: "#020617", stroke: "#f1f5f9" };
       ctx.save();
-      if (ball.webState && ball.webState !== "idle") {
-        const webTarget = ball.webState === "pulling" || ball.webState === "webBouncing"
-          ? game.balls.find((candidate) => candidate.id === ball.webTargetId)
-          : null;
-        const endX = webTarget ? webTarget.x : (ball.webX ?? ball.x);
-        const endY = webTarget ? webTarget.y : (ball.webY ?? ball.y);
-        const pulse = Math.sin(game.simTime * 0.045) * 8;
-        const midX = (ball.x + endX) / 2 + Math.sin(game.simTime * 0.034) * (12 + pulse * 0.25);
-        const midY = (ball.y + endY) / 2 + Math.cos(game.simTime * 0.032) * (12 - pulse * 0.25);
-
-        ctx.save();
-        ctx.lineCap = "round";
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 16;
-        ctx.strokeStyle = "rgba(2, 6, 23, 0.92)";
-        ctx.lineWidth = ball.webState === "shooting" ? 6 : 9;
-        ctx.beginPath();
-        ctx.moveTo(ball.x, ball.y);
-        ctx.quadraticCurveTo(midX, midY, endX, endY);
-        ctx.stroke();
-
-        ctx.shadowBlur = 5;
-        ctx.strokeStyle = "rgba(248, 250, 252, 0.92)";
-        ctx.lineWidth = ball.webState === "shooting" ? 1.8 : 2.8;
-        ctx.beginPath();
-        ctx.moveTo(ball.x, ball.y);
-        ctx.quadraticCurveTo(midX, midY, endX, endY);
-        ctx.stroke();
-
-        ctx.fillStyle = "#020617";
-        ctx.strokeStyle = "#f8fafc";
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.arc(endX, endY, ball.webState === "shooting" ? 6 : 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-      if (ball.webState === "spinDrag") {
-        const dragP = clamp((game.simTime - (ball.webSpinDragStartAt || game.simTime)) / Math.max(1, (ball.webSpinDragUntil || game.simTime + 1) - (ball.webSpinDragStartAt || game.simTime)), 0, 1);
-        const ringR = ball.webSpinDragRadius || ball.r + 92;
-        ctx.save();
-        ctx.translate(ball.x, ball.y);
-        ctx.globalAlpha = 0.28 + dragP * 0.24;
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 20;
-        ctx.strokeStyle = "rgba(2,6,23,0.94)";
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.arc(0, 0, ringR, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(248,250,252,0.72)";
-        ctx.lineWidth = 2.2;
-        ctx.setLineDash([18, 10]);
-        ctx.lineDashOffset = -game.simTime * 0.22;
-        ctx.beginPath();
-        ctx.arc(0, 0, ringR, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
-      if (ball.blackWebState === "shooting" || ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam") {
-        const webTarget = ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam"
-          ? game.balls.find((candidate) => candidate.id === ball.blackWebTargetId)
-          : null;
-        const endX = webTarget ? webTarget.x : ball.blackWebX;
-        const endY = webTarget ? webTarget.y : ball.blackWebY;
-        const pulse = Math.sin(game.simTime * 0.042) * 7;
-        const midX = (ball.x + endX) / 2 + Math.sin(game.simTime * 0.036) * (10 + pulse * 0.2);
-        const midY = (ball.y + endY) / 2 + Math.cos(game.simTime * 0.033) * (10 - pulse * 0.2);
-
-        ctx.save();
-        ctx.lineCap = "round";
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 15;
-        ctx.strokeStyle = "rgba(2, 6, 23, 0.88)";
-        ctx.lineWidth = ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam" ? 9 : 6;
-        ctx.beginPath();
-        ctx.moveTo(ball.x, ball.y);
-        ctx.quadraticCurveTo(midX, midY, endX, endY);
-        ctx.stroke();
-
-        ctx.shadowBlur = 5;
-        ctx.strokeStyle = "rgba(248, 250, 252, 0.9)";
-        ctx.lineWidth = ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam" ? 2.9 : 2;
-        ctx.beginPath();
-        ctx.moveTo(ball.x, ball.y);
-        ctx.quadraticCurveTo(midX, midY, endX, endY);
-        ctx.stroke();
-
-        ctx.fillStyle = "#020617";
-        ctx.strokeStyle = "#f8fafc";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(endX, endY, ball.blackWebState === "pulling" || ball.blackWebState === "pulling_target" || ball.blackWebState === "pulling_self" || ball.blackWebState === "string_spin" || ball.blackWebState === "string_slam" ? 8 : 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        if (ball.blackWebState === "string_spin") {
-          ctx.globalAlpha = 0.58;
-          ctx.strokeStyle = "rgba(248,250,252,0.72)";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(ball.x, ball.y, ball.blackStringSpinRadius || 82, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      if (ball.blackWebState === "pulling_target" || ball.blackVenomBiteState === "maw_open") {
-        ctx.save();
-        ctx.lineCap = "round";
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 16;
-        for (let i = 0; i < 6; i++) {
-          const side = i < 3 ? -1 : 1;
-          const spread = (i % 3 - 1) * 0.42;
-          const anchorAngle = (ball.blackVenomBiteAngle || 0) + Math.PI + side * (0.75 + Math.abs(spread));
-          const rootX = ball.x + Math.cos(anchorAngle) * ball.r * 0.55;
-          const rootY = ball.y + Math.sin(anchorAngle) * ball.r * 0.55;
-          const tipX = clamp(ball.x + Math.cos(anchorAngle + spread) * (ball.r + 34 + i * 3), 0, game.width);
-          const tipY = clamp(ball.y + Math.sin(anchorAngle + spread) * (ball.r + 34 + i * 3), 0, game.height);
-          ctx.strokeStyle = "rgba(2, 6, 23, 0.9)";
-          ctx.lineWidth = 6;
-          ctx.beginPath();
-          ctx.moveTo(rootX, rootY);
-          ctx.quadraticCurveTo((rootX + tipX) / 2, (rootY + tipY) / 2 + Math.sin(game.simTime * 0.03 + i) * 6, tipX, tipY);
-          ctx.stroke();
-          ctx.strokeStyle = "rgba(248, 250, 252, 0.72)";
-          ctx.lineWidth = 1.7;
-          ctx.beginPath();
-          ctx.moveTo(rootX, rootY);
-          ctx.quadraticCurveTo((rootX + tipX) / 2, (rootY + tipY) / 2 + Math.sin(game.simTime * 0.03 + i) * 6, tipX, tipY);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      if (ball.blackVenomBiteState === "tendril_swing" && ball.blackComboTargetId) {
-        const swingTarget = game.balls.find((candidate) => candidate.id === ball.blackComboTargetId);
-        if (swingTarget) {
-          ctx.save();
-          ctx.lineCap = "round";
-          ctx.shadowColor = "#020617";
-          ctx.shadowBlur = 18;
-          for (let i = 0; i < 5; i++) {
-            const wobble = Math.sin(game.simTime * 0.035 + i * 1.7) * 18;
-            const midX = (ball.x + swingTarget.x) / 2 + Math.cos(i * 1.3) * wobble;
-            const midY = (ball.y + swingTarget.y) / 2 + Math.sin(i * 1.1) * wobble;
-            ctx.strokeStyle = i % 2 === 0 ? "rgba(2, 6, 23, 0.88)" : "rgba(248, 250, 252, 0.72)";
-            ctx.lineWidth = i % 2 === 0 ? 7 : 2.5;
-            ctx.beginPath();
-            ctx.moveTo(ball.x + Math.cos(i) * ball.r * 0.55, ball.y + Math.sin(i) * ball.r * 0.55);
-            ctx.quadraticCurveTo(midX, midY, swingTarget.x + Math.cos(i + game.simTime * 0.02) * swingTarget.r, swingTarget.y + Math.sin(i + game.simTime * 0.02) * swingTarget.r);
-            ctx.stroke();
-          }
-          ctx.restore();
-        }
+      
+      // 1. Draw web connection strings for active skills
+      if (["single_shot", "single_pull_one", "single_pull_two", "single_spin_left", "single_slam_one", "single_slam_two", "auto_string", "auto_pull", "auto_spin", "auto_slam"].includes(ball.blackSimpleState)) {
+        const victim = game.balls.find((candidate) => candidate.id === ball.blackSimpleTargetId);
+        const endX = ball.blackSimpleState === "single_shot" ? ball.blackSimpleProjectileX : (victim?.x ?? ball.x);
+        const endY = ball.blackSimpleState === "single_shot" ? ball.blackSimpleProjectileY : (victim?.y ?? ball.y);
+        ctx.lineCap = "round"; ctx.shadowColor = "#020617"; ctx.shadowBlur = 14;
+        ctx.strokeStyle = "#020617"; ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.moveTo(ball.x, ball.y);
+        ctx.quadraticCurveTo((ball.x + endX) / 2 + Math.sin(game.simTime * 0.03) * 8, (ball.y + endY) / 2 + Math.cos(game.simTime * 0.028) * 8, endX, endY); ctx.stroke();
+        ctx.strokeStyle = "rgba(248,250,252,0.82)"; ctx.lineWidth = 1.6; ctx.shadowBlur = 2; ctx.stroke();
+        ctx.fillStyle = "#f8fafc"; ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2); ctx.fill();
       }
 
       ctx.translate(ball.x, ball.y);
 
-      const slimeMaxStacks = (game.balance.blackSpider || BALANCE.blackSpider).slimeMaxStacks || 6;
-      const slimeStacks = Math.min(slimeMaxStacks, Math.max(0, Math.floor(ball.blackSlimeArmorStacks || 0)));
-      if (slimeStacks > 0) {
-        const flash = (ball.blackSlimeArmorFlashUntil || 0) > game.simTime ? 1 : 0;
-        const sticky = (ball.blackSlimeArmorStickyUntil || 0) > game.simTime ? 1 : 0;
-        const pulse = 0.5 + Math.sin(game.simTime * 0.028) * 0.5;
-        const armorAlpha = Math.min(0.72, 0.26 + slimeStacks * 0.035 + flash * 0.16);
-        const armorRadius = ball.r + 4 + slimeStacks * 0.85 + sticky * 2 + pulse * 2.5;
-        ctx.save();
-        ctx.globalAlpha = armorAlpha;
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 16 + slimeStacks;
-        ctx.fillStyle = "#020617";
-        ctx.strokeStyle = "rgba(248,250,252,0.42)";
-        ctx.lineWidth = 1.2 + slimeStacks * 0.08;
-        const armorLegs = Math.min(10, Math.max(2, slimeStacks * 2));
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        for (let i = 0; i < armorLegs; i++) {
-          const side = i % 2 === 0 ? -1 : 1;
-          const row = Math.floor(i / 2);
-          const baseAngle = side < 0
-            ? Math.PI * 0.72 + row * 0.26
-            : Math.PI * 0.28 - row * 0.26;
-          const sway = Math.sin(game.simTime * 0.02 + i * 1.13) * 0.12;
-          const angle = baseAngle + sway;
-          const rootR = ball.r * (0.72 + (row % 2) * 0.06);
-          const jointR = ball.r + 20 + slimeStacks * 1.8 + row * 3;
-          const tipR = ball.r + 42 + slimeStacks * 3.2 + row * 4;
-          const rootX = Math.cos(angle) * rootR;
-          const rootY = Math.sin(angle) * rootR;
-          const jointAngle = angle + side * (0.42 + row * 0.035);
-          const tipAngle = angle + side * (0.68 + row * 0.05);
-          const jointX = Math.cos(jointAngle) * jointR;
-          const jointY = Math.sin(jointAngle) * jointR;
-          const tipX = Math.cos(tipAngle) * tipR;
-          const tipY = Math.sin(tipAngle) * tipR;
-
-          ctx.globalAlpha = Math.min(0.82, armorAlpha + 0.18);
-          ctx.strokeStyle = "rgba(2,6,23,0.96)";
-          ctx.lineWidth = 8 + Math.min(6, slimeStacks * 0.55);
-          ctx.beginPath();
-          ctx.moveTo(rootX, rootY);
-          ctx.quadraticCurveTo(jointX, jointY, tipX, tipY);
-          ctx.stroke();
-
-          ctx.globalAlpha = Math.min(0.55, armorAlpha);
-          ctx.strokeStyle = "rgba(248,250,252,0.36)";
-          ctx.lineWidth = 2.2;
-          ctx.beginPath();
-          ctx.moveTo(rootX, rootY);
-          ctx.quadraticCurveTo(jointX, jointY, tipX, tipY);
-          ctx.stroke();
-
-          ctx.globalAlpha = Math.min(0.9, armorAlpha + 0.16);
-          ctx.fillStyle = "#020617";
-          ctx.beginPath();
-          ctx.ellipse(tipX, tipY, 6 + slimeStacks * 0.45, 4 + slimeStacks * 0.22, tipAngle, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = armorAlpha;
-        ctx.fillStyle = "#020617";
-        const blobs = Math.min(16, 6 + slimeStacks * 2);
-        for (let i = 0; i < blobs; i++) {
-          const angle = (i / blobs) * Math.PI * 2 + game.simTime * 0.003 * (i % 2 ? -1 : 1);
-          const blobR = armorRadius + Math.sin(game.simTime * 0.021 + i * 1.7) * 2.8;
-          const bx = Math.cos(angle) * blobR;
-          const by = Math.sin(angle) * blobR;
-          ctx.beginPath();
-          ctx.ellipse(
-            bx,
-            by,
-            5.5 + slimeStacks * 0.5 + (i % 3) * 1.5,
-            3.8 + slimeStacks * 0.28,
-            angle + Math.PI / 2,
-            0,
-            Math.PI * 2
-          );
-          ctx.fill();
-          if (i % 2 === 0) ctx.stroke();
-        }
-        ctx.globalAlpha = Math.min(0.82, armorAlpha + 0.12);
-        ctx.lineCap = "round";
-        const ringSegments = Math.min(10, 3 + slimeStacks * 2);
-        for (let i = 0; i < ringSegments; i++) {
-          const start = (i / Math.max(1, ringSegments)) * Math.PI * 2 + pulse * 0.12;
-          ctx.strokeStyle = i % 2 ? "rgba(15,23,42,0.9)" : "rgba(248,250,252,0.34)";
-          ctx.lineWidth = i % 2 ? 5 + slimeStacks * 0.16 : 1.8;
-          ctx.beginPath();
-          ctx.arc(0, 0, armorRadius + (i % 3) * 2, start, start + 0.48 + slimeStacks * 0.02);
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 0.28 + flash * 0.18;
-        ctx.strokeStyle = "#f8fafc";
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.arc(0, 0, armorRadius + 4 + pulse * 3, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 0.86;
-        ctx.fillStyle = "#f8fafc";
-        ctx.strokeStyle = "#020617";
-        ctx.lineWidth = 3;
-        ctx.font = "bold 13px Impact, Arial Black, sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.strokeText(`${slimeStacks}`, 0, -armorRadius - 13);
-        ctx.fillText(`${slimeStacks}`, 0, -armorRadius - 13);
-        ctx.restore();
-      }
-
-      if ((ball.blackGooBuffUntil || 0) > game.simTime || (ball.blackGooFlashUntil || 0) > game.simTime) {
-        const pulse = 0.5 + Math.sin(game.simTime * 0.02) * 0.5;
-        ctx.save();
-        ctx.globalAlpha = 0.45 + pulse * 0.18;
-        ctx.strokeStyle = "#f8fafc";
-        ctx.lineWidth = 3.5;
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 24;
-        ctx.beginPath();
-        ctx.arc(0, 0, ball.r + 9 + pulse * 8, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      if (false && ball.blackWebState === "pulling_self") {
-        const biteAngle = ball.blackVenomBiteAngle || 0;
-        const lockPulse = 0.5 + Math.sin(game.simTime * 0.035) * 0.5;
-        ctx.save();
-        ctx.rotate(biteAngle);
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 22;
-        ctx.fillStyle = "#040609";
-        ctx.strokeStyle = "rgba(248,250,252,0.35)";
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.moveTo(-ball.r * 3.3, ball.r * 0.48);
-        ctx.bezierCurveTo(-ball.r * 2.72, -ball.r * 0.55, -ball.r * 1.45, -ball.r * 0.76, -ball.r * 0.2, -ball.r * 0.46);
-        ctx.bezierCurveTo(ball.r * 0.42, -ball.r * 0.78, ball.r * 1.2, -ball.r * 0.88, ball.r * 1.88, -ball.r * 0.58);
-        ctx.bezierCurveTo(ball.r * 2.28, -ball.r * 0.38, ball.r * 2.42, -ball.r * 0.06, ball.r * 2.0, ball.r * 0.1);
-        ctx.bezierCurveTo(ball.r * 1.24, ball.r * 0.38, ball.r * 0.62, ball.r * 0.62, -ball.r * 0.08, ball.r * 0.54);
-        ctx.bezierCurveTo(-ball.r * 1.16, ball.r * 0.9, -ball.r * 2.55, ball.r * 0.82, -ball.r * 3.3, ball.r * 0.48);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        // Large white Venom head patch from the reference.
-        ctx.fillStyle = "rgba(248,250,252,0.96)";
-        ctx.beginPath();
-        ctx.moveTo(ball.r * 0.15, -ball.r * 0.52);
-        ctx.bezierCurveTo(ball.r * 0.72, -ball.r * 0.82, ball.r * 1.45, -ball.r * 0.78, ball.r * 2.05, -ball.r * 0.42);
-        ctx.bezierCurveTo(ball.r * 1.54, -ball.r * 0.35, ball.r * 0.84, -ball.r * 0.36, ball.r * 0.2, -ball.r * 0.28);
-        ctx.bezierCurveTo(-ball.r * 0.02, -ball.r * 0.34, -ball.r * 0.02, -ball.r * 0.46, ball.r * 0.15, -ball.r * 0.52);
-        ctx.closePath();
-        ctx.fill();
-
-        // Open red mouth cavity, locked toward the target.
-        const mouthOpen = 1 + lockPulse * 0.1;
-        ctx.fillStyle = "#b91c1c";
-        ctx.shadowColor = "#ef4444";
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.moveTo(ball.r * 0.82, -ball.r * 0.22 * mouthOpen);
-        ctx.bezierCurveTo(ball.r * 1.26, -ball.r * 0.4 * mouthOpen, ball.r * 2.38, -ball.r * 0.33, ball.r * 2.66, -ball.r * 0.08);
-        ctx.bezierCurveTo(ball.r * 2.18, ball.r * 0.16, ball.r * 1.18, ball.r * 0.42 * mouthOpen, ball.r * 0.78, ball.r * 0.22 * mouthOpen);
-        ctx.bezierCurveTo(ball.r * 0.62, ball.r * 0.08, ball.r * 0.62, -ball.r * 0.08, ball.r * 0.82, -ball.r * 0.22 * mouthOpen);
-        ctx.closePath();
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Black upper/lower jaw lips.
-        ctx.fillStyle = "#050505";
-        ctx.beginPath();
-        ctx.moveTo(ball.r * 0.54, -ball.r * 0.3);
-        ctx.bezierCurveTo(ball.r * 1.16, -ball.r * 0.76, ball.r * 2.25, -ball.r * 0.62, ball.r * 2.76, -ball.r * 0.2);
-        ctx.bezierCurveTo(ball.r * 2.12, -ball.r * 0.18, ball.r * 1.28, -ball.r * 0.2, ball.r * 0.72, -ball.r * 0.05);
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(ball.r * 0.62, ball.r * 0.32);
-        ctx.bezierCurveTo(ball.r * 1.18, ball.r * 0.64, ball.r * 2.2, ball.r * 0.56, ball.r * 2.76, ball.r * 0.18);
-        ctx.bezierCurveTo(ball.r * 2.08, ball.r * 0.18, ball.r * 1.14, ball.r * 0.22, ball.r * 0.72, ball.r * 0.05);
-        ctx.closePath();
-        ctx.fill();
-
-        // Long sharp teeth.
-        ctx.fillStyle = "#ffffff";
-        ctx.strokeStyle = "#111827";
-        ctx.lineWidth = 0.9;
-        for (let i = 0; i < 9; i++) {
-          const x = ball.r * (1.0 + i * 0.19);
-          const topLen = ball.r * (0.22 + (i % 3) * 0.05);
-          ctx.beginPath();
-          ctx.moveTo(x, -ball.r * 0.18);
-          ctx.lineTo(x + ball.r * 0.07, -ball.r * 0.18 - topLen);
-          ctx.lineTo(x + ball.r * 0.15, -ball.r * 0.14);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-          const botLen = ball.r * (0.2 + ((i + 1) % 3) * 0.05);
-          ctx.beginPath();
-          ctx.moveTo(x + ball.r * 0.04, ball.r * 0.17);
-          ctx.lineTo(x + ball.r * 0.1, ball.r * 0.17 + botLen);
-          ctx.lineTo(x + ball.r * 0.18, ball.r * 0.13);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        }
-
-        // Green venom splashes near the bite, from the reference accents.
-        ctx.strokeStyle = "#39ff14";
-        ctx.shadowColor = "#39ff14";
-        ctx.shadowBlur = 8;
-        ctx.lineWidth = 3.2;
-        for (let i = 0; i < 3; i++) {
-          const baseX = ball.r * (1.05 + i * 0.38);
-          const baseY = ball.r * (0.22 + (i % 2) * 0.08);
-          ctx.beginPath();
-          ctx.moveTo(baseX, baseY);
-          ctx.lineTo(baseX + ball.r * 0.16, baseY - ball.r * 0.22);
-          ctx.lineTo(baseX + ball.r * 0.28, baseY + ball.r * 0.08);
-          ctx.stroke();
-        }
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = "rgba(15,23,42,0.9)";
-        for (let i = 0; i < 5; i++) {
-          ctx.beginPath();
-          ctx.ellipse(-ball.r * (2.2 - i * 0.35), Math.sin(game.simTime * 0.018 + i) * ball.r * 0.18, ball.r * 0.26, ball.r * 0.1, -0.25, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.strokeStyle = "rgba(71,85,105,0.58)";
-        ctx.lineWidth = 3;
-        for (let i = 0; i < 4; i++) {
-          ctx.beginPath();
-          ctx.moveTo(-ball.r * (2.55 - i * 0.45), ball.r * (0.22 - i * 0.08));
-          ctx.quadraticCurveTo(-ball.r * (2.1 - i * 0.4), -ball.r * 0.22, -ball.r * (1.4 - i * 0.28), -ball.r * 0.18);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      if (ball.blackWebState !== "pulling_self" && ["charging", "lunging", "jaw_open", "maw_open", "maw_bite", "triple_bite", "goo_leap"].includes(ball.blackVenomBiteState)) {
-        const biteAngle = ball.blackVenomBiteAngle || 0;
-        const biteElapsed = game.simTime - (ball.blackComboStartedAt || ball.blackVenomBiteStartedAt || game.simTime);
-        const triplePhase = ball.blackWebState === "pulling_self"
-          ? 1.62
-          : ball.blackVenomBiteState === "jaw_open" || ball.blackVenomBiteState === "maw_open"
-          ? 1 + clamp(biteElapsed / 380, 0, 1) * 0.48
-          : ball.blackVenomBiteState === "maw_bite" ? 1.55
-          : ball.blackVenomBiteState === "triple_bite"
-          ? biteElapsed > 700 ? 1.35 : biteElapsed > 330 ? 1.12 : 0.9
-          : ball.blackVenomBiteState === "goo_leap" ? 1.28 : 1;
-        const progress = (ball.blackVenomBiteState === "charging"
-          ? clamp((game.simTime - (ball.blackVenomBiteStartedAt || game.simTime)) / ((game.balance.blackSpider || BALANCE.blackSpider).venomBiteCharge || 260), 0, 1)
-          : 1) * triplePhase;
-        ctx.save();
-        ctx.rotate(biteAngle);
-        ctx.translate(ball.r * (0.58 + progress * 0.55), 0);
-        ctx.globalAlpha = 0.88;
-        ctx.shadowColor = "#020617";
-        ctx.shadowBlur = 22;
-
-        // Dark symbiote bite head, intentionally black instead of blue.
-        ctx.fillStyle = "#020617";
-        ctx.strokeStyle = "#e5e7eb";
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.2, -ball.r * 0.65);
-        ctx.quadraticCurveTo(ball.r * 0.62, -ball.r * 0.9, ball.r * 1.58, -ball.r * 0.24);
-        ctx.quadraticCurveTo(ball.r * 0.75, -ball.r * 0.03, ball.r * 0.08, -ball.r * 0.03);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.2, ball.r * 0.65);
-        ctx.quadraticCurveTo(ball.r * 0.62, ball.r * 0.9, ball.r * 1.58, ball.r * 0.24);
-        ctx.quadraticCurveTo(ball.r * 0.75, ball.r * 0.03, ball.r * 0.08, ball.r * 0.03);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        // White teeth along both jaws.
-        ctx.fillStyle = "#f8fafc";
-        for (let i = 0; i < 8; i++) {
-          const x = ball.r * (0.1 + i * 0.16);
-          const tooth = 5 + (i % 2) * 3;
-          ctx.beginPath();
-          ctx.moveTo(x, -ball.r * 0.18);
-          ctx.lineTo(x + 7, -ball.r * 0.44);
-          ctx.lineTo(x + 14, -ball.r * 0.16);
-          ctx.closePath();
-          ctx.fill();
-          ctx.beginPath();
-          ctx.moveTo(x, ball.r * 0.18);
-          ctx.lineTo(x + 7, ball.r * 0.44 + tooth * 0.2);
-          ctx.lineTo(x + 14, ball.r * 0.16);
-          ctx.closePath();
-          ctx.fill();
-        }
-
-        ctx.strokeStyle = "rgba(15, 23, 42, 0.75)";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.75, 0);
-        ctx.bezierCurveTo(-ball.r * 1.3, -ball.r * 0.38, -ball.r * 1.75, -ball.r * 0.28, -ball.r * 2.1, -ball.r * 0.6);
-        ctx.moveTo(-ball.r * 0.8, ball.r * 0.18);
-        ctx.bezierCurveTo(-ball.r * 1.35, ball.r * 0.5, -ball.r * 1.85, ball.r * 0.35, -ball.r * 2.25, ball.r * 0.7);
-        ctx.stroke();
-        ctx.restore();
-      }
-      
-      // 1. Draw writhing tendrils/legs
+      // 2. Draw writhing tendrils/legs
       const timeOffset = game.simTime * 0.016;
       ctx.lineCap = "round";
       for (let i = 0; i < 6; i++) {
+        const grown = i < Math.min(6, Math.max(0, ball.blackLegStacks || 0));
+        const growth = grown ? 13 + (ball.blackLegStacks || 0) * 1.5 : 0;
         const angle = (i * Math.PI) / 3 + Math.sin(timeOffset + i) * 0.22;
         const jX = Math.cos(angle) * ball.r;
         const jY = Math.sin(angle) * ball.r;
-        const cX = Math.cos(angle + 0.1) * (ball.r + 8 + Math.sin(timeOffset * 2 + i) * 4);
-        const cY = Math.sin(angle + 0.1) * (ball.r + 8 + Math.sin(timeOffset * 2 + i) * 4);
-        const tX = Math.cos(angle) * (ball.r + 14 + Math.sin(timeOffset * 1.5 + i) * 6);
-        const tY = Math.sin(angle) * (ball.r + 14 + Math.sin(timeOffset * 1.5 + i) * 6);
+        const cX = Math.cos(angle + 0.1) * (ball.r + 8 + growth * 0.55 + Math.sin(timeOffset * 2 + i) * 4);
+        const cY = Math.sin(angle + 0.1) * (ball.r + 8 + growth * 0.55 + Math.sin(timeOffset * 2 + i) * 4);
+        const tX = Math.cos(angle) * (ball.r + 14 + growth + Math.sin(timeOffset * 1.5 + i) * 6);
+        const tY = Math.sin(angle) * (ball.r + 14 + growth + Math.sin(timeOffset * 1.5 + i) * 6);
         
         // Underglow stroke
         ctx.strokeStyle = "#f1f5f9";
-        ctx.lineWidth = 6.5;
+        ctx.lineWidth = grown ? 8.5 : 6.5;
         ctx.save();
         ctx.shadowColor = "#cbd5e1";
         ctx.shadowBlur = 8;
@@ -17487,14 +17908,14 @@ export default function App() {
 
         // Dark central stroke
         ctx.strokeStyle = "#090d16";
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = grown ? 4.8 : 3.5;
         ctx.beginPath();
         ctx.moveTo(jX * 0.8, jY * 0.8);
         ctx.quadraticCurveTo(cX, cY, tX, tY);
         ctx.stroke();
       }
 
-      // 2. Draw glossy black body background
+      // 3. Draw glossy black body background
       ctx.beginPath();
       ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
       const metalGrad = ctx.createRadialGradient(
@@ -17508,7 +17929,7 @@ export default function App() {
       ctx.fillStyle = metalGrad;
       ctx.fill();
 
-      // 2b. Draw white web pattern inside the black spider ball
+      // 4. Draw white web pattern inside the black spider ball
       ctx.save();
       ctx.strokeStyle = "rgba(241, 245, 249, 0.4)";
       ctx.lineWidth = 1.2;
@@ -17527,12 +17948,12 @@ export default function App() {
       ctx.stroke();
       ctx.restore();
 
-      // Outer light stroke with glow
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = config.stroke || "#f1f5f9";
+      // 5. Outer light stroke with glow
+      ctx.lineWidth = ball.blackSimpleState === "max_stack_slam" ? 5.5 : 3.5;
+      ctx.strokeStyle = ball.blackSimpleState === "max_stack_slam" ? "#dc2626" : (config.stroke || "#f1f5f9");
       ctx.save();
-      ctx.shadowColor = "#e2e8f0";
-      ctx.shadowBlur = 10;
+      ctx.shadowColor = ball.blackSimpleState === "max_stack_slam" ? "#ef4444" : "#e2e8f0";
+      ctx.shadowBlur = ball.blackSimpleState === "max_stack_slam" ? 18 : 10;
       ctx.stroke();
       ctx.restore();
 
@@ -17598,10 +18019,11 @@ export default function App() {
         }
       }
 
-
-      // 3. Draw white eye markings (Venom style)
+      // 6. Draw white eye markings (Venom style)
       const isAggressive = (ball.venomLashFlashUntil && game.simTime < ball.venomLashFlashUntil) ||
+                            (ball.blackSimpleState && ball.blackSimpleState !== "idle") ||
                             (ball.bsSkillState && ball.bsSkillState !== "idle") ||
+                            (ball.blackTwinState && ball.blackTwinState !== "idle") ||
                             (ball.blackWebState && ball.blackWebState !== "idle") ||
                             (ball.blackVenomBiteState && ball.blackVenomBiteState !== "idle");
       ctx.fillStyle = "#ffffff";
@@ -23980,61 +24402,55 @@ export default function App() {
                 const isFishermanPulled = ball.fishermanPulledUntil && game.simTime < ball.fishermanPulledUntil;
                 const isGoblinGrabbed = game.balls.some(b => b.type === "bomber" && b.goblinState === "carrying" && b.goblinTargetId === ball.id);
                 if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
-                  const bal = game.balance.knife;
+                  const bal = { ...BALANCE.knife, ...game.balance?.knife };
                   const isDarkSaber = ball.type === "darkSaber";
                   const saberSpark = isDarkSaber ? "#ef4444" : "#bbf7d0";
                   const saberGlow = isDarkSaber ? "#dc2626" : "#4ade80";
                   const saberDeep = isDarkSaber ? "#7f1d1d" : "#16a34a";
                   const saberHitFlash = isDarkSaber ? "#ef4444" : "#4ade80";
-                  if (!ball.knifeBladeState) ball.knifeBladeState = "rotating";
+                  ball.knifeBladeState = "rotating";
                   
-                  if (ball.knifeBladeState === "rotating") {
+                  const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
+                  const closeFactor = clamp(1 - (dist - (ball.r + target.r + 8)) / 125, 0, 1);
+                  
+                  if (ball.saberSlashActive) {
+                    const p = (game.simTime - ball.saberSlashStart) / ball.saberSlashDuration;
+                    if (p >= 1) {
+                      ball.saberSlashActive = false;
+                    } else {
+                      ball.spinAngle = ball.saberSlashBase + ball.saberSlashDir * (-1.35 + p * 2.7);
+                    }
+                  }
+
+                  if (!ball.saberSlashActive) {
                     if (!ball.saberSpinDirection) ball.saberSpinDirection = 1;
-                    const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
-                    const closeFactor = clamp(1 - (dist - (ball.r + target.r + 8)) / 125, 0, 1);
                     const spinMult = 1 + closeFactor * ((bal.nearSpinMult || 1.9) - 1);
-                    ball.spinAngle += Math.abs(bal.spinSpeed) * spinMult * ball.saberSpinDirection;
-                    const bladeStart = {
-                      x: ball.x + Math.cos(ball.spinAngle) * (ball.r + 4),
-                      y: ball.y + Math.sin(ball.spinAngle) * (ball.r + 4),
-                    };
-                    const tip = {
-                      x: ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength),
-                      y: ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength),
-                    };
-                    const getTargetSwordSegment = () => {
-                      if (isSaberType(target.type)) {
-                        const tBal = game.balance.knife || BALANCE.knife;
-                        if ((target.knifeBladeState || "rotating") === "rotating") {
-                          const angle = target.spinAngle || 0;
-                          return {
-                            x1: target.x + Math.cos(angle) * (target.r + 4),
-                            y1: target.y + Math.sin(angle) * (target.r + 4),
-                            x2: target.x + Math.cos(angle) * (target.r + (tBal.bladeLength || 60)),
-                            y2: target.y + Math.sin(angle) * (target.r + (tBal.bladeLength || 60))
-                          };
-                        }
-                        if (target.knifeBladeState === "charging") {
-                          const angle = target.knifeBladeAngle || 0;
-                          return {
-                            x1: target.knifeBladeX - Math.cos(angle) * 14,
-                            y1: target.knifeBladeY - Math.sin(angle) * 14,
-                            x2: target.knifeBladeX + Math.cos(angle) * ((tBal.bladeLength || 60) - 8),
-                            y2: target.knifeBladeY + Math.sin(angle) * ((tBal.bladeLength || 60) - 8)
-                          };
-                        }
-                        if (["thrown", "returning"].includes(target.knifeBladeState)) {
-                          const angle = target.knifeBladeAngle || 0;
-                          return {
-                            x1: target.knifeBladeX - Math.cos(angle) * 14,
-                            y1: target.knifeBladeY - Math.sin(angle) * 14,
-                            x2: target.knifeBladeX + Math.cos(angle) * ((tBal.bladeLength || 60) - 8),
-                            y2: target.knifeBladeY + Math.sin(angle) * ((tBal.bladeLength || 60) - 8)
-                          };
-                        }
-                      }
-                      return null;
-                    };
+                    ball.spinAngle = (ball.spinAngle || 0) + Math.abs(bal.spinSpeed) * spinMult * ball.saberSpinDirection;
+                  }
+
+                  const bladeStart = {
+                    x: ball.x + Math.cos(ball.spinAngle) * (ball.r + 4),
+                    y: ball.y + Math.sin(ball.spinAngle) * (ball.r + 4),
+                  };
+                  const tip = {
+                    x: ball.x + Math.cos(ball.spinAngle) * (ball.r + bal.bladeLength),
+                    y: ball.y + Math.sin(ball.spinAngle) * (ball.r + bal.bladeLength),
+                  };
+                  const getTargetSwordSegment = () => {
+                    if (isSaberType(target.type)) {
+                      const tBal = { ...BALANCE.knife, ...game.balance?.knife };
+                      const angle = target.spinAngle || 0;
+                      return {
+                        x1: target.x + Math.cos(angle) * (target.r + 4),
+                        y1: target.y + Math.sin(angle) * (target.r + 4),
+                        x2: target.x + Math.cos(angle) * (target.r + (tBal.bladeLength || 60)),
+                        y2: target.y + Math.sin(angle) * (target.r + (tBal.bladeLength || 60))
+                      };
+                    }
+                    return null;
+                  };
+
+                  if (!ball.saberSlashActive) {
                     const swordSegment = getTargetSwordSegment();
                     const bladeClashed = swordSegment && game.simTime >= (ball.saberLastClashAt || 0) + 230 &&
                       segmentSegmentDist(bladeStart.x, bladeStart.y, tip.x, tip.y, swordSegment.x1, swordSegment.y1, swordSegment.x2, swordSegment.y2) < 14;
@@ -24056,7 +24472,9 @@ export default function App() {
                       spawnSparks(clashX, clashY, saberSpark, 34);
                       spawnImpactBurst(clashX, clashY, ball.spinAngle, isDarkSaber ? ["#ffffff", "#fecaca", "#ef4444", "#7f1d1d"] : ["#ffffff", "#dcfce7", "#4ade80", "#facc15"], 1.45);
                       game.screenShake = Math.max(game.screenShake || 0, 9);
-                      playAudioFile("/Saber%20hit.mp3", 0.9, 0, game.simulationSpeed || 1, `${ball.id}-saber-clash-${target.id}`);
+                      const clashDetune = isDarkSaber ? -280 : 0;
+                      const clashPlayback = (game.simulationSpeed || 1) * (isDarkSaber ? 0.88 : 1.05);
+                      playAudioFile("/Saber%20hit.mp3", 0.9, clashDetune, clashPlayback, `${ball.id}-saber-clash-${target.id}`);
                     } else if (linePointDist(target.x, target.y, bladeStart.x, bladeStart.y, tip.x, tip.y) < target.r + 10) {
                       const hitKey = `${ball.id}-${ball.type}-hit`;
                       const freshHit = !(game.damageCooldowns[hitKey] > game.simTime);
@@ -24072,98 +24490,91 @@ export default function App() {
                         const hitAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
                         spawnSparks(tip.x, tip.y, saberSpark, 24);
                         spawnImpactBurst(tip.x, tip.y, hitAngle, isDarkSaber ? ["#ffffff", "#fecaca", "#ef4444", "#7f1d1d"] : ["#ffffff", "#dcfce7", "#4ade80", "#16a34a"], 1.35);
-                        target.webHitFlashUntil = game.simTime + 160;
-                        target.webHitFlashColor = saberHitFlash;
                       }
                     }
+                  }
+
+                  // --- NEW SKILLS FOR SABER & DARK SABER ---
+                  if (!isDarkSaber) {
+                    // Normal Saber: Throw spinning sword skill
+                    const throwState = ball.saberThrowState || "idle";
                     
-                    if (dist >= 120 && dist <= 270 && game.simTime >= (ball.nextSecondaryAt || 0) && !ball.saberSlashActive) {
-                      const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-                      const windupSide = Math.random() < 0.5 ? -1 : 1;
-                      const windupAngle = angle - windupSide * 1.85;
-                      ball.knifeBladeState = "charging";
-                      ball.knifeBladeChargeUntil = game.simTime + 430;
-                      ball.knifeBladeThrownAt = 0;
-                      ball.knifeBladeReturnAt = 0;
-                      ball.knifeBladeWindupSide = windupSide;
-                      ball.knifeBladeX = ball.x + Math.cos(windupAngle) * (ball.r + 34);
-                      ball.knifeBladeY = ball.y + Math.sin(windupAngle) * (ball.r + 34);
-                      ball.knifeBladeTargetX = target.x;
-                      ball.knifeBladeTargetY = target.y;
-                      ball.knifeBladeVx = 0;
-                      ball.knifeBladeVy = 0;
-                      ball.knifeBladeAngle = windupAngle + windupSide * Math.PI / 2;
-                      ball.spinAngle = windupAngle;
-                      ball.saberSlashActive = false;
-                      ball.saberSlashFlashUntil = game.simTime + 430;
-                      spawnSparks(ball.knifeBladeX, ball.knifeBladeY, saberSpark, 18);
-                      playSound("shieldCatch", 0.68, 120);
-                    }
-                  } else {
-                    if (ball.knifeBladeState === "charging") {
-                      const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
-                      const chargeProgress = clamp(1 - ((ball.knifeBladeChargeUntil || game.simTime) - game.simTime) / 430, 0, 1);
-                      const windupSide = ball.knifeBladeWindupSide || 1;
-                      const windupEase = 1 - Math.pow(1 - chargeProgress, 3);
-                      const arcAngle = angle - windupSide * (1.85 * (1 - windupEase));
-                      const tangentAngle = arcAngle + windupSide * (Math.PI / 2) * (1 - windupEase) + windupSide * Math.sin(chargeProgress * Math.PI) * 0.35;
-                      const holdDistance = ball.r + 32 + Math.sin(chargeProgress * Math.PI) * 16;
-                      ball.spinAngle = arcAngle;
-                      ball.knifeBladeAngle = tangentAngle;
-                      ball.knifeBladeX = ball.x + Math.cos(arcAngle) * holdDistance;
-                      ball.knifeBladeY = ball.y + Math.sin(arcAngle) * holdDistance;
-                      ball.vx *= 0.965;
-                      ball.vy *= 0.965;
-                      if (game.simTime >= (ball.knifeBladeChargeUntil || 0)) {
-                        const throwSpeed = 660;
-                        ball.knifeBladeState = "thrown";
-                        ball.knifeBladeThrownAt = game.simTime;
-                        ball.knifeBladeReturnAt = game.simTime + 720;
-                        ball.knifeBladeVx = Math.cos(angle) * throwSpeed;
-                        ball.knifeBladeVy = Math.sin(angle) * throwSpeed;
-                        ball.knifeBladeAngle = angle;
-                        ball.nextSecondaryAt = game.simTime + bal.secCooldown;
-                        spawnImpactBurst(ball.knifeBladeX, ball.knifeBladeY, angle, isDarkSaber ? ["#ffffff", "#fecaca", "#ef4444"] : ["#ffffff", "#bbf7d0", "#22c55e"], 0.9);
+                    if (throwState === "idle") {
+                      if (target && game.simTime >= (ball.saberThrowNextAt || 0)) {
+                        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+                        ball.saberThrowState = "thrown";
+                        ball.saberThrowX = ball.x;
+                        ball.saberThrowY = ball.y;
+                        ball.saberThrowVx = Math.cos(angle) * 780;
+                        ball.saberThrowVy = Math.sin(angle) * 780;
+                        ball.saberThrowAngle = angle;
+                        ball.saberThrowReturnAt = game.simTime + 320;
+                        ball.saberThrowNextAt = game.simTime + 4500;
                         playSound("shieldThrow", 0.72, 120);
                       }
-                    } else if (ball.knifeBladeState === "thrown") {
-                      ball.knifeBladeAngle = Math.atan2(ball.knifeBladeVy, ball.knifeBladeVx);
-                      ball.knifeBladeX += ball.knifeBladeVx * stepDt;
-                      ball.knifeBladeY += ball.knifeBladeVy * stepDt;
-                      const farFromOwner = Math.hypot(ball.knifeBladeX - ball.x, ball.knifeBladeY - ball.y) > 360;
-                      const hitArenaEdge = ball.knifeBladeX < 24 || ball.knifeBladeX > game.width - 24 || ball.knifeBladeY < 24 || ball.knifeBladeY > game.height - 24;
-                      if (game.simTime >= (ball.knifeBladeReturnAt || 0) || farFromOwner || hitArenaEdge) {
-                        ball.knifeBladeState = "returning";
+                    } else if (throwState === "thrown") {
+                      ball.saberThrowAngle = (ball.saberThrowAngle || 0) + 0.28;
+                      ball.saberThrowX += ball.saberThrowVx * stepDt;
+                      ball.saberThrowY += ball.saberThrowVy * stepDt;
+                      if (game.simTime >= (ball.saberThrowReturnAt || 0)) {
+                        ball.saberThrowState = "stationary";
+                        ball.saberThrowStationaryUntil = game.simTime + 360; // Spin in place for 360ms (~1 full spin)
                       }
-                    } else if (ball.knifeBladeState === "returning") {
-                      const angle = Math.atan2(ball.y - ball.knifeBladeY, ball.x - ball.knifeBladeX);
-                      ball.knifeBladeVx = Math.cos(angle) * 760;
-                      ball.knifeBladeVy = Math.sin(angle) * 760;
-                      ball.knifeBladeAngle = angle;
-                      ball.knifeBladeX += ball.knifeBladeVx * stepDt;
-                      ball.knifeBladeY += ball.knifeBladeVy * stepDt;
-                      if (Math.hypot(ball.x - ball.knifeBladeX, ball.y - ball.knifeBladeY) < ball.r + 10) {
-                        ball.knifeBladeState = "rotating";
-                        ball.knifeBladeThrownAt = 0;
-                        ball.knifeBladeReturnAt = 0;
-                        ball.saberSlashFlashUntil = game.simTime + 180;
+                    } else if (throwState === "stationary") {
+                      // Spins in place at the target/peak location
+                      ball.saberThrowAngle = (ball.saberThrowAngle || 0) + 0.28;
+                      if (game.simTime >= (ball.saberThrowStationaryUntil || 0)) {
+                        ball.saberThrowState = "returning";
+                      }
+                    } else if (throwState === "returning") {
+                      const retAngle = Math.atan2(ball.y - ball.saberThrowY, ball.x - ball.saberThrowX);
+                      ball.saberThrowVx = Math.cos(retAngle) * 480; // Slower return speed (480 px/s)
+                      ball.saberThrowVy = Math.sin(retAngle) * 480;
+                      ball.saberThrowX += ball.saberThrowVx * stepDt;
+                      ball.saberThrowY += ball.saberThrowVy * stepDt;
+                      ball.saberThrowAngle = (ball.saberThrowAngle || 0) + 0.28;
+                      if (Math.hypot(ball.x - ball.saberThrowX, ball.y - ball.saberThrowY) < ball.r + 12) {
+                        ball.saberThrowState = "idle";
+                        ball.saberThrowReturnAt = 0;
                         playSound("shieldCatch", 0.62, 120);
                       }
                     }
                     
-                    if (ball.knifeBladeState !== "charging" && Math.hypot(ball.knifeBladeX - target.x, ball.knifeBladeY - target.y) < target.r + 16) {
-                      const hitKey = `${ball.id}-${ball.type}-sec-${target.id}`;
-                      const freshHit = !(game.damageCooldowns[hitKey] > game.simTime);
-                      applyDamage(target, bal.secDamage, hitKey, game.simTime, 300);
-                      if (freshHit) {
-                        ball.saberSpinDirection = -(ball.saberSpinDirection || 1);
-                        ball.saberSlashFlashUntil = game.simTime + 260;
-                        const hitAngle = Math.atan2(ball.knifeBladeVy, ball.knifeBladeVx);
-                        spawnSparks(ball.knifeBladeX, ball.knifeBladeY, isDarkSaber ? "#fca5a5" : "#86efac", 30);
-                        spawnImpactBurst(ball.knifeBladeX, ball.knifeBladeY, hitAngle, isDarkSaber ? ["#ffffff", "#fecaca", "#ef4444", "#111827"] : ["#ffffff", "#d1fae5", "#4ade80", "#0ea5e9"], 1.6);
-                        target.webHitFlashUntil = game.simTime + 190;
-                        target.webHitFlashColor = saberHitFlash;
+                    // Damage collision for thrown sword
+                    if (throwState !== "idle") {
+                      const swordDist = Math.hypot(ball.saberThrowX - target.x, ball.saberThrowY - target.y);
+                      if (swordDist < target.r + 20) {
+                        const hitKey = `${ball.id}-saber-throw-hit-${target.id}`;
+                        const freshHit = !(game.damageCooldowns[hitKey] > game.simTime);
+                        applyDamage(target, 4, hitKey, game.simTime, 280);
+                        if (freshHit) {
+                          spawnSparks(ball.saberThrowX, ball.saberThrowY, "#bbf7d0", 20);
+                          spawnImpactBurst(ball.saberThrowX, ball.saberThrowY, Math.atan2(ball.saberThrowVy, ball.saberThrowVx), ["#ffffff", "#dcfce7", "#4ade80"], 1.35);
+                          target.webHitFlashUntil = game.simTime + 160;
+                          target.webHitFlashColor = "#4ade80";
+                          playSound("saberThrowHit", 0.88, 110);
+                        }
                       }
+                    }
+                  } else {
+                    // Dark Saber: Purple lightning skill
+                    if (target && game.simTime >= (ball.darkSaberLightningNextAt || 0)) {
+                      ball.darkSaberLightningTargetId = target.id;
+                      ball.darkSaberLightningActiveUntil = game.simTime + 380;
+                      ball.darkSaberLightningNextAt = game.simTime + 5000;
+                      
+                      applyDamage(target, 6, `${ball.id}-dark-lightning-${target.id}`, game.simTime, 400);
+                      target.paralyzedUntil = Math.max(target.paralyzedUntil || 0, game.simTime + 350);
+                      target.skillLockedUntil = Math.max(target.skillLockedUntil || 0, target.paralyzedUntil);
+                      target.webHitFlashUntil = game.simTime + 250;
+                      target.webHitFlashColor = "#a855f7"; // purple!
+                      
+                      spawnSparks(target.x, target.y, "#c084fc", 25);
+                      spawnImpactBurst(target.x, target.y, Math.atan2(target.y - ball.y, target.x - ball.x), ["#ffffff", "#c084fc", "#a855f7", "#581c87"], 1.6);
+                      game.screenShake = Math.max(game.screenShake || 0, 20);
+                      
+                      playSound("wallSlam", 0.85, 90);
+                      playSound("saberLightning", 0.95, 100);
                     }
                   }
                 }
@@ -24273,14 +24684,26 @@ export default function App() {
             const target = ball.side === "left" ? right : left;
             ball.shieldAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
           }
-          if (isSaberType(ball.type) && (!ball.spinLockedUntil || game.simTime >= ball.spinLockedUntil) &&
-              (ball.laserBounceWallBouncesLeft || 0) <= 0) {
-            const nearestEnemy = game.balls
-              .filter((candidate) => candidate.side !== ball.side && candidate.type !== "cueBall" && candidate.health > 0)
-              .sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0];
-            const closeFactor = nearestEnemy ? clamp(1 - (Math.hypot(nearestEnemy.x - ball.x, nearestEnemy.y - ball.y) - (ball.r + nearestEnemy.r + 8)) / 125, 0, 1) : 0;
-            const spinMult = 1 + closeFactor * (((game.balance.knife || BALANCE.knife).nearSpinMult || 1.9) - 1);
-            ball.spinAngle += 0.02 * spinMult * (ball.saberSpinDirection || 1);
+          if (isSaberType(ball.type)) {
+            const isSaberSpinDisabled = 
+              (ball.spinLockedUntil && game.simTime < ball.spinLockedUntil) ||
+              (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) ||
+              (ball.skillLockedUntil && game.simTime < ball.skillLockedUntil) ||
+              (ball.webTrappedUntil && game.simTime < ball.webTrappedUntil) ||
+              (ball.laserBounceWallBouncesLeft || 0) > 0 ||
+              game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime) ||
+              game.balls.some(b => b.type === "blackSpider" && b.blackSimpleTargetId === ball.id && b.blackSimpleState && !["idle", "web_wall"].includes(b.blackSimpleState)) ||
+              game.balls.some(b => b.type === "fisherman" && b.fishTargetId === ball.id && b.fishState === "pulling") ||
+              game.balls.some(b => b.type === "goblin" && b.goblinGrabTargetId === ball.id && b.goblinState === "slamming");
+
+            if (!isSaberSpinDisabled) {
+              const nearestEnemy = game.balls
+                .filter((candidate) => candidate.side !== ball.side && candidate.type !== "cueBall" && candidate.health > 0)
+                .sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0];
+              const closeFactor = nearestEnemy ? clamp(1 - (Math.hypot(nearestEnemy.x - ball.x, nearestEnemy.y - ball.y) - (ball.r + nearestEnemy.r + 8)) / 125, 0, 1) : 0;
+              const spinMult = 1 + closeFactor * (({ ...BALANCE.knife, ...game.balance?.knife }.nearSpinMult || 1.9) - 1);
+              ball.spinAngle = (ball.spinAngle || 0) + 0.02 * spinMult * (ball.saberSpinDirection || 1);
+            }
           }
         });
         for (let i = 0; i < game.balls.length; i++) {
@@ -24420,8 +24843,6 @@ export default function App() {
               {renderSlider("Saber Length", "knife", "bladeLength", 15, 130, 1, "px")}
               {renderSlider("Spin Speed", "knife", "spinSpeed", 0.01, 0.3, 0.01)}
               {renderSlider("Near Enemy Spin Mult", "knife", "nearSpinMult", 1, 3, 0.05, "x")}
-              {renderSlider("Throw Cooldown", "knife", "secCooldown", 1000, 8000, 100, "ms")}
-              {renderSlider("Throw Damage", "knife", "secDamage", 1, 20)}
             </>
           )}
           {type === "sorcerer" && (
@@ -24540,6 +24961,27 @@ export default function App() {
           )}
           {type === "blackSpider" && (
             <>
+              {renderSlider("String Bite Slam Cooldown", "blackSpider", "simpleCooldown", 2000, 12000, 100, "ms")}
+              {renderSlider("String Shot Time", "blackSpider", "simpleStringTime", 150, 900, 25, "ms")}
+              {renderSlider("V-String Charge", "blackSpider", "simpleChargeTime", 100, 900, 25, "ms")}
+              {renderSlider("Bite Damage", "blackSpider", "simpleBiteDamage", 1, 12, 1)}
+              {renderSlider("Bite Time", "blackSpider", "simpleBiteTime", 150, 900, 25, "ms")}
+              {renderSlider("Slam Damage", "blackSpider", "simpleSlamDamage", 1, 20, 1)}
+              {renderSlider("Bounce Speed", "blackSpider", "simpleBounceSpeed", 300, 1300, 20, "px/s")}
+              {renderSlider("Target Bounces", "blackSpider", "simpleBounceCount", 1, 8, 1)}
+              {renderSlider("Black Web Wall Cooldown", "blackSpider", "simpleWallWebCooldown", 2500, 14000, 100, "ms")}
+              {renderSlider("Web Trap Pull Time", "blackSpider", "trapPullTime", 200, 1200, 25, "ms")}
+              {renderSlider("Web Trap Slam Damage", "blackSpider", "trapDamage", 1, 15, 1)}
+            </>
+          )}
+          {false && type === "blackSpider" && (
+            <>
+              {renderSlider("Twin Web Cooldown", "blackSpider", "twinCooldown", 3000, 16000, 100, "ms")}
+              {renderSlider("Twin Web Hold", "blackSpider", "twinHoldDuration", 500, 1800, 50, "ms")}
+              {renderSlider("Cross Bite Damage", "blackSpider", "twinStrikeDamage", 1, 10, 1)}
+              {renderSlider("Cross Bite Count", "blackSpider", "twinStrikeCount", 1, 6, 1)}
+              {renderSlider("Coffin Final Damage", "blackSpider", "twinFinalDamage", 1, 20, 1)}
+              {renderSlider("Coffin Launch Speed", "blackSpider", "twinLaunchSpeed", 300, 1500, 20, "px/s")}
               {renderSlider("Black Web Cooldown", "blackSpider", "blackWebCooldown", 1200, 9000, 100, "ms")}
               {renderSlider("Black Web Speed", "blackSpider", "blackWebSpeed", 300, 1400, 20, "px/s")}
               {renderSlider("Black Web Range", "blackSpider", "blackWebRange", 120, 800, 10, "px")}
@@ -25077,7 +25519,7 @@ export default function App() {
                             className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-sm font-extrabold text-slate-100 outline-none focus:border-sky-500"
                             style={{ boxShadow: selectedBall ? `0 0 12px ${selectedBall.color}22` : undefined }}
                           >
-                            {REMODEL_ROSTER.map((id) => BALL_TYPES[id]).filter(Boolean).map((ball) => (
+                            {REMODEL_ROSTER.map((id) => BALL_TYPES[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name)).map((ball) => (
                               <option key={ball.id} value={ball.id}>{ball.shortName} - {ball.name}</option>
                             ))}
                           </select>

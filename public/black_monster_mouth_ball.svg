@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bodyGrad" cx="38%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#2a2b36"/>
+      <stop offset="45%" stop-color="#11131a"/>
+      <stop offset="100%" stop-color="#020307"/>
+    </radialGradient>
+
+    <radialGradient id="mouthGrad" cx="50%" cy="46%" r="70%">
+      <stop offset="0%" stop-color="#5b0b17"/>
+      <stop offset="60%" stop-color="#250208"/>
+      <stop offset="100%" stop-color="#070103"/>
+    </radialGradient>
+
+    <linearGradient id="gumGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a93242"/>
+      <stop offset="55%" stop-color="#6f1422"/>
+      <stop offset="100%" stop-color="#3c0710"/>
+    </linearGradient>
+
+    <linearGradient id="toothGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fffdf4"/>
+      <stop offset="55%" stop-color="#e8dfcf"/>
+      <stop offset="100%" stop-color="#b9aa96"/>
+    </linearGradient>
+
+    <linearGradient id="tongueGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d95a65"/>
+      <stop offset="40%" stop-color="#9b2637"/>
+      <stop offset="100%" stop-color="#5f1020"/>
+    </linearGradient>
+
+    <filter id="dropShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer sphere -->
+  <g filter="url(#dropShadow)">
+    <circle cx="500" cy="500" r="392" fill="url(#bodyGrad)" stroke="#05060a" stroke-width="16"/>
+
+    <!-- Symbiote-like surface lobes -->
+    <path d="M176 442
+             C210 335 297 244 409 193
+             C350 250 318 319 310 389
+             C300 469 331 528 392 569
+             C295 560 221 522 176 442Z"
+          fill="#1b1d27" opacity="0.85"/>
+    <path d="M691 164
+             C792 215 858 306 883 406
+             C841 352 793 326 735 323
+             C680 320 636 338 595 373
+             C629 292 652 222 691 164Z"
+          fill="#181a22" opacity="0.8"/>
+    <path d="M133 646
+             C194 684 260 704 330 700
+             C264 753 206 784 145 788
+             C160 745 155 702 133 646Z"
+          fill="#171820" opacity="0.82"/>
+    <path d="M804 649
+             C858 618 902 568 925 509
+             C920 593 893 678 837 746
+             C826 716 816 684 804 649Z"
+          fill="#161820" opacity="0.9"/>
+
+    <!-- Exterior tendrils -->
+    <path d="M151 283 C106 246 91 200 110 155 C136 194 167 210 204 206 C188 231 170 256 151 283Z"
+          fill="#090a0f"/>
+    <path d="M819 211 C867 180 902 143 910 103 C929 151 925 201 893 240 C870 224 845 214 819 211Z"
+          fill="#090a0f"/>
+    <path d="M120 731 C78 735 42 720 17 686 C64 692 98 675 117 641 C125 672 126 701 120 731Z"
+          fill="#08090d"/>
+    <path d="M887 711 C933 714 969 694 989 655 C987 701 971 745 940 781 C924 752 907 728 887 711Z"
+          fill="#08090d"/>
+
+    <!-- Mouth cavity -->
+    <path d="M253 305
+             C330 224 431 189 534 199
+             C651 210 748 276 803 382
+             C845 462 840 565 786 651
+             C731 739 637 798 531 807
+             C422 816 321 772 255 692
+             C191 615 174 519 201 431
+             C213 389 231 347 253 305Z"
+          fill="url(#mouthGrad)" stroke="#0a0104" stroke-width="14"/>
+
+    <!-- Gums -->
+    <path d="M266 331
+             C340 268 421 241 515 245
+             C616 249 705 292 764 365
+             C706 341 635 326 546 323
+             C445 320 349 337 266 331Z"
+          fill="url(#gumGrad)"/>
+    <path d="M249 664
+             C332 702 428 721 529 716
+             C630 711 714 685 787 637
+             C755 705 677 756 583 775
+             C470 798 352 760 249 664Z"
+          fill="url(#gumGrad)"/>
+
+    <!-- Upper teeth -->
+    <g fill="url(#toothGrad)" stroke="#8e8172" stroke-width="3">
+      <path d="M281 321 L310 448 L343 327 Z"/>
+      <path d="M333 295 L360 438 L395 305 Z"/>
+      <path d="M389 272 L418 431 L453 286 Z"/>
+      <path d="M447 255 L476 424 L512 265 Z"/>
+      <path d="M507 251 L538 425 L574 262 Z"/>
+      <path d="M571 264 L599 430 L635 280 Z"/>
+      <path d="M631 286 L660 439 L696 311 Z"/>
+      <path d="M686 316 L712 447 L746 348 Z"/>
+    </g>
+
+    <!-- Lower teeth -->
+    <g fill="url(#toothGrad)" stroke="#8e8172" stroke-width="3">
+      <path d="M298 680 L331 558 L360 696 Z"/>
+      <path d="M354 711 L387 556 L417 724 Z"/>
+      <path d="M416 730 L451 553 L482 737 Z"/>
+      <path d="M481 741 L517 552 L548 742 Z"/>
+      <path d="M548 741 L581 554 L612 731 Z"/>
+      <path d="M613 727 L646 558 L674 711 Z"/>
+      <path d="M674 704 L706 562 L734 681 Z"/>
+    </g>
+
+    <!-- Tongue -->
+    <path d="M444 650
+             C518 609 562 559 574 505
+             C586 452 566 410 531 388
+             C591 394 647 433 671 490
+             C696 549 686 612 648 662
+             C612 709 569 744 527 772
+             C591 745 654 725 704 734
+             C750 742 791 772 822 809
+             C776 795 737 795 704 806
+             C654 822 604 856 552 869
+             C492 884 434 873 398 842
+             C361 811 356 766 377 726
+             C393 696 417 671 444 650Z"
+          fill="url(#tongueGrad)" stroke="#4a0915" stroke-width="10"/>
+
+    <!-- Tongue highlight -->
+    <path d="M487 669
+             C544 625 580 573 586 518
+             C590 484 582 455 568 433
+             C608 459 622 503 614 552
+             C603 614 553 678 493 724"
+          fill="none" stroke="#f08a92" stroke-width="18" stroke-linecap="round" opacity="0.35"/>
+
+    <!-- Saliva strands -->
+    <g fill="none" stroke="#f6fbff" stroke-width="5" stroke-linecap="round" opacity="0.78" filter="url(#softGlow)">
+      <path d="M335 364 C389 411 431 451 474 500"/>
+      <path d="M431 315 C463 394 490 457 511 536"/>
+      <path d="M591 315 C571 392 557 457 548 520"/>
+      <path d="M690 350 C633 409 596 463 569 520"/>
+      <path d="M332 650 C399 616 451 603 503 602"/>
+      <path d="M637 656 C606 624 583 608 559 601"/>
+      <path d="M464 420 C514 449 557 451 606 427"/>
+    </g>
+
+    <!-- Saliva droplets -->
+    <g fill="#f8fdff" opacity="0.82">
+      <circle cx="474" cy="500" r="8"/>
+      <circle cx="511" cy="536" r="7"/>
+      <circle cx="548" cy="520" r="7"/>
+      <circle cx="569" cy="520" r="6"/>
+      <circle cx="503" cy="602" r="7"/>
+      <circle cx="559" cy="601" r="7"/>
+    </g>
+
+    <!-- Black surface highlights -->
+    <path d="M202 270 C286 174 395 130 518 133"
+          fill="none" stroke="#575965" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+    <path d="M131 504 C119 409 147 323 205 259"
+          fill="none" stroke="#4d4f59" stroke-width="12" stroke-linecap="round" opacity="0.25"/>
+    <path d="M772 201 C843 265 881 352 885 451"
+          fill="none" stroke="#4d4f59" stroke-width="12" stroke-linecap="round" opacity="0.22"/>
+  </g>
+</svg>

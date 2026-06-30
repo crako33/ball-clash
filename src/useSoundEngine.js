@@ -304,6 +304,22 @@ export function useSoundEngine() {
       osc(ctx, dest, "sawtooth", 1400, 0.25, t, 0.14, 300);
       osc(ctx, dest, "sine", 900, 0.2, t, 0.12, 800);
     },
+    saberThrowHit: (ctx, dest, t) => {
+      noise(ctx, dest, 0.45, t, 0.15, 8000, 1.8, "highpass");
+      osc(ctx, dest, "sine", 1200, 0.35, t, 0.12, 100);
+      osc(ctx, dest, "sawtooth", 1600, 0.2, t, 0.08, 1400);
+      osc(ctx, dest, "triangle", 700, 0.25, t, 0.15, 80);
+    },
+    saberLightning: (ctx, dest, t) => {
+      noise(ctx, dest, 0.85, t, 0.18, 1500, 1.5, "bandpass");
+      osc(ctx, dest, "sawtooth", 180, 0.55, t, 0.22, 20);
+      osc(ctx, dest, "square", 90, 0.35, t, 0.18, 40);
+      for (let i = 0; i < 4; i++) {
+        const crackleTime = t + 0.04 + i * 0.05;
+        noise(ctx, dest, 0.38, crackleTime, 0.03, 7000, 2.5, "highpass");
+        osc(ctx, dest, "triangle", 1800 - i * 300, 0.15, crackleTime, 0.02, 50);
+      }
+    },
 
     // Spike Ball
     spikeHit: (ctx, dest, t) => {
