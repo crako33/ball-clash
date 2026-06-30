@@ -15317,208 +15317,178 @@ export default function App() {
           ctx.fill();
         });
       } else {
-        // --- TACTICAL BLACKSKULL HELMET DESIGN ---
-        // 1. Base Helmet Shape (Dark metallic carbon gradient)
+        // --- SITH LORD / DARTH VADER DOME DESIGN ---
+        // 1. Cheekguards / Earguards (flaps flanking helmet on left & right)
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 3.5;
+          ctx.fillStyle = "#0d0e11";
+          
+          ctx.beginPath();
+          // Start high on the side of the helmet dome:
+          ctx.moveTo(side * ball.r * 0.65, -ball.r * 0.42);
+          // Curve outward to flared top corner:
+          ctx.lineTo(side * ball.r * 1.15, -ball.r * 0.28);
+          // Drop down to flared lower corner:
+          ctx.lineTo(side * ball.r * 1.12, ball.r * 0.6);
+          // Bevel to the inside:
+          ctx.lineTo(side * ball.r * 0.72, ball.r * 0.35);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          
+          // Inner detail bevel line:
+          ctx.strokeStyle = "#25262c";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(side * ball.r * 0.7, -ball.r * 0.35);
+          ctx.lineTo(side * ball.r * 1.08, -ball.r * 0.24);
+          ctx.lineTo(side * ball.r * 1.05, ball.r * 0.52);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 2. Base Spherical Helmet Dome
         ctx.beginPath();
         ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-        const helmetGrad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.35, ball.r * 0.1, 0, 0, ball.r);
-        helmetGrad.addColorStop(0, "#4f5562"); // metallic dome highlight
-        helmetGrad.addColorStop(0.48, "#181b21");
-        helmetGrad.addColorStop(0.85, "#0b0c0f");
-        helmetGrad.addColorStop(1, "#020203");
+        const helmetGrad = ctx.createRadialGradient(-ball.r * 0.2, -ball.r * 0.3, ball.r * 0.1, 0, 0, ball.r);
+        helmetGrad.addColorStop(0, "#25262b");
+        helmetGrad.addColorStop(0.5, "#141518");
+        helmetGrad.addColorStop(1, "#070809");
         ctx.fillStyle = helmetGrad;
         ctx.fill();
 
-        // 2. Forehead NVG Mount Plate & Brow Ridge
-        ctx.strokeStyle = "#08090b";
-        ctx.lineWidth = 3.5;
-        // Draw NVG Mount center plate
-        ctx.fillStyle = "#272c35";
-        ctx.beginPath();
-        ctx.moveTo(-12, -ball.r * 0.8);
-        ctx.lineTo(12, -ball.r * 0.8);
-        ctx.lineTo(16, -ball.r * 0.5);
-        ctx.lineTo(10, -ball.r * 0.35);
-        ctx.lineTo(-10, -ball.r * 0.35);
-        ctx.lineTo(-16, -ball.r * 0.5);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        
-        // NVG inner mount detail
-        ctx.fillStyle = "#0c0d10";
-        ctx.fillRect(-6, -ball.r * 0.72, 12, 18);
-        ctx.strokeRect(-6, -ball.r * 0.72, 12, 18);
-        
-        // Brow line / Visor rim
-        ctx.strokeStyle = "#0c0e12";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.arc(0, -ball.r * 0.1, ball.r * 0.95, -Math.PI + 0.35, -0.35);
-        ctx.stroke();
-
-        // 3. Eye Sockets / Visor Lenses (Skull design)
-        ctx.strokeStyle = "#050608";
-        ctx.lineWidth = 2.5;
-        
-        // Left Eye Socket
-        ctx.fillStyle = "#030405";
-        ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.65, -ball.r * 0.1);
-        ctx.quadraticCurveTo(-ball.r * 0.35, -ball.r * 0.3, -ball.r * 0.08, -ball.r * 0.1);
-        ctx.quadraticCurveTo(-ball.r * 0.1, ball.r * 0.2, -ball.r * 0.35, ball.r * 0.24);
-        ctx.quadraticCurveTo(-ball.r * 0.6, ball.r * 0.15, -ball.r * 0.65, -ball.r * 0.1);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        
-        // Right Eye Socket
-        ctx.beginPath();
-        ctx.moveTo(ball.r * 0.65, -ball.r * 0.1);
-        ctx.quadraticCurveTo(ball.r * 0.35, -ball.r * 0.3, ball.r * 0.08, -ball.r * 0.1);
-        ctx.quadraticCurveTo(ball.r * 0.1, ball.r * 0.2, ball.r * 0.35, ball.r * 0.24);
-        ctx.quadraticCurveTo(ball.r * 0.6, ball.r * 0.15, ball.r * 0.65, -ball.r * 0.1);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-
-        // Lens Glowing / Reflective Details
-        // Left Lens: Dark polarized reflection
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(-ball.r * 0.65, -ball.r * 0.1);
-        ctx.quadraticCurveTo(-ball.r * 0.35, -ball.r * 0.3, -ball.r * 0.08, -ball.r * 0.1);
-        ctx.quadraticCurveTo(-ball.r * 0.1, ball.r * 0.2, -ball.r * 0.35, ball.r * 0.24);
-        ctx.quadraticCurveTo(-ball.r * 0.6, ball.r * 0.15, -ball.r * 0.65, -ball.r * 0.1);
-        ctx.closePath();
-        ctx.clip();
-        
-        const leftReflection = ctx.createLinearGradient(-ball.r * 0.6, -ball.r * 0.25, -ball.r * 0.2, ball.r * 0.15);
-        leftReflection.addColorStop(0, "rgba(71, 85, 105, 0.45)");
-        leftReflection.addColorStop(0.5, "rgba(15, 23, 42, 0.95)");
-        leftReflection.addColorStop(1, "rgba(2, 6, 23, 1)");
-        ctx.fillStyle = leftReflection;
-        ctx.fill();
-        ctx.restore();
-
-        // Right Lens: Gold/Green tactical HUD reflection (matching reference image!)
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(ball.r * 0.65, -ball.r * 0.1);
-        ctx.quadraticCurveTo(ball.r * 0.35, -ball.r * 0.3, ball.r * 0.08, -ball.r * 0.1);
-        ctx.quadraticCurveTo(ball.r * 0.1, ball.r * 0.2, ball.r * 0.35, ball.r * 0.24);
-        ctx.quadraticCurveTo(ball.r * 0.6, ball.r * 0.15, ball.r * 0.65, -ball.r * 0.1);
-        ctx.closePath();
-        ctx.clip();
-        
-        const rightReflection = ctx.createLinearGradient(ball.r * 0.15, -ball.r * 0.2, ball.r * 0.55, ball.r * 0.18);
-        rightReflection.addColorStop(0, "#064e3b");
-        rightReflection.addColorStop(0.35, "#047857");
-        rightReflection.addColorStop(0.72, "#b45309");
-        rightReflection.addColorStop(1, "#f59e0b");
-        ctx.fillStyle = rightReflection;
-        ctx.fill();
-        
-        // Add subtle horizontal glare line across the lens
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(ball.r * 0.1, -ball.r * 0.05);
-        ctx.lineTo(ball.r * 0.6, -ball.r * 0.08);
-        ctx.stroke();
-        ctx.restore();
-
-        // 4. Central Skull Nasal Cavity (Inverted tactical vent shape)
-        ctx.fillStyle = "#020304";
-        ctx.strokeStyle = "#11141a";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(0, ball.r * 0.02);
-        ctx.bezierCurveTo(-5, ball.r * 0.06, -7, ball.r * 0.26, -2, ball.r * 0.34);
-        ctx.lineTo(0, ball.r * 0.24);
-        ctx.lineTo(2, ball.r * 0.34);
-        ctx.bezierCurveTo(7, ball.r * 0.26, 5, ball.r * 0.06, 0, ball.r * 0.02);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-
-        // 5. Tactical Cheek Mesh Vents (Left & Right bottom)
-        [-1, 1].forEach((side) => {
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(side * ball.r * 0.45, ball.r * 0.32);
-          ctx.lineTo(side * ball.r * 0.72, ball.r * 0.28);
-          ctx.lineTo(side * ball.r * 0.64, ball.r * 0.64);
-          ctx.lineTo(side * ball.r * 0.35, ball.r * 0.68);
-          ctx.closePath();
-          ctx.clip();
-          
-          // Draw metallic mesh grid pattern
-          ctx.fillStyle = "#0c0d10";
-          ctx.fillRect(side * ball.r * 0.8, ball.r * 0.2, ball.r * -0.5, ball.r * 0.5);
-          ctx.strokeStyle = "#2d3139";
-          ctx.lineWidth = 1.2;
-          for (let offset = -40; offset < 40; offset += 4) {
-            ctx.beginPath();
-            ctx.moveTo(side * ball.r * 0.5 + offset, ball.r * 0.2);
-            ctx.lineTo(side * ball.r * 0.5 + offset + 20, ball.r * 0.7);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(side * ball.r * 0.5 + offset + 20, ball.r * 0.2);
-            ctx.lineTo(side * ball.r * 0.5 + offset, ball.r * 0.7);
-            ctx.stroke();
-          }
-          ctx.restore();
-          
-          // Vent borders
-          ctx.strokeStyle = "#1b1e24";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(side * ball.r * 0.45, ball.r * 0.32);
-          ctx.lineTo(side * ball.r * 0.72, ball.r * 0.28);
-          ctx.lineTo(side * ball.r * 0.64, ball.r * 0.64);
-          ctx.lineTo(side * ball.r * 0.35, ball.r * 0.68);
-          ctx.closePath();
-          ctx.stroke();
-        });
-
-        // 6. Skull Teeth & Jaw Shield (Bottom center)
-        ctx.fillStyle = "#1e2229";
-        ctx.strokeStyle = "#08090a";
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
-        ctx.ellipse(0, ball.r * 0.56, ball.r * 0.32, ball.r * 0.22, 0, 0, Math.PI * 2);
-        ctx.fill(); ctx.stroke();
-        
-        // Draw individual tactical skull teeth
-        ctx.fillStyle = "#0f1114";
-        ctx.strokeStyle = "#2d323b";
-        ctx.lineWidth = 1.2;
-        const toothWidth = ball.r * 0.052;
-        const toothHeight = ball.r * 0.13;
-        for (let i = -4; i <= 4; i++) {
-          const toothX = i * toothWidth * 1.15;
-          const curveOffset = Math.cos(i * 0.32) * ball.r * 0.04;
-          const toothY = ball.r * 0.52 + curveOffset;
-          
-          ctx.beginPath();
-          ctx.roundRect(toothX - toothWidth / 2, toothY - toothHeight / 2, toothWidth, toothHeight, 1.5);
-          ctx.fill(); ctx.stroke();
-        }
-
-        // 7. Tactical Rivets, Screws, and Plates
-        ctx.fillStyle = "#475569";
-        ctx.strokeStyle = "#0f172a";
-        ctx.lineWidth = 1;
-        [[-16, -ball.r * 0.76], [16, -ball.r * 0.76], [-20, -ball.r * 0.52], [20, -ball.r * 0.52]].forEach(([rx, ry]) => {
-          ctx.beginPath();
-          ctx.arc(rx, ry, 2.4, 0, Math.PI * 2);
-          ctx.fill(); ctx.stroke();
-        });
-        
-        // Outer helmet edge outline
-        ctx.strokeStyle = "#090a0c";
+        ctx.strokeStyle = "#000000";
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
         ctx.stroke();
+
+        // 3. Center Ridge (Forehead Mohawk Ridge) with parallel red lines
+        ctx.save();
+        ctx.fillStyle = "#111215";
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.15, -ball.r * 1.0);
+        ctx.lineTo(-ball.r * 0.12, -ball.r * 0.28);
+        ctx.lineTo(ball.r * 0.12, -ball.r * 0.28);
+        ctx.lineTo(ball.r * 0.15, -ball.r * 1.0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Center seam line
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -ball.r * 0.98);
+        ctx.lineTo(0, -ball.r * 0.3);
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. Curved helmet creases/bevels on the upper dome
+        ctx.strokeStyle = "#23242a";
+        ctx.lineWidth = 2.2;
+        // Left top crease
+        ctx.beginPath();
+        ctx.arc(-ball.r * 0.3, -ball.r * 0.6, ball.r * 0.5, Math.PI, Math.PI * 1.5);
+        ctx.stroke();
+        // Right top crease
+        ctx.beginPath();
+        ctx.arc(ball.r * 0.3, -ball.r * 0.6, ball.r * 0.5, Math.PI * 1.5, Math.PI * 2);
+        ctx.stroke();
+
+        // 5. Angry Sith Glowing Eyes
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          // Eye socket shadow
+          ctx.fillStyle = "#040405";
+          ctx.beginPath();
+          ctx.moveTo(side * ball.r * 0.16, -ball.r * 0.18);
+          ctx.lineTo(side * ball.r * 0.68, -ball.r * 0.08);
+          ctx.lineTo(side * ball.r * 0.56, ball.r * 0.08);
+          ctx.lineTo(side * ball.r * 0.2, -ball.r * 0.02);
+          ctx.closePath();
+          ctx.fill();
+
+          // Angled, glowing red slit lens
+          ctx.fillStyle = "#ef4444";
+          ctx.shadowColor = "#f43f5e";
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.moveTo(side * ball.r * 0.24, -ball.r * 0.12);
+          ctx.lineTo(side * ball.r * 0.64, -ball.r * 0.04);
+          ctx.lineTo(side * ball.r * 0.44, ball.r * 0.03);
+          ctx.lineTo(side * ball.r * 0.26, -ball.r * 0.04);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // 6. Angled crease below eyes (cheek structures)
+        ctx.strokeStyle = "#1d1e23";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.35, ball.r * 0.1);
+        ctx.lineTo(-ball.r * 0.68, ball.r * 0.32);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ball.r * 0.35, ball.r * 0.1);
+        ctx.lineTo(ball.r * 0.68, ball.r * 0.32);
+        ctx.stroke();
+
+        // 7. Hexagonal Respirator Mouth Grill (pointing down, with red outline)
+        ctx.save();
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 3.5;
+        ctx.fillStyle = "#0a0b0d";
+        
+        ctx.beginPath();
+        ctx.moveTo(-ball.r * 0.2, ball.r * 0.24);
+        ctx.lineTo(ball.r * 0.2, ball.r * 0.24);
+        ctx.lineTo(ball.r * 0.36, ball.r * 0.44);
+        ctx.lineTo(ball.r * 0.26, ball.r * 0.72);
+        ctx.lineTo(-ball.r * 0.26, ball.r * 0.72);
+        ctx.lineTo(-ball.r * 0.36, ball.r * 0.44);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Hexagon inner vertical grill slits
+        for (let dx = -14; dx <= 14; dx += 6.5) {
+          const xVal = (dx / 50) * ball.r;
+          ctx.save();
+          // Clip path inside the respirator
+          ctx.beginPath();
+          ctx.moveTo(-ball.r * 0.17, ball.r * 0.26);
+          ctx.lineTo(ball.r * 0.17, ball.r * 0.26);
+          ctx.lineTo(ball.r * 0.32, ball.r * 0.44);
+          ctx.lineTo(ball.r * 0.23, ball.r * 0.7);
+          ctx.lineTo(-ball.r * 0.23, ball.r * 0.7);
+          ctx.lineTo(-ball.r * 0.32, ball.r * 0.44);
+          ctx.closePath();
+          ctx.clip();
+
+          // Black grill slat
+          ctx.strokeStyle = "#000000";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(xVal, ball.r * 0.2);
+          ctx.lineTo(xVal, ball.r * 0.8);
+          ctx.stroke();
+
+          // Slat highlight
+          ctx.strokeStyle = "#2a2b30";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(xVal + 1, ball.r * 0.2);
+          ctx.lineTo(xVal + 1, ball.r * 0.8);
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.restore();
       }
       ctx.restore();
 
