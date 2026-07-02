@@ -2523,17 +2523,18 @@ export default function App() {
   const drawRecordingHudCard = (ctx, ball, x, y, w, align = "left", nameFontSize = 42) => {
     const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
     const blackGlow = ball?.type === "eightBall";
+    const redGlow = ball?.type === "darkSaber";
     const skillLines = getBallSkillList(ball, gameRef.current.simTime).split("\n");
     ctx.save();
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
-    ctx.fillStyle = blackGlow ? "#ffffff" : config.color;
-    ctx.shadowColor = blackGlow ? "#000000" : config.color;
-    ctx.shadowBlur = blackGlow ? 22 : 14;
+    ctx.fillStyle = (blackGlow || redGlow) ? "#ffffff" : config.color;
+    ctx.shadowColor = redGlow ? "#ef4444" : (blackGlow ? "#000000" : config.color);
+    ctx.shadowBlur = (blackGlow || redGlow) ? 22 : 14;
     ctx.font = `900 ${nameFontSize}px Arial Black, Impact, sans-serif`;
     const nameX = align === "left" ? x + 22 : x + w - 22;
-    ctx.lineWidth = blackGlow ? Math.max(6, nameFontSize * 0.16) : Math.max(5, nameFontSize * 0.12);
-    ctx.strokeStyle = blackGlow ? "#000000" : "#020617";
+    ctx.lineWidth = (blackGlow || redGlow) ? Math.max(6, nameFontSize * 0.16) : Math.max(5, nameFontSize * 0.12);
+    ctx.strokeStyle = redGlow ? "#dc2626" : (blackGlow ? "#000000" : "#020617");
     ctx.strokeText(getHudBallName(ball), nameX, y + 30);
     ctx.fillText(getHudBallName(ball), nameX, y + 30);
 
@@ -2571,6 +2572,7 @@ export default function App() {
     displayTeam.forEach((ball, index) => {
       const config = BALL_TYPES[ball?.type] || BALL_TYPES.knife;
       const blackGlow = ball?.type === "eightBall";
+      const redGlow = ball?.type === "darkSaber";
       const name = getHudBallName(ball);
       let fontSize = baseFontSize;
       ctx.font = `900 ${fontSize}px Arial Black, Impact, sans-serif`;
@@ -2578,11 +2580,11 @@ export default function App() {
         fontSize -= 2;
         ctx.font = `900 ${fontSize}px Arial Black, Impact, sans-serif`;
       }
-      ctx.fillStyle = blackGlow ? "#ffffff" : config.color;
-      ctx.shadowColor = blackGlow ? "#000000" : config.color;
-      ctx.shadowBlur = blackGlow ? 22 : 14;
-      ctx.lineWidth = blackGlow ? Math.max(6, fontSize * 0.16) : Math.max(5, fontSize * 0.12);
-      ctx.strokeStyle = blackGlow ? "#000000" : "#020617";
+      ctx.fillStyle = (blackGlow || redGlow) ? "#ffffff" : config.color;
+      ctx.shadowColor = redGlow ? "#ef4444" : (blackGlow ? "#000000" : config.color);
+      ctx.shadowBlur = (blackGlow || redGlow) ? 22 : 14;
+      ctx.lineWidth = (blackGlow || redGlow) ? Math.max(6, fontSize * 0.16) : Math.max(5, fontSize * 0.12);
+      ctx.strokeStyle = redGlow ? "#dc2626" : (blackGlow ? "#000000" : "#020617");
       const lineY = startY + index * lineHeight;
       ctx.strokeText(name, nameX, lineY);
       ctx.fillText(name, nameX, lineY);
@@ -2637,7 +2639,10 @@ export default function App() {
         ctx.font = `900 ${index === 0 ? fontSize + 1 : fontSize}px Arial, sans-serif`;
         while (text.length > 6 && ctx.measureText(text).width > maxTextWidth) text = text.slice(0, -2);
         if (text !== line) text = `${text.slice(0, -1)}…`;
-        ctx.fillStyle = index === 0 && block.ball?.type !== "eightBall" ? config.color : "#ffffff";
+        const darkSaberName = index === 0 && block.ball?.type === "darkSaber";
+        ctx.fillStyle = darkSaberName ? "#ffffff" : (index === 0 && block.ball?.type !== "eightBall" ? config.color : "#ffffff");
+        ctx.strokeStyle = darkSaberName ? "#dc2626" : "rgba(2, 6, 23, 0.92)";
+        ctx.shadowColor = darkSaberName ? "#ef4444" : "#020617";
         ctx.strokeText(text, x, cursorY);
         ctx.fillText(text, x, cursorY);
         cursorY += lineHeight;
