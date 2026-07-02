@@ -23854,18 +23854,18 @@ export default function App() {
       drawHealthInsideBall(ball);
     };
 
-    const drawIntroText = (text, x, y, size, color = "#f8fafc", alpha = 1, blackGlow = false) => {
+    const drawIntroText = (text, x, y, size, color = "#f8fafc", alpha = 1, blackGlow = false, redGlow = false) => {
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.font = `900 ${size}px Arial Black, Impact, sans-serif`;
-      ctx.lineWidth = blackGlow ? Math.max(6, size * 0.16) : Math.max(5, size * 0.12);
-      ctx.strokeStyle = blackGlow ? "#000000" : "#020617";
-      ctx.shadowColor = blackGlow ? "#000000" : color;
-      ctx.shadowBlur = blackGlow ? 22 : 14;
+      ctx.lineWidth = (blackGlow || redGlow) ? Math.max(6, size * 0.16) : Math.max(5, size * 0.12);
+      ctx.strokeStyle = redGlow ? "#dc2626" : (blackGlow ? "#000000" : "#020617");
+      ctx.shadowColor = redGlow ? "#ef4444" : (blackGlow ? "#000000" : color);
+      ctx.shadowBlur = (blackGlow || redGlow) ? 22 : 14;
       ctx.strokeText(text, x, y);
-      ctx.fillStyle = blackGlow ? "#ffffff" : color;
+      ctx.fillStyle = (blackGlow || redGlow) ? "#ffffff" : color;
       ctx.fillText(text, x, y);
       ctx.restore();
     };
@@ -23992,7 +23992,7 @@ export default function App() {
         if (elapsed < impactAt) {
           game.balls.forEach((ball) => {
             const labelY = ball.teamSlot === 0 ? ball.y + ball.r + 22 : ball.y - ball.r - 22;
-            drawIntroText(ball.name, ball.x, labelY, 12, getFighterNameColor(ball.type), 0.9, ball.type === "eightBall");
+            drawIntroText(ball.name, ball.x, labelY, 12, getFighterNameColor(ball.type), 0.9, ball.type === "eightBall", ball.type === "darkSaber");
           });
           drawIntroText(`${MATCH_FORMATS[battleMode]?.label || "TEAM"} CLASH`, centerX, centerY - 8, 28, "#f8fafc", 1);
         } else {
@@ -24077,9 +24077,9 @@ export default function App() {
       drawBall(right, game.simTime);
       game.balls.slice(2).forEach((ball) => drawBall(ball, game.simTime));
       if (elapsed < impactAt) {
-        drawIntroText(left.name, left.x, left.y - left.r - 28, 14, getFighterNameColor(left.type), 0.92, left.type === "eightBall");
-        drawIntroText(right.name, right.x, right.y - right.r - 28, 14, getFighterNameColor(right.type), 0.92, right.type === "eightBall");
-        game.balls.slice(2).forEach((ball) => drawIntroText(ball.name, ball.x, ball.y - ball.r - 24, 12, getFighterNameColor(ball.type), 0.86, ball.type === "eightBall"));
+        drawIntroText(left.name, left.x, left.y - left.r - 28, 14, getFighterNameColor(left.type), 0.92, left.type === "eightBall", left.type === "darkSaber");
+        drawIntroText(right.name, right.x, right.y - right.r - 28, 14, getFighterNameColor(right.type), 0.92, right.type === "eightBall", right.type === "darkSaber");
+        game.balls.slice(2).forEach((ball) => drawIntroText(ball.name, ball.x, ball.y - ball.r - 24, 12, getFighterNameColor(ball.type), 0.86, ball.type === "eightBall", ball.type === "darkSaber"));
       }
 
       if (elapsed >= impactAt && elapsed < impactAt + 520) {
@@ -24109,9 +24109,9 @@ export default function App() {
           intro.readySoundPlayed = true;
           playSound("shieldBlock", 0.8, 120);
         }
-        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, getFighterNameColor(left.type), 1, left.type === "eightBall");
+        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, getFighterNameColor(left.type), 1, left.type === "eightBall", left.type === "darkSaber");
         drawIntroText("VERSUS", centerX, centerY - 15, 22, "#f8fafc", 1);
-        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, getFighterNameColor(right.type), 1, right.type === "eightBall");
+        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, getFighterNameColor(right.type), 1, right.type === "eightBall", right.type === "darkSaber");
       } else {
         if (!intro.fightSoundPlayed) {
           intro.fightSoundPlayed = true;
