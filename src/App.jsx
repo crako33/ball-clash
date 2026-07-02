@@ -613,6 +613,8 @@ const getHpBarColor = (type) => {
   return BALL_TYPES[type]?.color || "#4ade80";
 };
 
+const getFighterNameColor = (type) => type === "darkSaber" ? "#f8fafc" : (BALL_TYPES[type]?.color || "#f8fafc");
+
 const isSaberType = (type) => type === "knife" || type === "darkSaber";
 
 const GRID_SIZE = 7;
@@ -4701,10 +4703,7 @@ export default function App() {
 
       // Play damage sound effects based on the source
       if (keyLower.includes("saber") || keyLower.includes("-knife-hit") || keyLower.includes("-knife-sec")) {
-        const isDark = keyLower.includes("darksaber") || keyLower.includes("dark-saber");
-        const hitDetune = isDark ? -320 : 0;
-        const hitPlayback = (game.simulationSpeed || 1) * (isDark ? 0.84 : 1.08);
-        playAudioFile("/Saber%20hit.mp3", 0.95, hitDetune, hitPlayback, `${cooldownKey}-saber-hit`);
+        playAudioFile("/Saber%20hit.mp3", 0.95, 0, (game.simulationSpeed || 1) * 1.08, `${cooldownKey}-saber-hit`);
       } else if (keyLower.includes("knife")) {
         playSound("knifeHit", 1, 80);
       } else if (keyLower.includes("wallspike")) {
@@ -23993,7 +23992,7 @@ export default function App() {
         if (elapsed < impactAt) {
           game.balls.forEach((ball) => {
             const labelY = ball.teamSlot === 0 ? ball.y + ball.r + 22 : ball.y - ball.r - 22;
-            drawIntroText(ball.name, ball.x, labelY, 12, BALL_TYPES[ball.type].color, 0.9, ball.type === "eightBall");
+            drawIntroText(ball.name, ball.x, labelY, 12, getFighterNameColor(ball.type), 0.9, ball.type === "eightBall");
           });
           drawIntroText(`${MATCH_FORMATS[battleMode]?.label || "TEAM"} CLASH`, centerX, centerY - 8, 28, "#f8fafc", 1);
         } else {
@@ -24078,9 +24077,9 @@ export default function App() {
       drawBall(right, game.simTime);
       game.balls.slice(2).forEach((ball) => drawBall(ball, game.simTime));
       if (elapsed < impactAt) {
-        drawIntroText(left.name, left.x, left.y - left.r - 28, 14, BALL_TYPES[left.type].color, 0.92, left.type === "eightBall");
-        drawIntroText(right.name, right.x, right.y - right.r - 28, 14, BALL_TYPES[right.type].color, 0.92, right.type === "eightBall");
-        game.balls.slice(2).forEach((ball) => drawIntroText(ball.name, ball.x, ball.y - ball.r - 24, 12, BALL_TYPES[ball.type].color, 0.86, ball.type === "eightBall"));
+        drawIntroText(left.name, left.x, left.y - left.r - 28, 14, getFighterNameColor(left.type), 0.92, left.type === "eightBall");
+        drawIntroText(right.name, right.x, right.y - right.r - 28, 14, getFighterNameColor(right.type), 0.92, right.type === "eightBall");
+        game.balls.slice(2).forEach((ball) => drawIntroText(ball.name, ball.x, ball.y - ball.r - 24, 12, getFighterNameColor(ball.type), 0.86, ball.type === "eightBall"));
       }
 
       if (elapsed >= impactAt && elapsed < impactAt + 520) {
@@ -24110,9 +24109,9 @@ export default function App() {
           intro.readySoundPlayed = true;
           playSound("shieldBlock", 0.8, 120);
         }
-        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, BALL_TYPES[left.type]?.color || "#38bdf8", 1, left.type === "eightBall");
+        drawIntroText(`${left.name}`, centerX, centerY - 65, 26, getFighterNameColor(left.type), 1, left.type === "eightBall");
         drawIntroText("VERSUS", centerX, centerY - 15, 22, "#f8fafc", 1);
-        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, BALL_TYPES[right.type]?.color || "#f43f5e", 1, right.type === "eightBall");
+        drawIntroText(`${right.name}`, centerX, centerY + 35, 26, getFighterNameColor(right.type), 1, right.type === "eightBall");
       } else {
         if (!intro.fightSoundPlayed) {
           intro.fightSoundPlayed = true;
@@ -24505,9 +24504,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                       spawnSparks(clashX, clashY, saberSpark, 34);
                       spawnImpactBurst(clashX, clashY, ball.spinAngle, isDarkSaber ? ["#ffffff", "#fecaca", "#ef4444", "#7f1d1d"] : ["#ffffff", "#dcfce7", "#4ade80", "#facc15"], 1.45);
                       game.screenShake = Math.max(game.screenShake || 0, 9);
-                      const clashDetune = isDarkSaber ? -280 : 0;
-                      const clashPlayback = (game.simulationSpeed || 1) * (isDarkSaber ? 0.88 : 1.05);
-                      playAudioFile("/Saber%20hit.mp3", 0.9, clashDetune, clashPlayback, `${ball.id}-saber-clash-${target.id}`);
+                      playAudioFile("/Saber%20hit.mp3", 0.9, 0, (game.simulationSpeed || 1) * 1.05, `${ball.id}-saber-clash-${target.id}`);
                     } else if (linePointDist(target.x, target.y, bladeStart.x, bladeStart.y, tip.x, tip.y) < target.r + 10) {
                       const hitKey = `${ball.id}-${ball.type}-hit`;
                       const freshHit = !(game.damageCooldowns[hitKey] > game.simTime);
@@ -25406,7 +25403,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                 <div 
                   className="truncate text-[26px] font-black" 
                   style={{ 
-                    color: selectedBalls[0] === "darkSaber" ? "#000000" : (selectedBalls[0] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[0]]?.color), 
+                    color: selectedBalls[0] === "darkSaber" ? "#f8fafc" : (selectedBalls[0] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[0]]?.color), 
                     fontFamily: '"Arial Black", Impact, sans-serif', 
                     WebkitTextStroke: selectedBalls[0] === "darkSaber" ? "2px #ef4444" : `2px ${selectedBalls[0] === "eightBall" ? "#000000" : "#020617"}`, 
                     paintOrder: "stroke fill", 
@@ -25424,7 +25421,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                 <div 
                   className="truncate text-[26px] font-black" 
                   style={{ 
-                    color: selectedBalls[1] === "darkSaber" ? "#000000" : (selectedBalls[1] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[1]]?.color), 
+                    color: selectedBalls[1] === "darkSaber" ? "#f8fafc" : (selectedBalls[1] === "eightBall" ? "#ffffff" : BALL_TYPES[selectedBalls[1]]?.color), 
                     fontFamily: '"Arial Black", Impact, sans-serif', 
                     WebkitTextStroke: selectedBalls[1] === "darkSaber" ? "2px #ef4444" : `2px ${selectedBalls[1] === "eightBall" ? "#000000" : "#020617"}`, 
                     paintOrder: "stroke fill", 
