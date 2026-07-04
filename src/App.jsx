@@ -771,17 +771,20 @@ const BALANCE = {
   serpent: { startSegments: 3, segmentDamage: 3, segmentHitCooldown: 420, maxSegments: 14, bouncesPerSegment: 2, segmentSpacing: 34, segmentRadius: 18, segmentBounceSpeed: 720 },
   loki: { cooldown: 3000, fireballCooldown: 1050, fireballSpeed: 980, fireballDamage: 6, illusionDuration: 7000, illusionFireballCooldown: 1550, illusionCount: 3, illusionDamage: 1, illusionKnockback: 180, swapStrikeDamage: 4, swapStrikeKnockback: 620, dodgeCooldown: 2100, fireballBounces: 1, fireballHomingTurn: 2.2 },
   sorcerer: {
-    cooldown: 3800,
-    blueDuration: 1500,
-    blueSuction: 320,
-    blueExplosionDamage: 8,
+    cooldown: 2200,
+    chargeDuration: 620,
+    normalOrbScale: 0.75,
+    blueSpeed: 285,
+    bluePullRadius: 155,
+    blueSuction: 640,
+    blueDamage: 3,
     redSpeed: 820,
-    redExplosionDamage: 10,
-    redKnockback: 1100,
-    purpleSpeed: 340,
-    purpleRadius: 28,
-    purpleTickDamage: 12,
-    purpleExplosionDamage: 18,
+    redExplosionDamage: 7,
+    redKnockback: 920,
+    purpleSpeed: 310,
+    purpleRadius: 50,
+    purpleTickDamage: 8,
+    purpleExplosionDamage: 15,
     infinityRadius: 110,
     infinitySlowFactor: 0.15
   },
@@ -842,19 +845,22 @@ const mergeBalanceSettings = (base, saved = {}) => {
     }
     if (type === "sorcerer") {
       Object.assign(merged[type], {
-        cooldown: 4000,
+        cooldown: 2200,
+        chargeDuration: 620,
+        normalOrbScale: 0.75,
         infinityRadius: 90,
         infinitySlowFactor: 0.12,
-        blueSuction: 320,
-        blueExplosionDamage: 8,
-        blueDuration: 1500,
-        redSpeed: 450,
-        redExplosionDamage: 10,
-        redKnockback: 1100,
-        purpleSpeed: 240,
-        purpleRadius: 28,
-        purpleExplosionDamage: 18,
-        purpleTickDamage: 12
+        blueSpeed: 285,
+        bluePullRadius: 155,
+        blueSuction: 640,
+        blueDamage: 3,
+        redSpeed: 820,
+        redExplosionDamage: 7,
+        redKnockback: 920,
+        purpleSpeed: 310,
+        purpleRadius: 50,
+        purpleExplosionDamage: 15,
+        purpleTickDamage: 8
       });
     }
     if (type === "blackSpider") {
@@ -1649,6 +1655,11 @@ export default function App() {
       sorcererSpellIndex: 0,
       nextSorcererCastAt: 0,
       sorcererBlueOrb: null,
+      sorcererCastState: "idle",
+      sorcererChargeUntil: 0,
+      sorcererPendingOrb: "blue",
+      sorcererNextOrb: "blue",
+      sorcererNormalShots: 0,
 
       // Fisherman Specific
       fishermanNextCastAt: type === "fisherman" ? 1800 : 0, fishermanFlashUntil: 0, fishermanRodAngle: side === "left" ? Math.PI : 0,
@@ -1837,6 +1848,10 @@ export default function App() {
   const getBallSkillStatus = (ball, currentTime = 0) => {
     if (!ball) return "SKILL READY";
     if (ball.type === "sorcerer") {
+      const next = (ball.sorcererNormalShots || 0) >= 3 ? "PURPLE ORB" : `${String(ball.sorcererNextOrb || "blue").toUpperCase()} ORB`;
+      return `${ball.sorcererCastState === "charging" ? `CHARGING ${String(ball.sorcererPendingOrb).toUpperCase()}` : `NEXT: ${next}`} · INFINITY ON`;
+    }
+    if (false && ball.type === "sorcerer") {
       const spellNames = ["LAPSE: BLUE", "REVERSAL: RED", "HOLLOW: PURPLE"];
       const nextIdx = (ball.sorcererSpellIndex || 0) % 3;
       return `${spellNames[nextIdx]} · INFINITY ON`;
@@ -1988,6 +2003,12 @@ export default function App() {
       lines.push(`GROWTH: ${(ball.serpentWallBounceCount || 0)}/${serpentBal.bouncesPerSegment || 2} WALL BOUNCES`);
       lines.push(`SECTION DAMAGE: ${serpentBal.segmentDamage || 3}`);
     } else if (ball.type === "sorcerer") {
+      const next = (ball.sorcererNormalShots || 0) >= 3 ? "PURPLE" : String(ball.sorcererNextOrb || "blue").toUpperCase();
+      lines.push(`ORB: ${ball.sorcererCastState === "charging" ? `CHARGING ${String(ball.sorcererPendingOrb).toUpperCase()}` : `NEXT ${next}`}`);
+      lines.push(`NORMAL FIRES: ${ball.sorcererNormalShots || 0}/3`);
+      lines.push(`COOLDOWN: ${cooldown(ball.nextSorcererCastAt)}`);
+      lines.push(`INFINITY FIELD: ACTIVE`);
+    } else if (false && ball.type === "sorcerer") {
       const spellIdx = ball.sorcererSpellIndex || 0;
       const spellNames = ["LAPSE: BLUE", "REVERSAL: RED", "HOLLOW: PURPLE"];
       lines.push(`SPELL CYCLE: ${spellNames[spellIdx]}`);
@@ -13622,6 +13643,69 @@ export default function App() {
     const updateSorcerer = (ball, target, currentTime, stepDt) => {
       const bal = game.balance.sorcerer || BALANCE.sorcerer;
 
+      // Current orb cycle: alternate Blue/Red. After three normal shots,
+      // charge and fire one oversized Purple orb, then resume alternation.
+      if (ball.sorcererCastState === "charging") {
+        if (currentTime < (ball.sorcererChargeUntil || 0) || !target) return;
+        const kind = ball.sorcererPendingOrb || "blue";
+        const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        const normalRadius = ball.r * (bal.normalOrbScale || 0.75);
+        const radius = kind === "purple" ? (bal.purpleRadius || ball.r * 1.65) : normalRadius;
+        const speed = kind === "blue" ? (bal.blueSpeed || 285) : kind === "red" ? (bal.redSpeed || 820) : (bal.purpleSpeed || 310);
+        const bulletKind = kind === "blue" ? "sorcererBlue" : kind === "red" ? "sorcererRed" : "sorcererPurple";
+        game.bullets.push({
+          ownerId: ball.id,
+          targetSide: target.side,
+          kind: bulletKind,
+          x: ball.x + Math.cos(angle) * (ball.r + radius + 4),
+          y: ball.y + Math.sin(angle) * (ball.r + radius + 4),
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          r: radius,
+          damage: kind === "blue" ? (bal.blueDamage || 3) : kind === "red" ? (bal.redExplosionDamage || 7) : (bal.purpleExplosionDamage || 15),
+          knockback: kind === "red" ? (bal.redKnockback || 920) : 0,
+          pullRadius: kind === "blue" ? (bal.bluePullRadius || 155) : 0,
+          pullForce: kind === "blue" ? (bal.blueSuction || 640) : 0,
+          tickDamage: kind === "purple" ? (bal.purpleTickDamage || 8) : 0,
+          nextTickDamageAt: 0,
+          life: kind === "purple" ? 5.0 : kind === "blue" ? 5.5 : 3.2
+        });
+        // Firing never arrests Sorcerer's movement. The release adds a clear
+        // backward kick that carries through normal wall-bounce physics.
+        const recoil = kind === "purple" ? 760 : kind === "red" ? 560 : 390;
+        ball.vx -= Math.cos(angle) * recoil;
+        ball.vy -= Math.sin(angle) * recoil;
+        ball.sorcererRecoilUntil = currentTime + 520;
+        ball.sorcererCastState = "idle";
+        if (kind === "purple") {
+          ball.sorcererNormalShots = 0;
+          playSound("warpSlam", 1.2, 100);
+        } else {
+          ball.sorcererNormalShots = (ball.sorcererNormalShots || 0) + 1;
+          ball.sorcererNextOrb = kind === "blue" ? "red" : "blue";
+          playSound(kind === "blue" ? "laserCharge" : "laserFire", 0.92, 100);
+        }
+        ball.nextSorcererCastAt = currentTime + (bal.cooldown || 2200);
+        const color = kind === "blue" ? "#3b82f6" : kind === "red" ? "#ef4444" : "#d946ef";
+        spawnImpactBurst(ball.x, ball.y, angle, ["#ffffff", color, kind === "purple" ? "#701a75" : color], kind === "purple" ? 1.8 : 1.15);
+        spawnSparks(ball.x, ball.y, color, kind === "purple" ? 28 : 16);
+        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -48, text: `${kind.toUpperCase()} ORB!`, color, life: 0.85, maxLife: 0.85 });
+        const stats = ball.side === "left" ? game.stats.left : game.stats.right;
+        if (stats) stats.totalShots++;
+        return;
+      }
+
+      if (target && currentTime >= (ball.nextSorcererCastAt || 0)) {
+        const kind = (ball.sorcererNormalShots || 0) >= 3 ? "purple" : (ball.sorcererNextOrb || "blue");
+        ball.sorcererPendingOrb = kind;
+        ball.sorcererCastState = "charging";
+        ball.sorcererChargeUntil = currentTime + (bal.chargeDuration || 620);
+        ball.sorcererChargeAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
+        game.floatingTexts.push({ x: ball.x, y: ball.y - ball.r - 22, vy: -36, text: `CHARGING ${kind.toUpperCase()}`, color: kind === "blue" ? "#60a5fa" : kind === "red" ? "#f87171" : "#e879f9", life: 0.7, maxLife: 0.7 });
+        playSound("laserCharge", kind === "purple" ? 1.15 : 0.8, kind === "purple" ? 70 : 140);
+      }
+      return;
+
       if (ball.sorcererBlueOrb) {
         const orb = ball.sorcererBlueOrb;
         game.balls.forEach((enemy) => {
@@ -14753,6 +14837,26 @@ export default function App() {
           }
         }
 
+        if (bullet.kind === "sorcererBlue") {
+          const pullRadius = bullet.pullRadius || 155;
+          balls.forEach((enemy) => {
+            if (enemy.health <= 0 || enemy.shattered || enemy.type === "cueBall" || enemy.id === bullet.ownerId || enemy.side !== bullet.targetSide) return;
+            const dx = bullet.x - enemy.x;
+            const dy = bullet.y - enemy.y;
+            const dist = Math.max(1, Math.hypot(dx, dy));
+            if (dist >= pullRadius + enemy.r) return;
+            const strength = (1 - dist / (pullRadius + enemy.r)) * (bullet.pullForce || 640);
+            enemy.vx += (dx / dist) * strength * dt;
+            enemy.vy += (dy / dist) * strength * dt;
+            if (dist < bullet.r + enemy.r + 20) {
+              enemy.vx = enemy.vx * 0.35 + bullet.vx * 0.65;
+              enemy.vy = enemy.vy * 0.35 + bullet.vy * 0.65;
+              enemy.skillLockedUntil = Math.max(enemy.skillLockedUntil || 0, game.simTime + 90);
+            }
+          });
+          if (Math.random() < 0.32) spawnSparks(bullet.x, bullet.y, "#60a5fa", 1);
+        }
+
         if (bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball") {
           bullet.angle = (bullet.angle || 0) + (bullet.kind === "lokiFireball" ? 9 : 6) * dt;
           if (bullet.tricksterBounced && bullet.tricksterHomingAfterBounce && bullet.targetSide) {
@@ -14888,6 +14992,14 @@ export default function App() {
           }
 
           // Sorcerer bullets hit
+          if (bullet.kind === "sorcererBlue") {
+            applyDamage(target, bullet.damage || 3, `${bullet.ownerId}-blue-orb-hit-${target.id}`, game.simTime, 340);
+            const speed = Math.max(1, Math.hypot(bullet.vx, bullet.vy));
+            target.vx = target.vx * 0.25 + (bullet.vx / speed) * speed * 0.8;
+            target.vy = target.vy * 0.25 + (bullet.vy / speed) * speed * 0.8;
+            spawnSparks(target.x, target.y, "#60a5fa", 7);
+            return true;
+          }
           if (bullet.kind === "sorcererRed") {
             triggerRedExplosion(bullet, target);
             return false;
@@ -22315,6 +22427,20 @@ export default function App() {
           ctx.strokeStyle = isReal ? "#fde047" : "#cbd5e1"; 
           ctx.lineWidth = 2.5; 
           ctx.stroke();
+        } else if (bullet.kind === "sorcererBlue") {
+          const pulse = 0.82 + Math.sin(game.simTime * 0.025) * 0.18;
+          ctx.shadowColor = "#3b82f6";
+          ctx.shadowBlur = 22;
+          ctx.fillStyle = "rgba(59,130,246,0.16)";
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r * 1.55 + pulse * 3, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = "rgba(147,197,253,0.68)";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r * 1.3, -game.simTime * 0.012, Math.PI * 1.35 - game.simTime * 0.012); ctx.stroke();
+          const blueGrad = ctx.createRadialGradient(bullet.x - bullet.r * 0.3, bullet.y - bullet.r * 0.3, 1, bullet.x, bullet.y, bullet.r);
+          blueGrad.addColorStop(0, "#eff6ff"); blueGrad.addColorStop(0.35, "#60a5fa"); blueGrad.addColorStop(1, "#1e3a8a");
+          ctx.fillStyle = blueGrad;
+          ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = "#bfdbfe"; ctx.lineWidth = 2.5; ctx.stroke();
         } else if (bullet.kind === "sorcererRed") {
           ctx.shadowColor = "#ef4444";
           ctx.shadowBlur = 16;
@@ -23187,6 +23313,26 @@ export default function App() {
 
       ctx.save();
       ctx.translate(ball.x, ball.y);
+
+      if (ball.sorcererCastState === "charging") {
+        const bal = game.balance.sorcerer || BALANCE.sorcerer;
+        const progress = clamp(1 - ((ball.sorcererChargeUntil || game.simTime) - game.simTime) / Math.max(1, bal.chargeDuration || 620), 0, 1);
+        const kind = ball.sorcererPendingOrb || "blue";
+        const color = kind === "blue" ? "#3b82f6" : kind === "red" ? "#ef4444" : "#d946ef";
+        const finalRadius = kind === "purple" ? (bal.purpleRadius || 50) : ball.r * (bal.normalOrbScale || 0.75);
+        const chargeRadius = Math.max(4, finalRadius * (0.2 + progress * 0.8));
+        const angle = ball.sorcererChargeAngle || 0;
+        const ox = Math.cos(angle) * (ball.r + chargeRadius * 0.55);
+        const oy = Math.sin(angle) * (ball.r + chargeRadius * 0.55);
+        ctx.save();
+        ctx.shadowColor = color; ctx.shadowBlur = 18 + progress * 16;
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.45 + progress * 0.5;
+        ctx.beginPath(); ctx.arc(ox, oy, chargeRadius, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ox, oy, chargeRadius * (1.18 + Math.sin(game.simTime * 0.03) * 0.08), 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
 
       // 1. Spiked White Hair (drawn behind head)
       ctx.beginPath();
@@ -24439,6 +24585,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                     (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) ||
                     (ball.skillLockedUntil && game.simTime < ball.skillLockedUntil) ||
                     (ball.webTrappedUntil && game.simTime < ball.webTrappedUntil) ||
+                    (ball.webSplatterStuckUntil && game.simTime < ball.webSplatterStuckUntil) ||
                     (ball.laserBounceWallBouncesLeft || 0) > 0 ||
                     isGrabbedByArm ||
                     isBlackSpiderPulled ||
@@ -24487,7 +24634,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                     return null;
                   };
 
-                  if (!ball.saberSlashActive) {
+                  if (!isSaberSpinDisabled && !ball.saberSlashActive) {
                     const swordSegment = getTargetSwordSegment();
                     const bladeClashed = swordSegment && game.simTime >= (ball.saberLastClashAt || 0) + 230 &&
                       segmentSegmentDist(bladeStart.x, bladeStart.y, tip.x, tip.y, swordSegment.x1, swordSegment.y1, swordSegment.x2, swordSegment.y2) < 14;
@@ -24535,7 +24682,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                     const throwState = ball.saberThrowState || "idle";
                     
                     if (throwState === "idle") {
-                      if (target && game.simTime >= (ball.saberThrowNextAt || 0)) {
+                      if (!isSaberSpinDisabled && target && game.simTime >= (ball.saberThrowNextAt || 0)) {
                         const angle = Math.atan2(target.y - ball.y, target.x - ball.x);
                         ball.saberThrowState = "thrown";
                         ball.saberThrowX = ball.x;
@@ -24576,7 +24723,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                     }
                     
                     // Damage collision for thrown sword
-                    if (throwState !== "idle") {
+                    if (!isSaberSpinDisabled && throwState !== "idle") {
                       const swordDist = Math.hypot(ball.saberThrowX - target.x, ball.saberThrowY - target.y);
                       if (swordDist < target.r + 20) {
                         const hitKey = `${ball.id}-saber-throw-hit-${target.id}`;
@@ -24593,7 +24740,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                     }
                   } else {
                     // Dark Saber: Purple lightning skill
-                    if (target && game.simTime >= (ball.darkSaberLightningNextAt || 0)) {
+                    if (!isSaberSpinDisabled && target && game.simTime >= (ball.darkSaberLightningNextAt || 0)) {
                       ball.darkSaberLightningTargetId = target.id;
                       ball.darkSaberLightningActiveUntil = game.simTime + 380;
                       ball.darkSaberLightningNextAt = game.simTime + 5000;
