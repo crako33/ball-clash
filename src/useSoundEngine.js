@@ -17,7 +17,8 @@ const HEAVY_HITS = new Set([
   "wallSlam",
   "warpSlam",
   "laserFire",
-  "bigLaserFire"
+  "bigLaserFire",
+  "knifeHit"
 ]);
 
 const ALLOWED_AUDIO_FILES = new Set([
@@ -82,7 +83,7 @@ const AUDIO_FILE_MAX_INSTANCES = Object.freeze({
   "/spike%20hit2.mp3": 3,
   "/shield%20hit%201.mp3": 2,
   "/shield%20hit%202.mp3": 2,
-  "/Saber%20hit.mp3": 3,
+  "/Saber%20hit.mp3": 6,
   "/laser%20fire.mp3": 2,
   "/big%20laser.mp3": 1,
   "/Wave%201.mp3": 2,
@@ -873,7 +874,7 @@ export function useSoundEngine() {
       const activeForUrl = activeAudioSourcesRef.current[url];
       const maxForUrl = AUDIO_FILE_MAX_INSTANCES[url] || 2;
       if ((activeForKey?.size || 0) >= maxForUrl || (activeForUrl?.size || 0) >= maxForUrl) return;
-      if (activeFileVoicesRef.current >= MAX_FILE_VOICES && !url.includes("Bash") && !url.includes("bomb") && !url.includes("laser")) return;
+      if (activeFileVoicesRef.current >= MAX_FILE_VOICES && !url.includes("Bash") && !url.includes("bomb") && !url.includes("laser") && !url.includes("Saber")) return;
       const source = ctx.createBufferSource();
       const gain = ctx.createGain();
       source.buffer = audioBufferCacheRef.current[url];

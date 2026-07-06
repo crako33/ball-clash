@@ -44,6 +44,26 @@ const BALL_TYPES = {
     animeStyle: "Dark sci-fi swordmaster rival",
     gameStyle: "Precision-based close-range duelist with ranged recall poking",
   },
+  blueSaber: {
+    id: "blueSaber",
+    name: "Blue Saber Ball",
+    shortName: "BLUE",
+    color: "#1d4ed8",
+    stroke: "#bfdbfe",
+    radius: 30,
+    description: "Blue-saber duelist with the same rotating slash as Saber Ball. Secondary: Saber Parry glows on cooldown and deflects incoming projectiles.",
+    emoji: "BLUE",
+    visualTheme: "Azure Guardian / Energy Saber Sentinel",
+    colorPalette: "Royal Blue, Cyan, White, Chrome",
+    facialAge: "Ageless vigilant guardian",
+    personality: "Calm, alert, and fiercely defensive",
+    primaryWeapon: "Blue Energy Saber",
+    signatureAbility: "Saber Parry (projectile deflection stance)",
+    companion: "None",
+    specialVisualEffects: "Bright blue saber trails, circular parry aura, cyan deflection sparks",
+    animeStyle: "Futuristic guardian swordmaster",
+    gameStyle: "Close-range rotating duelist with a timed anti-projectile defense",
+  },
   boomerang: {
     id: "boomerang",
     name: "Boomerang Ball",
@@ -615,7 +635,7 @@ const getHpBarColor = (type) => {
 
 const getFighterNameColor = (type) => type === "darkSaber" ? "#f8fafc" : (BALL_TYPES[type]?.color || "#f8fafc");
 
-const isSaberType = (type) => type === "knife" || type === "darkSaber";
+const isSaberType = (type) => type === "knife" || type === "darkSaber" || type === "blueSaber";
 
 const GRID_SIZE = 7;
 const TILE_SIZE = 64;
@@ -669,7 +689,7 @@ const BOUNCE_SPEED_MULTIPLIER = 1;
 let MAX_HEALTH = 100;
 const MAX_PARTICLES = 420;
 const MAX_RECORDING_PARTICLES = 280;
-const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "blackSpider", "earthSpiker", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "darkSaber", "boomerang", "wave", "fireSkull", "batter", "stringWeb", "arm", "vampire", "loki", "sorcerer", "fireBender", "serpent"];
+const REMODEL_ROSTER = ["hammer", "shield", "chaos", "gun", "eightBall", "spider", "blackSpider", "earthSpiker", "laser", "bomber", "fisherman", "wrecker", "spore", "knife", "darkSaber", "blueSaber", "boomerang", "wave", "fireSkull", "batter", "stringWeb", "arm", "vampire", "loki", "sorcerer", "fireBender", "serpent"];
 const MATCH_FORMATS = {
   "1v1": {
     label: "1v1",
@@ -728,6 +748,7 @@ const FIGHT_INTRO_IMPACT_AT = 1550;
 
 const BALANCE = {
   knife: { damage: 2, cooldown: 360, bladeLength: 78, spinSpeed: 0.09, nearSpinMult: 1.9, nearSlashDuration: 120, farSlashDuration: 170 },
+  blueSaber: { parryCooldown: 5200, parryDuration: 1150, parryPadding: 18, parrySpeedMultiplier: 1.18, parrySpinMultiplier: 1.7 },
   gun: { bulletDamage: 2, bulletSpeed: 550, shotCooldown: 520, reloadTime: 1900, bulletLife: 1.55, secCooldown: 4000, secDashForce: 380, dogDamage: 3, dogHealth: 50, dogSpeed: 190, dogCooldown: 9000, rapidFireCooldown: 140, rapidPierceShots: 2 },
   vampire: { drainPerTick: 1, healPerTick: 1, tickCooldown: 250, latchDuration: 900, latchCooldown: 3200, latchDistance: 10, secCooldown: 6200, mistWindup: 260, mistDuration: 520, mistSpeed: 920, mistDamage: 7, mistHeal: 4, mistKnockback: 420, cloneRadius: 17, cloneLife: 7000 },
   laser: { damagePerTick: 1, tickCooldown: 90, chargeTime: 750, fireDuration: 650, cooldown: 2300, beamWidth: 14, recoilForce: 180, armorRequired: 5 },
@@ -1707,6 +1728,10 @@ export default function App() {
       saberSpinDirection: 1,
       saberSlashFlashUntil: 0,
       saberLastClashAt: 0,
+      blueSaberParryUntil: 0,
+      blueSaberParryNextAt: type === "blueSaber" ? 1800 : 0,
+      blueSaberParryFlashUntil: 0,
+      blueSaberParryCount: 0,
       shieldBashUntil: 0,
       shieldBashFlashUntil: 0,
       shieldBashBouncesLeft: 0,
@@ -1912,6 +1937,9 @@ export default function App() {
       const labels = { windup: "CHARGING THROW", thrown: "RICOCHET THROW", returning: "RETURNING", catchSpin: "CATCH SPIN" };
       return labels[ball.boomerangState] || "BOOMERANG READY";
     }
+    if (ball.type === "blueSaber") {
+      return (ball.blueSaberParryUntil || 0) > currentTime ? "SABER PARRY ACTIVE" : "SABER PARRY READY";
+    }
     if (ball.type === "wave") {
       const charge = Math.round(clamp(ball.tideCharge || 0, 0, 1) * 100);
       return ball.tideReady ? "TIDE FULL · WALL BOUNCE READY" : `TIDE CHARGING ${charge}%`;
@@ -1968,6 +1996,9 @@ export default function App() {
       lines.push(`SABER SLASH: ${ball.saberSlashActive ? "SLASHING" : cooldown(ball.nextSlashAt)}`);
       if (ball.type === "darkSaber") {
         lines.push(`LIGHTNING: ${ball.darkSaberLightningActiveUntil && currentTime < ball.darkSaberLightningActiveUntil ? "STRIKING" : cooldown(ball.darkSaberLightningNextAt)}`);
+      } else if (ball.type === "blueSaber") {
+        lines.push(`SABER PARRY: ${(ball.blueSaberParryUntil || 0) > currentTime ? "GLOWING" : cooldown(ball.blueSaberParryNextAt)}`);
+        lines.push(`PROJECTILES DEFLECTED: ${ball.blueSaberParryCount || 0}`);
       } else {
         lines.push(`BOOMERANG: ${ball.saberThrowState && ball.saberThrowState !== "idle" ? "ACTIVE" : cooldown(ball.saberThrowNextAt)}`);
       }
@@ -4645,11 +4676,39 @@ export default function App() {
       playAudioFile("/Spike%20Bash%20Sound.mp3", volume, 0, (game.simulationSpeed || 1) * 0.95);
     };
 
+    const isSaberDamageKey = (key = "") => {
+      const normalized = String(key).toLowerCase();
+      return normalized.includes("saber") || normalized.includes("-knife-hit") || normalized.includes("-knife-sec");
+    };
+
+    const playSaberContactSound = (defender, contactKey, currentTime, blocked = false) => {
+      game.saberContactSoundCooldowns = game.saberContactSoundCooldowns || {};
+      const normalized = String(contactKey).toLowerCase();
+      const soundKey = `${contactKey}-${blocked ? "armored" : "hit"}`;
+      if ((game.saberContactSoundCooldowns[soundKey] || 0) > currentTime) return false;
+      game.saberContactSoundCooldowns[soundKey] = currentTime + (blocked ? 150 : 90);
+      const isDarkSaberHit = normalized.includes("darksaber") || normalized.includes("dark-saber");
+      const hitInstance = `${soundKey}-saber-contact-${Math.floor(currentTime / 80) % 8}`;
+      const pan = (defender.x / game.width) * 2 - 1;
+      playAudioFile("/Saber%20hit.mp3", blocked ? 1.02 : 0.95, 0, (game.simulationSpeed || 1) * (blocked ? 0.98 : 1.08), hitInstance);
+      if (isDarkSaberHit) {
+        playSound("knifeHit", blocked ? 0.9 : 0.78, 55, { pan, depth: 0.03, room: 0.38 });
+      }
+      if (blocked) {
+        playSound("shieldBlock", 0.48, 70, { pan, depth: 0.04, room: 0.46 });
+      }
+      return true;
+    };
+
     const applyDamage = (defender, amount, cooldownKey, currentTime, cooldown = 360) => {
-      if (isBomberSelfDestructInvulnerable(defender)) return;
-      if (isWreckerJumpInvulnerable(defender)) return;
-      if (isEightBallBreakInvulnerable(defender, currentTime)) return;
-      if (game.damageCooldowns[cooldownKey] > currentTime) return;
+      const keyLower = String(cooldownKey).toLowerCase();
+      if (isBomberSelfDestructInvulnerable(defender)) return false;
+      if (isWreckerJumpInvulnerable(defender)) {
+        if (isSaberDamageKey(keyLower)) playSaberContactSound(defender, cooldownKey, currentTime, true);
+        return false;
+      }
+      if (isEightBallBreakInvulnerable(defender, currentTime)) return false;
+      if (game.damageCooldowns[cooldownKey] > currentTime) return false;
       
       let finalAmount = Math.max(MIN_DAMAGE, Math.round(amount));
       if (defender.type === "wrecker") {
@@ -4664,7 +4723,6 @@ export default function App() {
 
       // Determine hit flash color based on source/weapon prefix in cooldownKey
       let flashColor = "#ef4444"; // Default red
-      const keyLower = cooldownKey.toLowerCase();
       if (keyLower.includes("darksaber") || keyLower.includes("dark-saber")) {
         flashColor = "#ef4444"; // Dark Saber red
       } else if (keyLower.includes("knife") || keyLower.includes("saber")) {
@@ -4728,8 +4786,8 @@ export default function App() {
       });
 
       // Play damage sound effects based on the source
-      if (keyLower.includes("saber") || keyLower.includes("-knife-hit") || keyLower.includes("-knife-sec")) {
-        playAudioFile("/Saber%20hit.mp3", 0.95, 0, (game.simulationSpeed || 1) * 1.08, `${cooldownKey}-saber-hit`);
+      if (isSaberDamageKey(keyLower)) {
+        playSaberContactSound(defender, cooldownKey, currentTime, false);
       } else if (keyLower.includes("knife")) {
         playSound("knifeHit", 1, 80);
       } else if (keyLower.includes("wallspike")) {
@@ -4768,6 +4826,7 @@ export default function App() {
       } else {
         playSound("damage", 1, 100);
       }
+      return true;
     };
 
     const getParticleBudget = (requested) => {
@@ -14879,6 +14938,63 @@ export default function App() {
         bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt;
         bullet.life -= dt;
         if (bullet.life <= 0) return false;
+
+        // Blue Saber Parry redirects a hostile projectile from the glowing blade.
+        if (!bullet.isCosmetic && !bullet.cannotReflect && !bullet.piercesDefense) {
+          const parrier = balls.find((candidate) => {
+            if (candidate.type !== "blueSaber" || candidate.health <= 0) return false;
+            if ((candidate.blueSaberParryUntil || 0) <= game.simTime || candidate.id === bullet.ownerId) return false;
+            if ((candidate.paralyzedUntil || 0) > game.simTime || (candidate.skillLockedUntil || 0) > game.simTime ||
+                (candidate.webTrappedUntil || 0) > game.simTime || (candidate.webSplatterStuckUntil || 0) > game.simTime ||
+                (candidate.spinLockedUntil || 0) > game.simTime) return false;
+            if (bullet.targetSide && bullet.targetSide !== candidate.side) return false;
+            if (bullet.lastBlueParryId === candidate.id && game.simTime < (bullet.blueParryIgnoreUntil || 0)) return false;
+            const saberBal = { ...BALANCE.knife, ...game.balance?.knife };
+            const parryBal = { ...BALANCE.blueSaber, ...game.balance?.blueSaber };
+            const sweepRadius = candidate.r + (saberBal.bladeLength || 78) + (parryBal.parryPadding || 18);
+            return Math.hypot(bullet.x - candidate.x, bullet.y - candidate.y) < sweepRadius + bullet.r;
+          });
+
+          if (parrier) {
+            const originalOwner = balls.find((candidate) => candidate.id === bullet.ownerId);
+            const returnTarget = originalOwner?.health > 0
+              ? originalOwner
+              : balls
+                  .filter((candidate) => candidate.side !== parrier.side && candidate.health > 0 && candidate.type !== "cueBall")
+                  .sort((a, b) => Math.hypot(a.x - parrier.x, a.y - parrier.y) - Math.hypot(b.x - parrier.x, b.y - parrier.y))[0];
+            const speed = Math.max(500, Math.hypot(bullet.vx, bullet.vy)) * ((game.balance?.blueSaber || BALANCE.blueSaber).parrySpeedMultiplier || 1.18);
+            const returnAngle = returnTarget
+              ? Math.atan2(returnTarget.y - bullet.y, returnTarget.x - bullet.x)
+              : Math.atan2(-bullet.vy, -bullet.vx);
+            bullet.vx = Math.cos(returnAngle) * speed;
+            bullet.vy = Math.sin(returnAngle) * speed;
+            bullet.ownerId = parrier.id;
+            bullet.targetSide = parrier.side === "left" ? "right" : "left";
+            bullet.lastBlueParryId = parrier.id;
+            bullet.blueParryIgnoreUntil = game.simTime + 300;
+            bullet.life = Math.max(bullet.life, 0.8);
+            parrier.blueSaberParryFlashUntil = game.simTime + 240;
+            parrier.blueSaberParryCount = (parrier.blueSaberParryCount || 0) + 1;
+            const stats = parrier.side === "left" ? game.stats.left : game.stats.right;
+            if (stats) stats.blocked++;
+            spawnSparks(bullet.x, bullet.y, "#7dd3fc", 22);
+            spawnImpactBurst(bullet.x, bullet.y, returnAngle, ["#ffffff", "#bfdbfe", "#38bdf8", "#2563eb"], 1.25);
+            game.floatingTexts = game.floatingTexts || [];
+            game.floatingTexts.push({
+              x: bullet.x,
+              y: bullet.y - 15,
+              vy: -52,
+              text: "PARRY!",
+              color: "#7dd3fc",
+              life: 0.65,
+              maxLife: 0.65
+            });
+            game.screenShake = Math.max(game.screenShake || 0, 7);
+            playSound("shieldBlock", 0.82, 90, { pan: (bullet.x / game.width) * 2 - 1, depth: 0.02, room: 0.34 });
+            playSound("knifeHit", 0.5, 55, { pan: (bullet.x / game.width) * 2 - 1, depth: 0.02, room: 0.3 });
+          }
+        }
+
         if (bullet.kind === "laserPulse" || bullet.kind === "lokiFireball" || bullet.kind === "lokiIllusionFireball" || bullet.kind === "serpentTail") {
           let bounced = false;
           const pad = 18 + bullet.r;
@@ -15289,11 +15405,12 @@ export default function App() {
     const drawKnifeBall = (ball) => {
       const config = BALL_TYPES[ball.type] || BALL_TYPES.knife;
       const dark = ball.type === "darkSaber";
+      const blue = ball.type === "blueSaber";
       const bal = { ...BALANCE.knife, ...game.balance?.knife };
       const bladeLength = bal.bladeLength || 78;
 
       // --- Draw Thrown Spinning Sword (World coordinates) ---
-      if (!dark && (ball.saberThrowState === "thrown" || ball.saberThrowState === "stationary" || ball.saberThrowState === "returning")) {
+      if (!dark && !blue && (ball.saberThrowState === "thrown" || ball.saberThrowState === "stationary" || ball.saberThrowState === "returning")) {
         ctx.save();
         ctx.translate(ball.saberThrowX, ball.saberThrowY);
         ctx.rotate(ball.saberThrowAngle || 0);
@@ -15322,6 +15439,27 @@ export default function App() {
         // draw hilt
         ctx.fillStyle = "#374151"; ctx.fillRect(hiltX, -5, 16, 10);
         ctx.fillStyle = "#d1d5db"; ctx.fillRect(hiltX + 2, -3, 4, 6);
+        ctx.restore();
+      }
+
+      // Blue Saber Parry: the aura and blade brighten for the whole counter window.
+      if (blue && (ball.blueSaberParryUntil || 0) > game.simTime) {
+        const pulse = 0.5 + Math.sin(game.simTime * 0.025) * 0.16;
+        const flash = (ball.blueSaberParryFlashUntil || 0) > game.simTime ? 1 : 0;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, pulse + flash * 0.28);
+        ctx.strokeStyle = flash ? "#ffffff" : "#60a5fa";
+        ctx.shadowColor = "#38bdf8";
+        ctx.shadowBlur = 22 + flash * 12;
+        ctx.lineWidth = 5 + flash * 3;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 14 + Math.sin(game.simTime * 0.018) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha *= 0.45;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r + 24, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
       }
 
@@ -15371,11 +15509,11 @@ export default function App() {
         }
       }
 
-      const saberColor = dark ? "#ef4444" : "#22c55e";
-      const saberLight = dark ? "#fecaca" : "#bbf7d0";
-      const saberWhite = dark ? "#fff1f2" : "#ecfdf5";
-      const saberDeep = dark ? "#7f1d1d" : "#15803d";
-      const flashFill = dark ? "rgba(239, 68, 68, 0.35)" : "rgba(74, 222, 128, 0.35)";
+      const saberColor = dark ? "#ef4444" : blue ? "#2563eb" : "#22c55e";
+      const saberLight = dark ? "#fecaca" : blue ? "#93c5fd" : "#bbf7d0";
+      const saberWhite = dark ? "#fff1f2" : blue ? "#eff6ff" : "#ecfdf5";
+      const saberDeep = dark ? "#7f1d1d" : blue ? "#1e3a8a" : "#15803d";
+      const flashFill = dark ? "rgba(239, 68, 68, 0.35)" : blue ? "rgba(37, 99, 235, 0.38)" : "rgba(74, 222, 128, 0.35)";
       const spinAngle = ball.spinAngle || 0;
       const dir = ball.saberSpinDirection || 1;
       const saberSlashActive = ball.saberSlashActive || false;
@@ -15390,11 +15528,11 @@ export default function App() {
         // Draw Pointed Elf Ears
         [-1, 1].forEach((side) => {
           const earGrad = ctx.createLinearGradient(side * ball.r * 0.65, -ball.r * 0.22, side * (ball.r + 52), -ball.r * 0.55);
-          earGrad.addColorStop(0, "#bbf7d0");
-          earGrad.addColorStop(0.58, "#22c55e");
-          earGrad.addColorStop(1, "#15803d");
+          earGrad.addColorStop(0, blue ? "#bfdbfe" : "#bbf7d0");
+          earGrad.addColorStop(0.58, blue ? "#3b82f6" : "#22c55e");
+          earGrad.addColorStop(1, blue ? "#1e3a8a" : "#15803d");
           ctx.fillStyle = earGrad;
-          ctx.strokeStyle = "#14532d";
+          ctx.strokeStyle = blue ? "#172554" : "#14532d";
           ctx.lineWidth = 2.4;
           ctx.beginPath();
           ctx.moveTo(side * ball.r * 0.5, -ball.r * 0.3);
@@ -15405,7 +15543,7 @@ export default function App() {
           ctx.stroke();
 
           // Highlight line inside the ear
-          ctx.strokeStyle = "rgba(236, 253, 245, 0.78)";
+          ctx.strokeStyle = blue ? "rgba(239, 246, 255, 0.82)" : "rgba(236, 253, 245, 0.78)";
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.moveTo(side * ball.r * 0.75, -ball.r * 0.25);
@@ -15428,7 +15566,7 @@ export default function App() {
           ctx.beginPath();
           ctx.arc(side * ball.r * 0.32, -ball.r * 0.15, ball.r * 0.16, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = "#0d5c2e";
+          ctx.fillStyle = blue ? "#1e3a8a" : "#0d5c2e";
           ctx.beginPath();
           ctx.arc(side * ball.r * 0.32 + side * 1.5, -ball.r * 0.15, ball.r * 0.08, 0, Math.PI * 2);
           ctx.fill();
@@ -15659,7 +15797,7 @@ export default function App() {
         const p = clamp((saberSlashFlashUntil - game.simTime) / 260, 0, 1);
         ctx.save();
         ctx.globalAlpha = 0.72 * p;
-        ctx.strokeStyle = dark ? "#fca5a5" : "#86efac";
+        ctx.strokeStyle = dark ? "#fca5a5" : blue ? "#93c5fd" : "#86efac";
         ctx.shadowColor = saberColor;
         ctx.shadowBlur = 18;
         ctx.lineWidth = 12;
@@ -15679,7 +15817,7 @@ export default function App() {
         ctx.save();
         ctx.globalAlpha = Math.max(0, 0.6 * (1 - p));
         ctx.fillStyle = flashFill;
-        ctx.strokeStyle = dark ? "#ef4444" : "#4ade80";
+        ctx.strokeStyle = dark ? "#ef4444" : blue ? "#3b82f6" : "#4ade80";
         ctx.shadowColor = saberColor;
         ctx.shadowBlur = 16;
         ctx.lineWidth = 6;
@@ -15704,9 +15842,10 @@ export default function App() {
         saberGrad.addColorStop(0.5, saberColor);
         saberGrad.addColorStop(1, saberWhite);
         ctx.shadowColor = saberColor;
-        ctx.shadowBlur = 12;
+        const parryActive = blue && (ball.blueSaberParryUntil || 0) > game.simTime;
+        ctx.shadowBlur = parryActive ? 26 : 12;
         ctx.strokeStyle = saberGrad;
-        ctx.lineWidth = 8;
+        ctx.lineWidth = parryActive ? 10 : 8;
         ctx.lineCap = "round";
         ctx.beginPath(); ctx.moveTo(ball.r + 4, 0); ctx.lineTo(tipX, 0); ctx.stroke();
         ctx.shadowBlur = 0;
@@ -24571,10 +24710,17 @@ export default function App() {
 if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                   const bal = { ...BALANCE.knife, ...game.balance?.knife };
                   const isDarkSaber = ball.type === "darkSaber";
-                  const saberSpark = isDarkSaber ? "#ef4444" : "#bbf7d0";
-                  const saberGlow = isDarkSaber ? "#dc2626" : "#4ade80";
-                  const saberDeep = isDarkSaber ? "#7f1d1d" : "#16a34a";
-                  const saberHitFlash = isDarkSaber ? "#ef4444" : "#4ade80";
+                  const isBlueSaber = ball.type === "blueSaber";
+                  const blueSaberBal = { ...BALANCE.blueSaber, ...game.balance?.blueSaber };
+                  const saberSpark = isDarkSaber ? "#ef4444" : isBlueSaber ? "#bfdbfe" : "#bbf7d0";
+                  const saberGlow = isDarkSaber ? "#dc2626" : isBlueSaber ? "#2563eb" : "#4ade80";
+                  const saberDeep = isDarkSaber ? "#7f1d1d" : isBlueSaber ? "#1e3a8a" : "#16a34a";
+                  const saberHitFlash = isDarkSaber ? "#ef4444" : isBlueSaber ? "#3b82f6" : "#4ade80";
+                  const saberImpactPalette = isDarkSaber
+                    ? ["#ffffff", "#fecaca", "#ef4444", "#7f1d1d"]
+                    : isBlueSaber
+                      ? ["#ffffff", "#bfdbfe", "#3b82f6", "#1e3a8a"]
+                      : ["#ffffff", "#dcfce7", "#4ade80", "#16a34a"];
                   ball.knifeBladeState = "rotating";
                   
                   const dist = Math.hypot(target.x - ball.x, target.y - ball.y);
@@ -24605,7 +24751,10 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
 
                     if (!ball.saberSlashActive) {
                       if (!ball.saberSpinDirection) ball.saberSpinDirection = 1;
-                      const spinMult = 1 + closeFactor * ((bal.nearSpinMult || 1.9) - 1);
+                      const parrySpin = isBlueSaber && (ball.blueSaberParryUntil || 0) > game.simTime
+                        ? (blueSaberBal.parrySpinMultiplier || 1.7)
+                        : 1;
+                      const spinMult = (1 + closeFactor * ((bal.nearSpinMult || 1.9) - 1)) * parrySpin;
                       ball.spinAngle = (ball.spinAngle || 0) + Math.abs(bal.spinSpeed) * spinMult * ball.saberSpinDirection;
                     }
                   } else {
@@ -24654,9 +24803,10 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                       const clashX = (tip.x + swordSegment.x2) / 2;
                       const clashY = (tip.y + swordSegment.y2) / 2;
                       spawnSparks(clashX, clashY, saberSpark, 34);
-                      spawnImpactBurst(clashX, clashY, ball.spinAngle, isDarkSaber ? ["#ffffff", "#fecaca", "#ef4444", "#7f1d1d"] : ["#ffffff", "#dcfce7", "#4ade80", "#facc15"], 1.45);
+                      spawnImpactBurst(clashX, clashY, ball.spinAngle, saberImpactPalette, 1.45);
                       game.screenShake = Math.max(game.screenShake || 0, 9);
-                      playAudioFile("/Saber%20hit.mp3", 0.9, 0, (game.simulationSpeed || 1) * 1.05, `${ball.id}-saber-clash-${target.id}`);
+                      playAudioFile("/Saber%20hit.mp3", 0.9, 0, (game.simulationSpeed || 1) * 1.05, `${ball.id}-saber-clash-${target.id}-${Math.floor(game.simTime / 80) % 8}`);
+                      if (isDarkSaber) playSound("knifeHit", 0.72, 55, { pan: (clashX / game.width) * 2 - 1, depth: 0.03, room: 0.42 });
                     } else if (linePointDist(target.x, target.y, bladeStart.x, bladeStart.y, tip.x, tip.y) < target.r + 10) {
                       const hitKey = `${ball.id}-${ball.type}-hit`;
                       const freshHit = !(game.damageCooldowns[hitKey] > game.simTime);
@@ -24671,13 +24821,13 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                         ball.saberSlashFlashUntil = game.simTime + 260;
                         const hitAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
                         spawnSparks(tip.x, tip.y, saberSpark, 24);
-                        spawnImpactBurst(tip.x, tip.y, hitAngle, isDarkSaber ? ["#ffffff", "#fecaca", "#ef4444", "#7f1d1d"] : ["#ffffff", "#dcfce7", "#4ade80", "#16a34a"], 1.35);
+                        spawnImpactBurst(tip.x, tip.y, hitAngle, saberImpactPalette, 1.35);
                       }
                     }
                   }
 
-                  // --- NEW SKILLS FOR SABER & DARK SABER ---
-                  if (!isDarkSaber) {
+                  // Each Saber variant has exactly one distinct secondary skill.
+                  if (!isDarkSaber && !isBlueSaber) {
                     // Normal Saber: Throw spinning sword skill
                     const throwState = ball.saberThrowState || "idle";
                     
@@ -24738,7 +24888,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                         }
                       }
                     }
-                  } else {
+                  } else if (isDarkSaber) {
                     // Dark Saber: Purple lightning skill
                     if (!isSaberSpinDisabled && target && game.simTime >= (ball.darkSaberLightningNextAt || 0)) {
                       ball.darkSaberLightningTargetId = target.id;
@@ -24774,6 +24924,31 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                       
                       playSound("wallSlam", 0.85, 90);
                       playSound("saberLightning", 0.95, 100);
+                    }
+                  } else {
+                    const incomingProjectile = (game.bullets || []).some((projectile) =>
+                      !projectile.isCosmetic && !projectile.cannotReflect && !projectile.piercesDefense &&
+                      projectile.ownerId !== ball.id && (!projectile.targetSide || projectile.targetSide === ball.side) &&
+                      Math.hypot(projectile.x - ball.x, projectile.y - ball.y) < ball.r + (bal.bladeLength || 78) + 105
+                    );
+                    if (!isSaberSpinDisabled && incomingProjectile && game.simTime >= (ball.blueSaberParryNextAt || 0)) {
+                      ball.blueSaberParryUntil = game.simTime + (blueSaberBal.parryDuration || 1150);
+                      ball.blueSaberParryNextAt = game.simTime + (blueSaberBal.parryCooldown || 5200);
+                      ball.blueSaberParryFlashUntil = game.simTime + 260;
+                      ball.saberSlashFlashUntil = game.simTime + 300;
+                      spawnSparks(ball.x, ball.y, "#7dd3fc", 24);
+                      spawnImpactBurst(ball.x, ball.y, ball.spinAngle || 0, ["#ffffff", "#bfdbfe", "#60a5fa", "#1d4ed8"], 1.2);
+                      game.floatingTexts = game.floatingTexts || [];
+                      game.floatingTexts.push({
+                        x: ball.x,
+                        y: ball.y - ball.r - 20,
+                        vy: -48,
+                        text: "SABER PARRY!",
+                        color: "#7dd3fc",
+                        life: 0.8,
+                        maxLife: 0.8
+                      });
+                      playSound("shieldBlock", 0.68, 120, { pan: (ball.x / game.width) * 2 - 1, depth: 0.03, room: 0.35 });
                     }
                   }
                 }
@@ -24889,6 +25064,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
               (ball.paralyzedUntil && game.simTime < ball.paralyzedUntil) ||
               (ball.skillLockedUntil && game.simTime < ball.skillLockedUntil) ||
               (ball.webTrappedUntil && game.simTime < ball.webTrappedUntil) ||
+              (ball.webSplatterStuckUntil && game.simTime < ball.webSplatterStuckUntil) ||
               (ball.laserBounceWallBouncesLeft || 0) > 0 ||
               game.balls.some(b => b.type === "arm" && b.armGrabTargetId === ball.id && b.armState === "elbow_dropping" && b.armStateUntil > game.simTime) ||
               game.balls.some(b => b.type === "blackSpider" && b.blackSimpleTargetId === ball.id && b.blackSimpleState && !["idle", "web_wall"].includes(b.blackSimpleState)) ||
@@ -24901,7 +25077,10 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                 .filter((candidate) => candidate.side !== ball.side && candidate.type !== "cueBall" && candidate.health > 0)
                 .sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0];
               const closeFactor = nearestEnemy ? clamp(1 - (Math.hypot(nearestEnemy.x - ball.x, nearestEnemy.y - ball.y) - (ball.r + nearestEnemy.r + 8)) / 125, 0, 1) : 0;
-              const spinMult = 1 + closeFactor * (({ ...BALANCE.knife, ...game.balance?.knife }.nearSpinMult || 1.9) - 1);
+              const parrySpinMult = ball.type === "blueSaber" && (ball.blueSaberParryUntil || 0) > game.simTime
+                ? ({ ...BALANCE.blueSaber, ...game.balance?.blueSaber }.parrySpinMultiplier || 1.7)
+                : 1;
+              const spinMult = (1 + closeFactor * (({ ...BALANCE.knife, ...game.balance?.knife }.nearSpinMult || 1.9) - 1)) * parrySpinMult;
               ball.spinAngle = (ball.spinAngle || 0) + 0.02 * spinMult * (ball.saberSpinDirection || 1);
             }
           }
@@ -25043,6 +25222,14 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
               {renderSlider("Saber Length", "knife", "bladeLength", 15, 130, 1, "px")}
               {renderSlider("Spin Speed", "knife", "spinSpeed", 0.01, 0.3, 0.01)}
               {renderSlider("Near Enemy Spin Mult", "knife", "nearSpinMult", 1, 3, 0.05, "x")}
+            </>
+          )}
+          {type === "blueSaber" && (
+            <>
+              {renderSlider("Parry Cooldown", "blueSaber", "parryCooldown", 2500, 9000, 100, "ms")}
+              {renderSlider("Parry Duration", "blueSaber", "parryDuration", 400, 2200, 50, "ms")}
+              {renderSlider("Parry Reach", "blueSaber", "parryPadding", 6, 35, 1, "px")}
+              {renderSlider("Reflected Speed", "blueSaber", "parrySpeedMultiplier", 1, 2, 0.05, "x")}
             </>
           )}
           {type === "sorcerer" && (
