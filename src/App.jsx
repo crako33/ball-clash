@@ -999,6 +999,8 @@ const loadSavedBalanceSettings = () => {
 const hasStringBounceGuard = (ball) =>
   ball?.type === "stringWeb" && (ball.stringBounceWallBouncesLeft || 0) > 0;
 
+const usesSpiderSkillKit = (type) => type === "spider" || type === "blackSpider";
+
 const EIGHT_BALL_SILHOUETTE_SVG = `
 <svg width="1200" height="1200" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -1096,7 +1098,7 @@ const cancelActiveMovementStates = (ball) => {
     ball.armState = "idle";
     ball.armStateUntil = 0;
   }
-  if (ball.type === "spider") {
+  if (usesSpiderSkillKit(ball.type)) {
     ball.webState = "idle";
     ball.webTargetId = null;
     ball.webBouncesLeft = 0;
@@ -1128,7 +1130,7 @@ const applyMotorcycleRagdoll = (ball, angle, force, currentTime, lockDuration = 
 const isBallConnected = (ball, balls = [], currentTime = 0) => {
   if (!ball) return false;
   if (ball.type === "vampire" && ball.latchedTo && ball.latchUntil > currentTime) return true;
-  if (ball.type === "spider" && (ball.webState === "pulling" || ball.webState === "webBouncing")) return true;
+  if (usesSpiderSkillKit(ball.type) && (ball.webState === "pulling" || ball.webState === "webBouncing")) return true;
   if (ball.type === "arm" && ball.armState === "elbow_dropping" && ball.armStateUntil > currentTime) return true;
   if (ball.type === "hammer" && ball.hammerState === "charging") return true;
   if (ball.type === "wrecker" && ["charging", "swinging"].includes(ball.wreckerState)) return true;
@@ -1140,7 +1142,7 @@ const isBallConnected = (ball, balls = [], currentTime = 0) => {
   return balls.some((other) => {
     if (!other || other.id === ball.id) return false;
     if (other.type === "vampire" && other.latchedTo === ball.id && other.latchUntil > currentTime) return true;
-    if (other.type === "spider" && other.webTargetId === ball.id && (other.webState === "pulling" || other.webState === "webBouncing")) return true;
+    if (usesSpiderSkillKit(other.type) && other.webTargetId === ball.id && (other.webState === "pulling" || other.webState === "webBouncing")) return true;
     if (other.type === "arm" && other.armGrabTargetId === ball.id && other.armState === "elbow_dropping" && other.armStateUntil > currentTime) return true;
     if (other.tridentTargetId === ball.id && (other.tridentState === "thrown" || other.tridentState === "stuck")) return true;
     if (other.type === "wrecker" && other.wreckerActionTargetId === ball.id && ["swinging"].includes(other.wreckerState)) return true;
@@ -1236,6 +1238,85 @@ const getStringBounceVelocity = (ball, str, hitX, hitY, speed, seed = 0) => {
 };
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+const getLineWeaverRubberControl = (str, currentTime = 0) => {
+  const x1 = str.x1 || 0;
+  const y1 = str.y1 || 0;
+  const x2 = str.x2 || 0;
+  const y2 = str.y2 || 0;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const midX = (x1 + x2) * 0.5;
+  const midY = (y1 + y2) * 0.5;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const age = Math.max(0, currentTime - (str.createdTime || currentTime));
+  const hitAge = Math.max(0, currentTime - (str.elasticHitAt || str.createdTime || currentTime));
+  const freshness = Math.exp(-hitAge / 1450);
+  const baseBend = Number.isFinite(str.elasticBend)
+    ? str.elasticBend
+    : (Math.sin((str.createdTime || 0) * 0.021 + len * 0.013) * Math.min(42, len * 0.18));
+  const hitT = clamp(Number.isFinite(str.elasticHitT) ? str.elasticHitT : 0.5, 0.15, 0.85);
+  const anchorBias = (hitT - 0.5) * len * 0.32;
+  const wobble = Math.sin(currentTime * 0.018 + (str.createdTime || 0) * 0.037) * Math.min(18, len * 0.055) * freshness;
+  const idleSag = Math.sin(age * 0.0022 + (str.createdTime || 0) * 0.011) * Math.min(12, len * 0.035);
+  const bend = baseBend * (0.38 + freshness * 0.62) + wobble + idleSag;
+  return {
+    x: midX + (dx / len) * anchorBias + nx * bend,
+    y: midY + (dy / len) * anchorBias + ny * bend,
+  };
+};
+
+const rubberStringPointAt = (str, t, currentTime = 0) => {
+  const control = getLineWeaverRubberControl(str, currentTime);
+  const inv = 1 - t;
+  return {
+    x: inv * inv * str.x1 + 2 * inv * t * control.x + t * t * str.x2,
+    y: inv * inv * str.y1 + 2 * inv * t * control.y + t * t * str.y2,
+  };
+};
+
+const rubberStringNearestPoint = (px, py, str, currentTime = 0) => {
+  let best = { x: str.x1, y: str.y1, t: 0, dist: Infinity };
+  const samples = 18;
+  let previous = { x: str.x1, y: str.y1, t: 0 };
+  for (let i = 1; i <= samples; i++) {
+    const t = i / samples;
+    const point = rubberStringPointAt(str, t, currentTime);
+    const dx = point.x - previous.x;
+    const dy = point.y - previous.y;
+    const lenSq = dx * dx + dy * dy;
+    const raw = lenSq ? ((px - previous.x) * dx + (py - previous.y) * dy) / lenSq : 0;
+    const localT = clamp(raw, 0, 1);
+    const x = previous.x + dx * localT;
+    const y = previous.y + dy * localT;
+    const dist = Math.hypot(px - x, py - y);
+    if (dist < best.dist) {
+      best = { x, y, t: previous.t + (t - previous.t) * localT, dist };
+    }
+    previous = { ...point, t };
+  }
+  return best;
+};
+
+const makeLineWeaverString = ({ x1, y1, x2, y2, ownerSide, createdTime, life, hitX, hitY, impactVx = 0, impactVy = 0 }) => {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const tx = dx / len;
+  const ty = dy / len;
+  const nx = -ty;
+  const ny = tx;
+  const hitT = clamp(((hitX ?? x2) - x1) * tx / len + ((hitY ?? y2) - y1) * ty / len, 0, 1);
+  const impactSide = Math.sign(impactVx * nx + impactVy * ny) || (ownerSide === "left" ? 1 : -1);
+  return {
+    x1, y1, x2, y2, ownerSide, createdTime, life,
+    elasticBend: impactSide * Math.min(76, Math.max(24, len * 0.2)),
+    elasticHitT: hitT,
+    elasticHitAt: createdTime,
+  };
+};
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const drawStar = (ctx, cx, cy, spikes, outerRadius, innerRadius) => {
   let rot = (Math.PI / 2) * 3;
@@ -1881,7 +1962,7 @@ export default function App() {
       const nextIdx = (ball.sorcererSpellIndex || 0) % 3;
       return `${spellNames[nextIdx]} · INFINITY ON`;
     }
-    if (ball.type === "spider") {
+    if (usesSpiderSkillKit(ball.type)) {
       if (ball.webShieldActive) return "WEB ARMOR · SPEED UP";
       const labels = { throwing: "WEB THROW", pulling: "WEB PULL", spinning: "WEB SPIN" };
       if (labels[ball.bsSkillState]) return labels[ball.bsSkillState];
@@ -2081,7 +2162,7 @@ export default function App() {
       lines.push(`CUE STRIKE: ${states[ball.eightCueState] || cooldown(ball.eightNextCueAt)}`);
       lines.push(`BANK SHOT: ${ball.eightCueBankShot ? "ACTIVE" : "READY"}`);
       lines.push(`POWER: ${ball.eightPowerStacks || 0} STACKS`);
-    } else if (ball.type === "spider") {
+    } else if (usesSpiderSkillKit(ball.type)) {
       const slamStates = { throwing: "THROWING", pulling: "PULLING", spinning: "SPINNING" };
       const trapArmed = (game?.venomPools || []).some((pool) => pool.ownerId === ball.id && pool.isSpiderTrap);
       const bites = ball.webState === "pulling" || ball.webState === "webBouncing" ? Math.max(0, 3 - (ball.webBouncesLeft || 0)) : 0;
@@ -3290,10 +3371,12 @@ export default function App() {
                 if (bounced && simTime >= OPENING_SKILL_DELAY) {
                 if (ball.type === "stringWeb") {
                     if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
-                      const newString = {
-                        x1: ball.lastBounceX, y1: ball.lastBounceY, x2: bx, y2: by, ownerSide: ball.side, createdTime: simTime,
-                        life: balance.stringWeb.stringLifetime
-                      };
+                      const newString = makeLineWeaverString({
+                        x1: ball.lastBounceX, y1: ball.lastBounceY, x2: bx, y2: by,
+                        ownerSide: ball.side, createdTime: simTime,
+                        life: balance.stringWeb.stringLifetime,
+                        hitX: bx, hitY: by, impactVx: ball.vx, impactVy: ball.vy
+                      });
                       localStrings.push(newString);
                       const maxStrings = balance.stringWeb.maxStrings || 10;
                       const ownerStrings = localStrings.filter((str) => str.ownerSide === ball.side);
@@ -3714,7 +3797,7 @@ export default function App() {
               }
             }
             // Spider Ball Physics in Tournament
-            if (ball.type === "spider") {
+            if (usesSpiderSkillKit(ball.type)) {
               const dist = Math.hypot(enemy.x - ball.x, enemy.y - ball.y);
               if (dist < 240 && simTime >= (ball.nextSecondaryAt || 0)) {
                 ball.nextSecondaryAt = simTime + balance.spider.secCooldown;
@@ -3828,7 +3911,7 @@ export default function App() {
               }
             }
             // Black Spider Ball Physics in Tournament
-            if (ball.type === "blackSpider") {
+            if (false && ball.type === "blackSpider") {
               // Disabled skills
             }
             // Bomber Ball Physics in Tournament
@@ -4452,29 +4535,31 @@ export default function App() {
             str.life -= dt * 1000;
             if (str.life <= 0) return false;
             balls.forEach((ball) => {
-              const dist = linePointDist(ball.x, ball.y, str.x1, str.y1, str.x2, str.y2);
+              const nearest = rubberStringNearestPoint(ball.x, ball.y, str, simTime);
+              const dist = nearest.dist;
               const stringBal = balance.stringWeb || BALANCE.stringWeb;
               if (ball.side === str.ownerSide) {
                 if (ball.type !== "stringWeb" || dist >= ball.r + (stringBal.stringHitPadding || 0) || simTime < (ball.nextStringTrampolineAt || 0)) return;
-                const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
-                const dot = A * C + B * D, lenSq = C * C + D * D;
-                const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
-                const xx = str.x1 + param * C, yy = str.y1 + param * D;
+                const xx = nearest.x, yy = nearest.y;
                 const speed = Math.hypot(ball.vx, ball.vy);
                 const nextSpeed = Math.min(1100, Math.max(stringBal.trampolineMinSpeed || 480, speed * (stringBal.trampolineBoost || 1.8)));
                 const bounce = getStringBounceVelocity(ball, str, xx, yy, nextSpeed, simTime + str.createdTime);
                 ball.vx = bounce.vx;
                 ball.vy = bounce.vy;
                 if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
-                  pendingLocalStrings.push({
+                  pendingLocalStrings.push(makeLineWeaverString({
                     x1: ball.lastBounceX,
                     y1: ball.lastBounceY,
                     x2: xx,
                     y2: yy,
                     ownerSide: ball.side,
                     createdTime: simTime,
-                    life: stringBal.stringLifetime
-                  });
+                    life: stringBal.stringLifetime,
+                    hitX: xx,
+                    hitY: yy,
+                    impactVx: ball.vx,
+                    impactVy: ball.vy
+                  }));
                 }
                 ball.lastBounceX = xx;
                 ball.lastBounceY = yy;
@@ -5683,15 +5768,19 @@ export default function App() {
           if (ball.type === "stringWeb") {
             if (!game.strings) game.strings = [];
             if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
-              const newString = {
+              const newString = makeLineWeaverString({
                 x1: ball.lastBounceX,
                 y1: ball.lastBounceY,
                 x2: bx,
                 y2: by,
                 ownerSide: ball.side,
                 createdTime: game.simTime,
-                life: game.balance.stringWeb.stringLifetime
-              };
+                life: game.balance.stringWeb.stringLifetime,
+                hitX: bx,
+                hitY: by,
+                impactVx: ball.vx,
+                impactVy: ball.vy
+              });
               game.strings.push(newString);
               const maxStrings = game.balance.stringWeb.maxStrings || 10;
               const ownerStrings = game.strings.filter((str) => str.ownerSide === ball.side);
@@ -13977,8 +14066,9 @@ export default function App() {
 
     const updateSpiderWebProjectile = (stepDt, balls) => {
       balls.forEach(ball => {
-        const isBlackSpiderWeb = ball.type === "blackSpider";
-        if ((ball.type !== "spider" && !isBlackSpiderWeb) || ball.webState !== "shooting") return;
+        const usesSharedSpiderWeb = usesSpiderSkillKit(ball.type);
+        const isBlackSpiderWeb = false;
+        if (!usesSharedSpiderWeb || ball.webState !== "shooting") return;
         ball.webX += ball.webVx * stepDt;
         ball.webY += ball.webVy * stepDt;
         const pad = 18;
@@ -14039,7 +14129,7 @@ export default function App() {
           if (consumed || ball.health <= 0 || ball.type === "cueBall") return;
           if (Math.hypot(ball.x - splat.x, ball.y - splat.y) >= ball.r + splat.r * 0.72) return;
 
-          if (ball.id === splat.ownerId && ball.type === "blackSpider" && splat.isBlackSpider) {
+          if (false && ball.id === splat.ownerId && ball.type === "blackSpider" && splat.isBlackSpider) {
             if (game.simTime < (splat.ownerIgnoreUntil || 0)) return;
             ownerTouching = true;
             if (splat.ownerTouching) return;
@@ -14059,7 +14149,7 @@ export default function App() {
               0,
               game.simulationSpeed || 1
             );
-          } else if (ball.id === splat.ownerId && ball.type === "spider") {
+          } else if (ball.id === splat.ownerId && usesSpiderSkillKit(ball.type)) {
             if (game.simTime < (splat.ownerIgnoreUntil || 0)) return;
             ownerTouching = true;
             if (splat.ownerTouching || ball.webShieldActive) return;
@@ -14077,11 +14167,12 @@ export default function App() {
               game.simulationSpeed || 1
             );
           } else if (ball.side !== splat.ownerSide) {
-            const isBlackSplat = !!splat.isBlackSpider;
+            const splatOwner = game.balls.find((candidate) => candidate.id === splat.ownerId);
+            const isBlackSplat = !!splat.isBlackSpider && !usesSpiderSkillKit(splatOwner?.type);
             ball.webSplatterStuckUntil = Math.max(ball.webSplatterStuckUntil || 0, game.simTime + (isBlackSplat ? 950 : 1600));
             ball.vx = 0;
             ball.vy = 0;
-            const spiderOwner = game.balls.find((candidate) => candidate.id === splat.ownerId && candidate.type === "spider");
+            const spiderOwner = game.balls.find((candidate) => candidate.id === splat.ownerId && usesSpiderSkillKit(candidate.type));
             if (spiderOwner) {
               spiderOwner.nextShotAt = game.simTime;
               game.floatingTexts = game.floatingTexts || [];
@@ -14091,7 +14182,7 @@ export default function App() {
               });
             }
             const blackSpiderOwner = game.balls.find((candidate) => candidate.id === splat.ownerId && candidate.type === "blackSpider");
-            if (blackSpiderOwner && splat.canTriggerTrap !== false) {
+            if (false && blackSpiderOwner && splat.canTriggerTrap !== false) {
               const bsBal = game.balance.blackSpider || BALANCE.blackSpider;
               blackSpiderOwner.blackSimpleState = "auto_string";
               blackSpiderOwner.blackSimpleTargetId = ball.id;
@@ -18148,6 +18239,33 @@ export default function App() {
         ctx.quadraticCurveTo((ball.x + endX) / 2 + Math.sin(game.simTime * 0.03) * 8, (ball.y + endY) / 2 + Math.cos(game.simTime * 0.028) * 8, endX, endY); ctx.stroke();
         ctx.strokeStyle = "rgba(248,250,252,0.82)"; ctx.lineWidth = 1.6; ctx.shadowBlur = 2; ctx.stroke();
         ctx.fillStyle = "#f8fafc"; ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2); ctx.fill();
+      }
+
+      if (ball.webState === "shooting" || ball.webState === "pulling" || ball.webState === "webBouncing") {
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "#020617";
+        ctx.lineWidth = 5;
+        ctx.shadowColor = "#f8fafc";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.lineTo(ball.webX, ball.webY);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(248,250,252,0.82)";
+        ctx.lineWidth = 1.8;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+        if (ball.webState === "shooting") {
+          ctx.fillStyle = "#f8fafc";
+          ctx.strokeStyle = "#020617";
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(ball.webX, ball.webY, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
       }
 
       ctx.translate(ball.x, ball.y);
@@ -23074,29 +23192,31 @@ export default function App() {
         str.life -= dt * 1000;
         if (str.life <= 0) return false;
         game.balls.forEach((ball) => {
-          const dist = linePointDist(ball.x, ball.y, str.x1, str.y1, str.x2, str.y2);
+          const nearest = rubberStringNearestPoint(ball.x, ball.y, str, game.simTime);
+          const dist = nearest.dist;
           const stringBal = game.balance.stringWeb || BALANCE.stringWeb;
           if (ball.side === str.ownerSide) {
             if (ball.type !== "stringWeb" || dist >= ball.r + (stringBal.stringHitPadding || 0) || game.simTime < (ball.nextStringTrampolineAt || 0)) return;
-            const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
-            const dot = A * C + B * D, lenSq = C * C + D * D;
-            const param = lenSq ? clamp(dot / lenSq, 0, 1) : 0;
-            const xx = str.x1 + param * C, yy = str.y1 + param * D;
+            const xx = nearest.x, yy = nearest.y;
             const speed = Math.hypot(ball.vx, ball.vy);
             const nextSpeed = Math.min(1100, Math.max(stringBal.trampolineMinSpeed || 480, speed * (stringBal.trampolineBoost || 1.8)));
             const bounce = getStringBounceVelocity(ball, str, xx, yy, nextSpeed, game.simTime + str.createdTime);
             ball.vx = bounce.vx;
             ball.vy = bounce.vy;
             if (ball.lastBounceX !== undefined && ball.lastBounceX !== null) {
-              const newString = {
+              const newString = makeLineWeaverString({
                 x1: ball.lastBounceX,
                 y1: ball.lastBounceY,
                 x2: xx,
                 y2: yy,
                 ownerSide: ball.side,
                 createdTime: game.simTime,
-                life: stringBal.stringLifetime
-              };
+                life: stringBal.stringLifetime,
+                hitX: xx,
+                hitY: yy,
+                impactVx: ball.vx,
+                impactVy: ball.vy
+              });
               pendingStrings.push(newString);
             }
             ball.lastBounceX = xx;
@@ -23122,14 +23242,7 @@ export default function App() {
             str.insideIds[ball.id] = true;
             applyDamage(ball, game.balance.stringWeb.stringDamage, `${ball.id}-string-${str.createdTime}`, game.simTime, 9999999);
             
-            const A = ball.x - str.x1, B = ball.y - str.y1, C = str.x2 - str.x1, D = str.y2 - str.y1;
-            const dot = A * C + B * D, lenSq = C * C + D * D;
-            let param = -1;
-            if (lenSq !== 0) param = dot / lenSq;
-            let xx, yy;
-            if (param < 0) { xx = str.x1; yy = str.y1; }
-            else if (param > 1) { xx = str.x2; yy = str.y2; }
-            else { xx = str.x1 + param * C; yy = str.y1 + param * D; }
+            const xx = nearest.x, yy = nearest.y;
             
             ball.spinAngle = (ball.spinAngle || 0) + 0.6;
             ball.webHitFlashUntil = game.simTime + 180;
@@ -23658,32 +23771,48 @@ export default function App() {
       if (!game.strings) return;
       game.strings.forEach((str) => {
         ctx.save();
+        const control = getLineWeaverRubberControl(str, game.simTime);
+        const strokeRubberString = () => {
+          ctx.beginPath();
+          ctx.moveTo(str.x1, str.y1);
+          ctx.quadraticCurveTo(control.x, control.y, str.x2, str.y2);
+          ctx.stroke();
+        };
 
         ctx.strokeStyle = str.ownerSide === "left" ? "rgba(192, 132, 252, 0.24)" : "rgba(232, 121, 249, 0.24)";
         ctx.lineWidth = 12;
         ctx.shadowColor = str.ownerSide === "left" ? "#a855f7" : "#d946ef";
         ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.moveTo(str.x1, str.y1);
-        ctx.lineTo(str.x2, str.y2);
-        ctx.stroke();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        strokeRubberString();
 
         ctx.strokeStyle = str.ownerSide === "left" ? "#c084fc" : "#e879f9";
         ctx.lineWidth = 4;
         ctx.shadowBlur = 8;
 
-        ctx.beginPath();
-        ctx.moveTo(str.x1, str.y1);
-        ctx.lineTo(str.x2, str.y2);
-        ctx.stroke();
+        strokeRubberString();
 
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.2;
         ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.moveTo(str.x1, str.y1);
-        ctx.lineTo(str.x2, str.y2);
-        ctx.stroke();
+        strokeRubberString();
+
+        const pulseCount = 3;
+        for (let i = 0; i < pulseCount; i++) {
+          const t = (game.simTime * 0.0011 + i / pulseCount + (str.createdTime || 0) * 0.00017) % 1;
+          const point = rubberStringPointAt(str, t, game.simTime);
+          const radius = 2.2 + Math.sin(game.simTime * 0.018 + i) * 0.8;
+          ctx.save();
+          ctx.globalAlpha = 0.52;
+          ctx.fillStyle = "#ffffff";
+          ctx.shadowColor = str.ownerSide === "left" ? "#c084fc" : "#e879f9";
+          ctx.shadowBlur = 9;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
 
         const drawEndpoint = (x, y) => {
           ctx.save();
@@ -24966,9 +25095,8 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                   if (ball.type === "laser") updateLaserLegacy(ball, target, game.simTime, stepDt);
                   
                   // New Weapon Ticks
-                  if (ball.type === "spider") {
+                  if (usesSpiderSkillKit(ball.type)) {
                     updateSpider(ball, target, game.simTime, stepDt);
-                    updateBlackSpider(ball, target, game.simTime, stepDt);
                   }
                   if (ball.type === "bomber") updateBomber(ball, target, game.simTime);
                   if (ball.type === "spore") updateSpore(ball, target, game.simTime);
@@ -24980,7 +25108,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
                   if (ball.type === "trident") updateTrident(ball, target, game.simTime, stepDt);
                   if (ball.type === "shadow") updateShadow(ball, target, game.simTime, stepDt);
                   if (ball.type === "fisherman") updateFisherman(ball, target, game.simTime, stepDt);
-                  if (ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
+                  if (false && ball.type === "blackSpider") updateBlackSpider(ball, target, game.simTime, stepDt);
                   if (ball.type === "earthSpiker") updateEarthSpiker(ball, target, game.simTime);
                   if (ball.type === "fireBender") updateFireBender(ball, target, game.simTime, stepDt);
                   if (ball.type === "serpent") updateSerpent(ball, target, game.simTime, stepDt);
@@ -25331,7 +25459,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
               {renderSlider("Sec: Bash Damage", "shield", "secBashDamage", 1, 20)}
             </>
           )}
-          {type === "spider" && (
+          {usesSpiderSkillKit(type) && (
             <>
               {renderSlider("Fang Damage", "spider", "fangDamage", 1, 20)}
               {renderSlider("Web String Speed", "spider", "webSpeed", 200, 1200, 20, "px/s")}
@@ -25346,7 +25474,7 @@ if (isSaberType(ball.type) && !isGrabbedByArm && !isBlackSpiderPulled) {
               {renderSlider("Trap Lock Duration", "spider", "trapLockDuration", 500, 5000, 100, "ms")}
             </>
           )}
-          {type === "blackSpider" && (
+          {false && type === "blackSpider" && (
             <>
               {renderSlider("String Bite Slam Cooldown", "blackSpider", "simpleCooldown", 2000, 12000, 100, "ms")}
               {renderSlider("String Shot Time", "blackSpider", "simpleStringTime", 150, 900, 25, "ms")}
